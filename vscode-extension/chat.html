@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #1e1e1e; color: #d4d4d4; height: 100vh; display: flex; flex-direction: column; }
+#messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+#loading { display: none; padding: 8px 16px; color: #888; font-size: 13px; }
+#loading.show { display: block; }
+.msg { max-width: 85%; padding: 10px 14px; border-radius: 8px; line-height: 1.5; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; }
+.msg.user { align-self: flex-end; background: #0e639c; color: #fff; }
+.msg.assistant { align-self: flex-start; background: #2d2d2d; color: #d4d4d4; }
+.msg.assistant h1, .msg.assistant h2, .msg.assistant h3 { margin: 8px 0 4px; color: #569cd6; }
+.msg.assistant p { margin: 4px 0; }
+.msg.assistant ul, .msg.assistant ol { margin: 4px 0; padding-left: 20px; }
+.msg.assistant code { background: #3c3c3c; padding: 1px 4px; border-radius: 3px; font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 12px; }
+.msg.assistant pre { background: #1a1a1a; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 8px 0; }
+.msg.assistant pre code { background: none; padding: 0; border-radius: 0; }
+.msg.assistant blockquote { border-left: 3px solid #569cd6; padding-left: 8px; margin: 4px 0; color: #888; }
+.msg.assistant table { border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+.msg.assistant th, .msg.assistant td { border: 1px solid #444; padding: 4px 8px; }
+.msg.assistant th { background: #333; }
+.msg.assistant a { color: #3794ff; }
+.msg .label { font-size: 11px; color: #888; margin-bottom: 4px; font-weight: 600; }
+.msg.user .label { text-align: right; color: #7fc1ff; }
+#input-area { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid #333; background: #252526; }
+#input { flex: 1; background: #3c3c3c; color: #d4d4d4; border: 1px solid #555; border-radius: 6px; padding: 8px 12px; font-family: inherit; font-size: 13px; resize: none; outline: none; }
+#input:focus { border-color: #0e639c; }
+#send { background: #0e639c; color: #fff; border: none; border-radius: 6px; padding: 8px 20px; font-size: 13px; cursor: pointer; }
+#send:hover { background: #1177bb; }
+#send:disabled { opacity: 0.5; cursor: default; }
+#error-banner { display: none; background: #5a1d1d; color: #f14c4c; padding: 8px 16px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="messages"></div>
+<div id="loading">CodeYang is thinking<span id="dots">...</span></div>
+<div id="error-banner"></div>
+<div id="input-area">
+  <textarea id="input" rows="2" placeholder="Ask CodeYang anything..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send();}"></textarea>
+  <button id="send" onclick="send()">Send</button>
+</div>
+<script>
+const vscode = acquireVsCodeApi();
+const messages = document.getElementById('messages');
+const input = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+const loading = document.getElementById('loading');
+const errorBanner = document.getElementById('error-banner');
+
+let assistantMsgDiv = null;
+
+window.addEventListener('message', event => {
+  const msg = event.data;
+  switch (msg.type) {
+    case 'addMessage':
+      addMessage(msg.role, msg.content);
+      break;
+    case 'appendAssistant':
+      if (assistantMsgDiv) {
+        assistantMsgDiv.innerHTML = renderMarkdown(assistantMsgDiv.dataset.content + msg.content);
+        assistantMsgDiv.dataset.content += msg.content;
+      }
+      break;
+    case 'done':
+      loading.classList.remove('show');
+      sendBtn.disabled = false;
+      assistantMsgDiv = null;
+      input.focus();
+      break;
+    case 'error':
+      loading.classList.remove('show');
+      sendBtn.disabled = false;
+      errorBanner.textContent = msg.message;
+      errorBanner.style.display = 'block';
+      setTimeout(() => { errorBanner.style.display = 'none'; }, 5000);
+      break;
+  }
+});
+
+function addMessage(role, content) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  if (role === 'assistant') {
+    div.dataset.content = content;
+    div.innerHTML = renderMarkdown(content);
+    assistantMsgDiv = div;
+  } else {
+    div.innerHTML = '<div class="label">You</div>' + escapeHtml(content);
+  }
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function send() {
+  const text = input.value.trim();
+  if (!text || sendBtn.disabled) return;
+  input.value = '';
+  errorBanner.style.display = 'none';
+
+  addMessage('user', text);
+  loading.classList.add('show');
+  sendBtn.disabled = true;
+
+  vscode.postMessage({ type: 'chat', text });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderMarkdown(md) {
+  md = md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  md = md.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    return '<pre><code>' + escapeHtml(code.trim()) + '</code></pre>';
+  });
+
+  md = md.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  md = md.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  md = md.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  md = md.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+  md = md.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+
+  md = md.replace(/^(\d+)\. (.+)$/gm, '<li value="$1">$2</li>');
+  md = md.replace(/^- (.+)$/gm, '<li>$1</li>');
+
+  md = md.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+  md = md.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  md = md.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  md = md.replace(/\n\n/g, '</p><p>');
+  md = md.replace(/^(?!<[hplb]|<div|<pre)/gm, '');
+
+  return '<p>' + md + '</p>';
+}
+</script>
+</body>
+</html>

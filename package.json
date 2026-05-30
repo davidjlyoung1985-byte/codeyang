@@ -1,0 +1,31 @@
+{
+  "name": "codeyang",
+  "version": "0.2.0",
+  "description": "Terminal-based AI coding agent powered by Claude",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "codeyang": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --clean --outDir dist",
+    "dev": "tsup src/index.ts --format esm --watch --outDir dist",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "execa": "^9.3.0",
+    "picocolors": "^1.1.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.2.0",
+    "typescript": "^5.5.0"
+  }
+}

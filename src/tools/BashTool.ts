@@ -1,0 +1,25 @@
+import { execa } from 'execa';
+
+export async function executeBash(command: string, cwd?: string): Promise<string> {
+  const result = await execa(command, {
+    shell: process.platform === 'win32' ? 'powershell.exe' : 'bash',
+    cwd: cwd || process.cwd(),
+    timeout: 30_000,
+    reject: false,
+    env: { ...process.env, CI: undefined },
+  });
+
+  const stdout = result.stdout?.trim() || '';
+  const stderr = result.stderr?.trim() || '';
+
+  if (result.exitCode === 0) {
+    return stdout || '(no output)';
+  }
+
+  const parts: string[] = [];
+  if (stdout) parts.push(`stdout:\n${stdout}`);
+  if (stderr) parts.push(`stderr:\n${stderr}`);
+  parts.push(`exit code: ${result.exitCode}`);
+
+  return parts.join('\n\n');
+}

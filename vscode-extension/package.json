@@ -1,0 +1,39 @@
+{
+  "name": "codeyang-vscode",
+  "displayName": "CodeYang AI Agent",
+  "version": "0.1.0",
+  "description": "AI coding agent powered by Claude — chat with CodeYang inside VS Code",
+  "publisher": "codeyang",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Chat",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:codeyang.startChat"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeyang.startChat",
+        "title": "CodeYang: Start Chat"
+      }
+    ],
+    "configuration": {
+      "title": "CodeYang",
+      "properties": {
+        "codeyang.apiKey": {
+          "type": "string",
+          "description": "Anthropic API Key for CodeYang AI agent",
+          "default": ""
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0"
+  }
+}
