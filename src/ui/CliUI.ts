@@ -4,6 +4,9 @@ import picocolors from 'picocolors';
 export class CliUI {
   private rl: readline.Interface;
   private onInput?: (line: string) => void;
+  private spinnerTimer: ReturnType<typeof setInterval> | null = null;
+  private spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  private spinnerIdx = 0;
 
   constructor() {
     this.rl = readline.createInterface({
@@ -31,7 +34,7 @@ export class CliUI {
     console.log(picocolors.green('╚══════════════════════════════════════════╝'));
     console.log();
     console.log(picocolors.dim('Type your request and press Enter. Ctrl+C to exit.'));
-    console.log(picocolors.dim('Available: Bash, Read, Write, Edit, Glob, Grep, Task'));
+    console.log(picocolors.dim('/clear to reset  |  /exit to quit'));
     console.log();
   }
 
@@ -48,6 +51,12 @@ export class CliUI {
     console.log();
   }
 
+  showSystemMessage(text: string) {
+    console.log();
+    console.log(picocolors.dim(`  ⓘ ${text}`));
+    console.log();
+  }
+
   showAgentDone() {
     console.log(picocolors.green('└──'));
     console.log();
@@ -58,6 +67,8 @@ export class CliUI {
   }
 
   showAgentText(text: string) {
+    // Stop spinner before printing full text
+    this.stopSpinner();
     for (const line of text.split('\n')) {
       if (line.trim()) {
         console.log(picocolors.green('│ ') + line);
@@ -65,7 +76,34 @@ export class CliUI {
     }
   }
 
+  showAgentDelta(text: string) {
+    // Stop spinner before streaming text
+    this.stopSpinner();
+    process.stdout.write(picocolors.green(text));
+  }
+
+  startSpinner() {
+    this.stopSpinner();
+    this.spinnerIdx = 0;
+    process.stdout.write(picocolors.green('│ ') + picocolors.dim(this.spinnerFrames[0]) + ' ');
+    this.spinnerTimer = setInterval(() => {
+      this.spinnerIdx = (this.spinnerIdx + 1) % this.spinnerFrames.length;
+      // Clear the last character and write the new frame
+      process.stdout.write('\b' + picocolors.dim(this.spinnerFrames[this.spinnerIdx]));
+    }, 120);
+  }
+
+  stopSpinner() {
+    if (this.spinnerTimer) {
+      clearInterval(this.spinnerTimer);
+      this.spinnerTimer = null;
+      // Clear spinner character
+      process.stdout.write('\b \b');
+    }
+  }
+
   showToolCall(name: string, args: Record<string, unknown>) {
+    this.stopSpinner();
     const argStr = JSON.stringify(args).slice(0, 200);
     console.log(picocolors.dim(`  ─ 🛠 ${name}(${argStr})`));
   }
@@ -76,8 +114,17 @@ export class CliUI {
     console.log(picocolors.dim(`    → ${prefix}${line.slice(0, 150)}`));
   }
 
-  showQuestion(question: string) {
-    console.log(picocolors.yellow(`\n? ${question}`));
+  showQuestion(question: string, options?: Array<{ label: string; description: string }>) {
+    this.stopSpinner();
+    console.log();
+    console.log(picocolors.yellow(`? ${question}`));
+
+    if (options && options.length > 0) {
+      for (let i = 0; i < options.length; i++) {
+        console.log(picocolors.yellow(`  ${i + 1}. ${options[i].label}`) + picocolors.dim(` — ${options[i].description}`));
+      }
+    }
+
     this.promptForAnswer();
   }
 
@@ -86,10 +133,12 @@ export class CliUI {
   }
 
   showError(err: string) {
+    this.stopSpinner();
     console.log(picocolors.red(`\n✗ ${err}`));
   }
 
   close() {
+    this.stopSpinner();
     this.rl.close();
   }
 }

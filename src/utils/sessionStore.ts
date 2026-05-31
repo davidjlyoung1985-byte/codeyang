@@ -1,9 +1,9 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { Session, Message } from '../types.js';
 
-const SESSIONS_DIR = join(homedir(), '.codex', 'sessions');
+const SESSIONS_DIR = join(homedir(), '.codeyang', 'sessions');
 
 async function ensureDir() {
   await mkdir(SESSIONS_DIR, { recursive: true });
@@ -45,4 +45,13 @@ export async function listSessions(): Promise<Session[]> {
     } catch {}
   }
   return sessions;
+}
+
+export async function deleteSession(id: string): Promise<boolean> {
+  try {
+    await unlink(join(SESSIONS_DIR, `${id}.json`));
+    return true;
+  } catch {
+    return false;
+  }
 }

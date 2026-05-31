@@ -1,8 +1,8 @@
 {
   "name": "codeyang-vscode",
   "displayName": "CodeYang AI Agent",
-  "version": "0.1.0",
-  "description": "AI coding agent powered by Claude — chat with CodeYang inside VS Code",
+  "version": "0.2.0",
+  "description": "AI coding agent powered by Claude — chat with tool-using CodeYang inside VS Code",
   "publisher": "codeyang",
   "engines": {
     "vscode": "^1.85.0"
@@ -29,6 +29,11 @@
           "type": "string",
           "description": "Anthropic API Key for CodeYang AI agent",
           "default": ""
+        },
+        "codeyang.model": {
+          "type": "string",
+          "description": "Claude model to use (e.g. claude-sonnet-4-20250514)",
+          "default": "claude-sonnet-4-20250514"
         }
       }
     }

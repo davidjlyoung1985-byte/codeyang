@@ -1,6 +1,6 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { stat } from 'node:fs/promises';
-import { join, isAbsolute, dirname } from 'node:path';
+import { join, isAbsolute } from 'node:path';
 
 export async function executeEdit(
   filePath: string,
