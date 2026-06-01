@@ -2,8 +2,10 @@
 import * as readline from 'node:readline';
 import { CliUI } from './ui/CliUI.js';
 import { Agent } from './agent/Agent.js';
-import { config, loadLocalConfig, saveApiKey } from './agent/config.js';
+import { config, loadLocalConfig, saveApiKey, getMcpServers } from './agent/config.js';
 import { saveSession, listSessions, loadSession, deleteSession } from './utils/sessionStore.js';
+import { setMcpManager, refreshMcpTools } from './tools/registry.js';
+import { McpManager } from './mcp/McpManager.js';
 
 const VERSION = '0.2.0';
 
@@ -50,6 +52,7 @@ Options:
 
 Interactive Commands:
   /clear           Reset the conversation
+  /mcp             Show MCP server status
   /exit, /quit     Exit CodeYang`);
     process.exit(0);
   }
@@ -77,6 +80,27 @@ Interactive Commands:
     }
     await saveApiKey(key);
     console.log('API key saved to ~/.codeyang/config.json\n');
+  }
+
+  // Initialize MCP servers if configured
+  const mcpMgr = new McpManager();
+  const mcpServers = getMcpServers();
+  if (Object.keys(mcpServers).length > 0) {
+    const entries = Object.entries(mcpServers);
+    console.log(`Starting ${entries.length} MCP server(s)...`);
+    mcpMgr.configure(mcpServers);
+    await mcpMgr.initialize((name, status, detail) => {
+      const icon = status === 'connected' ? '+' : status === 'error' ? '!' : '>';
+      console.log(`  ${icon} ${name}: ${detail}`);
+    });
+    setMcpManager(mcpMgr);
+    refreshMcpTools();
+    const totalTools = mcpMgr.allTools.length;
+    if (totalTools > 0) {
+      console.log(`  MCP tools available: ${totalTools}\n`);
+    }
+  } else {
+    setMcpManager(null);
   }
 
   const ui = new CliUI();
@@ -131,6 +155,7 @@ Interactive Commands:
 
     if (['exit', 'quit', '/exit', '/quit'].includes(lower)) {
       await saveSession(agent.exportMessages());
+      await mcpMgr.shutdown();
       ui.close();
       process.exit(0);
     }
@@ -138,6 +163,24 @@ Interactive Commands:
     if (lower === '/clear') {
       agent.reset();
       ui.showSystemMessage('Conversation cleared. Starting fresh.');
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/mcp') {
+      if (!mcpMgr.hasServers) {
+        console.log('No MCP servers configured.');
+        console.log('\nAdd servers to ~/.codeyang/config.json:');
+        console.log('{\n  "mcpServers": {\n    "my-server": {\n      "command": "node",\n      "args": ["server.js"]\n    }\n  }\n}');
+      } else {
+        const names = mcpMgr.serverNames;
+        console.log(`MCP Servers (${names.length}):`);
+        for (const name of names) {
+          const status = mcpMgr.getServerStatus(name);
+          const icon = status === 'connected' ? '(+)' : '(!)';
+          console.log(`  ${icon} ${name}: ${status}`);
+        }
+      }
       ui.promptUser();
       return;
     }
@@ -164,6 +207,7 @@ Interactive Commands:
         await saveSession(agent.exportMessages());
         console.log('Session saved.');
       }
+      await mcpMgr.shutdown();
       process.exit(0);
     } catch {
       process.exit(1);

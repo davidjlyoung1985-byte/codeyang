@@ -9,6 +9,7 @@ import { executeTodoWrite } from './TodoWriteTool.js';
 import { executeWebFetch } from './WebFetchTool.js';
 import { executeTask } from './TaskTool.js';
 import type Anthropic from '@anthropic-ai/sdk';
+import type { McpManager } from '../mcp/McpManager.js';
 
 export interface ToolContext {
   anthropicClient: Anthropic;
@@ -18,9 +19,37 @@ export interface ToolContext {
 }
 
 let currentContext: ToolContext | null = null;
+let mcpManager: McpManager | null = null;
+const mcpTools: ToolDefinition[] = [];
 
 export function setToolContext(ctx: ToolContext | null) {
   currentContext = ctx;
+}
+
+/** Register the MCP manager so MCP tools can be discovered and called */
+export function setMcpManager(mgr: McpManager | null) {
+  mcpManager = mgr;
+}
+
+/** Rebuild the MCP tool list from the manager. Call after server init or tool refresh. */
+export function refreshMcpTools(): void {
+  mcpTools.length = 0;
+  if (!mcpManager) return;
+
+  for (const t of mcpManager.allTools) {
+    mcpTools.push({
+      name: t.qualifiedName,
+      description: `[MCP:${t.serverName}] ${t.description}`,
+      parameters: t.inputSchema as Record<string, unknown>,
+      execute: async (args: Record<string, unknown>) => {
+        if (!mcpManager) {
+          return 'MCP manager not available';
+        }
+        const result = await mcpManager.callTool(t.qualifiedName, args);
+        return result.isError ? `[MCP Error] ${result.output}` : result.output;
+      },
+    });
+  }
 }
 
 export const tools: ToolDefinition[] = [
@@ -257,7 +286,8 @@ export const tools: ToolDefinition[] = [
 ];
 
 export function getTool(name: string): ToolDefinition | undefined {
-  return tools.find(t => t.name === name);
+  // Check built-in tools first, then MCP tools
+  return tools.find(t => t.name === name) ?? mcpTools.find(t => t.name === name);
 }
 
 export function toolSchemas(): Array<{
@@ -265,7 +295,8 @@ export function toolSchemas(): Array<{
   description: string;
   input_schema: { type: 'object'; properties?: unknown; required?: string[]; [k: string]: unknown };
 }> {
-  return tools.map(t => ({
+  const allTools = [...tools, ...mcpTools];
+  return allTools.map(t => ({
     name: t.name,
     description: t.description,
     input_schema: t.parameters as { type: 'object'; properties?: unknown; required?: string[]; [k: string]: unknown },

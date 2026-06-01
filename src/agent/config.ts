@@ -1,12 +1,14 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import type { McpServerConfig } from '../mcp/types.js';
 
 const CONFIG_DIR = join(homedir(), '.codeyang');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 
 interface LocalConfig {
   apiKey?: string;
+  mcpServers?: Record<string, McpServerConfig>;
 }
 
 let localConfig: LocalConfig = {};
@@ -23,6 +25,18 @@ export async function loadLocalConfig(): Promise<void> {
 export async function saveApiKey(key: string): Promise<void> {
   await mkdir(CONFIG_DIR, { recursive: true });
   localConfig.apiKey = key;
+  await writeFile(CONFIG_FILE, JSON.stringify(localConfig, null, 2), 'utf-8');
+}
+
+/** Get configured MCP servers from config file */
+export function getMcpServers(): Record<string, McpServerConfig> {
+  return localConfig.mcpServers ?? {};
+}
+
+/** Save MCP server configuration to config file */
+export async function saveMcpServers(servers: Record<string, McpServerConfig>): Promise<void> {
+  await mkdir(CONFIG_DIR, { recursive: true });
+  localConfig.mcpServers = servers;
   await writeFile(CONFIG_FILE, JSON.stringify(localConfig, null, 2), 'utf-8');
 }
 

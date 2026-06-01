@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Message, ToolCall, ToolResult } from '../types.js';
 import { config } from './config.js';
-import { toolSchemas, getTool, setToolContext } from '../tools/registry.js';
+import { toolSchemas, getTool, setToolContext, refreshMcpTools } from '../tools/registry.js';
 
 export interface AgentCallbacks {
   onUserMessage?: (text: string) => void;
@@ -91,6 +91,9 @@ export class Agent {
     const messages = this.jsonClone(this.history);
     messages.push({ role: 'user', content: prompt });
     this.cbs.onUserMessage?.(prompt);
+
+    // Refresh MCP tools before each turn (catches newly connected servers)
+    refreshMcpTools();
 
     setToolContext({
       anthropicClient: this.client,
