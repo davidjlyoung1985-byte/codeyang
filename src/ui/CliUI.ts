@@ -19,43 +19,6 @@ function hr(label?: string): void {
   }
 }
 
-/** Draw a box around content. level: 0=main, 1=nested */
-function box(content: string, title?: string, level = 0): void {
-  const tl = level === 0 ? '╭' : '┌';
-  const bl = level === 0 ? '╰' : '└';
-  const color = level === 0 ? c.green : c.yellow;
-  const w = termW() - 2;
-
-  if (title) {
-    console.log(color(`${tl}─ ${title} ` + '─'.repeat(Math.max(0, w - title.length - 3))));
-  } else {
-    console.log(color(tl + '─'.repeat(w)));
-  }
-
-  for (const line of content.split('\n')) {
-    // Strip existing leading │ from rendered sub-blocks before re-wrapping
-    const stripped = line.startsWith('│ ') ? line.slice(2) : line;
-    // Word-wrap for long lines but keep code blocks intact (no wrap)
-    if (stripped.length > w) {
-      const words = stripped.split(' ');
-      let cur = '';
-      for (const word of words) {
-        if ((cur + word).length > w) {
-          console.log(color('│ ') + cur.trimEnd());
-          cur = word + ' ';
-        } else {
-          cur += word + ' ';
-        }
-      }
-      if (cur.trim()) console.log(color('│ ') + cur.trimEnd());
-    } else {
-      console.log(color('│ ') + stripped);
-    }
-  }
-
-  console.log(color(bl + '─'.repeat(w)));
-}
-
 // ─── Markdown rendering (lightweight, no external deps) ─────────────────────
 
 function bold(text: string): string {
@@ -215,17 +178,9 @@ export class CliUI {
 
   welcome() {
     console.log('');
-    console.log(c.bold(c.green('  ╔══════════════════════════════════════════════╗')));
-    console.log(
-      c.bold(c.green('  ║')) +
-        c.bold(c.white('  CodeYang  ')) +
-        c.dim('AI Coding Agent') +
-        c.bold(c.green('            ║')),
-    );
-    console.log(c.bold(c.green('  ╚══════════════════════════════════════════════╝')));
+    console.log(c.bold(c.green('  CodeYang')) + c.dim(' — AI Coding Agent'));
     console.log('');
-    console.log(c.dim('  /clear  Reset conversation'));
-    console.log(c.dim('  Ctrl+C  Save & exit'));
+    console.log(c.dim('  /clear  Reset  /  Ctrl+C  Exit'));
     console.log('');
     hr('ready');
     console.log('');
@@ -242,7 +197,10 @@ export class CliUI {
     this.spinner.stop();
     this.turnCount++;
     console.log('');
-    box(text, 'You', 1);
+    console.log(c.bold(c.yellow('  用户')));
+    for (const line of text.split('\n')) {
+      console.log('  ' + line);
+    }
   }
 
   showSystemMessage(text: string) {
@@ -250,7 +208,8 @@ export class CliUI {
   }
 
   showAgentStart() {
-    // Just a visual indicator that the agent is thinking
+    console.log('');
+    console.log(c.bold(c.green('  CodeYang')));
   }
 
   showAgentDone() {
