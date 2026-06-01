@@ -24,6 +24,10 @@ export class Agent {
   private toolCache = new Map<string, { result: string; timestamp: number }>();
   private static CACHE_TTL_MS = 5_000;
 
+  // Anti-repetition: track previous assistant text
+  private lastAssistantText = '';
+  private repeatCount = 0;
+
   constructor() {
     this.client = new Anthropic({ apiKey: config.apiKey });
   }
@@ -82,6 +86,8 @@ export class Agent {
   reset() {
     this.history = [];
     this.invalidateCache();
+    this.lastAssistantText = '';
+    this.repeatCount = 0;
   }
 
   answerQuestion(answer: string) {
@@ -227,6 +233,18 @@ export class Agent {
 
       if (assistantText) {
         this.cbs.onAgentText?.(assistantText);
+
+        // Anti-repetition: break if the agent says the same thing repeatedly
+        if (assistantText === this.lastAssistantText) {
+          this.repeatCount++;
+          if (this.repeatCount >= 2) {
+            this.cbs.onError?.('Agent loop detected — stopping to avoid repetition');
+            break;
+          }
+        } else {
+          this.repeatCount = 0;
+        }
+        this.lastAssistantText = assistantText;
       }
 
       if (toolCalls.length === 0) {

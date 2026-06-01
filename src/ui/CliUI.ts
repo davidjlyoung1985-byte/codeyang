@@ -260,19 +260,21 @@ export class CliUI {
 
   showAgentText(text: string) {
     this.spinner.stop();
+    // Clear any in-progress streaming indicator
+    if (this.streamBuf) {
+      process.stdout.write('\r' + ' '.repeat(20) + '\r');
+    }
+    this.streamBuf = '';
     const rendered = renderMarkdown(text);
     for (const line of rendered.split('\n')) {
       console.log('  ' + line);
     }
   }
 
-  showAgentDelta(text: string) {
-    // Agent is streaming — write directly. When it's done, showAgentText
-    // does the formatted display. To avoid flicker, we buffer and use spinner.
-    // But for a live-stream experience, write inline:
-    this.spinner.stop();
-    this.streamBuf += text;
-    process.stdout.write(text);
+  showAgentDelta(_text: string) {
+    // Buffer silently; showAgentText handles the formatted output.
+    // Keep spinner active for live-stream feel.
+    this.streamBuf += _text;
   }
 
   startSpinner() {
