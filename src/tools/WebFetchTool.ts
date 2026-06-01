@@ -1,7 +1,4 @@
-export async function executeWebFetch(
-  url: string,
-  format?: string,
-): Promise<string> {
+export async function executeWebFetch(url: string, format?: string): Promise<string> {
   if (!url || typeof url !== 'string') {
     throw new Error('URL is required');
   }
@@ -27,7 +24,7 @@ export async function executeWebFetch(
       signal: controller.signal,
       headers: {
         'User-Agent': 'CodeYang/0.2.0 (AI Coding Agent)',
-        'Accept': outputFormat === 'html' ? 'text/html' : 'text/plain, text/html',
+        Accept: outputFormat === 'html' ? 'text/html' : 'text/plain, text/html',
       },
     });
     clearTimeout(timeout);

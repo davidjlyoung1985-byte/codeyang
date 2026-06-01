@@ -121,11 +121,21 @@ Interactive Commands:
   }
 
   agent.setCallbacks({
-    onAgentText(text) { ui.showAgentText(text); },
-    onToolStart(name, args) { ui.showToolCall(name, args); },
-    onToolResult(_name, output, isError) { ui.showToolResult(output, isError); },
-    onQuestion(q, options) { ui.showQuestion(q, options); },
-    onError(err) { ui.showError(err); },
+    onAgentText(text) {
+      ui.showAgentText(text);
+    },
+    onToolStart(name, args) {
+      ui.showToolCall(name, args);
+    },
+    onToolResult(_name, output, isError) {
+      ui.showToolResult(output, isError);
+    },
+    onQuestion(q, options) {
+      ui.showQuestion(q, options);
+    },
+    onError(err) {
+      ui.showError(err);
+    },
   });
 
   async function handleInput(line: string) {
@@ -171,7 +181,9 @@ Interactive Commands:
       if (!mcpMgr.hasServers) {
         console.log('No MCP servers configured.');
         console.log('\nAdd servers to ~/.codeyang/config.json:');
-        console.log('{\n  "mcpServers": {\n    "my-server": {\n      "command": "node",\n      "args": ["server.js"]\n    }\n  }\n}');
+        console.log(
+          '{\n  "mcpServers": {\n    "my-server": {\n      "command": "node",\n      "args": ["server.js"]\n    }\n  }\n}',
+        );
       } else {
         const names = mcpMgr.serverNames;
         console.log(`MCP Servers (${names.length}):`);
@@ -196,13 +208,15 @@ Interactive Commands:
   const sigintHandler = async () => {
     sigintCount++;
     if (sigintCount > 1) {
-      // Double Ctrl+C — force exit
       process.exit(1);
     }
 
     console.log('\n\nSaving session before exit... (Ctrl+C again to force quit)');
 
     try {
+      // Cancel any pending question so the agent can exit cleanly
+      agent.cancelQuestion();
+
       if (running) {
         await saveSession(agent.exportMessages());
         console.log('Session saved.');
@@ -220,7 +234,7 @@ Interactive Commands:
   ui.promptUser();
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Fatal error:', err);
   process.exit(1);
 });

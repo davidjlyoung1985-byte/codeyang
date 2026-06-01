@@ -73,8 +73,8 @@ export async function executeTask(
         const assistantContent: Array<
           { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown }
         > = blocks
-          .filter(b => b.type === 'text' || b.type === 'tool_use')
-          .map(b => {
+          .filter((b) => b.type === 'text' || b.type === 'tool_use')
+          .map((b) => {
             if (b.type === 'text') return { type: 'text' as const, text: b.text };
             return {
               type: 'tool_use' as const,

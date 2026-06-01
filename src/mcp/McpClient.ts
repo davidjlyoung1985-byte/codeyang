@@ -26,10 +26,7 @@ export class McpClient {
   constructor(serverName: string, config: McpServerConfig) {
     this.serverName = serverName;
     this.config = config;
-    this.client = new Client(
-      { name: 'codeyang', version: '0.2.0' },
-      { capabilities: {} },
-    );
+    this.client = new Client({ name: 'codeyang', version: '0.2.0' }, { capabilities: {} });
   }
 
   get tools(): McpToolDef[] {
@@ -49,9 +46,7 @@ export class McpClient {
     this.transport = new StdioClientTransport({
       command: this.config.command,
       args: this.config.args ?? [],
-      env: this.config.env
-        ? { ...process.env, ...this.config.env } as Record<string, string>
-        : undefined,
+      env: this.config.env ? ({ ...process.env, ...this.config.env } as Record<string, string>) : undefined,
       cwd: this.config.cwd,
       stderr: 'pipe' as const, // Silence MCP server stderr noise
     });
@@ -66,7 +61,7 @@ export class McpClient {
   /** Discover tools from the server */
   private async discoverTools(): Promise<McpToolDef[]> {
     const result = await this.client.listTools();
-    return result.tools.map(t => ({
+    return result.tools.map((t) => ({
       serverName: this.serverName,
       qualifiedName: `mcp__${this.serverName}__${t.name}`,
       name: t.name,

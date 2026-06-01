@@ -13,7 +13,7 @@ async function ensureDir() {
 export async function saveSession(messages: Message[]): Promise<string> {
   await ensureDir();
   const id = `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
-  const title = messages.find(m => m.role === 'user')?.content.slice(0, 50) || 'untitled';
+  const title = messages.find((m) => m.role === 'user')?.content.slice(0, 50) || 'untitled';
   const session: Session = {
     id,
     title: title.replace(/\n/g, ' '),
@@ -39,7 +39,10 @@ export async function listSessions(): Promise<Session[]> {
   const { readdir } = await import('node:fs/promises');
   const files = await readdir(SESSIONS_DIR);
   const sessions: Session[] = [];
-  for (const f of files.filter(f => f.endsWith('.json')).sort().reverse()) {
+  for (const f of files
+    .filter((f) => f.endsWith('.json'))
+    .sort()
+    .reverse()) {
     try {
       const data = await readFile(join(SESSIONS_DIR, f), 'utf-8');
       sessions.push(JSON.parse(data));

@@ -72,7 +72,8 @@ export const tools: ToolDefinition[] = [
   },
   {
     name: 'Read',
-    description: 'Read the contents of a file or list a directory. For files, optionally specify offset and limit for large files. For directories, returns a listing with entries sorted alphabetically (directories first).',
+    description:
+      'Read the contents of a file or list a directory. For files, optionally specify offset and limit for large files. For directories, returns a listing with entries sorted alphabetically (directories first).',
     parameters: {
       type: 'object',
       properties: {
@@ -108,7 +109,8 @@ export const tools: ToolDefinition[] = [
   },
   {
     name: 'Edit',
-    description: 'Edit a file by replacing exact text. Use for surgical code changes. Provide enough context in oldString for a unique match. Use replaceAll for renaming across the file.',
+    description:
+      'Edit a file by replacing exact text. Use for surgical code changes. Provide enough context in oldString for a unique match. Use replaceAll for renaming across the file.',
     parameters: {
       type: 'object',
       properties: {
@@ -179,7 +181,11 @@ export const tools: ToolDefinition[] = [
             type: 'object',
             properties: {
               content: { type: 'string', description: 'Brief description of the task' },
-              status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'], description: 'Current status' },
+              status: {
+                type: 'string',
+                enum: ['pending', 'in_progress', 'completed', 'cancelled'],
+                description: 'Current status',
+              },
               priority: { type: 'string', enum: ['high', 'medium', 'low'], description: 'Priority level' },
             },
             required: ['content', 'status', 'priority'],
@@ -192,7 +198,7 @@ export const tools: ToolDefinition[] = [
     execute: async (args) => {
       const todos = (args['todos'] as Array<Record<string, unknown>>) ?? [];
       return executeTodoWrite(
-        todos.map(t => ({
+        todos.map((t) => ({
           content: String(t.content ?? ''),
           status: (t.status as 'pending' | 'in_progress' | 'completed' | 'cancelled') || 'pending',
           priority: (t.priority as 'high' | 'medium' | 'low') || 'medium',
@@ -287,7 +293,7 @@ export const tools: ToolDefinition[] = [
 
 export function getTool(name: string): ToolDefinition | undefined {
   // Check built-in tools first, then MCP tools
-  return tools.find(t => t.name === name) ?? mcpTools.find(t => t.name === name);
+  return tools.find((t) => t.name === name) ?? mcpTools.find((t) => t.name === name);
 }
 
 export function toolSchemas(): Array<{
@@ -296,7 +302,7 @@ export function toolSchemas(): Array<{
   input_schema: { type: 'object'; properties?: unknown; required?: string[]; [k: string]: unknown };
 }> {
   const allTools = [...tools, ...mcpTools];
-  return allTools.map(t => ({
+  return allTools.map((t) => ({
     name: t.name,
     description: t.description,
     input_schema: t.parameters as { type: 'object'; properties?: unknown; required?: string[]; [k: string]: unknown },

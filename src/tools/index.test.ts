@@ -135,7 +135,7 @@ describe('executeTodoWrite', () => {
     // Completed items should be removed from active list
     const todos = getTodos();
     expect(todos.length).toBe(2);
-    expect(todos.some(t => t.content === 'Task C')).toBe(false);
+    expect(todos.some((t) => t.content === 'Task C')).toBe(false);
   });
 
   it('normalizes invalid status/priority', async () => {
@@ -158,8 +158,8 @@ describe('executeTodoWrite', () => {
     await executeTodoWrite([{ content: 'Task 1', status: 'in_progress', priority: 'high' }]);
     await executeTodoWrite([{ content: 'Task 2', status: 'pending', priority: 'medium' }]);
     const todos = getTodos();
-    expect(todos.find(t => t.content === 'Task 1')).toBeDefined();
-    expect(todos.find(t => t.content === 'Task 2')).toBeDefined();
+    expect(todos.find((t) => t.content === 'Task 1')).toBeDefined();
+    expect(todos.find((t) => t.content === 'Task 2')).toBeDefined();
   });
 });
 

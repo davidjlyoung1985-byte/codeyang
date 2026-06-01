@@ -25,7 +25,7 @@ export async function executeRead(filePath: string, offset?: number, limit?: num
       lines.push(`${entry.name}${suffix}`);
     }
     const total = entries.length;
-    const dirs = entries.filter(e => e.isDirectory()).length;
+    const dirs = entries.filter((e) => e.isDirectory()).length;
     const files = total - dirs;
     return lines.length > 0
       ? `${lines.join('\n')}\n\n${dirs} director${dirs === 1 ? 'y' : 'ies'}, ${files} file${files === 1 ? '' : 's'}`

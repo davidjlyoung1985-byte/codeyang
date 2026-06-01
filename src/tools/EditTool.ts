@@ -21,25 +21,60 @@ export async function executeEdit(
     if (!content.includes(oldString)) {
       throw new Error(`oldString not found in ${filePath}`);
     }
+    const beforeCount = countMatches(content, oldString);
     const updated = content.replaceAll(oldString, newString);
     await writeFile(resolved, updated, 'utf-8');
-    const count = (content.match(new RegExp(escapeRegex(oldString), 'g')) || []).length;
-    return `Replaced ${count} occurrence(s) in ${filePath}`;
+
+    // Verify the write was applied correctly
+    const verify = await readFile(resolved, 'utf-8');
+    const afterCount = countMatches(verify, oldString);
+    if (afterCount > 0) {
+      throw new Error(`Replace verification failed: ${afterCount} occurrence(s) of oldString remain in ${filePath}`);
+    }
+
+    return `Replaced ${beforeCount} occurrence(s) in ${filePath}`;
   }
 
+  // Single replace — must match exactly once
   const idx = content.indexOf(oldString);
   if (idx === -1) {
     throw new Error(`oldString not found in ${filePath}`);
   }
   if (content.indexOf(oldString, idx + 1) !== -1) {
-    throw new Error(`Found multiple matches for oldString in ${filePath}. Provide more surrounding context or use replaceAll.`);
+    throw new Error(
+      `Found multiple matches for oldString in ${filePath}. Provide more surrounding context or use replaceAll.`,
+    );
   }
 
-  const updated = content.replace(oldString, newString);
+  const updated = content.slice(0, idx) + newString + content.slice(idx + oldString.length);
   await writeFile(resolved, updated, 'utf-8');
+
+  // Verify the replacement took effect (guards against TOCTOU races)
+  const verify = await readFile(resolved, 'utf-8');
+  if (verify.includes(oldString)) {
+    throw new Error(
+      `Replace verification failed: oldString still present in ${filePath}. File may have been modified concurrently.`,
+    );
+  }
+  if (!verify.includes(newString)) {
+    throw new Error(
+      `Replace verification failed: newString not found in ${filePath}. File may have been modified concurrently.`,
+    );
+  }
+
   return `Edited ${filePath} (1 occurrence)`;
 }
 
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/**
+ * Count non-overlapping occurrences of a substring
+ */
+function countMatches(str: string, search: string): number {
+  if (!search) return 0;
+  let count = 0;
+  let pos = 0;
+  while ((pos = str.indexOf(search, pos)) !== -1) {
+    count++;
+    pos += search.length;
+  }
+  return count;
 }

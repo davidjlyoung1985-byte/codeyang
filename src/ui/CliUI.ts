@@ -77,7 +77,10 @@ function renderMarkdownLine(line: string): string {
   out = out.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_m: string, text: string) => c.italic(text));
 
   // Links: [text](url) — show text, dim url
-  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m: string, text: string, url: string) => `${text} ${c.dim(`(${url})`)}`);
+  out = out.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    (_m: string, text: string, url: string) => `${text} ${c.dim(`(${url})`)}`,
+  );
 
   // Headers: ### text, ## text, # text
   if (/^#{1,3}\s/.test(out)) {
@@ -213,7 +216,12 @@ export class CliUI {
   welcome() {
     console.log('');
     console.log(c.bold(c.green('  ╔══════════════════════════════════════════════╗')));
-    console.log(c.bold(c.green('  ║')) + c.bold(c.white('  CodeYang  ')) + c.dim('AI Coding Agent') + c.bold(c.green('            ║')));
+    console.log(
+      c.bold(c.green('  ║')) +
+        c.bold(c.white('  CodeYang  ')) +
+        c.dim('AI Coding Agent') +
+        c.bold(c.green('            ║')),
+    );
     console.log(c.bold(c.green('  ╚══════════════════════════════════════════════╝')));
     console.log('');
     console.log(c.dim('  /clear  Reset conversation'));

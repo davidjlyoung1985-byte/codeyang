@@ -24,7 +24,9 @@ export class McpManager {
   }
 
   /** Connect to all configured servers and discover tools. Returns any errors per server. */
-  async initialize(onStatus?: (serverName: string, status: 'connecting' | 'connected' | 'error', details: string) => void): Promise<void> {
+  async initialize(
+    onStatus?: (serverName: string, status: 'connecting' | 'connected' | 'error', details: string) => void,
+  ): Promise<void> {
     if (this.initialized) {
       return;
     }
@@ -93,7 +95,7 @@ export class McpManager {
 
   /** Shutdown all servers */
   async shutdown(): Promise<void> {
-    const disconnects = Array.from(this.clients.values()).map(c => c.disconnect());
+    const disconnects = Array.from(this.clients.values()).map((c) => c.disconnect());
     await Promise.allSettled(disconnects);
     this.clients.clear();
     this._allTools = [];

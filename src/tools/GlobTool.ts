@@ -2,6 +2,8 @@ import { readdir } from 'node:fs/promises';
 import { join, isAbsolute, relative } from 'node:path';
 import { type Dirent } from 'node:fs';
 
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.next', 'build', '.turbo', 'coverage', '__pycache__']);
+
 /**
  * Convert a glob pattern to a regex.
  * Supports: **, *, ?, [...], [!...]
@@ -18,10 +20,13 @@ function globToRegex(pattern: string): RegExp {
         if (pattern[i + 1] === '*') {
           // ** matches zero or more directories
           i += 2;
+          // Consume optional trailing /
           if (i < pattern.length && pattern[i] === '/') {
-            i++; // skip trailing /
+            i++;
           }
-          regexStr += '.*';
+          // If ** is followed by more pattern, it matches anything across dirs.
+          // If ** is the last token, it also matches everything (the trailing / was stripped).
+          regexStr += i < pattern.length ? '(.*/)?' : '.*';
         } else {
           // * matches anything except /
           i++;
@@ -30,33 +35,42 @@ function globToRegex(pattern: string): RegExp {
         break;
 
       case '?':
-        // ? matches any single character except /
         i++;
         regexStr += '[^/]';
         break;
 
       case '[': {
-        // Character class [...]
         const end = pattern.indexOf(']', i);
         if (end === -1) {
-          // No closing bracket, treat as literal
           regexStr += '\\[';
           i++;
         } else {
-          // Extract the character class content
-          const classContent = pattern.slice(i + 1, end);
-          if (classContent.startsWith('!')) {
-            // [!...] is negated character class
-            regexStr += '[^' + classContent.slice(1) + ']';
-          } else {
-            regexStr += '[' + classContent + ']';
+          let classContent = pattern.slice(i + 1, end);
+
+          // Handle negation: [!...] or [^...]
+          let negate = false;
+          if (classContent.startsWith('!') || classContent.startsWith('^')) {
+            negate = true;
+            classContent = classContent.slice(1);
           }
+
+          // If class is empty after negation (e.g., [!] or [^]), treat as literal brackets
+          if (!classContent) {
+            regexStr += '\\[' + pattern.slice(i + 1, end) + '\\]';
+            i = end + 1;
+            break;
+          }
+
+          // Escape regex metacharacters inside the class except for internal [
+          // Note: ] as first char in class must be literal: []] matches ]
+          const escaped = classContent.replace(/\\/g, '\\\\').replace(/\]/g, '\\]').replace(/\^/g, '\\^');
+          regexStr += negate ? `[^${escaped}]` : `[${escaped}]`;
           i = end + 1;
         }
         break;
       }
 
-      // Escaped regex metacharacters
+      // Escape regex metacharacters
       case '.':
       case '^':
       case '$':
@@ -75,6 +89,11 @@ function globToRegex(pattern: string): RegExp {
         regexStr += ch;
         i++;
     }
+  }
+
+  // Strip trailing / (folder patterns like "src/" should match files inside)
+  if (regexStr.endsWith('/')) {
+    regexStr = regexStr.slice(0, -1) + '(/.*)?';
   }
 
   return new RegExp(`^${regexStr}$`);
@@ -105,7 +124,8 @@ export async function executeGlob(pattern: string, root?: string): Promise<strin
         results.push(rel);
       }
 
-      if (entry.isDirectory()) {
+      if (entry.isDirectory() && !entry.name.startsWith('.') && !SKIP_DIRS.has(entry.name)) {
+        // Only recurse if the pattern could match deeper
         if (pattern.includes('**')) {
           await walk(full);
         } else if (pattern.includes('/')) {

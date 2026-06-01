@@ -17,24 +17,26 @@ export function resetTodos(): void {
 
 export async function executeTodoWrite(todos: TodoItem[]): Promise<string> {
   if (!Array.isArray(todos) || todos.length === 0) {
-    return 'Usage: Provide a non-empty array of todo items, each with:\n' +
+    return (
+      'Usage: Provide a non-empty array of todo items, each with:\n' +
       '  - content: description of the task\n' +
       '  - status: "pending" | "in_progress" | "completed" | "cancelled"\n' +
-      '  - priority: "high" | "medium" | "low"';
+      '  - priority: "high" | "medium" | "low"'
+    );
   }
 
   // Validate and normalize incoming todos
   const validStatuses = new Set(['pending', 'in_progress', 'completed', 'cancelled']);
   const validPriorities = new Set(['high', 'medium', 'low']);
 
-  const normalized: TodoItem[] = todos.map(t => ({
+  const normalized: TodoItem[] = todos.map((t) => ({
     content: String(t.content ?? ''),
     status: validStatuses.has(t.status) ? t.status : 'pending',
     priority: validPriorities.has(t.priority) ? t.priority : 'medium',
   }));
 
   // Merge with existing todos: update by content match, add new ones
-  const existingMap = new Map(currentTodos.map(t => [t.content, t]));
+  const existingMap = new Map(currentTodos.map((t) => [t.content, t]));
   for (const item of normalized) {
     existingMap.set(item.content, item);
   }
@@ -43,14 +45,12 @@ export async function executeTodoWrite(todos: TodoItem[]): Promise<string> {
   const prevTodos = currentTodos;
 
   // Start with new normalized items (excluding completed/cancelled)
-  currentTodos = normalized.filter(t =>
-    t.status !== 'completed' && t.status !== 'cancelled'
-  );
+  currentTodos = normalized.filter((t) => t.status !== 'completed' && t.status !== 'cancelled');
 
   // Also keep any existing items not in the new list that are in_progress or pending
   for (const item of prevTodos) {
     if (item.status === 'completed' || item.status === 'cancelled') continue;
-    if (!normalized.some(t => t.content === item.content)) {
+    if (!normalized.some((t) => t.content === item.content)) {
       currentTodos.push(item);
     }
   }

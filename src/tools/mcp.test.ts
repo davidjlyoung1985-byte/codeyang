@@ -24,8 +24,8 @@ describe('McpManager', () => {
 
     it('accepts multiple servers', () => {
       mgr.configure({
-        'srv1': { command: 'node', args: ['srv1.js'] },
-        'srv2': { command: 'python', args: ['srv2.py'] },
+        srv1: { command: 'node', args: ['srv1.js'] },
+        srv2: { command: 'python', args: ['srv2.py'] },
       });
       expect(mgr.serverNames).toHaveLength(2);
       expect(mgr.serverNames).toContain('srv1');
@@ -53,7 +53,7 @@ describe('McpManager', () => {
     });
 
     it('parses qualified name correctly for unconnected server', async () => {
-      mgr.configure({ 'demo': { command: 'node', args: ['demo.js'] } });
+      mgr.configure({ demo: { command: 'node', args: ['demo.js'] } });
       const result = await mgr.callTool('mcp__demo__search', { query: 'test' });
       // Server is configured but never initialized (not in clients map), so "not found"
       expect(result.isError).toBe(true);
@@ -66,7 +66,7 @@ describe('McpManager', () => {
     });
 
     it('returns empty array when only configured but not initialized', () => {
-      mgr.configure({ 'srv': { command: 'node', args: ['srv.js'] } });
+      mgr.configure({ srv: { command: 'node', args: ['srv.js'] } });
       expect(mgr.allTools).toHaveLength(0);
     });
   });
@@ -77,7 +77,7 @@ describe('McpManager', () => {
     });
 
     it('returns true after configure with servers', () => {
-      mgr.configure({ 'srv': { command: 'node', args: ['srv.js'] } });
+      mgr.configure({ srv: { command: 'node', args: ['srv.js'] } });
       expect(mgr.hasServers).toBe(true);
     });
   });
@@ -117,7 +117,10 @@ describe('registry MCP integration', () => {
       ];
     }
 
-    override async callTool(qualifiedName: string, args: Record<string, unknown>): Promise<{ output: string; isError: boolean }> {
+    override async callTool(
+      qualifiedName: string,
+      args: Record<string, unknown>,
+    ): Promise<{ output: string; isError: boolean }> {
       if (qualifiedName === 'mcp__mock-srv__hello') {
         return { output: `Hello, ${args['name']}!`, isError: false };
       }
@@ -137,7 +140,7 @@ describe('registry MCP integration', () => {
     const schemas = toolSchemas();
     expect(schemas.length).toBeGreaterThan(0);
     // Verify no MCP-prefixed tools
-    const mcpNames = schemas.map(s => s.name).filter(n => n.startsWith('mcp__'));
+    const mcpNames = schemas.map((s) => s.name).filter((n) => n.startsWith('mcp__'));
     expect(mcpNames).toHaveLength(0);
   });
 
@@ -147,7 +150,7 @@ describe('registry MCP integration', () => {
     refreshMcpTools();
 
     const schemas = toolSchemas();
-    const mcpNames = schemas.map(s => s.name).filter(n => n.startsWith('mcp__'));
+    const mcpNames = schemas.map((s) => s.name).filter((n) => n.startsWith('mcp__'));
 
     expect(mcpNames).toHaveLength(2);
     expect(mcpNames).toContain('mcp__mock-srv__hello');
@@ -197,8 +200,8 @@ describe('registry MCP integration', () => {
 
     expect(
       toolSchemas()
-        .map(s => s.name)
-        .filter(n => n.startsWith('mcp__')),
+        .map((s) => s.name)
+        .filter((n) => n.startsWith('mcp__')),
     ).toHaveLength(2);
 
     setMcpManager(null);
@@ -206,8 +209,8 @@ describe('registry MCP integration', () => {
 
     expect(
       toolSchemas()
-        .map(s => s.name)
-        .filter(n => n.startsWith('mcp__')),
+        .map((s) => s.name)
+        .filter((n) => n.startsWith('mcp__')),
     ).toHaveLength(0);
   });
 

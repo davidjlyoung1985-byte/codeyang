@@ -20,12 +20,24 @@ export class Agent {
   private questionResolve: ((answer: string) => void) | null = null;
   private maxRetries = 3;
 
+  // Tool result cache — avoid re-reading unchanged files within a session
+  private toolCache = new Map<string, { result: string; timestamp: number }>();
+  private static CACHE_TTL_MS = 5_000;
+
   constructor() {
     this.client = new Anthropic({ apiKey: config.apiKey });
   }
 
+  private cacheKey(name: string, args: Record<string, unknown>): string {
+    return `${name}:${JSON.stringify(args)}`;
+  }
+
+  private invalidateCache() {
+    this.toolCache.clear();
+  }
+
   private async sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private async withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
@@ -36,15 +48,15 @@ export class Agent {
         const isRetryable =
           err instanceof Error &&
           (err.message.includes('rate_limit') ||
-           err.message.includes('Rate exceeded') ||
-           err.message.includes('429') ||
-           err.message.includes('529') ||
-           err.message.includes('server error') ||
-           err.message.includes('503') ||
-           err.message.includes('timeout') ||
-           err.message.includes('network') ||
-           err.message.includes('ECONNRESET') ||
-           err.message.includes('ETIMEDOUT'));
+            err.message.includes('Rate exceeded') ||
+            err.message.includes('429') ||
+            err.message.includes('529') ||
+            err.message.includes('server error') ||
+            err.message.includes('503') ||
+            err.message.includes('timeout') ||
+            err.message.includes('network') ||
+            err.message.includes('ECONNRESET') ||
+            err.message.includes('ETIMEDOUT'));
 
         if (attempt < this.maxRetries && isRetryable) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30_000);
@@ -69,11 +81,20 @@ export class Agent {
   /** Clear conversation history and start fresh */
   reset() {
     this.history = [];
+    this.invalidateCache();
   }
 
   answerQuestion(answer: string) {
     if (this.questionResolve) {
       this.questionResolve(answer);
+      this.questionResolve = null;
+    }
+  }
+
+  /** Cancel a pending question (called on SIGINT to prevent hanging) */
+  cancelQuestion() {
+    if (this.questionResolve) {
+      this.questionResolve('[Cancelled by user]');
       this.questionResolve = null;
     }
   }
@@ -89,10 +110,17 @@ export class Agent {
 
   async run(prompt: string): Promise<void> {
     const messages = this.jsonClone(this.history);
-    messages.push({ role: 'user', content: prompt });
+
+    // Pre-analysis: inject planning guidance for complex prompts
+    const isComplex = prompt.length > 200 || (prompt.match(/[。；;.!?？]/g) || []).length >= 2 || prompt.includes('\n');
+    const userMsg = isComplex
+      ? `Task: ${prompt}\n\nFirst: briefly outline your approach (what you'll do step by step).\nThen: execute.`
+      : prompt;
+
+    messages.push({ role: 'user', content: userMsg });
     this.cbs.onUserMessage?.(prompt);
 
-    // Refresh MCP tools before each turn (catches newly connected servers)
+    // Refresh MCP tools once at session start (servers don't change mid-session)
     refreshMcpTools();
 
     setToolContext({
@@ -109,78 +137,88 @@ export class Agent {
         process.stderr.write(`\n[DEBUG turn ${turn}] messages count: ${messages.length}\n`);
       }
 
-      const streamResult = await this.withRetry(
-        async () => {
-          const s = this.client.messages.stream({
-            model: config.model,
-            max_tokens: config.maxTokens,
-            temperature: 0.5,
-            system: config.systemPrompt,
-            messages,
-            tools: toolSchemas(),
-          });
+      const streamResult = await this.withRetry(async () => {
+        const s = this.client.messages.stream({
+          model: config.model,
+          max_tokens: config.maxTokens,
+          temperature: 0.5,
+          system: config.systemPrompt,
+          messages,
+          tools: toolSchemas(),
+        });
 
-          const blocks: Array<{ type: string; text?: string; id?: string; name?: string; input?: unknown; input_json?: string }> = [];
-          const tcList: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
-          const textParts: string[] = [];
-          let blockIdx = -1;
+        const blocks: Array<{
+          type: string;
+          text?: string;
+          id?: string;
+          name?: string;
+          input?: unknown;
+          input_json?: string;
+        }> = [];
+        const tcList: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
+        const textParts: string[] = [];
+        let blockIdx = -1;
 
-          for await (const event of s) {
-            switch (event.type) {
-              case 'content_block_start':
-                blockIdx = event.index;
-                blocks[blockIdx] = event.content_block as { type: string; text?: string; id?: string; name?: string; input?: unknown };
-                break;
+        for await (const event of s) {
+          switch (event.type) {
+            case 'content_block_start':
+              blockIdx = event.index;
+              blocks[blockIdx] = event.content_block as {
+                type: string;
+                text?: string;
+                id?: string;
+                name?: string;
+                input?: unknown;
+              };
+              break;
 
-              case 'content_block_delta':
-                if (event.delta?.type === 'text_delta' && event.delta.text) {
-                  this.cbs.onAgentDelta?.(event.delta.text);
-                  textParts.push(event.delta.text);
-                  if (blocks[blockIdx]?.type === 'text') {
-                    blocks[blockIdx].text = (blocks[blockIdx].text || '') + event.delta.text;
-                  }
-                } else if (event.delta?.type === 'input_json_delta' && event.delta.partial_json) {
-                  if (blocks[blockIdx]?.type === 'tool_use') {
-                    blocks[blockIdx].input_json = (blocks[blockIdx].input_json || '') + event.delta.partial_json;
-                  }
+            case 'content_block_delta':
+              if (event.delta?.type === 'text_delta' && event.delta.text) {
+                this.cbs.onAgentDelta?.(event.delta.text);
+                textParts.push(event.delta.text);
+                if (blocks[blockIdx]?.type === 'text') {
+                  blocks[blockIdx].text = (blocks[blockIdx].text || '') + event.delta.text;
                 }
-                break;
-
-              case 'content_block_stop':
+              } else if (event.delta?.type === 'input_json_delta' && event.delta.partial_json) {
                 if (blocks[blockIdx]?.type === 'tool_use') {
-                  try {
-                    blocks[blockIdx].input = JSON.parse(blocks[blockIdx].input_json || '{}');
-                  } catch {
-                    blocks[blockIdx].input = {};
-                  }
+                  blocks[blockIdx].input_json = (blocks[blockIdx].input_json || '') + event.delta.partial_json;
                 }
-                break;
-            }
-          }
+              }
+              break;
 
-          for (const b of blocks) {
-            if (!b) continue;
-            if (b.type === 'tool_use') {
-              tcList.push({
-                id: b.id!,
-                name: b.name!,
-                input: this.jsonClone(b.input || {}) as Record<string, unknown>,
-              });
-            }
+            case 'content_block_stop':
+              if (blocks[blockIdx]?.type === 'tool_use') {
+                try {
+                  blocks[blockIdx].input = JSON.parse(blocks[blockIdx].input_json || '{}');
+                } catch {
+                  blocks[blockIdx].input = {};
+                }
+              }
+              break;
           }
+        }
 
-          return { blocks, toolCalls: tcList, assistantText: textParts.join('') };
-        },
-        'Anthropic streaming API call',
-      );
+        for (const b of blocks) {
+          if (!b) continue;
+          if (b.type === 'tool_use') {
+            tcList.push({
+              id: b.id!,
+              name: b.name!,
+              input: this.jsonClone(b.input || {}) as Record<string, unknown>,
+            });
+          }
+        }
+
+        return { blocks, toolCalls: tcList, assistantText: textParts.join('') };
+      }, 'Anthropic streaming API call');
 
       const { blocks: contentBlocks, toolCalls, assistantText } = streamResult;
 
       const assistantContent: Array<
         { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown }
       > = contentBlocks
-        .filter(b => b && (b.type === 'text' || b.type === 'tool_use'))
-        .map(b => {
+        .filter((b) => b && (b.type === 'text' || b.type === 'tool_use'))
+        .map((b) => {
           if (b.type === 'text') return { type: 'text' as const, text: b.text || '' };
           return { type: 'tool_use' as const, id: b.id!, name: b.name!, input: this.jsonClone(b.input || {}) };
         });
@@ -196,53 +234,84 @@ export class Agent {
         break;
       }
 
-      // Execute tools — maintain positional correspondence with toolCalls
+      // Execute tools — parallel for speed, Question handled first
       const toolResults: ToolResult[] = [];
-      const toolResultIds: string[] = []; // parallel array: result index → tool_use_id
+      const toolResultIds: string[] = [];
 
+      // Handle Question tool first (it blocks for user input)
       for (let i = 0; i < toolCalls.length; i++) {
         const tc = toolCalls[i];
-        toolResultIds[i] = tc.id; // always record the tool_use_id for this position
-
-        const tool = getTool(tc.name);
-        if (!tool) {
-          toolResults.push({ tool: tc.name, input: tc.input, output: `Unknown: ${tc.name}`, isError: true });
-          continue;
-        }
+        toolResultIds[i] = tc.id;
 
         if (tc.name === 'Question') {
           const q = String(tc.input['question'] ?? '');
           const options = Array.isArray(tc.input['options'])
-            ? tc.input['options'] as Array<{ label: string; description: string }>
+            ? (tc.input['options'] as Array<{ label: string; description: string }>)
             : undefined;
           this.cbs.onQuestion?.(q, options);
-          const answer = await new Promise<string>(resolve => { this.questionResolve = resolve; });
-          toolResults.push({ tool: tc.name, input: tc.input, output: answer, isError: false });
-          continue;
+          const answer = await new Promise<string>((resolve) => {
+            this.questionResolve = resolve;
+          });
+          toolResults[i] = { tool: tc.name, input: tc.input, output: answer, isError: false };
+        }
+      }
+
+      // Execute all non-Question tools in parallel
+      const parallelTasks = toolCalls.map(async (tc, i) => {
+        if (tc.name === 'Question') return; // already handled above
+
+        toolResultIds[i] = tc.id;
+
+        const tool = getTool(tc.name);
+        if (!tool) {
+          toolResults[i] = { tool: tc.name, input: tc.input, output: `Unknown: ${tc.name}`, isError: true };
+          return;
         }
 
         this.cbs.onToolStart?.(tc.name, tc.input);
 
+        // Check cache for read-only tools (Read, Glob)
+        const cacheable = tc.name === 'Read' || tc.name === 'Glob';
+        if (cacheable) {
+          const key = this.cacheKey(tc.name, tc.input);
+          const cached = this.toolCache.get(key);
+          if (cached && Date.now() - cached.timestamp < Agent.CACHE_TTL_MS) {
+            toolResults[i] = { tool: tc.name, input: tc.input, output: cached.result, isError: false };
+            return;
+          }
+        }
+
         try {
           const output = await tool.execute(tc.input);
-          toolResults.push({ tool: tc.name, input: tc.input, output, isError: false });
+          toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
           this.cbs.onToolResult?.(tc.name, output, false);
+
+          // Cache successful reads
+          if (cacheable) {
+            this.toolCache.set(this.cacheKey(tc.name, tc.input), { result: output, timestamp: Date.now() });
+          }
+
+          // Invalidate cache on writes
+          if (tc.name === 'Write' || tc.name === 'Edit') {
+            this.invalidateCache();
+          }
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err);
-          toolResults.push({ tool: tc.name, input: tc.input, output: errorMsg, isError: true });
+          toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
           this.cbs.onToolResult?.(tc.name, errorMsg, true);
         }
-      }
+      });
+
+      await Promise.all(parallelTasks);
 
       // Map results to tool_use_ids by position (handles duplicate tool names correctly)
-      const toolResultContent: Array<
-        { type: 'tool_result'; tool_use_id: string; content: string; is_error: boolean }
-      > = toolResults.map((tr, i) => ({
-        type: 'tool_result',
-        tool_use_id: toolResultIds[i] ?? 'unknown',
-        content: tr.output,
-        is_error: tr.isError,
-      }));
+      const toolResultContent: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error: boolean }> =
+        toolResults.map((tr, i) => ({
+          type: 'tool_result',
+          tool_use_id: toolResultIds[i] ?? 'unknown',
+          content: tr.output,
+          is_error: tr.isError,
+        }));
 
       messages.push({ role: 'user', content: toolResultContent });
       this.history = this.jsonClone(messages);
@@ -258,7 +327,7 @@ export class Agent {
         if (m.toolResults && m.toolResults.length > 0) {
           // Reconstruct tool_result blocks for session resumption
           const blocks: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }> =
-            m.toolResults.map(tr => ({
+            m.toolResults.map((tr) => ({
               type: 'tool_result',
               tool_use_id: tr.tool || 'unknown',
               content: tr.output,
@@ -285,21 +354,21 @@ export class Agent {
 
   /** Serialize history preserving tool_result blocks for session persistence */
   exportMessages(): Message[] {
-    return this.history.map(m => {
+    return this.history.map((m) => {
       if (typeof m.content === 'string') {
         return { role: m.role as 'user' | 'assistant', content: m.content };
       }
 
       // Extract text parts
       const textParts = m.content
-        .filter(b => b.type === 'text')
-        .map(b => (b as { type: 'text'; text: string }).text)
+        .filter((b) => b.type === 'text')
+        .map((b) => (b as { type: 'text'; text: string }).text)
         .join('');
 
       // Extract tool_use parts
       const toolUseParts = m.content
-        .filter(b => b.type === 'tool_use')
-        .map(b => ({
+        .filter((b) => b.type === 'tool_use')
+        .map((b) => ({
           id: (b as { id: string }).id,
           name: (b as { name: string }).name,
           args: (b as { input: Record<string, unknown> }).input,
@@ -307,8 +376,8 @@ export class Agent {
 
       // Extract tool_result parts — critical for session resumption
       const toolResultParts = m.content
-        .filter(b => b.type === 'tool_result')
-        .map(b => {
+        .filter((b) => b.type === 'tool_result')
+        .map((b) => {
           const tr = b as { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
           return {
             tool: tr.tool_use_id,
@@ -321,8 +390,8 @@ export class Agent {
       return {
         role: m.role as 'user' | 'assistant',
         content: textParts,
-        toolCalls: toolUseParts.length > 0 ? toolUseParts as ToolCall[] : undefined,
-        toolResults: toolResultParts.length > 0 ? toolResultParts as ToolResult[] : undefined,
+        toolCalls: toolUseParts.length > 0 ? (toolUseParts as ToolCall[]) : undefined,
+        toolResults: toolResultParts.length > 0 ? (toolResultParts as ToolResult[]) : undefined,
       };
     });
   }
