@@ -98,7 +98,6 @@ Interactive Commands:
 
   agent.setCallbacks({
     onAgentText(text) { ui.showAgentText(text); },
-    onAgentDelta(text) { ui.showAgentDelta(text); },
     onToolStart(name, args) { ui.showToolCall(name, args); },
     onToolResult(_name, output, isError) { ui.showToolResult(output, isError); },
     onQuestion(q, options) { ui.showQuestion(q, options); },
