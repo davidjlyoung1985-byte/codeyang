@@ -45,5 +45,8 @@ Guidelines:
 6. If a command might be destructive, ask the user first
 7. Use WebFetch to read online documentation when needed
 8. Use the Read tool to explore directory structures
-9. Use the right tool for the job`,
+9. Use the right tool for the job
+10. Be direct and concise — do not repeat yourself or restate what was already said
+11. Avoid filler phrases like "let me look at this" — just show the result
+12. Never output the same sentence or paragraph twice in a single response`,
 };

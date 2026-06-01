@@ -1,5 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
-import { stat } from 'node:fs/promises';
+import { readFile, writeFile, stat } from 'node:fs/promises';
 import { join, isAbsolute } from 'node:path';
 
 export async function executeEdit(

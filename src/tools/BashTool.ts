@@ -13,7 +13,8 @@ export async function executeBash(command: string, cwd?: string): Promise<string
   const stderr = result.stderr?.trim() || '';
 
   if (result.exitCode === 0) {
-    return stdout || '(no output)';
+    const output = stdout || '(no output)';
+    return stderr ? `${output}\n\n(stderr):\n${stderr}` : output;
   }
 
   const parts: string[] = [];

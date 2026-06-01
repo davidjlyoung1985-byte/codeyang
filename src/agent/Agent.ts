@@ -111,6 +111,7 @@ export class Agent {
           const s = this.client.messages.stream({
             model: config.model,
             max_tokens: config.maxTokens,
+            temperature: 0.5,
             system: config.systemPrompt,
             messages,
             tools: toolSchemas(),

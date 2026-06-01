@@ -276,6 +276,7 @@ const toolDefinitions = [
   { name: 'WebFetch', description: 'Fetch content from a URL. Converts HTML to readable text.', input_schema: { type: 'object', properties: { url: { type: 'string', description: 'URL to fetch' }, format: { type: 'string', enum: ['text', 'html'] } }, required: ['url'] } },
   { name: 'TodoWrite', description: 'Create and maintain a structured task list for the current session.', input_schema: { type: 'object', properties: { todos: { type: 'array', items: { type: 'object', properties: { content: { type: 'string' }, status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'] }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['content', 'status', 'priority'] }, description: 'The updated todo list' } }, required: ['todos'] } },
   { name: 'Question', description: 'Ask the user a question when you need clarification.', input_schema: { type: 'object', properties: { question: { type: 'string', description: 'The question to ask' }, options: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, description: { type: 'string' } }, required: ['label', 'description'] }, description: 'Available choices' } }, required: ['question'] } },
+  { name: 'Task', description: 'Launch a sub-agent for complex multi-step tasks. Available in CLI mode only.', input_schema: { type: 'object', properties: { description: { type: 'string', description: 'Brief description of the task' }, prompt: { type: 'string', description: 'Detailed prompt for the sub-agent' }, subagent_type: { type: 'string', description: 'Type of sub-agent' } }, required: ['description', 'prompt'] } },
 ];
 
 async function executeTool(name, args, panel) {
@@ -288,6 +289,7 @@ async function executeTool(name, args, panel) {
     case 'Grep': return execGrep(String(args.pattern || ''), args.include ? String(args.include) : undefined, args.path ? String(args.path) : undefined);
     case 'WebFetch': return await execWebFetch(String(args.url || ''), args.format ? String(args.format) : undefined);
     case 'TodoWrite': return execTodoWrite(Array.isArray(args.todos) ? args.todos : []);
+    case 'Task': return 'Sub-agent tasks are available in the CodeYang CLI. Please execute this work directly using the available tools (Read, Grep, Bash, etc.).';
     case 'Question': {
       const q = String(args.question || '');
       const options = args.options;
@@ -322,12 +324,15 @@ async function runAgent(client, messages, panel) {
     'Help users with coding, debugging, code explanation, and project navigation.',
     'Use the available tools to read files, search code, run commands, write files, and more.',
     'Be concise but thorough. Use markdown formatting.',
+    'Do not repeat yourself or restate the obvious — say it once and move on.',
+    'Avoid filler and preamble — give the answer directly.',
   ].join('\n');
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
     const stream = client.messages.stream({
       model: getModel(),
       max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
+      temperature: 0.5,
       system: systemPrompt,
       messages,
       tools: toolDefinitions,

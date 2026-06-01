@@ -4,6 +4,7 @@
   "description": "Terminal-based AI coding agent powered by Claude",
   "type": "module",
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
     "codeyang": "./dist/index.js"
   },
@@ -15,8 +16,8 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "tsup src/index.ts --format esm --clean --outDir dist",
-    "dev": "tsup src/index.ts --format esm --watch --outDir dist",
+    "build": "tsup src/index.ts --format esm --clean --sourcemap --dts --outDir dist",
+    "dev": "tsup src/index.ts --format esm --clean --sourcemap --watch --outDir dist",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",

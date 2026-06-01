@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import crypto from 'node:crypto';
 import type { Session, Message } from '../types.js';
 
 const SESSIONS_DIR = join(homedir(), '.codeyang', 'sessions');
@@ -11,7 +12,7 @@ async function ensureDir() {
 
 export async function saveSession(messages: Message[]): Promise<string> {
   await ensureDir();
-  const id = Date.now().toString(36);
+  const id = `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
   const title = messages.find(m => m.role === 'user')?.content.slice(0, 50) || 'untitled';
   const session: Session = {
     id,
