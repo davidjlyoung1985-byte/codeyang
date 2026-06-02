@@ -4,8 +4,9 @@ import { CliUI } from './ui/CliUI.js';
 import { Agent } from './agent/Agent.js';
 import { config, loadLocalConfig, saveApiKey, getMcpServers } from './agent/config.js';
 import { saveSession, listSessions, loadSession, deleteSession } from './utils/sessionStore.js';
-import { setMcpManager, refreshMcpTools } from './tools/registry.js';
+import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
+import { detectQtProject, createQtTools } from './qt/index.js';
 
 const VERSION = '0.2.0';
 
@@ -103,8 +104,14 @@ Interactive Commands:
     setMcpManager(null);
   }
 
+  // Detect Qt project and inject Qt-specific knowledge/tools
+  const qtContext = await detectQtProject(process.cwd());
+  if (qtContext.isQtProject) {
+    registerQtTools(createQtTools(qtContext));
+  }
+
   const ui = new CliUI();
-  const agent = new Agent();
+  const agent = new Agent(qtContext);
   let running = false;
   let sigintCount = 0;
 

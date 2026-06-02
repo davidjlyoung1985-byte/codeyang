@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { Message, ToolCall, ToolResult } from '../types.js';
 import { config } from './config.js';
 import { toolSchemas, getTool, setToolContext, refreshMcpTools } from '../tools/registry.js';
+import type { QtContext } from '../qt/index.js';
 
 export interface AgentCallbacks {
   onUserMessage?: (text: string) => void;
@@ -28,7 +29,7 @@ export class Agent {
   private lastAssistantText = '';
   private repeatCount = 0;
 
-  constructor() {
+  constructor(private qtContext?: QtContext) {
     this.client = new Anthropic({ apiKey: config.apiKey });
   }
 
@@ -148,7 +149,7 @@ export class Agent {
           model: config.model,
           max_tokens: config.maxTokens,
           temperature: 0.5,
-          system: config.systemPrompt,
+          system: config.getSystemPrompt(this.qtContext),
           messages,
           tools: toolSchemas(),
         });

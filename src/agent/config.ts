@@ -2,6 +2,8 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { McpServerConfig } from '../mcp/types.js';
+import type { QtContext } from '../qt/index.js';
+import { buildQtPrompt } from '../qt/index.js';
 
 const CONFIG_DIR = join(homedir(), '.codeyang');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
@@ -28,12 +30,10 @@ export async function saveApiKey(key: string): Promise<void> {
   await writeFile(CONFIG_FILE, JSON.stringify(localConfig, null, 2), 'utf-8');
 }
 
-/** Get configured MCP servers from config file */
 export function getMcpServers(): Record<string, McpServerConfig> {
   return localConfig.mcpServers ?? {};
 }
 
-/** Save MCP server configuration to config file */
 export async function saveMcpServers(servers: Record<string, McpServerConfig>): Promise<void> {
   await mkdir(CONFIG_DIR, { recursive: true });
   localConfig.mcpServers = servers;
@@ -52,7 +52,16 @@ export const config = {
     );
   },
   maxTokens: Number(process.env['CODEYANG_MAX_TOKENS'] || process.env['CODEX_MAX_TOKENS'] || '8192'),
-  systemPrompt: `You are CodeYang, a fast, concise AI coding agent that solves problems and takes action.
+  getSystemPrompt(qtContext?: QtContext): string {
+    let prompt = BASE_SYSTEM_PROMPT;
+    if (qtContext?.isQtProject) {
+      prompt += '\n\n' + buildQtPrompt(qtContext);
+    }
+    return prompt;
+  },
+};
+
+const BASE_SYSTEM_PROMPT = `You are CodeYang, a fast, concise AI coding agent that solves problems and takes action.
 
 You have file, shell, search, and editing tools. Use them.
 
@@ -79,5 +88,4 @@ You have file, shell, search, and editing tools. Use them.
 ## Tools
 - Prefer reading existing files over creating new ones
 - Bash: safe commands first, ask before destructive operations
-- WebFetch: use for real docs, not speculation`,
-};
+- WebFetch: use for real docs, not speculation`;

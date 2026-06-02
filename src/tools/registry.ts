@@ -21,6 +21,7 @@ export interface ToolContext {
 let currentContext: ToolContext | null = null;
 let mcpManager: McpManager | null = null;
 const mcpTools: ToolDefinition[] = [];
+const qtTools: ToolDefinition[] = [];
 
 export function setToolContext(ctx: ToolContext | null) {
   currentContext = ctx;
@@ -51,6 +52,12 @@ export async function refreshMcpTools(): Promise<void> {
       },
     });
   }
+}
+
+/** Register Qt-specific tools. Called when a Qt project is detected. */
+export function registerQtTools(toolDefs: ToolDefinition[]): void {
+  qtTools.length = 0;
+  qtTools.push(...toolDefs);
 }
 
 export const tools: ToolDefinition[] = [
@@ -293,8 +300,9 @@ export const tools: ToolDefinition[] = [
 ];
 
 export function getTool(name: string): ToolDefinition | undefined {
-  // Check built-in tools first, then MCP tools
-  return tools.find((t) => t.name === name) ?? mcpTools.find((t) => t.name === name);
+  return (
+    tools.find((t) => t.name === name) ?? mcpTools.find((t) => t.name === name) ?? qtTools.find((t) => t.name === name)
+  );
 }
 
 export function toolSchemas(): Array<{
@@ -302,7 +310,7 @@ export function toolSchemas(): Array<{
   description: string;
   input_schema: { type: 'object'; properties?: unknown; required?: string[]; [k: string]: unknown };
 }> {
-  const allTools = [...tools, ...mcpTools];
+  const allTools = [...tools, ...mcpTools, ...qtTools];
   return allTools.map((t) => ({
     name: t.name,
     description: t.description,

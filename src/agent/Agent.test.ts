@@ -7,7 +7,7 @@ vi.mock('./config.js', () => ({
     model: 'claude-sonnet-4-20250514',
     apiKey: 'test-key-12345',
     maxTokens: 8192,
-    systemPrompt: 'You are a test agent.',
+    getSystemPrompt: vi.fn(() => 'You are a test agent.'),
   },
 }));
 
