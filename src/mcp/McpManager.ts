@@ -67,10 +67,17 @@ export class McpManager {
     return client.connected ? 'connected' : 'error';
   }
 
-  /** Force rediscovery of tools from all connected servers */
+  /** Re-discover tools from all connected MCP servers.
+   *  Each server's tools are refreshed via listTools(), so newly added tools
+   *  will be discovered without restarting the session. Returns updated tool list. */
   async refreshTools(): Promise<McpToolDef[]> {
-    // For now, tools are static after initial discovery.
-    // In the future, we could call listTools() again on each connected client.
+    const results = await Promise.allSettled(Array.from(this.clients.values()).map((c) => c.refreshTools()));
+    // Log any refresh failures (but don't block)
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        // Silently ignore individual server refresh failures
+      }
+    }
     this._allTools = this.collectTools();
     return this._allTools;
   }

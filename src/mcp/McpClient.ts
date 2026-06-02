@@ -58,6 +58,15 @@ export class McpClient {
     return this._tools;
   }
 
+  /** Re-discover tools from the server at runtime. Returns updated tool list. */
+  async refreshTools(): Promise<McpToolDef[]> {
+    if (!this.isConnected) {
+      return [];
+    }
+    this._tools = await this.discoverTools();
+    return this._tools;
+  }
+
   /** Discover tools from the server */
   private async discoverTools(): Promise<McpToolDef[]> {
     const result = await this.client.listTools();

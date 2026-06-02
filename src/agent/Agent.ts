@@ -126,8 +126,8 @@ export class Agent {
     messages.push({ role: 'user', content: userMsg });
     this.cbs.onUserMessage?.(prompt);
 
-    // Refresh MCP tools once at session start (servers don't change mid-session)
-    refreshMcpTools();
+    // Refresh MCP tools once at session start
+    await refreshMcpTools();
 
     setToolContext({
       anthropicClient: this.client,
@@ -232,19 +232,22 @@ export class Agent {
       messages.push({ role: 'assistant', content: assistantContent });
 
       if (assistantText) {
-        this.cbs.onAgentText?.(assistantText);
-
-        // Anti-repetition: break if the agent says the same thing repeatedly
+        // Anti-repetition: check BEFORE displaying to user.
+        // Break if the same text appears twice in a row (1 repeat).
         if (assistantText === this.lastAssistantText) {
           this.repeatCount++;
-          if (this.repeatCount >= 2) {
+          if (this.repeatCount >= 1) {
             this.cbs.onError?.('Agent loop detected — stopping to avoid repetition');
+            this.history = this.jsonClone(messages);
             break;
           }
         } else {
           this.repeatCount = 0;
         }
         this.lastAssistantText = assistantText;
+
+        // Display only after passing the repetition check
+        this.cbs.onAgentText?.(assistantText);
       }
 
       if (toolCalls.length === 0) {
@@ -283,6 +286,7 @@ export class Agent {
         const tool = getTool(tc.name);
         if (!tool) {
           toolResults[i] = { tool: tc.name, input: tc.input, output: `Unknown: ${tc.name}`, isError: true };
+          this.cbs.onToolResult?.(tc.name, `Unknown: ${tc.name}`, true);
           return;
         }
 
@@ -340,6 +344,10 @@ export class Agent {
 
   /** Restore history from saved messages including tool_result blocks */
   loadMessages(msgs: Message[]) {
+    // Reset anti-repetition state when loading a new session
+    this.lastAssistantText = '';
+    this.repeatCount = 0;
+
     for (const m of msgs) {
       if (m.role === 'user') {
         if (m.toolResults && m.toolResults.length > 0) {

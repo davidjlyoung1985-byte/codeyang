@@ -32,11 +32,12 @@ export function setMcpManager(mgr: McpManager | null) {
 }
 
 /** Rebuild the MCP tool list from the manager. Call after server init or tool refresh. */
-export function refreshMcpTools(): void {
+export async function refreshMcpTools(): Promise<void> {
   mcpTools.length = 0;
   if (!mcpManager) return;
 
-  for (const t of mcpManager.allTools) {
+  const discovered = await mcpManager.refreshTools();
+  for (const t of discovered) {
     mcpTools.push({
       name: t.qualifiedName,
       description: `[MCP:${t.serverName}] ${t.description}`,

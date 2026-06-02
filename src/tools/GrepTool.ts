@@ -1,7 +1,6 @@
 import { readFile, readdir } from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
 import { join, isAbsolute, relative } from 'node:path';
-import { execa } from 'execa';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.next', 'build', '.turbo', 'coverage', '__pycache__']);
 
@@ -41,6 +40,8 @@ function globToRegex(pattern: string): RegExp {
 /** Fast: try ripgrep if available. Returns null if rg not found or fails. */
 async function tryRipgrep(pattern: string, includeRegex: RegExp | null, base: string): Promise<string | null> {
   try {
+    // Dynamic import for execa — works in both ESM and CJS contexts
+    const { execa } = await import('execa');
     const args: string[] = ['-n', '-i', '--no-heading', '-m', '20'];
     if (includeRegex) {
       // Convert includeRegex to glob for rg
@@ -59,6 +60,9 @@ async function tryRipgrep(pattern: string, includeRegex: RegExp | null, base: st
       return result.stdout || '(no matches)';
     }
     if (result.exitCode === 1) {
+      // rg exit code 1 = no matches. But if stderr is not empty,
+      // rg wasn't found or had an error — fall back to Node.js grep.
+      if (result.stderr && result.stderr.length > 0) return null;
       return '(no matches)';
     }
     return null; // rg failed, fall back

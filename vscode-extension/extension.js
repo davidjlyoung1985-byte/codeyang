@@ -4,6 +4,17 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 
+// Shared tools from main project (CJS build)
+const {
+  executeRead: _executeRead,
+  executeWrite: _executeWrite,
+  executeEdit: _executeEdit,
+  executeGlob: _executeGlob,
+  executeGrep: _executeGrep,
+  executeWebFetch: _executeWebFetch,
+  executeTodoWrite: _executeTodoWrite,
+} = require('../../dist/cjs/tools.cjs');
+
 // ─── Configuration ──────────────────────────────────────────────────────────
 function getApiKey() {
   const cfgKey = vscode.workspace.getConfiguration('codeyang').get('apiKey', '');
@@ -39,34 +50,12 @@ function getWorkspaceRoot() {
   return folders && folders.length > 0 ? folders[0].uri.fsPath : process.cwd();
 }
 
-const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.next', 'build', '.turbo', 'coverage', '__pycache__']);
-
 // ─── Tools ──────────────────────────────────────────────────────────────────
-function execRead(filePath, offset, limit) {
+// Wrappers that resolve paths relative to workspace root before calling shared tools
+
+async function execRead(filePath, offset, limit) {
   const resolved = path.isAbsolute(filePath) ? filePath : path.join(getWorkspaceRoot(), filePath);
-  if (!fs.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
-  const st = fs.statSync(resolved);
-  if (st.isDirectory()) {
-    const entries = fs.readdirSync(resolved, { withFileTypes: true });
-    const sorted = [...entries].sort((a, b) => {
-      if (a.isDirectory() !== b.isDirectory()) return a.isDirectory() ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
-    const dirs = entries.filter(e => e.isDirectory()).length;
-    const files = entries.length - dirs;
-    return sorted.map(e => e.name + (e.isDirectory() ? '/' : '')).join('\n') +
-      `\n\n${dirs} director${dirs === 1 ? 'y' : 'ies'}, ${files} file${files === 1 ? '' : 's'}`;
-  }
-  const content = fs.readFileSync(resolved, 'utf-8');
-  const lines = content.split('\n');
-  if (offset !== undefined) {
-    const start = Number(offset);
-    const end = limit !== undefined ? start + Number(limit) : lines.length;
-    const shown = lines.slice(start, end);
-    const header = `(Lines ${start + 1}-${start + shown.length} of ${lines.length})\n`;
-    return header + shown.map((l, i) => `${start + i + 1}: ${l}`).join('\n');
-  }
-  return content;
+  return _executeRead(resolved, offset, limit);
 }
 
 function execBash(command, cwd) {
@@ -84,185 +73,39 @@ function execBash(command, cwd) {
   }
 }
 
-function execWrite(filePath, content) {
+async function execWrite(filePath, content) {
   const resolved = path.isAbsolute(filePath) ? filePath : path.join(getWorkspaceRoot(), filePath);
-  const dir = path.dirname(resolved);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(resolved, content, 'utf-8');
-  return `Written ${content.length} bytes to ${filePath}`;
+  return _executeWrite(resolved, content);
 }
 
-function execEdit(filePath, oldString, newString, replaceAll) {
+async function execEdit(filePath, oldString, newString, replaceAll) {
   const resolved = path.isAbsolute(filePath) ? filePath : path.join(getWorkspaceRoot(), filePath);
-  if (!fs.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
-  const content = fs.readFileSync(resolved, 'utf-8');
-
-  if (replaceAll) {
-    if (!content.includes(oldString)) throw new Error(`oldString not found in ${filePath}`);
-    const count = (content.match(new RegExp(escapeRegex(oldString), 'g')) || []).length;
-    const updated = content.replaceAll(oldString, newString);
-    fs.writeFileSync(resolved, updated, 'utf-8');
-    return `Replaced ${count} occurrence(s) in ${filePath}`;
-  }
-
-  const idx = content.indexOf(oldString);
-  if (idx === -1) throw new Error(`oldString not found in ${filePath}`);
-  if (content.indexOf(oldString, idx + 1) !== -1) {
-    throw new Error(`Found multiple matches for oldString in ${filePath}. Provide more surrounding context or use replaceAll.`);
-  }
-  const updated = content.replace(oldString, newString);
-  fs.writeFileSync(resolved, updated, 'utf-8');
-  return `Edited ${filePath} (1 occurrence)`;
-}
-
-function escapeRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return _executeEdit(resolved, oldString, newString, replaceAll);
 }
 
 async function execWebFetch(url, format) {
-  if (!url || typeof url !== 'string') throw new Error('URL is required');
-  let parsed;
-  try {
-    parsed = new URL(url);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error(`Unsupported protocol: ${parsed.protocol}`);
-  } catch (e) {
-    if (e.message.includes('Unsupported')) throw e;
-    throw new Error(`Invalid URL: ${url}`);
-  }
-
-  const outputFormat = format === 'html' ? 'html' : 'text';
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'CodeYang/0.2.0 (AI Coding Agent)',
-        'Accept': outputFormat === 'html' ? 'text/html' : 'text/plain, text/html',
-      },
-    });
-    clearTimeout(timeout);
-
-    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-
-    const contentType = response.headers.get('content-type') || '';
-    const isHtml = contentType.includes('text/html');
-
-    if (isHtml && outputFormat === 'text') {
-      let html = await response.text();
-      let text = html
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&nbsp;/g, ' ')
-        .replace(/\s+/g, ' ')
-        .replace(/\n\s*\n/g, '\n')
-        .trim();
-      if (text.length > 100000) text = text.slice(0, 100000) + '\n\n[Content truncated at 100000 characters]';
-      return text;
-    }
-
-    const content = await response.text();
-    if (content.length > 100000) return content.slice(0, 100000) + '\n\n[Content truncated at 100000 characters]';
-    return content;
-  } catch (err) {
-    if (err.name === 'AbortError') throw new Error(`Request timed out after 15s: ${url}`);
-    throw err;
-  }
+  return _executeWebFetch(url, format);
 }
 
-function execGlob(pattern, root) {
-  const base = root ? (path.isAbsolute(root) ? root : path.join(getWorkspaceRoot(), root)) : getWorkspaceRoot();
-  const results = [];
-  function walk(dir) {
-    let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      const full = path.join(dir, entry.name);
-      const rel = path.relative(base, full).replace(/\\/g, '/');
-      const regexStr = pattern.replace(/\./g, '\\.').replace(/\*\*/g, '___G___').replace(/\*/g, '[^/]*').replace(/___G___/g, '.*');
-      if (new RegExp('^' + regexStr + '$').test(rel)) results.push(rel);
-      if (entry.isDirectory()) {
-        if (pattern.includes('**')) walk(full);
-        else if (pattern.includes('/') && rel.split('/').length < pattern.split('/').length) walk(full);
-      }
-    }
-  }
-  walk(base);
-  return results.length > 0 ? results.join('\n') : '(no matches)';
+async function execGlob(pattern, root) {
+  const resolvedRoot = root ? (path.isAbsolute(root) ? root : path.join(getWorkspaceRoot(), root)) : getWorkspaceRoot();
+  return _executeGlob(pattern, resolvedRoot);
 }
 
-function execGrep(pattern, include, searchPath) {
-  const base = searchPath ? (path.isAbsolute(searchPath) ? searchPath : path.join(getWorkspaceRoot(), searchPath)) : getWorkspaceRoot();
-  const regex = new RegExp(pattern, 'i');
-  const includeRegex = include ? new RegExp(include.replace(/\*/g, '.*')) : null;
-  const results = [];
-  function walk(dir) {
-    let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !SKIP_DIRS.has(entry.name)) walk(full);
-      } else if (entry.isFile()) {
-        if (includeRegex && !includeRegex.test(entry.name)) continue;
-        try {
-          const content = fs.readFileSync(full, 'utf-8');
-          const lines = content.split('\n');
-          const matches = [];
-          for (let i = 0; i < lines.length; i++) {
-            if (regex.test(lines[i])) matches.push((i + 1) + ': ' + lines[i].trim());
-          }
-          if (matches.length > 0) {
-            results.push({ file: path.relative(base, full).replace(/\\/g, '/'), lines: matches.slice(0, 20) });
-          }
-        } catch {}
-      }
-    }
-  }
-  walk(base);
-  if (results.length === 0) return '(no matches)';
-  return results.map(r => r.file + '\n' + r.lines.join('\n')).join('\n\n');
+async function execGrep(pattern, include, searchPath) {
+  const resolvedPath = searchPath ? (path.isAbsolute(searchPath) ? searchPath : path.join(getWorkspaceRoot(), searchPath)) : getWorkspaceRoot();
+  return _executeGrep(pattern, include, resolvedPath);
 }
 
-// ─── Todo & Question state ──────────────────────────────────────────────────
-let currentTodos = [];
-
-function execTodoWrite(todos) {
+async function execTodoWrite(todos) {
   if (!Array.isArray(todos) || todos.length === 0) {
     return 'Usage: Provide a non-empty array of todo items with content, status, priority.';
   }
-  const validStatuses = new Set(['pending', 'in_progress', 'completed', 'cancelled']);
-  const validPriorities = new Set(['high', 'medium', 'low']);
-  const normalized = todos.map(t => ({
+  return _executeTodoWrite(todos.map(t => ({
     content: String(t.content || ''),
-    status: validStatuses.has(t.status) ? t.status : 'pending',
-    priority: validPriorities.has(t.priority) ? t.priority : 'medium',
-  }));
-
-  currentTodos = normalized.filter(t => t.status !== 'completed' && t.status !== 'cancelled');
-
-  const statusIcons = { pending: '[ ]', in_progress: '[~]', completed: '[x]', cancelled: '[-]' };
-  const lines = [`## Todo List (${currentTodos.length} active)`];
-  const grouped = { in_progress: [], pending: [], completed: [], cancelled: [] };
-  for (const t of todos) { (grouped[t.status] ||= []).push(t); }
-
-  for (const status of ['in_progress', 'pending', 'completed', 'cancelled']) {
-    const items = grouped[status];
-    if (items.length === 0) continue;
-    lines.push(`\n### ${status.replace('_', ' ')}:`);
-    for (const item of items) {
-      lines.push(`  ${statusIcons[item.status] || '?'} [${item.priority}] ${item.content}`);
-    }
-  }
-  return lines.join('\n');
+    status: t.status || 'pending',
+    priority: t.priority || 'medium',
+  })));
 }
 
 // ─── Tool Definitions ───────────────────────────────────────────────────────
@@ -282,13 +125,13 @@ const toolDefinitions = [
 async function executeTool(name, args, panel) {
   switch (name) {
     case 'Bash': return execBash(String(args.command || ''), args.cwd ? String(args.cwd) : undefined);
-    case 'Read': return execRead(String(args.filePath || ''), args.offset, args.limit);
-    case 'Write': return execWrite(String(args.filePath || ''), String(args.content || ''));
-    case 'Edit': return execEdit(String(args.filePath || ''), String(args.oldString || ''), String(args.newString || ''), args.replaceAll === true);
-    case 'Glob': return execGlob(String(args.pattern || ''), args.root ? String(args.root) : undefined);
-    case 'Grep': return execGrep(String(args.pattern || ''), args.include ? String(args.include) : undefined, args.path ? String(args.path) : undefined);
+    case 'Read': return await execRead(String(args.filePath || ''), args.offset, args.limit);
+    case 'Write': return await execWrite(String(args.filePath || ''), String(args.content || ''));
+    case 'Edit': return await execEdit(String(args.filePath || ''), String(args.oldString || ''), String(args.newString || ''), args.replaceAll === true);
+    case 'Glob': return await execGlob(String(args.pattern || ''), args.root ? String(args.root) : undefined);
+    case 'Grep': return await execGrep(String(args.pattern || ''), args.include ? String(args.include) : undefined, args.path ? String(args.path) : undefined);
     case 'WebFetch': return await execWebFetch(String(args.url || ''), args.format ? String(args.format) : undefined);
-    case 'TodoWrite': return execTodoWrite(Array.isArray(args.todos) ? args.todos : []);
+    case 'TodoWrite': return await execTodoWrite(Array.isArray(args.todos) ? args.todos : []);
     case 'Task': return 'Sub-agent tasks are available in the CodeYang CLI. Please execute this work directly using the available tools (Read, Grep, Bash, etc.).';
     case 'Question': {
       const q = String(args.question || '');
@@ -316,6 +159,64 @@ async function executeTool(name, args, panel) {
   }
 }
 
+// ─── Retry ──────────────────────────────────────────────────────────────────
+async function withRetry(fn, label, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isRetryable =
+        err.message?.includes('rate_limit') ||
+        err.message?.includes('Rate exceeded') ||
+        err.message?.includes('429') ||
+        err.message?.includes('529') ||
+        err.message?.includes('server error') ||
+        err.message?.includes('503') ||
+        err.message?.includes('timeout') ||
+        err.message?.includes('network') ||
+        err.message?.includes('ECONNRESET') ||
+        err.message?.includes('ETIMEDOUT');
+
+      if (attempt < maxRetries && isRetryable) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30_000);
+        console.error(`${label} attempt ${attempt}/${maxRetries} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+// ─── Session persistence ─────────────────────────────────────────────────────
+const SESSION_DIR = path.join(os.homedir(), '.codeyang', 'vscode-sessions');
+
+function saveSession(messages) {
+  if (messages.length === 0) return;
+  try {
+    if (!fs.existsSync(SESSION_DIR)) fs.mkdirSync(SESSION_DIR, { recursive: true });
+    // Auto-generate title from first user message
+    const firstUserMsg = messages.find(m => m.role === 'user');
+    const title = firstUserMsg
+      ? String(firstUserMsg.content || '').slice(0, 60).replace(/\n/g, ' ')
+      : 'untitled';
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const session = {
+      id,
+      title,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: messages.map(m => ({
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+      })),
+    };
+    fs.writeFileSync(path.join(SESSION_DIR, `${id}.json`), JSON.stringify(session, null, 2));
+  } catch (e) {
+    console.error('Failed to save session:', e.message);
+  }
+}
+
 // ─── Agent Loop ─────────────────────────────────────────────────────────────
 async function runAgent(client, messages, panel) {
   const MAX_TURNS = 15;
@@ -329,14 +230,17 @@ async function runAgent(client, messages, panel) {
   ].join('\n');
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const stream = client.messages.stream({
-      model: getModel(),
-      max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
-      temperature: 0.5,
-      system: systemPrompt,
-      messages,
-      tools: toolDefinitions,
-    });
+    const stream = await withRetry(
+      () => client.messages.stream({
+        model: getModel(),
+        max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
+        temperature: 0.5,
+        system: systemPrompt,
+        messages,
+        tools: toolDefinitions,
+      }),
+      'Anthropic streaming API',
+    );
 
     const contentBlocks = [];
     let currentBlockIndex = -1;
@@ -504,6 +408,7 @@ function createOrShowPanel(context) {
           const messages = history.slice();
           await runAgent(anthropicClient, messages, panel);
           history = messages;
+          saveSession(history);  // Persist after each exchange
           panel.webview.postMessage({ type: 'done' });
         } catch (err) {
           const errMsg = err.message || String(err);

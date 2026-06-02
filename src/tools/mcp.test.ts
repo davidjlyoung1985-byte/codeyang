@@ -117,6 +117,10 @@ describe('registry MCP integration', () => {
       ];
     }
 
+    override async refreshTools(): Promise<McpToolDef[]> {
+      return this.allTools;
+    }
+
     override async callTool(
       qualifiedName: string,
       args: Record<string, unknown>,
@@ -131,9 +135,9 @@ describe('registry MCP integration', () => {
     }
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     setMcpManager(null);
-    refreshMcpTools();
+    await refreshMcpTools();
   });
 
   it('has only built-in tools when no MCP manager', () => {
@@ -144,10 +148,10 @@ describe('registry MCP integration', () => {
     expect(mcpNames).toHaveLength(0);
   });
 
-  it('includes MCP tools after setting manager', () => {
+  it('includes MCP tools after setting manager', async () => {
     const mock = new MockMcpManager();
     setMcpManager(mock as unknown as McpManager);
-    refreshMcpTools();
+    await refreshMcpTools();
 
     const schemas = toolSchemas();
     const mcpNames = schemas.map((s) => s.name).filter((n) => n.startsWith('mcp__'));
@@ -157,10 +161,10 @@ describe('registry MCP integration', () => {
     expect(mcpNames).toContain('mcp__mock-srv__add');
   });
 
-  it('getTool finds MCP tool after registration', () => {
+  it('getTool finds MCP tool after registration', async () => {
     const mock = new MockMcpManager();
     setMcpManager(mock as unknown as McpManager);
-    refreshMcpTools();
+    await refreshMcpTools();
 
     const tool = getTool('mcp__mock-srv__hello');
     expect(tool).toBeDefined();
@@ -172,7 +176,7 @@ describe('registry MCP integration', () => {
   it('MCP tool execute delegates to manager', async () => {
     const mock = new MockMcpManager();
     setMcpManager(mock as unknown as McpManager);
-    refreshMcpTools();
+    await refreshMcpTools();
 
     const tool = getTool('mcp__mock-srv__hello');
     expect(tool).toBeDefined();
@@ -184,7 +188,7 @@ describe('registry MCP integration', () => {
   it('MCP tool execute reports errors', async () => {
     const mock = new MockMcpManager();
     setMcpManager(mock as unknown as McpManager);
-    refreshMcpTools();
+    await refreshMcpTools();
 
     const tool = getTool('mcp__mock-srv__add');
     expect(tool).toBeDefined();
@@ -193,10 +197,10 @@ describe('registry MCP integration', () => {
     expect(result).toBe('7');
   });
 
-  it('clears MCP tools when manager set to null', () => {
+  it('clears MCP tools when manager set to null', async () => {
     const mock = new MockMcpManager();
     setMcpManager(mock as unknown as McpManager);
-    refreshMcpTools();
+    await refreshMcpTools();
 
     expect(
       toolSchemas()
@@ -205,7 +209,7 @@ describe('registry MCP integration', () => {
     ).toHaveLength(2);
 
     setMcpManager(null);
-    refreshMcpTools();
+    await refreshMcpTools();
 
     expect(
       toolSchemas()

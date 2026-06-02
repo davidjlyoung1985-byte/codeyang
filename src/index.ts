@@ -94,7 +94,7 @@ Interactive Commands:
       console.log(`  ${icon} ${name}: ${detail}`);
     });
     setMcpManager(mcpMgr);
-    refreshMcpTools();
+    await refreshMcpTools();
     const totalTools = mcpMgr.allTools.length;
     if (totalTools > 0) {
       console.log(`  MCP tools available: ${totalTools}\n`);

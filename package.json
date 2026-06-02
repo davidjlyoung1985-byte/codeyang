@@ -16,7 +16,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "tsup src/index.ts --format esm --clean --sourcemap --dts --outDir dist",
+    "build": "tsup --config tsup.config.ts",
     "dev": "tsup src/index.ts --format esm --clean --sourcemap --watch --outDir dist",
     "start": "node dist/index.js",
     "test": "vitest run",
