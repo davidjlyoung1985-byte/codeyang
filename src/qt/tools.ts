@@ -13,6 +13,9 @@ import { executeQtQml } from './tools/QtQmlTool.js';
 import { executeQtTestGen } from './testing/QtTestGen.js';
 import { executeQtTestRunner } from './testing/QtTestRunner.js';
 import { executeQtCoverage } from './testing/QtCoverage.js';
+import { executeQtGraphics } from './tools/QtGraphicsTool.js';
+import { executeQtCharts } from './tools/QtChartsTool.js';
+import { executeQtMath } from './tools/QtMathTool.js';
 
 export function createQtTools(ctx: QtContext): ToolDefinition[] {
   const tools: ToolDefinition[] = [
@@ -209,6 +212,73 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
       execute: async (args) => {
         const cwd = args['cwd'] ? String(args['cwd']) : undefined;
         return executeQtCoverage(cwd);
+      },
+    },
+    {
+      name: 'QtGraphics',
+      description:
+        'Analyze QPainter, QGraphicsView, and rendering code for anti-patterns and performance issues. ' +
+        'Detects: missing save()/restore(), inline image creation in paintEvent, update() inside paintEvent, ' +
+        'missing antialiasing for text, uncached QGraphicsItem::paint(), and QPixmap::grabWidget (Qt6 removed).',
+      parameters: {
+        type: 'object',
+        properties: {
+          cwd: { type: 'string', description: 'Project root (default: current working directory)' },
+        },
+        required: [],
+      },
+      execute: async (args) => {
+        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        return executeQtGraphics(cwd);
+      },
+    },
+    {
+      name: 'QtCharts',
+      description:
+        'Reference and code generator for Qt Charts. Provides instant lookup for all chart types ' +
+        '(line, scatter, bar, pie, spline, area, candlestick, box plot, polar). ' +
+        'Shows minimal examples, common patterns (live updates, multi-axis, .ui integration), and anti-patterns. ' +
+        'Use "QtCharts <type>" for detailed reference on a specific chart type.',
+      parameters: {
+        type: 'object',
+        properties: {
+          chartType: {
+            type: 'string',
+            description: 'Specific chart type for detailed reference. Leave empty for overview. Types: line, scatter, bar, pie, spline, area, candlestick, boxplot, polar, financial.',
+          },
+        },
+        required: [],
+      },
+      execute: async (args) => {
+        const chartType = args['chartType'] ? String(args['chartType']) : undefined;
+        return executeQtCharts(chartType);
+      },
+    },
+    {
+      name: 'QtMath',
+      description:
+        'Qt math utilities reference and safe expression evaluator. ' +
+        'Covers: QtMath/QtNumeric headers, common math patterns, QVector2D/3D/4D operations, ' +
+        'QMatrix4x4 transforms, QRect geometry, numerical constants, and safe numeric patterns. ' +
+        'Use "QtMath eval <expression>" to evaluate a math expression.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: {
+            type: 'string',
+            description: '"eval" to evaluate an expression, or leave empty for API reference.',
+          },
+          expression: {
+            type: 'string',
+            description: 'Math expression to evaluate (only when action is "eval"). Example: "2 + 3 * 4".',
+          },
+        },
+        required: [],
+      },
+      execute: async (args) => {
+        const action = args['action'] ? String(args['action']) : undefined;
+        const expression = args['expression'] ? String(args['expression']) : undefined;
+        return executeQtMath(action, expression);
       },
     },
   ];

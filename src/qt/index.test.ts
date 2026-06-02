@@ -182,7 +182,7 @@ describe('createQtTools', () => {
     hasQrcFiles: true,
   };
 
-  it('creates all 10 Qt tools', () => {
+  it('creates all 12 Qt tools', () => {
     const tools = createQtTools(ctx);
     const names = tools.map((t) => t.name);
     expect(names).toContain('QtBuild');
@@ -194,7 +194,10 @@ describe('createQtTools', () => {
     expect(names).toContain('QtTestGen');
     expect(names).toContain('QtTestRunner');
     expect(names).toContain('QtCoverage');
-    expect(tools).toHaveLength(9);
+    expect(names).toContain('QtGraphics');
+    expect(names).toContain('QtCharts');
+    expect(names).toContain('QtMath');
+    expect(tools).toHaveLength(12);
   });
 
   it('each tool has required metadata', () => {
@@ -298,5 +301,46 @@ signals:
     expect(result).toContain('Worker');
     expect(result).toContain('No test file');
     expect(result).toContain('done');
+  });
+
+  it('QtMath eval evaluates expressions correctly', async () => {
+    const tools = createQtTools(ctx);
+    const mathTool = tools.find((t) => t.name === 'QtMath');
+    expect(mathTool).toBeDefined();
+    const result = await mathTool!.execute({ action: 'eval', expression: '2 + 3 * 4' });
+    expect(result).toContain('14');
+  });
+
+  it('QtCharts returns overview without args', async () => {
+    const tools = createQtTools(ctx);
+    const chartTool = tools.find((t) => t.name === 'QtCharts');
+    expect(chartTool).toBeDefined();
+    const result = await chartTool!.execute({});
+    expect(result).toContain('QLineSeries');
+    expect(result).toContain('QChartView');
+  });
+
+  it('QtCharts returns detailed ref for specific type', async () => {
+    const tools = createQtTools(ctx);
+    const chartTool = tools.find((t) => t.name === 'QtCharts');
+    const result = await chartTool!.execute({ chartType: 'pie' });
+    expect(result).toContain('QPieSeries');
+    expect(result).toContain('setHoleSize');
+  });
+
+  it('QtGraphics analyzes painter code', async () => {
+    await createFile('widget.cpp', 
+      'void MyWidget::paintEvent(QPaintEvent *) {\n' +
+      '    QPainter p(this);\n' +
+      '    p.setPen(Qt::red);\n' +
+      '    p.drawText(10, 10, "Hello");\n' +
+      '    p.end();\n' +
+      '}');
+    const tools = createQtTools(ctx);
+    const gfxTool = tools.find((t) => t.name === 'QtGraphics');
+    expect(gfxTool).toBeDefined();
+    const result = await gfxTool!.execute({ cwd: tempDir });
+    // Should detect state changes without save/restore
+    expect(result).toContain('save()');
   });
 });
