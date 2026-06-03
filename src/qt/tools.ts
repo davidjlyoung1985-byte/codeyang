@@ -16,6 +16,8 @@ import { executeQtCoverage } from './testing/QtCoverage.js';
 import { executeQtGraphics } from './tools/QtGraphicsTool.js';
 import { executeQtCharts } from './tools/QtChartsTool.js';
 import { executeQtMath } from './tools/QtMathTool.js';
+import { executeQtModelView } from './tools/QtModelViewTool.js';
+import { executeQtThread } from './tools/QtThreadTool.js';
 
 export function createQtTools(ctx: QtContext): ToolDefinition[] {
   const tools: ToolDefinition[] = [
@@ -279,6 +281,45 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         const action = args['action'] ? String(args['action']) : undefined;
         const expression = args['expression'] ? String(args['expression']) : undefined;
         return executeQtMath(action, expression);
+      },
+    },
+    {
+      name: 'QtModelView',
+      description:
+        'Analyze Qt Model/View architecture. Detects anti-patterns: beginInsertRows without endInsertRows, ' +
+        'beginResetModel overuse, multiple setModel() without disconnect, ' +
+        'missing parent() in tree models, createIndex without caching, ' +
+        'allocations in DisplayRole handler, unhandled roles in data(). ' +
+        'Counts models, views, delegates, and proxies in the project.',
+      parameters: {
+        type: 'object',
+        properties: {
+          cwd: { type: 'string', description: 'Project root (default: current working directory)' },
+        },
+        required: [],
+      },
+      execute: async (args) => {
+        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        return executeQtModelView(cwd);
+      },
+    },
+    {
+      name: 'QtThread',
+      description:
+        'Analyze Qt threading/concurrency code for safety issues. Detects: GUI calls from QThread::run(), ' +
+        'blocking waitFor*() in main thread, QMutex lock without unlock, processEvents() anti-pattern, ' +
+        'direct QThread subclassing (prefer moveToThread), QtConcurrent without error handling, ' +
+        'lockForWrite without unlock, direct delete in thread context.',
+      parameters: {
+        type: 'object',
+        properties: {
+          cwd: { type: 'string', description: 'Project root (default: current working directory)' },
+        },
+        required: [],
+      },
+      execute: async (args) => {
+        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        return executeQtThread(cwd);
       },
     },
   ];

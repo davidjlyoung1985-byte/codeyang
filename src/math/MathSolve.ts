@@ -42,7 +42,7 @@ export async function executeMathSolve(problem: string, type?: string): Promise<
   }
 
   // ─── Trigonometry ────────────────────────────────────────────────────
-  if (type === 'trig' || /\b(?:sin|cos|tan|sine|cosine|正弦|余弦|正切|角度|triangle|三角)\b/i.test(p)) {
+  if (type === 'trig' || /\b(?:sin|cos|tan|sine|cosine|正弦|余弦|正切|角度|triangle|三角|deg|rad|degree)\b/i.test(p)) {
     return solveTrig(p);
   }
 
@@ -170,17 +170,36 @@ function solveQuadratic(expr: string): string {
   lines.push('');
 
   // Parse "ax^2 + bx + c = 0"
-  let match = cleaned.match(/^([+-]?\d*\.?\d*)x\^2([+-]\d+\.?\d*)x([+-]\d+\.?\d*)=0$/);
+  let match = cleaned.match(/^([+-]?\d*\.?\d*)x\^2([+-]\d*\.?\d*)x([+-]\d+\.?\d*)=0$/);
   if (!match) {
-    // Try: "x^2 + bx + c = 0" (a=1)
-    match = cleaned.match(/^x\^2([+-]\d+\.?\d*)x([+-]\d+\.?\d*)=0$/);
+    // Try: "x^2 + bx + c = 0" (a=1, b may be implicit like "+x" or "-x")
+    match = cleaned.match(/^x\^2([+-]\d*\.?\d*)x([+-]\d+\.?\d*)=0$/);
+  }
+  if (!match) {
+    // Try: "x^2 + bx + c = 0" where b=1 (implicit: "+x")
+    match = cleaned.match(/^x\^2\+x([+-]\d+\.?\d*)=0$/);
+    if (match) {
+      // b=1 case
+      const c1 = parseFloat(match[1] || '0');
+      return solveQuadraticCore(1, 1, c1, lines);
+    }
+    match = cleaned.match(/^x\^2-x([+-]\d+\.?\d*)=0$/);
+    if (match) {
+      const c1 = parseFloat(match[1] || '0');
+      return solveQuadraticCore(1, -1, c1, lines);
+    }
   }
   if (!match) return '无法解析二次方程。请使用格式: `ax² + bx + c = 0`, 例如 `x² + 3x - 4 = 0`';
 
   const a = match[1] ? (parseFloat(match[1]) || (match[1] === '-' ? -1 : 1)) : 1;
-  const b = parseFloat(match[2]) || 0;
+  const bRaw = match[2];
+  const b = bRaw === '+' || bRaw === '' ? 1 : bRaw === '-' ? -1 : (parseFloat(bRaw) || 0);
   const c = parseFloat(match[3]) || 0;
 
+  return solveQuadraticCore(a, b, c, lines);
+}
+
+function solveQuadraticCore(a: number, b: number, c: number, lines: string[]): string {
   lines.push(`系数: a = ${a}, b = ${b}, c = ${c}`);
   lines.push('');
 

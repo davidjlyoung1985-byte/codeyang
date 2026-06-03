@@ -1,9 +1,8 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig([
-  // Main CLI (ESM)
   {
-    entry: { index: 'src/index.ts' },
+    entry: { index: 'src/index.ts', codeyangx: 'src/codeyangx.ts' },
     format: ['esm'],
     clean: true,
     sourcemap: true,

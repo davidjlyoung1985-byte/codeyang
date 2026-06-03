@@ -8,7 +8,7 @@ import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registr
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 async function promptForApiKey(): Promise<string> {
   return new Promise((resolve) => {

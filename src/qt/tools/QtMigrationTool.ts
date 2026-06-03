@@ -268,6 +268,111 @@ const RULES: MigrationRule[] = [
     replacement: 'QStringView(QString).split() or QStringTokenizer',
     severity: 'warning',
   },
+
+  // ═══ Model/View ═══
+  {
+    pattern: /\bQAbstractItemModel::begin(?:Insert|Remove)Columns\b/,
+    category: 'Model/View',
+    old: 'QAbstractItemModel::beginInsertColumns() etc.',
+    replacement: 'Use beginInsertColumns() with proper index handling (Qt6 changed column count semantics)',
+    severity: 'warning',
+  },
+  {
+    pattern: /\bQHeaderView::setMovable\b|\.setMovable\s*\(/,
+    category: 'Model/View',
+    old: 'QHeaderView::setMovable()',
+    replacement: 'setSectionsMovable() (renamed in Qt6)',
+    severity: 'error',
+  },
+  {
+    pattern: /\bQHeaderView::setResizeMode\b|\.setResizeMode\s*\(/,
+    category: 'Model/View',
+    old: 'QHeaderView::setResizeMode()',
+    replacement: 'setSectionResizeMode() (renamed in Qt6)',
+    severity: 'error',
+  },
+
+  // ═══ Threading ═══
+  {
+    pattern: /\bQThread::(?:idealThreadCount|currentThreadId)\b/,
+    category: 'Threading',
+    old: 'QThread::idealThreadCount()',
+    replacement: 'QThreadPool::globalInstance()->maxThreadCount() (QThread::idealThreadCount removed in Qt6)',
+    severity: 'warning',
+  },
+  {
+    pattern: /\bQFuture\b.*\bwaitForFinished\b/,
+    category: 'Threading',
+    old: 'QFuture::waitForFinished() (blocking)',
+    replacement: 'QFutureWatcher::finished() signal for async completion notification',
+    severity: 'warning',
+  },
+
+  // ═══ Networking ═══
+  {
+    pattern: /\bQNetworkConfigurationManager\b/,
+    category: 'Network',
+    old: 'QNetworkConfigurationManager',
+    replacement: 'QNetworkInformation (Qt 6.7+) or manual reachability checks',
+    severity: 'error',
+  },
+  {
+    pattern: /\bQNetworkRequest::(?:HttpPipeliningAllowedAttribute|SpdyAllowedAttribute)/,
+    category: 'Network',
+    old: 'QNetworkRequest HTTP/2 attributes',
+    replacement: 'QNetworkRequest::setHttp2Configuration() for HTTP/2 control',
+    severity: 'warning',
+  },
+  {
+    pattern: /\bQSslSocket::sslLibraryBuildVersionString\b/,
+    category: 'Network',
+    old: 'QSslSocket::sslLibraryBuildVersionString()',
+    replacement: 'QSslSocket::sslLibraryVersionString() (renamed)',
+    severity: 'warning',
+  },
+
+  // ═══ Model/View headers ═══
+  {
+    pattern: /\bQHeaderView::(?:Movable|Fixed|ResizeToContents|Stretch|Interactive)\b/,
+    category: 'Model/View',
+    old: 'QHeaderView::ResizeMode enum values',
+    replacement: 'These were renamed in Qt6 Qt namespace: Qt::ScrollBarPolicy, Qt::FocusPolicy enums',
+    severity: 'warning',
+  },
+
+  // ═══ State Machine ═══
+  {
+    pattern: /\bQStateMachine::(?:Running|NotRunning|ChildMode|ErrorState)\b/,
+    category: 'Core',
+    old: 'QStateMachine enum values',
+    replacement: 'QStateMachine enums moved in Qt6 — check documentation for updated values',
+    severity: 'warning',
+  },
+
+  // ═══ Serialization ═══
+  {
+    pattern: /\bQJsonDocument\b(?!\s*::)|\bQJsonObject\b(?!\s*::)/,
+    category: 'Serialization',
+    old: 'QJsonDocument fromBinaryData() / toBinaryData()',
+    replacement: 'fromJson() / toJson() methods (binary methods removed in Qt6)',
+    severity: 'info',
+  },
+  {
+    pattern: /\bQJsonDocument::fromBinaryData\b/,
+    category: 'Serialization',
+    old: 'QJsonDocument::fromBinaryData()',
+    replacement: 'Store JSON as text or use QDataStream with toJson(QJsonDocument::Compact)',
+    severity: 'error',
+  },
+
+  // ═══ i18n ═══
+  {
+    pattern: /\bQLocale::(?:system|country|language)\s*\(\s*\)/,
+    category: 'i18n',
+    old: 'QLocale::system() method (removed)',
+    replacement: 'QLocale::system() is now a static method that returns a QLocale object',
+    severity: 'info',
+  },
 ];
 
 // ─── Scanner ─────────────────────────────────────────────────────────────────

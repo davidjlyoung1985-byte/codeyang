@@ -73,7 +73,71 @@ ${ctx.hasQrcFiles ? 'This project has .qrc files (Qt resource files).' : ''}`);
 - Never call qApp->processEvents() in tests — use QSignalSpy::wait() instead.
 - Benchmarks: QBENCHMARK { /* code */ } for performance regression testing.
 - Data-driven tests: QTest::addColumn<T>() + QTest::newRow() + QFETCH(T, name).
-- Test organization: initTestCase() runs once before all tests; cleanupTestCase() runs once after.`);
+- Test organization: initTestCase() runs once before all tests; cleanupTestCase() runs once after.
+
+### Model/View Architecture
+- Qt's Model/View separates data (model), presentation (view), and selection (selection model).
+- Use QAbstractItemModel for custom data — implement rowCount(), columnCount(), data(), index(), parent().
+- For read-only models, override data() and rowCount() only. For editable, also flags() and setData().
+- QStandardItemModel is the simplest: create items, set text/data, append rows. Good for small datasets.
+- For large datasets (>10K rows), use QAbstractTableModel with lazy data() — don't store all items in memory.
+- beginInsertRows()/endInsertRows() MUST be called before/after structural changes — or views crash.
+- beginResetModel()/endResetModel() is expensive — avoid for single-item changes.
+- QSortFilterProxyModel filters/sorts without copying data — prefer over manual sorting.
+- QDataWidgetMapper maps model columns to form widgets — ideal for database record editing.
+- Never delete items returned by data() or index() — they're owned by the model.
+- With QML, models exposed via Q_PROPERTY or setContextProperty are accessible in ListView/Repeater.
+- Custom roles use Qt::UserRole + N; cast with model->data(idx, Qt::UserRole+1).value<MyType>().
+
+### Threading and Concurrency
+- QObject is NOT thread-safe. Each QObject lives in one thread (thread affinity).
+- Cross-thread signals: Qt::QueuedConnection is automatic when sender/receiver are in different threads.
+- NEVER call GUI methods from non-GUI threads — use QMetaObject::invokeMethod() with Qt::QueuedConnection.
+- QThread::run() is the worker thread entry point. Override it, or use worker-object approach (moveToThread).
+- Worker-object pattern (preferred): create QObject subclass, moveToThread(), connect signals to start work.
+- QMutex for exclusive access; QReadWriteLock for read-heavy scenarios; QSemaphore for resource counting.
+- QWaitCondition for thread synchronization — always use with QMutex.
+- QtConcurrent::run() / QtConcurrent::map() for simple parallel tasks without explicit thread management.
+- QThreadPool with QRunnable for reusable worker pools — setMaxThreadCount() to control parallelism.
+- Never subclass QThread unless you REALLY need to modify thread behavior — use moveToThread pattern.
+- QAtomicInt / QAtomicPointer for lock-free atomic operations (counters, flags).
+- QFuture/QFutureWatcher for async result monitoring with QtConcurrent or custom futures.
+
+### Networking
+- QNetworkAccessManager is the central HTTP client — create ONE instance per application (reuse it).
+- QNetworkRequest sets headers, URL, attributes; QNetworkReply handles the response ASYNCHRONOUSLY.
+- ALWAYS connect to QNetworkReply::finished() — never block the event loop waiting for network.
+- QNetworkReply::error() check BEFORE reading data — error() != NoError means the request failed.
+- QNetworkAccessManager::setRedirectPolicy() to control HTTP redirects (default: manual).
+- QSslConfiguration for TLS settings; setPeerVerifyMode() for self-signed certificates in dev.
+- For REST APIs: QNetworkRequest::setHeader(QNetworkRequest::ContentTypeHeader, "application/json").
+- QTcpSocket for TCP (stream-oriented); QUdpSocket for UDP (datagram); QWebSocket for WebSocket.
+- QTcpServer::listen() to accept connections; override incomingConnection() or connect to newConnection().
+- NEVER use blocking waitForReadyRead()/waitForConnected() in the GUI thread.
+- QNetworkInformation in Qt 6.7+ for network reachability/type detection.
+
+### Serialization (JSON/XML/Stream)
+- QJsonDocument::fromJson() parses JSON; toJson() serializes. Use QJsonObject/QJsonArray for structured access.
+- QJsonObject::value("key") returns QJsonValue; check isNull() before using.
+- For C++ struct <-> JSON: register converters with QJsonValue::fromVariant() or manual serialize/deserialize methods.
+- QXmlStreamReader/Writer for efficient, non-DOM XML processing — preferred for large files.
+- QDomDocument for full DOM access (loads entire document into memory — avoid for >10MB XML).
+- QDataStream for binary serialization — use setVersion() for compatibility across Qt versions.
+- QSettings for application settings — portable across platforms (registry on Windows, plist on macOS, ini on Linux).
+- QSaveFile for atomic file writes — writes to temp first, then renames (prevents data loss on crash).
+- In Qt6: QJsonDocument::toJson() returns QByteArray by value; in Qt5: took a reference parameter.
+
+### Internationalization (i18n)
+- Wrap all user-visible strings in tr(): label->setText(tr("Hello")). NEVER use raw Chinese/English strings.
+- QObject::tr() with class context — derived classes get their own translation context.
+- lupdate scans source for tr() calls, generates .ts XML files. lrelease compiles .ts to .qm binaries.
+- In .pro: TRANSLATIONS += myapp_zh_CN.ts myapp_ja.ts.
+- In CMake: qt_add_translations(myapp TS_FILES myapp_zh_CN.ts).
+- QTranslator::load() loads .qm; QCoreApplication::installTranslator() activates it.
+- For plurals: tr("1 file found", "%n files found", 0, n). The %n is replaced by Qt.
+- NEVER concatenate translated strings: tr("Found ") + QString::number(n) + tr(" files") — use %n.
+- Qt Linguist is the GUI tool for translators to edit .ts files.
+- QLocale::system() for current locale; QLocale::setDefault() to override.`);
 
   return parts.join('\n\n');
 }

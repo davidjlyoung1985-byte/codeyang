@@ -197,7 +197,9 @@ describe('createQtTools', () => {
     expect(names).toContain('QtGraphics');
     expect(names).toContain('QtCharts');
     expect(names).toContain('QtMath');
-    expect(tools).toHaveLength(12);
+    expect(names).toContain('QtModelView');
+    expect(names).toContain('QtThread');
+    expect(tools).toHaveLength(14);
   });
 
   it('each tool has required metadata', () => {
@@ -342,5 +344,40 @@ signals:
     const result = await gfxTool!.execute({ cwd: tempDir });
     // Should detect state changes without save/restore
     expect(result).toContain('save()');
+  });
+
+  it('QtModelView analyzes model/view code', async () => {
+    await createFile('mymodel.h',
+      `class MyModel : public QAbstractItemModel {
+    Q_OBJECT
+public:
+    QVariant data(const QModelIndex &idx, int role) const override {
+        if (role == Qt::DisplayRole) return QString("data");
+        return QVariant();
+    }
+    void addRow() { beginInsertRows(QModelIndex(), 0, 0); }
+};`);
+    const tools = createQtTools(ctx);
+    const mvTool = tools.find((t) => t.name === 'QtModelView');
+    expect(mvTool).toBeDefined();
+    const result = await mvTool!.execute({ cwd: tempDir });
+    expect(result).toContain('endInsertRows');
+  });
+
+  it('QtThread detects QThread subclass anti-pattern', async () => {
+    await createFile('worker.h',
+      `class Worker : public QThread {
+    Q_OBJECT
+    void run() override {
+        emit resultReady();
+    }
+signals:
+    void resultReady();
+};`);
+    const tools = createQtTools(ctx);
+    const threadTool = tools.find((t) => t.name === 'QtThread');
+    expect(threadTool).toBeDefined();
+    const result = await threadTool!.execute({ cwd: tempDir });
+    expect(result).toContain('moveToThread');
   });
 });
