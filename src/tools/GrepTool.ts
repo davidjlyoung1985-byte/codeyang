@@ -38,16 +38,12 @@ function globToRegex(pattern: string): RegExp {
 }
 
 /** Fast: try ripgrep if available. Returns null if rg not found or fails. */
-async function tryRipgrep(pattern: string, includeRegex: RegExp | null, base: string): Promise<string | null> {
+async function tryRipgrep(pattern: string, include: string | null, base: string, contextLines: number): Promise<string | null> {
   try {
-    // Dynamic import for execa — works in both ESM and CJS contexts
     const { execa } = await import('execa');
     const args: string[] = ['-n', '-i', '--no-heading', '-m', '20'];
-    if (includeRegex) {
-      // Convert includeRegex to glob for rg
-      const glob = includeRegex.source.replace(/\\./g, '.').replace(/\\.\*/g, '.*');
-      args.push('-g', glob);
-    }
+    if (contextLines > 0) args.push(`-C${contextLines}`);
+    if (include) args.push('-g', include);
     args.push(pattern, base);
 
     const result = await execa('rg', args, {
@@ -71,8 +67,8 @@ async function tryRipgrep(pattern: string, includeRegex: RegExp | null, base: st
   }
 }
 
-/** Streaming line-by-line grep for a single file. Returns matched line numbers + text. */
-async function grepFileLineStream(filePath: string, regex: RegExp, maxMatches: number): Promise<string[] | null> {
+/** Streaming line-by-line grep for a single file with optional context lines. */
+async function grepFileLineStream(filePath: string, regex: RegExp, maxMatches: number, contextLines = 0): Promise<string[] | null> {
   let content: string;
   try {
     content = await readFile(filePath, 'utf-8');
@@ -85,20 +81,30 @@ async function grepFileLineStream(filePath: string, regex: RegExp, maxMatches: n
 
   const lines = content.split('\n');
   const matches: string[] = [];
+  const seen = new Set<number>();
   for (let i = 0; i < lines.length && matches.length < maxMatches; i++) {
     if (regex.test(lines[i])) {
-      matches.push(`${i + 1}: ${lines[i].trim()}`);
+      const start = Math.max(0, i - contextLines);
+      const end = Math.min(lines.length - 1, i + contextLines);
+      for (let j = start; j <= end; j++) {
+        if (!seen.has(j)) {
+          seen.add(j);
+          const prefix = j === i ? `${j + 1}: ` : `${j + 1}  `;
+          matches.push(prefix + lines[j].trim());
+        }
+      }
+      if (contextLines > 0) matches.push('--');
     }
   }
   return matches.length > 0 ? matches : null;
 }
 
-export async function executeGrep(pattern: string, include?: string, path?: string): Promise<string> {
+export async function executeGrep(pattern: string, include?: string, path?: string, contextLines = 0): Promise<string> {
   const base = path ? (isAbsolute(path) ? path : join(process.cwd(), path)) : process.cwd();
   const includeRegex = include ? globToRegex(include) : null;
 
   // Try ripgrep first — 10-50x faster
-  const rgResult = await tryRipgrep(pattern, includeRegex, base);
+  const rgResult = await tryRipgrep(pattern, include ?? null, base, contextLines);
   if (rgResult !== null) return rgResult;
 
   // Fallback: walk directory tree with streaming reads
@@ -121,7 +127,7 @@ export async function executeGrep(pattern: string, include?: string, path?: stri
         }
       } else if (entry.isFile()) {
         if (includeRegex && !includeRegex.test(entry.name)) continue;
-        const matched = await grepFileLineStream(full, regex, 20);
+        const matched = await grepFileLineStream(full, regex, 20, contextLines);
         if (matched) {
           const relPath = relative(base, full).replace(/\\/g, '/');
           results.push({ file: relPath, lines: matched });

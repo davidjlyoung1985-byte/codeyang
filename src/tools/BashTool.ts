@@ -1,10 +1,10 @@
 import { execa } from 'execa';
 
-export async function executeBash(command: string, cwd?: string): Promise<string> {
+export async function executeBash(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
   const result = await execa(command, {
     shell: process.platform === 'win32' ? 'powershell.exe' : 'bash',
     cwd: cwd || process.cwd(),
-    timeout: 30_000,
+    timeout: timeoutSecs * 1000,
     reject: false,
     env: { ...process.env, CI: undefined },
   });

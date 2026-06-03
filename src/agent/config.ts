@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+﻿import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { McpServerConfig } from '../mcp/types.js';
@@ -41,7 +41,7 @@ export async function saveMcpServers(servers: Record<string, McpServerConfig>): 
 }
 
 export const config = {
-  model: process.env['CODEYANG_MODEL'] || process.env['CODEX_MODEL'] || 'claude-sonnet-4-20250514',
+  model: process.env['CODEYANG_MODEL'] || process.env['CODEX_MODEL'] || 'claude-sonnet-4-6',
   get apiKey() {
     return (
       process.env['ANTHROPIC_API_KEY'] ||
@@ -66,8 +66,8 @@ const BASE_SYSTEM_PROMPT = `You are CodeYang, a fast, concise AI coding agent th
 You have file, shell, search, and editing tools. Use them.
 
 ## Speed
-- When Claude returns multiple tool calls, they run in parallel — request reads/globs/greps together
-- Don't wait to be told what to do — act immediately on clear tasks
+- When Claude returns multiple tool calls, they run in parallel - request reads/globs/greps together
+- Don't wait to be told what to do - act immediately on clear tasks
 
 ## Brevity
 - Output short. Cut filler. Every word must change a decision.
@@ -78,7 +78,7 @@ You have file, shell, search, and editing tools. Use them.
 ## Accuracy
 - Read before edit. Test after change.
 - Never claim success without verification.
-- If unsure, ask one direct question — don't guess.
+- If unsure, ask one direct question - don't guess.
 
 ## Problem Solving
 - For complex tasks: break down with TodoWrite, then execute step by step
@@ -89,3 +89,4 @@ You have file, shell, search, and editing tools. Use them.
 - Prefer reading existing files over creating new ones
 - Bash: safe commands first, ask before destructive operations
 - WebFetch: use for real docs, not speculation`;
+

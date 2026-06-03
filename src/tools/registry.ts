@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '../types.js';
+﻿import type { ToolDefinition } from '../types.js';
 import { executeBash } from './BashTool.js';
 import { executeRead } from './ReadTool.js';
 import { executeWrite } from './WriteTool.js';
@@ -72,13 +72,15 @@ export const tools: ToolDefinition[] = [
       properties: {
         command: { type: 'string', description: 'The command to execute' },
         cwd: { type: 'string', description: 'Working directory (optional)' },
+        timeout_secs: { type: 'number', description: 'Timeout in seconds (default: 30). Use higher for builds.' },
       },
       required: ['command'],
     },
     execute: async (args) => {
       const command = String(args['command'] ?? '');
       const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      return executeBash(command, cwd);
+      const timeoutSecs = args['timeout_secs'] !== undefined ? Number(args['timeout_secs']) : undefined;
+      return executeBash(command, cwd, timeoutSecs);
     },
   },
   {
@@ -166,6 +168,7 @@ export const tools: ToolDefinition[] = [
         pattern: { type: 'string', description: 'Regex pattern to search' },
         include: { type: 'string', description: 'File glob filter (e.g. "*.ts")' },
         path: { type: 'string', description: 'Directory to search (optional)' },
+        context_lines: { type: 'number', description: 'Lines of context around each match (default: 0)' },
       },
       required: ['pattern'],
     },
@@ -173,7 +176,8 @@ export const tools: ToolDefinition[] = [
       const pattern = String(args['pattern'] ?? '');
       const include = args['include'] ? String(args['include']) : undefined;
       const path = args['path'] ? String(args['path']) : undefined;
-      return executeGrep(pattern, include, path);
+      const contextLines = args['context_lines'] !== undefined ? Number(args['context_lines']) : 0;
+      return executeGrep(pattern, include, path, contextLines);
     },
   },
   {
@@ -294,7 +298,7 @@ export const tools: ToolDefinition[] = [
       const q = String(args['question'] ?? '');
       const options = args['options'] as Array<{ label: string; description: string }> | undefined;
       if (options && options.length > 0) {
-        const opts = options.map((o, i) => `  ${i + 1}. ${o.label} — ${o.description}`).join('\n');
+        const opts = options.map((o, i) => `  ${i + 1}. ${o.label} 鈥?${o.description}`).join('\n');
         return `[QUESTION] ${q}\n\nOptions:\n${opts}`;
       }
       return `[QUESTION] ${q}`;
@@ -304,9 +308,9 @@ export const tools: ToolDefinition[] = [
     name: 'MathSolve',
     description:
       'Solve middle school math problems step by step with Chinese explanations. ' +
-      'Covers: linear equations (一元一次方程), quadratic equations (一元二次方程), ' +
-      'systems of equations (二元一次方程组), Pythagorean theorem (勾股定理), ' +
-      'circle geometry (圆), statistics (统计), and percentages (百分比).',
+      'Covers: linear equations (涓€鍏冧竴娆℃柟绋?, quadratic equations (涓€鍏冧簩娆℃柟绋?, ' +
+      'systems of equations (浜屽厓涓€娆℃柟绋嬬粍), Pythagorean theorem (鍕捐偂瀹氱悊), ' +
+      'circle geometry (鍦?, statistics (缁熻), and percentages (鐧惧垎姣?.',
     parameters: {
       type: 'object',
       properties: {
@@ -328,9 +332,9 @@ export const tools: ToolDefinition[] = [
   {
     name: 'MathPlot',
     description:
-      'Generate SVG mathematical diagrams. Supports: coordinate plane (坐标系), ' +
-      'function graphs (函数图像, e.g. func:x*2+1), triangle (三角形 with labels), ' +
-      'bar charts (条形统计图, e.g. bar:A=5,B=8). Outputs SVG files viewable in browser.',
+      'Generate SVG mathematical diagrams. Supports: coordinate plane (鍧愭爣绯?, ' +
+      'function graphs (鍑芥暟鍥惧儚, e.g. func:x*2+1), triangle (涓夎褰?with labels), ' +
+      'bar charts (鏉″舰缁熻鍥? e.g. bar:A=5,B=8). Outputs SVG files viewable in browser.',
     parameters: {
       type: 'object',
       properties: {
@@ -349,9 +353,9 @@ export const tools: ToolDefinition[] = [
     name: 'MathExplain',
     description:
       'Reference for middle school math concepts with formulas, examples, and common mistakes. ' +
-      'Topics: linear equations (一元一次方程), quadratic equations (一元二次方程), ' +
-      'Pythagorean theorem (勾股定理), linear functions (一次函数), ' +
-      'quadratic functions (二次函数), circles (圆), statistics (统计), probability (概率).',
+      'Topics: linear equations (涓€鍏冧竴娆℃柟绋?, quadratic equations (涓€鍏冧簩娆℃柟绋?, ' +
+      'Pythagorean theorem (鍕捐偂瀹氱悊), linear functions (涓€娆″嚱鏁?, ' +
+      'quadratic functions (浜屾鍑芥暟), circles (鍦?, statistics (缁熻), probability (姒傜巼).',
     parameters: {
       type: 'object',
       properties: {
@@ -384,3 +388,5 @@ export function toolSchemas(): Array<{
     input_schema: t.parameters as { type: 'object'; properties?: unknown; required?: string[]; [k: string]: unknown },
   }));
 }
+
+

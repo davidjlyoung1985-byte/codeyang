@@ -1,6 +1,6 @@
-{
+﻿{
   "name": "codeyang",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Terminal-based AI coding agent powered by Claude",
   "type": "module",
   "main": "./dist/index.js",
@@ -49,3 +49,4 @@
     "vitest": "^4.1.7"
   }
 }
+

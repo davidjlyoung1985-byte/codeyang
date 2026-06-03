@@ -180,7 +180,7 @@ export class CliUI {
     console.log('');
     console.log(c.bold(c.green('  CodeYang')) + c.dim(' — AI Coding Agent'));
     console.log('');
-    console.log(c.dim('  /clear  Reset  /  Ctrl+C  Exit'));
+    console.log(c.dim('  /clear  /sessions  /model  /mcp  ·  Ctrl+C  Exit'));
     console.log('');
     hr('ready');
     console.log('');
@@ -218,22 +218,28 @@ export class CliUI {
   }
 
   showAgentText(text: string) {
-    this.spinner.stop();
-    // Clear any in-progress streaming indicator
     if (this.streamBuf) {
-      process.stdout.write('\r' + ' '.repeat(20) + '\r');
+      // Already streamed live — just add trailing newline and clear buffer
+      process.stdout.write('\n');
+      this.streamBuf = '';
+      return;
     }
-    this.streamBuf = '';
+    // Fallback: render with markdown (no streaming occurred)
+    this.spinner.stop();
     const rendered = renderMarkdown(text);
     for (const line of rendered.split('\n')) {
       console.log('  ' + line);
     }
   }
 
-  showAgentDelta(_text: string) {
-    // Buffer silently; showAgentText handles the formatted output.
-    // Keep spinner active for live-stream feel.
-    this.streamBuf += _text;
+  showAgentDelta(text: string) {
+    if (this.spinner.active) {
+      this.spinner.stop();
+      process.stdout.write('\n  ');
+    }
+    // Indent continuation lines to match the leading '  '
+    process.stdout.write(text.replace(/\n/g, '\n  '));
+    this.streamBuf += text;
   }
 
   startSpinner() {

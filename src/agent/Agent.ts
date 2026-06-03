@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Message, ToolCall, ToolResult } from '../types.js';
 import { config } from './config.js';
-import { toolSchemas, getTool, setToolContext, refreshMcpTools } from '../tools/registry.js';
+import { toolSchemas, getTool, setToolContext } from '../tools/registry.js';
 import type { QtContext } from '../qt/index.js';
 
 export interface AgentCallbacks {
@@ -126,9 +126,6 @@ export class Agent {
 
     messages.push({ role: 'user', content: userMsg });
     this.cbs.onUserMessage?.(prompt);
-
-    // Refresh MCP tools once at session start
-    await refreshMcpTools();
 
     setToolContext({
       anthropicClient: this.client,

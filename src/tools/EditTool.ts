@@ -49,17 +49,10 @@ export async function executeEdit(
   const updated = content.slice(0, idx) + newString + content.slice(idx + oldString.length);
   await writeFile(resolved, updated, 'utf-8');
 
-  // Verify the replacement took effect (guards against TOCTOU races)
+  // Verify write took effect
   const verify = await readFile(resolved, 'utf-8');
-  if (verify.includes(oldString)) {
-    throw new Error(
-      `Replace verification failed: oldString still present in ${filePath}. File may have been modified concurrently.`,
-    );
-  }
-  if (!verify.includes(newString)) {
-    throw new Error(
-      `Replace verification failed: newString not found in ${filePath}. File may have been modified concurrently.`,
-    );
+  if (!verify.includes(newString) && newString.length > 0) {
+    throw new Error(`Replace verification failed: newString not found in ${filePath}.`);
   }
 
   return `Edited ${filePath} (1 occurrence)`;

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 import * as readline from 'node:readline';
 import { CliUI } from './ui/CliUI.js';
 import { Agent } from './agent/Agent.js';
@@ -8,7 +8,7 @@ import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registr
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
 
-const VERSION = '0.3.0';
+const VERSION = '0.4.0';
 
 async function promptForApiKey(): Promise<string> {
   return new Promise((resolve) => {
@@ -41,7 +41,7 @@ async function main() {
   }
 
   if (args.includes('--help') || args.includes('-h')) {
-    console.log(`CodeYang v${VERSION} — AI Coding Agent
+    console.log(`CodeYang v${VERSION} - AI Coding Agent
 Usage: codeyang [options]
 
 Options:
@@ -53,6 +53,9 @@ Options:
 
 Interactive Commands:
   /clear           Reset the conversation
+  /sessions        List saved sessions
+  /model           Show current model
+  /model <name>    Switch model
   /mcp             Show MCP server status
   /exit, /quit     Exit CodeYang`);
     process.exit(0);
@@ -114,6 +117,7 @@ Interactive Commands:
   const agent = new Agent(qtContext);
   let running = false;
   let sigintCount = 0;
+  let currentSessionId: string | undefined;
 
   const resumeIdx = args.indexOf('--resume');
   if (resumeIdx !== -1 && args[resumeIdx + 1]) {
@@ -121,6 +125,7 @@ Interactive Commands:
     const session = await loadSession(sessionId);
     if (session) {
       agent.loadMessages(session.messages);
+      currentSessionId = session.id;
       console.log(`\nResumed session: ${session.title}\n`);
     } else {
       console.log(`\nSession not found: ${sessionId}\n`);
@@ -156,7 +161,7 @@ Interactive Commands:
 
     try {
       await agent.run(line);
-      await saveSession(agent.exportMessages());
+      currentSessionId = await saveSession(agent.exportMessages(), currentSessionId);
     } catch (err) {
       ui.showError(err instanceof Error ? err.message : String(err));
     }
@@ -171,7 +176,7 @@ Interactive Commands:
     const lower = line.toLowerCase().trim();
 
     if (['exit', 'quit', '/exit', '/quit'].includes(lower)) {
-      await saveSession(agent.exportMessages());
+      await saveSession(agent.exportMessages(), currentSessionId);
       await mcpMgr.shutdown();
       ui.close();
       process.exit(0);
@@ -180,6 +185,29 @@ Interactive Commands:
     if (lower === '/clear') {
       agent.reset();
       ui.showSystemMessage('Conversation cleared. Starting fresh.');
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/sessions') {
+      const sessions = await listSessions();
+      if (sessions.length === 0) {
+        console.log('No saved sessions.');
+      } else {
+        for (const s of sessions) console.log(`  ${s.id}  ${s.title}  (${s.updatedAt})`);
+      }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower.startsWith('/model')) {
+      const arg = line.slice(6).trim();
+      if (arg) {
+        config.model = arg;
+        ui.showSystemMessage(`Model switched to: ${arg}`);
+      } else {
+        console.log(`  Model: ${config.model}`);
+      }
       ui.promptUser();
       return;
     }
@@ -225,7 +253,7 @@ Interactive Commands:
       agent.cancelQuestion();
 
       if (running) {
-        await saveSession(agent.exportMessages());
+        await saveSession(agent.exportMessages(), currentSessionId);
         console.log('Session saved.');
       }
       await mcpMgr.shutdown();
@@ -245,3 +273,5 @@ main().catch((err) => {
   console.error('Fatal error:', err);
   process.exit(1);
 });
+
+
