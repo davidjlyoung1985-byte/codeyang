@@ -7,7 +7,7 @@ Also includes a **VS Code extension** for in-editor AI chat with tool-using capa
 ## Features
 
 - **Natural language coding** — describe what you want and CodeYang figures out how to do it
-- **43 built-in tools** — File operations (Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists), Search (Glob, Grep), Data processing (JsonParse, JsonWrite, JsonQuery, YamlParse, YamlWrite, Convert, CsvParse, CsvWrite, XmlParse, XmlWrite), Git (GitStatus, GitDiff, GitCommit, GitBranch, GitCheckout, GitLog, GitPush, GitPull, GitClone, GitAdd, GitReset, GitStash, GitMerge, GitRemote, GitCurrentBranch, GitBlame), Task management (TodoWrite), Web (WebFetch), Delegation (Task, Question)
+- **49 built-in tools** — File operations (Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists), Search (Glob, Grep), Data processing (JsonParse, JsonWrite, JsonQuery, YamlParse, YamlWrite, Convert, CsvParse, CsvWrite, XmlParse, XmlWrite), Git (GitStatus, GitDiff, GitCommit, GitBranch, GitCheckout, GitLog, GitPush, GitPull, GitClone, GitAdd, GitReset, GitStash, GitMerge, GitRemote, GitCurrentBranch, GitBlame), Code analysis (ParseAst, AnalyzeCode, Complexity, Lint, FindDeps, CountLines), Task management (TodoWrite), Web (WebFetch), Delegation (Task, Question)
 - **Streaming responses** — see Claude's output in real-time as it generates
 - **Sub-agent delegation** — Task tool launches autonomous mini-agents for complex work
 - **Session persistence** — saves and resumes coding sessions automatically
@@ -119,6 +119,12 @@ Navigate to the `vscode-extension/` directory and follow the VS Code extension i
 | **GitRemote** | List remotes |
 | **GitCurrentBranch** | Show current branch |
 | **GitBlame** | Show file annotations |
+| **ParseAst** | Parse code to AST |
+| **AnalyzeCode** | Extract symbols from code |
+| **Complexity** | Calculate code complexity |
+| **Lint** | Run ESLint with auto-fix |
+| **FindDeps** | List project dependencies |
+| **CountLines** | Count code/comment/blank lines |
 | **TodoWrite** | Track task progress |
 | **WebFetch** | Fetch web content as text |
 | **Task** | Launch autonomous sub-agents |
@@ -136,19 +142,20 @@ src/
 ├── ui/
 │   └── CliUI.ts          # Terminal UI with colors
 ├── tools/
-│   ├── registry.ts       # Tool registry & schemas
-│   ├── BashTool.ts       # Shell command execution
-│   ├── ReadTool.ts       # File/directory reading
-│   ├── WriteTool.ts      # File writing
-│   ├── EditTool.ts       # Surgical text replacement
-│   ├── FileSystemTool.ts # Copy/Move/Delete/Mkdir/List/Exists
-│   ├── DataTool.ts       # JSON/YAML/CSV/XML parsing & conversion
-│   ├── GitTool.ts        # Git version control operations
-│   ├── GlobTool.ts       # File glob pattern matching
-│   ├── GrepTool.ts       # Content regex search
-│   ├── TodoWriteTool.ts  # Task list management
-│   ├── WebFetchTool.ts   # HTTP fetch + HTML-to-text
-│   └── TaskTool.ts       # Sub-agent execution engine
+│   ├── registry.ts          # Tool registry & schemas
+│   ├── BashTool.ts          # Shell command execution
+│   ├── ReadTool.ts          # File/directory reading
+│   ├── WriteTool.ts         # File writing
+│   ├── EditTool.ts          # Surgical text replacement
+│   ├── FileSystemTool.ts    # Copy/Move/Delete/Mkdir/List/Exists
+│   ├── DataTool.ts          # JSON/YAML/CSV/XML parsing & conversion
+│   ├── GitTool.ts           # Git version control operations
+│   ├── CodeAnalysisTool.ts  # AST/lint/complexity/dependency analysis
+│   ├── GlobTool.ts          # File glob pattern matching
+│   ├── GrepTool.ts          # Content regex search
+│   ├── TodoWriteTool.ts     # Task list management
+│   ├── WebFetchTool.ts      # HTTP fetch + HTML-to-text
+│   └── TaskTool.ts          # Sub-agent execution engine
 └── utils/
     └── sessionStore.ts   # Session persistence
 ```

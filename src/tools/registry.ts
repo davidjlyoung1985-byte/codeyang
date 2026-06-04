@@ -39,6 +39,14 @@ import {
   executeGitCurrentBranch,
   executeGitBlame,
 } from './GitTool.js';
+import {
+  executeParseAst,
+  executeAnalyzeCode,
+  executeComplexity,
+  executeLint,
+  executeFindDeps,
+  executeCountLines,
+} from './CodeAnalysisTool.js';
 import { executeMathSolve } from '../math/MathSolve.js';
 import { executeMathPlot } from '../math/MathPlot.js';
 import { executeMathExplain } from '../math/MathExplain.js';
@@ -919,6 +927,102 @@ export const tools: ToolDefinition[] = [
       const filePath = String(args['filePath'] ?? '');
       const cwd = args['cwd'] ? String(args['cwd']) : undefined;
       return executeGitBlame(filePath, cwd);
+    },
+  },
+  {
+    name: 'ParseAst',
+    description: 'Parse JavaScript/TypeScript code and return AST information.',
+    parameters: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Path to the source file' },
+        language: { type: 'string', enum: ['javascript', 'typescript'], description: 'Language (default: javascript)' },
+      },
+      required: ['filePath'],
+    },
+    execute: async (args) => {
+      const filePath = String(args['filePath'] ?? '');
+      const language = (args['language'] as 'javascript' | 'typescript') || 'javascript';
+      return executeParseAst(filePath, language);
+    },
+  },
+  {
+    name: 'AnalyzeCode',
+    description: 'Analyze code structure and extract symbols (imports, exports, functions, classes, variables).',
+    parameters: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Path to the source file' },
+        language: { type: 'string', enum: ['javascript', 'typescript'], description: 'Language (default: javascript)' },
+      },
+      required: ['filePath'],
+    },
+    execute: async (args) => {
+      const filePath = String(args['filePath'] ?? '');
+      const language = (args['language'] as 'javascript' | 'typescript') || 'javascript';
+      return executeAnalyzeCode(filePath, language);
+    },
+  },
+  {
+    name: 'Complexity',
+    description: 'Calculate code complexity metrics (cyclomatic complexity, nesting depth, branches).',
+    parameters: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Path to the source file' },
+      },
+      required: ['filePath'],
+    },
+    execute: async (args) => {
+      const filePath = String(args['filePath'] ?? '');
+      return executeComplexity(filePath);
+    },
+  },
+  {
+    name: 'Lint',
+    description: 'Run ESLint on a file to find code quality issues. Can auto-fix fixable issues.',
+    parameters: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Path to the source file' },
+        fix: { type: 'boolean', description: 'Auto-fix fixable issues (default: false)' },
+      },
+      required: ['filePath'],
+    },
+    execute: async (args) => {
+      const filePath = String(args['filePath'] ?? '');
+      const fix = args['fix'] === true;
+      return executeLint(filePath, fix);
+    },
+  },
+  {
+    name: 'FindDeps',
+    description: 'Find and list project dependencies from package.json.',
+    parameters: {
+      type: 'object',
+      properties: {
+        projectDir: { type: 'string', description: 'Project directory path' },
+      },
+      required: ['projectDir'],
+    },
+    execute: async (args) => {
+      const projectDir = String(args['projectDir'] ?? '');
+      return executeFindDeps(projectDir);
+    },
+  },
+  {
+    name: 'CountLines',
+    description: 'Count lines of code, comments, and blank lines in a file.',
+    parameters: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Path to the source file' },
+      },
+      required: ['filePath'],
+    },
+    execute: async (args) => {
+      const filePath = String(args['filePath'] ?? '');
+      return executeCountLines(filePath);
     },
   },
   {
