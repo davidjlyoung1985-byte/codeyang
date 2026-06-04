@@ -29,19 +29,36 @@ function getApiKey() {
   return null;
 }
 
+function getApiBaseUrl() {
+  const cfgBase = vscode.workspace.getConfiguration('codeyang').get('apiBaseUrl', '');
+  if (cfgBase) return cfgBase;
+  if (process.env['ANTHROPIC_BASE_URL']) return process.env['ANTHROPIC_BASE_URL'];
+  try {
+    const cfgPath = path.join(os.homedir(), '.codeyang', 'config.json');
+    const data = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+    if (data.apiBaseUrl) return data.apiBaseUrl;
+  } catch {}
+  return 'https://api.anthropic.com';
+}
+
 function getModel() {
   return vscode.workspace.getConfiguration('codeyang').get('model', '') ||
     process.env['CODEYANG_MODEL'] ||
     'claude-sonnet-4-20250514';
 }
 
-async function saveApiKey(key) {
+async function saveApiKey(key, baseUrl) {
   // Save to VS Code settings
   await vscode.workspace.getConfiguration('codeyang').update('apiKey', key, true);
+  if (baseUrl) {
+    await vscode.workspace.getConfiguration('codeyang').update('apiBaseUrl', baseUrl, true);
+  }
   // Also save to ~/.codeyang/config.json for CLI
   const dir = path.join(os.homedir(), '.codeyang');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ apiKey: key }, null, 2));
+  const config = { apiKey: key };
+  if (baseUrl) config.apiBaseUrl = baseUrl;
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config, null, 2));
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -346,7 +363,11 @@ function createOrShowPanel(context) {
       if (hasKey) {
         try {
           const { Anthropic } = require('@anthropic-ai/sdk');
-          anthropicClient = new Anthropic({ apiKey: getApiKey() });
+          const baseUrl = getApiBaseUrl();
+          anthropicClient = new Anthropic({
+            apiKey: getApiKey(),
+            baseURL: baseUrl
+          });
         } catch {}
         panel.webview.postMessage({ type: 'apiKeySet' });
       } else {
@@ -365,12 +386,16 @@ function createOrShowPanel(context) {
     switch (msg.type) {
       case 'setApiKey': {
         if (msg.key && msg.key.trim()) {
-          await saveApiKey(msg.key.trim());
+          const baseUrl = msg.baseUrl && msg.baseUrl.trim() ? msg.baseUrl.trim() : 'https://api.anthropic.com';
+          await saveApiKey(msg.key.trim(), baseUrl);
           try {
             const { Anthropic } = require('@anthropic-ai/sdk');
-            anthropicClient = new Anthropic({ apiKey: msg.key.trim() });
+            anthropicClient = new Anthropic({
+              apiKey: msg.key.trim(),
+              baseURL: baseUrl
+            });
             panel.webview.postMessage({ type: 'apiKeySet' });
-            vscode.window.showInformationMessage('CodeYang: API key saved. You can now start chatting.');
+            vscode.window.showInformationMessage(`CodeYang: Connected to ${baseUrl}`);
           } catch (err) {
             panel.webview.postMessage({ type: 'error', message: 'Failed to initialize: ' + err.message });
           }
@@ -387,7 +412,11 @@ function createOrShowPanel(context) {
           }
           try {
             const { Anthropic } = require('@anthropic-ai/sdk');
-            anthropicClient = new Anthropic({ apiKey: key });
+            const baseUrl = getApiBaseUrl();
+            anthropicClient = new Anthropic({
+              apiKey: key,
+              baseURL: baseUrl
+            });
           } catch (err) {
             panel.webview.postMessage({ type: 'error', message: 'Failed to initialize Anthropic client: ' + err.message });
             return;

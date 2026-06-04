@@ -60,12 +60,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sa
 </style>
 </head>
 <body>
-<div id="setup-banner">No API key configured. Enter your Anthropic API key below to get started.</div>
-<div id="setup-area">
-  <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." />
-  <button id="save-key-btn" onclick="saveApiKey()">Save Key</button>
+<div id="setup-banner">Configuration Required. Enter API settings below to get started.</div>
+<div id="setup-area" style="flex-direction: column; gap: 12px;">
+  <div style="display: flex; gap: 8px; align-items: center;">
+    <label style="min-width: 80px; font-size: 13px;">API Base URL:</label>
+    <input type="text" id="api-base-input" placeholder="https://api.anthropic.com" style="flex: 1;" />
+  </div>
+  <div style="display: flex; gap: 8px; align-items: center;">
+    <label style="min-width: 80px; font-size: 13px;">API Key:</label>
+    <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="flex: 1;" />
+  </div>
+  <div style="display: flex; justify-content: flex-end;">
+    <button id="save-key-btn" onclick="saveApiKey()">Connect</button>
+  </div>
 </div>
-<div id="setup-hint">Get your key at: https://console.anthropic.com/</div>
+<div id="setup-hint">Default API base: https://api.anthropic.com | Get your key at: https://console.anthropic.com/</div>
 <div id="messages"></div>
 <div id="loading"><span class="spinner"></span> CodeYang is thinking...</div>
 <div id="error-banner"></div>
@@ -89,6 +98,7 @@ var setupArea = document.getElementById('setup-area');
 var setupBanner = document.getElementById('setup-banner');
 var setupHint = document.getElementById('setup-hint');
 var apiKeyInput = document.getElementById('api-key-input');
+var apiBaseInput = document.getElementById('api-base-input');
 var assistantMsgDiv = null;
 var hasApiKey = false;
 var questionArea = document.getElementById('question-area');
@@ -106,7 +116,7 @@ window.addEventListener('message', function(event) {
       setupArea.classList.remove('visible');
       setupBanner.classList.remove('visible');
       setupHint.classList.remove('visible');
-      addSystemMessage('API key saved. You can now start chatting!');
+      addSystemMessage('Connected successfully. You can now start chatting!');
       input.focus();
       break;
 
@@ -212,9 +222,14 @@ function addToolResult(output, isError) {
 
 function saveApiKey() {
   var key = apiKeyInput.value.trim();
-  if (!key) return;
+  var baseUrl = apiBaseInput.value.trim() || 'https://api.anthropic.com';
+  if (!key) {
+    addSystemMessage('Please enter your API key.');
+    return;
+  }
   apiKeyInput.value = '';
-  vscode.postMessage({ type: 'setApiKey', key: key });
+  apiBaseInput.value = '';
+  vscode.postMessage({ type: 'setApiKey', key: key, baseUrl: baseUrl });
 }
 
 function send() {

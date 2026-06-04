@@ -30,6 +30,11 @@
           "description": "Anthropic API Key for CodeYang AI agent",
           "default": ""
         },
+        "codeyang.apiBaseUrl": {
+          "type": "string",
+          "description": "API Base URL (default: https://api.anthropic.com)",
+          "default": "https://api.anthropic.com"
+        },
         "codeyang.model": {
           "type": "string",
           "description": "Claude model to use (e.g. claude-sonnet-4-20250514)",
