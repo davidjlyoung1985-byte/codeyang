@@ -7,7 +7,7 @@ Also includes a **VS Code extension** for in-editor AI chat with tool-using capa
 ## Features
 
 - **Natural language coding** — describe what you want and CodeYang figures out how to do it
-- **49 built-in tools** — File operations (Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists), Search (Glob, Grep), Data processing (JsonParse, JsonWrite, JsonQuery, YamlParse, YamlWrite, Convert, CsvParse, CsvWrite, XmlParse, XmlWrite), Git (GitStatus, GitDiff, GitCommit, GitBranch, GitCheckout, GitLog, GitPush, GitPull, GitClone, GitAdd, GitReset, GitStash, GitMerge, GitRemote, GitCurrentBranch, GitBlame), Code analysis (ParseAst, AnalyzeCode, Complexity, Lint, FindDeps, CountLines), Task management (TodoWrite), Web (WebFetch), Delegation (Task, Question)
+- **55 built-in tools** — File operations (Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists), Search (Glob, Grep), Data processing (JsonParse, JsonWrite, JsonQuery, YamlParse, YamlWrite, Convert, CsvParse, CsvWrite, XmlParse, XmlWrite), Git (GitStatus, GitDiff, GitCommit, GitBranch, GitCheckout, GitLog, GitPush, GitPull, GitClone, GitAdd, GitReset, GitStash, GitMerge, GitRemote, GitCurrentBranch, GitBlame), Code analysis (ParseAst, AnalyzeCode, Complexity, Lint, FindDeps, CountLines), Network (HttpRequest, DownloadFile, UploadFile, ApiCall, CheckUrl, ParseUrl), Task management (TodoWrite), Web (WebFetch), Delegation (Task, Question)
 - **Streaming responses** — see Claude's output in real-time as it generates
 - **Sub-agent delegation** — Task tool launches autonomous mini-agents for complex work
 - **Session persistence** — saves and resumes coding sessions automatically
@@ -125,6 +125,12 @@ Navigate to the `vscode-extension/` directory and follow the VS Code extension i
 | **Lint** | Run ESLint with auto-fix |
 | **FindDeps** | List project dependencies |
 | **CountLines** | Count code/comment/blank lines |
+| **HttpRequest** | Send HTTP requests (GET/POST/PUT/DELETE) |
+| **DownloadFile** | Download files from URLs |
+| **UploadFile** | Upload files via multipart/form-data |
+| **ApiCall** | Call RESTful APIs with JSON |
+| **CheckUrl** | Check URL accessibility and info |
+| **ParseUrl** | Parse URL components and query params |
 | **TodoWrite** | Track task progress |
 | **WebFetch** | Fetch web content as text |
 | **Task** | Launch autonomous sub-agents |
@@ -151,6 +157,7 @@ src/
 │   ├── DataTool.ts          # JSON/YAML/CSV/XML parsing & conversion
 │   ├── GitTool.ts           # Git version control operations
 │   ├── CodeAnalysisTool.ts  # AST/lint/complexity/dependency analysis
+│   ├── NetworkTool.ts       # HTTP requests/download/upload/API calls
 │   ├── GlobTool.ts          # File glob pattern matching
 │   ├── GrepTool.ts          # Content regex search
 │   ├── TodoWriteTool.ts     # Task list management

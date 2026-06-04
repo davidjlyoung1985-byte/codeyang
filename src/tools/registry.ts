@@ -47,6 +47,14 @@ import {
   executeFindDeps,
   executeCountLines,
 } from './CodeAnalysisTool.js';
+import {
+  executeHttpRequest,
+  executeDownloadFile,
+  executeUploadFile,
+  executeApiCall,
+  executeCheckUrl,
+  executeParseUrl,
+} from './NetworkTool.js';
 import { executeMathSolve } from '../math/MathSolve.js';
 import { executeMathPlot } from '../math/MathPlot.js';
 import { executeMathExplain } from '../math/MathExplain.js';
@@ -1023,6 +1031,126 @@ export const tools: ToolDefinition[] = [
     execute: async (args) => {
       const filePath = String(args['filePath'] ?? '');
       return executeCountLines(filePath);
+    },
+  },
+  {
+    name: 'HttpRequest',
+    description: 'Send HTTP request with configurable method, headers, and body. Returns response with status, headers, and data.',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Target URL' },
+        method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], description: 'HTTP method (default: GET)' },
+        headers: { type: 'object', description: 'Request headers (optional)' },
+        body: { type: 'string', description: 'Request body for POST/PUT/PATCH (optional)' },
+        timeout: { type: 'number', description: 'Timeout in milliseconds (default: 30000)' },
+      },
+      required: ['url'],
+    },
+    execute: async (args) => {
+      const url = String(args['url'] ?? '');
+      const method = (args['method'] as any) || 'GET';
+      const headers = args['headers'] as Record<string, string> | undefined;
+      const body = args['body'] ? String(args['body']) : undefined;
+      const timeout = args['timeout'] !== undefined ? Number(args['timeout']) : 30000;
+      return executeHttpRequest(url, method, headers, body, timeout);
+    },
+  },
+  {
+    name: 'DownloadFile',
+    description: 'Download file from URL to local path. Creates parent directories if needed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Source URL' },
+        destPath: { type: 'string', description: 'Destination file path' },
+        timeout: { type: 'number', description: 'Timeout in milliseconds (default: 60000)' },
+      },
+      required: ['url', 'destPath'],
+    },
+    execute: async (args) => {
+      const url = String(args['url'] ?? '');
+      const destPath = String(args['destPath'] ?? '');
+      const timeout = args['timeout'] !== undefined ? Number(args['timeout']) : 60000;
+      return executeDownloadFile(url, destPath, timeout);
+    },
+  },
+  {
+    name: 'UploadFile',
+    description: 'Upload file to server via multipart/form-data. Can include additional form fields.',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Target URL' },
+        filePath: { type: 'string', description: 'Local file path to upload' },
+        fieldName: { type: 'string', description: 'Form field name for file (default: "file")' },
+        additionalFields: { type: 'object', description: 'Additional form fields (optional)' },
+        timeout: { type: 'number', description: 'Timeout in milliseconds (default: 60000)' },
+      },
+      required: ['url', 'filePath'],
+    },
+    execute: async (args) => {
+      const url = String(args['url'] ?? '');
+      const filePath = String(args['filePath'] ?? '');
+      const fieldName = args['fieldName'] ? String(args['fieldName']) : 'file';
+      const additionalFields = args['additionalFields'] as Record<string, string> | undefined;
+      const timeout = args['timeout'] !== undefined ? Number(args['timeout']) : 60000;
+      return executeUploadFile(url, filePath, fieldName, additionalFields, timeout);
+    },
+  },
+  {
+    name: 'ApiCall',
+    description: 'Call RESTful API with JSON body and parse response. Automatic Content-Type: application/json.',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'API endpoint URL' },
+        method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], description: 'HTTP method (default: GET)' },
+        body: { type: 'object', description: 'JSON request body (optional)' },
+        headers: { type: 'object', description: 'Additional headers (optional)' },
+        timeout: { type: 'number', description: 'Timeout in milliseconds (default: 30000)' },
+      },
+      required: ['url'],
+    },
+    execute: async (args) => {
+      const url = String(args['url'] ?? '');
+      const method = (args['method'] as any) || 'GET';
+      const body = args['body'];
+      const headers = args['headers'] as Record<string, string> | undefined;
+      const timeout = args['timeout'] !== undefined ? Number(args['timeout']) : 30000;
+      return executeApiCall(url, method, body, headers, timeout);
+    },
+  },
+  {
+    name: 'CheckUrl',
+    description: 'Check if URL is accessible. Returns status, response time, content type, and server info.',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL to check' },
+        timeout: { type: 'number', description: 'Timeout in milliseconds (default: 10000)' },
+      },
+      required: ['url'],
+    },
+    execute: async (args) => {
+      const url = String(args['url'] ?? '');
+      const timeout = args['timeout'] !== undefined ? Number(args['timeout']) : 10000;
+      return executeCheckUrl(url, timeout);
+    },
+  },
+  {
+    name: 'ParseUrl',
+    description: 'Parse URL and extract components (protocol, host, port, pathname, query parameters, hash).',
+    parameters: {
+      type: 'object',
+      properties: {
+        urlString: { type: 'string', description: 'URL string to parse' },
+      },
+      required: ['urlString'],
+    },
+    execute: async (args) => {
+      const urlString = String(args['urlString'] ?? '');
+      return executeParseUrl(urlString);
     },
   },
   {
