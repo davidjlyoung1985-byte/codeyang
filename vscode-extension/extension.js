@@ -144,13 +144,7 @@ async function executeTool(name, args, panel) {
       // Show question to user and wait for answer
       panel.webview.postMessage({ type: 'question', question: q, options: options || [] });
       const answer = await new Promise(resolve => {
-        const handler = msg => {
-          if (msg.type === 'questionAnswer') {
-            panel.webview.onDidReceiveMessage(msg => {});
-            resolve(msg.answer);
-          }
-        };
-        // Use a one-time listener approach - store resolve and handle in message handler
+        // Store resolve function for the main message handler to use
         panel._questionResolve = resolve;
       });
       return `[ANSWER] ${answer}`;
@@ -412,12 +406,21 @@ function createOrShowPanel(context) {
           panel.webview.postMessage({ type: 'done' });
         } catch (err) {
           const errMsg = err.message || String(err);
-          if (errMsg.includes('401') || errMsg.includes('authentication') || errMsg.includes('api key')) {
-            panel.webview.postMessage({ type: 'error', message: 'Invalid API key. Please check your Anthropic API key and try again.' });
+          console.error('Agent error:', err);
+
+          if (errMsg.includes('401') || errMsg.includes('authentication') || errMsg.includes('api key') || errMsg.includes('invalid_api_key')) {
+            panel.webview.postMessage({ type: 'error', message: 'Invalid API key. Please check your Anthropic API key (should start with sk-ant-) and try again.' });
             panel.webview.postMessage({ type: 'showSetup' });
+          } else if (errMsg.includes('503') || errMsg.includes('500') || errMsg.includes('Internal server error')) {
+            panel.webview.postMessage({ type: 'error', message: 'Anthropic API server is temporarily unavailable (503/500 error). Please try again in a few moments.' });
+          } else if (errMsg.includes('429') || errMsg.includes('rate_limit')) {
+            panel.webview.postMessage({ type: 'error', message: 'Rate limit exceeded. Please wait a moment and try again.' });
+          } else if (errMsg.includes('ENOTFOUND') || errMsg.includes('ECONNREFUSED') || errMsg.includes('network')) {
+            panel.webview.postMessage({ type: 'error', message: 'Network error: Cannot connect to Anthropic API. Please check your internet connection.' });
           } else {
-            panel.webview.postMessage({ type: 'error', message: errMsg });
+            panel.webview.postMessage({ type: 'error', message: 'Error: ' + errMsg });
           }
+          panel.webview.postMessage({ type: 'done' });
         }
         break;
       }
