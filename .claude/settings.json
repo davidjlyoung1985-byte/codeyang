@@ -1,0 +1,20 @@
+{
+  "allowedCommands": [
+    {
+      "tool": "Bash",
+      "match": "**",
+      "note": "Allow all bash commands"
+    },
+    {
+      "tool": "PowerShell",
+      "match": "**",
+      "note": "Allow all PowerShell commands"
+    }
+  ],
+  "allowedPaths": {
+    "read": ["**"],
+    "write": ["**"],
+    "readOrWrite": ["**"]
+  },
+  "mcpServers": {}
+}

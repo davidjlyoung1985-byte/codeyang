@@ -7,7 +7,7 @@ Also includes a **VS Code extension** for in-editor AI chat with tool-using capa
 ## Features
 
 - **Natural language coding** — describe what you want and CodeYang figures out how to do it
-- **16 built-in tools** — Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists, Glob, Grep, TodoWrite, WebFetch, Task (sub-agent), Question
+- **26 built-in tools** — Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists, Glob, Grep, JsonParse, JsonWrite, JsonQuery, YamlParse, YamlWrite, Convert, CsvParse, CsvWrite, XmlParse, XmlWrite, TodoWrite, WebFetch, Task (sub-agent), Question
 - **Streaming responses** — see Claude's output in real-time as it generates
 - **Sub-agent delegation** — Task tool launches autonomous mini-agents for complex work
 - **Session persistence** — saves and resumes coding sessions automatically
@@ -93,6 +93,16 @@ Navigate to the `vscode-extension/` directory and follow the VS Code extension i
 | **Exists** | Check if path exists and get info |
 | **Glob** | Find files by pattern |
 | **Grep** | Search file contents with regex |
+| **JsonParse** | Parse JSON from file or string |
+| **JsonWrite** | Write JSON data to file |
+| **JsonQuery** | Query JSON with dot notation |
+| **YamlParse** | Parse YAML from file or string |
+| **YamlWrite** | Write YAML data to file |
+| **Convert** | Convert between JSON and YAML |
+| **CsvParse** | Parse CSV to JSON array |
+| **CsvWrite** | Write JSON array to CSV |
+| **XmlParse** | Parse XML to JSON |
+| **XmlWrite** | Write JSON to XML |
 | **TodoWrite** | Track task progress |
 | **WebFetch** | Fetch web content as text |
 | **Task** | Launch autonomous sub-agents |
@@ -116,6 +126,7 @@ src/
 │   ├── WriteTool.ts      # File writing
 │   ├── EditTool.ts       # Surgical text replacement
 │   ├── FileSystemTool.ts # Copy/Move/Delete/Mkdir/List/Exists
+│   ├── DataTool.ts       # JSON/YAML/CSV/XML parsing & conversion
 │   ├── GlobTool.ts       # File glob pattern matching
 │   ├── GrepTool.ts       # Content regex search
 │   ├── TodoWriteTool.ts  # Task list management
