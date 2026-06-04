@@ -7,7 +7,7 @@ Also includes a **VS Code extension** for in-editor AI chat with tool-using capa
 ## Features
 
 - **Natural language coding** — describe what you want and CodeYang figures out how to do it
-- **10 built-in tools** — Bash, Read, Write, Edit, Glob, Grep, TodoWrite, WebFetch, Task (sub-agent), Question
+- **16 built-in tools** — Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists, Glob, Grep, TodoWrite, WebFetch, Task (sub-agent), Question
 - **Streaming responses** — see Claude's output in real-time as it generates
 - **Sub-agent delegation** — Task tool launches autonomous mini-agents for complex work
 - **Session persistence** — saves and resumes coding sessions automatically
@@ -85,6 +85,12 @@ Navigate to the `vscode-extension/` directory and follow the VS Code extension i
 | **Read** | Read files or list directories |
 | **Write** | Create or overwrite files |
 | **Edit** | Surgical text replacement in files |
+| **Copy** | Copy files or directories recursively |
+| **Move** | Move or rename files and directories |
+| **Delete** | Delete files or directories with safety checks |
+| **Mkdir** | Create directories with parent creation |
+| **List** | List directory contents with details |
+| **Exists** | Check if path exists and get info |
 | **Glob** | Find files by pattern |
 | **Grep** | Search file contents with regex |
 | **TodoWrite** | Track task progress |
@@ -109,6 +115,7 @@ src/
 │   ├── ReadTool.ts       # File/directory reading
 │   ├── WriteTool.ts      # File writing
 │   ├── EditTool.ts       # Surgical text replacement
+│   ├── FileSystemTool.ts # Copy/Move/Delete/Mkdir/List/Exists
 │   ├── GlobTool.ts       # File glob pattern matching
 │   ├── GrepTool.ts       # Content regex search
 │   ├── TodoWriteTool.ts  # Task list management
