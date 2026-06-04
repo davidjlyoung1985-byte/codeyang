@@ -7,7 +7,7 @@ Also includes a **VS Code extension** for in-editor AI chat with tool-using capa
 ## Features
 
 - **Natural language coding** — describe what you want and CodeYang figures out how to do it
-- **26 built-in tools** — Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists, Glob, Grep, JsonParse, JsonWrite, JsonQuery, YamlParse, YamlWrite, Convert, CsvParse, CsvWrite, XmlParse, XmlWrite, TodoWrite, WebFetch, Task (sub-agent), Question
+- **43 built-in tools** — File operations (Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists), Search (Glob, Grep), Data processing (JsonParse, JsonWrite, JsonQuery, YamlParse, YamlWrite, Convert, CsvParse, CsvWrite, XmlParse, XmlWrite), Git (GitStatus, GitDiff, GitCommit, GitBranch, GitCheckout, GitLog, GitPush, GitPull, GitClone, GitAdd, GitReset, GitStash, GitMerge, GitRemote, GitCurrentBranch, GitBlame), Task management (TodoWrite), Web (WebFetch), Delegation (Task, Question)
 - **Streaming responses** — see Claude's output in real-time as it generates
 - **Sub-agent delegation** — Task tool launches autonomous mini-agents for complex work
 - **Session persistence** — saves and resumes coding sessions automatically
@@ -103,6 +103,22 @@ Navigate to the `vscode-extension/` directory and follow the VS Code extension i
 | **CsvWrite** | Write JSON array to CSV |
 | **XmlParse** | Parse XML to JSON |
 | **XmlWrite** | Write JSON to XML |
+| **GitStatus** | Show repository status |
+| **GitDiff** | Show changes (staged/unstaged) |
+| **GitCommit** | Create commits |
+| **GitBranch** | List branches |
+| **GitCheckout** | Switch/create branches |
+| **GitLog** | View commit history |
+| **GitPush** | Push to remote |
+| **GitPull** | Pull from remote |
+| **GitClone** | Clone repository |
+| **GitAdd** | Stage files |
+| **GitReset** | Unstage/reset changes |
+| **GitStash** | Stash changes |
+| **GitMerge** | Merge branches |
+| **GitRemote** | List remotes |
+| **GitCurrentBranch** | Show current branch |
+| **GitBlame** | Show file annotations |
 | **TodoWrite** | Track task progress |
 | **WebFetch** | Fetch web content as text |
 | **Task** | Launch autonomous sub-agents |
@@ -127,6 +143,7 @@ src/
 │   ├── EditTool.ts       # Surgical text replacement
 │   ├── FileSystemTool.ts # Copy/Move/Delete/Mkdir/List/Exists
 │   ├── DataTool.ts       # JSON/YAML/CSV/XML parsing & conversion
+│   ├── GitTool.ts        # Git version control operations
 │   ├── GlobTool.ts       # File glob pattern matching
 │   ├── GrepTool.ts       # Content regex search
 │   ├── TodoWriteTool.ts  # Task list management
