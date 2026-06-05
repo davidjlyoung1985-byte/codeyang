@@ -13,3 +13,5 @@ export { executeGlob, matchGlob } from './GlobTool.js';
 export { executeGrep } from './GrepTool.js';
 export { executeTodoWrite, getTodos, resetTodos } from './TodoWriteTool.js';
 export { executeWebFetch } from './WebFetchTool.js';
+export { executeSearch } from './SearchTool.js';
+export { executeImageInfo, executeImageToBase64, executeListImages } from './ImageTool.js';

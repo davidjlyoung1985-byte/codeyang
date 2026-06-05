@@ -1,7 +1,18 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, PassThrough } from 'node:fs';
+import { Readable } from 'node:stream';
+
+// Mock axios before importing NetworkTool
+vi.mock('axios', () => {
+  const mockFn = vi.fn();
+  mockFn.post = vi.fn();
+  mockFn.head = vi.fn();
+  return { default: mockFn };
+});
+
+import axios from 'axios';
 import {
   executeHttpRequest,
   executeDownloadFile,
@@ -12,39 +23,54 @@ import {
 } from './NetworkTool.js';
 
 const TEST_DIR = path.join(process.cwd(), '.test-network');
+const mockedAxios = axios as unknown as ReturnType<typeof vi.fn> & {
+  post: ReturnType<typeof vi.fn>;
+  head: ReturnType<typeof vi.fn>;
+};
+
+beforeEach(async () => {
+  vi.clearAllMocks();
+  if (existsSync(TEST_DIR)) {
+    await fs.rm(TEST_DIR, { recursive: true, force: true });
+  }
+  await fs.mkdir(TEST_DIR, { recursive: true });
+});
+
+afterEach(async () => {
+  if (existsSync(TEST_DIR)) {
+    await fs.rm(TEST_DIR, { recursive: true, force: true });
+  }
+});
 
 describe('NetworkTool', () => {
-  beforeEach(async () => {
-    if (existsSync(TEST_DIR)) {
-      await fs.rm(TEST_DIR, { recursive: true, force: true });
-    }
-    await fs.mkdir(TEST_DIR, { recursive: true });
-  });
-
-  afterEach(async () => {
-    if (existsSync(TEST_DIR)) {
-      await fs.rm(TEST_DIR, { recursive: true, force: true });
-    }
-  });
-
   describe('executeHttpRequest', () => {
     it('should make GET request', async () => {
-      const result = await executeHttpRequest(
-        'https://httpbin.org/get',
-        'GET',
-      );
+      mockedAxios.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'application/json' },
+        data: { url: 'https://example.com/get' },
+      });
+
+      const result = await executeHttpRequest('https://example.com/get', 'GET');
 
       expect(result).toContain('"status": 200');
       expect(result).toContain('"data"');
     });
 
     it('should make POST request with body', async () => {
-      const body = { name: 'test', value: 123 };
+      mockedAxios.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: { json: { name: 'test', value: 123 } },
+      });
+
       const result = await executeHttpRequest(
-        'https://httpbin.org/post',
+        'https://example.com/post',
         'POST',
         { 'Content-Type': 'application/json' },
-        body,
+        '{"name":"test","value":123}',
       );
 
       expect(result).toContain('"status": 200');
@@ -52,34 +78,32 @@ describe('NetworkTool', () => {
     });
 
     it('should handle request timeout', async () => {
-      const result = await executeHttpRequest(
-        'https://httpbin.org/delay/10',
-        'GET',
-        undefined,
-        undefined,
-        100,
-      );
+      mockedAxios.mockRejectedValue(Object.assign(new Error('timeout of 100ms exceeded'), { code: 'ECONNABORTED' }));
+
+      const result = await executeHttpRequest('https://example.com/delay', 'GET', undefined, undefined, 100);
 
       expect(result).toContain('Error');
     });
 
     it('should handle 404 errors', async () => {
-      const result = await executeHttpRequest(
-        'https://httpbin.org/status/404',
-        'GET',
-      );
+      const err = Object.assign(new Error('Not Found'), {
+        response: { status: 404, statusText: 'Not Found', headers: {}, data: '' },
+      });
+      mockedAxios.mockRejectedValue(err);
+
+      const result = await executeHttpRequest('https://example.com/status/404', 'GET');
 
       expect(result).toContain('"status": 404');
     });
   });
 
   describe('executeDownloadFile', () => {
-    it('should download file', async () => {
+    it('should download file and write to disk', async () => {
+      const readable = Readable.from(['{"slideshow": {}}']);
+      mockedAxios.mockResolvedValue({ data: readable, headers: {} });
+
       const destPath = path.join(TEST_DIR, 'downloaded.json');
-      const result = await executeDownloadFile(
-        'https://httpbin.org/json',
-        destPath,
-      );
+      const result = await executeDownloadFile('https://example.com/json', destPath);
 
       expect(result).toContain('Downloaded');
       expect(result).toContain('Size:');
@@ -87,23 +111,21 @@ describe('NetworkTool', () => {
     });
 
     it('should create parent directories', async () => {
+      const readable = Readable.from(['{}']);
+      mockedAxios.mockResolvedValue({ data: readable, headers: {} });
+
       const destPath = path.join(TEST_DIR, 'sub', 'dir', 'file.json');
-      const result = await executeDownloadFile(
-        'https://httpbin.org/json',
-        destPath,
-      );
+      const result = await executeDownloadFile('https://example.com/json', destPath);
 
       expect(result).toContain('Downloaded');
       expect(existsSync(destPath)).toBe(true);
     });
 
     it('should handle download errors', async () => {
+      mockedAxios.mockRejectedValue(new Error('ENOTFOUND invalid-url'));
+
       const destPath = path.join(TEST_DIR, 'error.txt');
-      const result = await executeDownloadFile(
-        'https://invalid-url-that-does-not-exist.com/file',
-        destPath,
-        1000,
-      );
+      const result = await executeDownloadFile('https://invalid-url.com/file', destPath, 1000);
 
       expect(result).toContain('Error');
     });
@@ -111,37 +133,43 @@ describe('NetworkTool', () => {
 
   describe('executeUploadFile', () => {
     it('should upload file', async () => {
+      mockedAxios.post.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: { files: { file: 'test content' } },
+      });
+
       const testFile = path.join(TEST_DIR, 'upload.txt');
       await fs.writeFile(testFile, 'test content');
 
-      const result = await executeUploadFile(
-        'https://httpbin.org/post',
-        testFile,
-      );
+      const result = await executeUploadFile('https://example.com/post', testFile);
 
       expect(result).toContain('"status": 200');
     });
 
     it('should upload with additional fields', async () => {
+      mockedAxios.post.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: { form: { description: 'test file', version: '1.0' } },
+      });
+
       const testFile = path.join(TEST_DIR, 'upload.txt');
       await fs.writeFile(testFile, 'test content');
 
-      const result = await executeUploadFile(
-        'https://httpbin.org/post',
-        testFile,
-        'file',
-        { description: 'test file', version: '1.0' },
-      );
+      const result = await executeUploadFile('https://example.com/post', testFile, 'file', {
+        description: 'test file',
+        version: '1.0',
+      });
 
       expect(result).toContain('"status": 200');
       expect(result).toContain('description');
     });
 
-    it('should handle upload errors', async () => {
-      const result = await executeUploadFile(
-        'https://httpbin.org/post',
-        'nonexistent-file.txt',
-      );
+    it('should handle upload errors (file not found)', async () => {
+      const result = await executeUploadFile('https://example.com/post', 'nonexistent-file.txt');
 
       expect(result).toContain('Error');
     });
@@ -149,10 +177,14 @@ describe('NetworkTool', () => {
 
   describe('executeApiCall', () => {
     it('should make successful API call', async () => {
-      const result = await executeApiCall(
-        'https://httpbin.org/get',
-        'GET',
-      );
+      mockedAxios.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: { url: 'https://example.com/get' },
+      });
+
+      const result = await executeApiCall('https://example.com/get', 'GET');
 
       const parsed = JSON.parse(result);
       expect(parsed.success).toBe(true);
@@ -160,12 +192,14 @@ describe('NetworkTool', () => {
     });
 
     it('should POST JSON data', async () => {
-      const body = { user: 'john', age: 30 };
-      const result = await executeApiCall(
-        'https://httpbin.org/post',
-        'POST',
-        body,
-      );
+      mockedAxios.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: { json: { user: 'john', age: 30 } },
+      });
+
+      const result = await executeApiCall('https://example.com/post', 'POST', { user: 'john', age: 30 });
 
       const parsed = JSON.parse(result);
       expect(parsed.success).toBe(true);
@@ -173,10 +207,12 @@ describe('NetworkTool', () => {
     });
 
     it('should handle API errors', async () => {
-      const result = await executeApiCall(
-        'https://httpbin.org/status/500',
-        'GET',
-      );
+      const err = Object.assign(new Error('Internal Server Error'), {
+        response: { status: 500, statusText: 'Internal Server Error', headers: {}, data: '' },
+      });
+      mockedAxios.mockRejectedValue(err);
+
+      const result = await executeApiCall('https://example.com/status/500', 'GET');
 
       const parsed = JSON.parse(result);
       expect(parsed.success).toBe(false);
@@ -184,12 +220,16 @@ describe('NetworkTool', () => {
     });
 
     it('should include custom headers', async () => {
-      const result = await executeApiCall(
-        'https://httpbin.org/headers',
-        'GET',
-        undefined,
-        { 'X-Custom-Header': 'test-value' },
-      );
+      mockedAxios.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: { headers: { 'X-Custom-Header': 'test-value' } },
+      });
+
+      const result = await executeApiCall('https://example.com/headers', 'GET', undefined, {
+        'X-Custom-Header': 'test-value',
+      });
 
       const parsed = JSON.parse(result);
       expect(parsed.success).toBe(true);
@@ -198,25 +238,37 @@ describe('NetworkTool', () => {
 
   describe('executeCheckUrl', () => {
     it('should check accessible URL', async () => {
-      const result = await executeCheckUrl('https://httpbin.org/');
+      mockedAxios.head.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'text/html', server: 'nginx' },
+      });
+
+      const result = await executeCheckUrl('https://example.com/');
 
       expect(result).toContain('Status: 200');
       expect(result).toContain('Accessible: Yes');
       expect(result).toContain('Response Time:');
     });
 
-    it('should check inaccessible URL', async () => {
-      const result = await executeCheckUrl('https://httpbin.org/status/404');
+    it('should check inaccessible URL (404)', async () => {
+      // validateStatus: () => true means 404 resolves, not rejects
+      mockedAxios.head.mockResolvedValue({
+        status: 404,
+        statusText: 'Not Found',
+        headers: {},
+      });
+
+      const result = await executeCheckUrl('https://example.com/missing');
 
       expect(result).toContain('Status: 404');
       expect(result).toContain('Accessible: No');
     });
 
     it('should handle connection errors', async () => {
-      const result = await executeCheckUrl(
-        'https://invalid-domain-12345.com',
-        1000,
-      );
+      mockedAxios.head.mockRejectedValue(new Error('ENOTFOUND invalid-domain-12345.com'));
+
+      const result = await executeCheckUrl('https://invalid-domain-12345.com', 1000);
 
       expect(result).toContain('URL check failed');
     });

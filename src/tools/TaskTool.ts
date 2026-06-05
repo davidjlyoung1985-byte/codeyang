@@ -12,6 +12,20 @@ const TASK_SYSTEM_PROMPT = `You are a sub-agent of CodeYang, an AI coding agent.
 - Once you have completed your task, provide a clear, structured summary of your findings.
 - Be efficient. You have a maximum of 10 turns.`;
 
+/**
+ * Run a single prompt in a sub-agent and return the result.
+ * Simpler alternative to the subtasks array form.
+ */
+export async function executeTaskPrompt(
+  client: Anthropic,
+  model: string,
+  maxTokens: number,
+  prompt: string,
+  cwd: string,
+): Promise<string> {
+  return executeTask(client, model, maxTokens, prompt, [prompt], cwd);
+}
+
 export async function executeTask(
   client: Anthropic,
   model: string,

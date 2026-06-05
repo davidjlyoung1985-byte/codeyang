@@ -1,13 +1,14 @@
-import Anthropic from '@anthropic-ai/sdk';
 import type { Message, ToolCall, ToolResult } from '../types.js';
 import { config } from './config.js';
 import { toolSchemas, getTool, setToolContext } from '../tools/registry.js';
 import type { QtContext } from '../qt/index.js';
+import { createLLMClient, type LLMClient, type LLMMessage, type ToolSchema } from './LLMClient.js';
 
 export interface AgentCallbacks {
   onUserMessage?: (text: string) => void;
   onAgentText?: (text: string) => void;
   onAgentDelta?: (text: string) => void;
+  onToolBatch?: (total: number) => void;
   onToolStart?: (name: string, args: Record<string, unknown>) => void;
   onToolResult?: (name: string, output: string, isError: boolean) => void;
   onQuestion?: (question: string, options?: Array<{ label: string; description: string }>) => void;
@@ -15,8 +16,8 @@ export interface AgentCallbacks {
 }
 
 export class Agent {
-  private client: Anthropic;
-  private history: Anthropic.Messages.MessageParam[] = [];
+  private client: LLMClient;
+  private history: LLMMessage[] = [];
   private cbs: AgentCallbacks = {};
   private questionResolve: ((answer: string) => void) | null = null;
   private maxRetries = 3;
@@ -30,7 +31,7 @@ export class Agent {
   private repeatCount = 0;
 
   constructor(private qtContext?: QtContext) {
-    this.client = new Anthropic({ apiKey: config.apiKey });
+    this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
   }
 
   private cacheKey(name: string, args: Record<string, unknown>): string {
@@ -128,7 +129,7 @@ export class Agent {
     this.cbs.onUserMessage?.(prompt);
 
     setToolContext({
-      anthropicClient: this.client,
+      anthropicClient: null,
       model: config.model,
       maxTokens: config.maxTokens,
       cwd: process.cwd(),
@@ -142,90 +143,62 @@ export class Agent {
       }
 
       const streamResult = await this.withRetry(async () => {
-        const s = this.client.messages.stream({
+        const textParts: string[] = [];
+        const toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
+        const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
+
+        for await (const event of this.client.stream({
           model: config.model,
-          max_tokens: config.maxTokens,
+          maxTokens: config.maxTokens,
           temperature: 0.5,
           system: config.getSystemPrompt(this.qtContext),
           messages,
-          tools: toolSchemas(),
-        });
-
-        const blocks: Array<{
-          type: string;
-          text?: string;
-          id?: string;
-          name?: string;
-          input?: unknown;
-          input_json?: string;
-        }> = [];
-        const tcList: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
-        const textParts: string[] = [];
-        let blockIdx = -1;
-
-        for await (const event of s) {
-          switch (event.type) {
-            case 'content_block_start':
-              blockIdx = event.index;
-              blocks[blockIdx] = event.content_block as {
-                type: string;
-                text?: string;
-                id?: string;
-                name?: string;
-                input?: unknown;
-              };
-              break;
-
-            case 'content_block_delta':
-              if (event.delta?.type === 'text_delta' && event.delta.text) {
-                this.cbs.onAgentDelta?.(event.delta.text);
-                textParts.push(event.delta.text);
-                if (blocks[blockIdx]?.type === 'text') {
-                  blocks[blockIdx].text = (blocks[blockIdx].text || '') + event.delta.text;
-                }
-              } else if (event.delta?.type === 'input_json_delta' && event.delta.partial_json) {
-                if (blocks[blockIdx]?.type === 'tool_use') {
-                  blocks[blockIdx].input_json = (blocks[blockIdx].input_json || '') + event.delta.partial_json;
-                }
-              }
-              break;
-
-            case 'content_block_stop':
-              if (blocks[blockIdx]?.type === 'tool_use') {
-                try {
-                  blocks[blockIdx].input = JSON.parse(blocks[blockIdx].input_json || '{}');
-                } catch {
-                  blocks[blockIdx].input = {};
-                }
-              }
-              break;
-          }
-        }
-
-        for (const b of blocks) {
-          if (!b) continue;
-          if (b.type === 'tool_use') {
-            tcList.push({
-              id: b.id!,
-              name: b.name!,
-              input: this.jsonClone(b.input || {}) as Record<string, unknown>,
+          tools: toolSchemas() as ToolSchema[],
+        })) {
+          if (event.type === 'text_delta' && event.text) {
+            this.cbs.onAgentDelta?.(event.text);
+            textParts.push(event.text);
+          } else if (event.type === 'tool_call_start') {
+            toolCallsAccum.set(event.toolCallIndex!, {
+              id: event.toolCallId,
+              name: event.toolCallName,
+              args: '',
             });
+          } else if (event.type === 'tool_call_delta') {
+            const accum = toolCallsAccum.get(event.toolCallIndex!);
+            if (accum) accum.args += event.toolCallArgs || '';
+          } else if (event.type === 'tool_call_end') {
+            const accum = toolCallsAccum.get(event.toolCallIndex!);
+            if (accum) {
+              try {
+                toolCalls.push({
+                  id: accum.id!,
+                  name: accum.name!,
+                  input: JSON.parse(accum.args || '{}'),
+                });
+              } catch {
+                toolCalls.push({ id: accum.id!, name: accum.name!, input: {} });
+              }
+            }
           }
         }
 
-        return { blocks, toolCalls: tcList, assistantText: textParts.join('') };
-      }, 'Anthropic streaming API call');
+        return { toolCalls, assistantText: textParts.join('') };
+      }, 'LLM streaming API call');
 
-      const { blocks: contentBlocks, toolCalls, assistantText } = streamResult;
+      const { toolCalls, assistantText } = streamResult;
 
       const assistantContent: Array<
         { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown }
-      > = contentBlocks
-        .filter((b) => b && (b.type === 'text' || b.type === 'tool_use'))
-        .map((b) => {
-          if (b.type === 'text') return { type: 'text' as const, text: b.text || '' };
-          return { type: 'tool_use' as const, id: b.id!, name: b.name!, input: this.jsonClone(b.input || {}) };
-        });
+      > = [];
+
+      if (assistantText) {
+        assistantContent.push({ type: 'text', text: assistantText });
+      }
+
+      for (const tc of toolCalls) {
+        assistantContent.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input });
+      }
 
       messages.push({ role: 'assistant', content: assistantContent });
 
@@ -256,6 +229,7 @@ export class Agent {
       // Execute tools — parallel for speed, Question handled first
       const toolResults: ToolResult[] = [];
       const toolResultIds: string[] = [];
+      this.cbs.onToolBatch?.(toolCalls.length);
 
       // Handle Question tool first (it blocks for user input)
       for (let i = 0; i < toolCalls.length; i++) {

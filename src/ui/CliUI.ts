@@ -3,12 +3,12 @@ import picocolors from 'picocolors';
 
 const c = picocolors;
 
-/** Terminal width, clamped to a max to keep things readable on wide screens */
+const VERSION = '0.6.0';
+
 function termW(): number {
   return Math.min(process.stdout.columns || 80, 120);
 }
 
-/** Print a visually distinct horizontal separator */
 function hr(label?: string): void {
   const w = termW();
   if (label) {
@@ -19,42 +19,15 @@ function hr(label?: string): void {
   }
 }
 
-// ─── Markdown rendering (lightweight, no external deps) ─────────────────────
-
-function bold(text: string): string {
-  // ANSI bold escape
-  return `\x1b[1m${text}\x1b[22m`;
-}
-
-function renderMarkdownLine(line: string): string {
-  let out = line;
-
-  // Code blocks — highlight as a block (handled at block level in renderMarkdown)
-  // Inline code: `text`
+function renderInlineMarkdown(text: string): string {
+  let out = text;
   out = out.replace(/`([^`]+)`/g, (_m: string, code: string) => c.cyan(code));
-
-  // Bold: **text**
-  out = out.replace(/\*\*([^*]+)\*\*/g, (_m: string, text: string) => bold(text));
-
-  // Italic: *text* (but not ** which was already handled)
-  out = out.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_m: string, text: string) => c.italic(text));
-
-  // Links: [text](url) — show text, dim url
+  out = out.replace(/\*\*([^*]+)\*\*/g, (_m: string, t: string) => `\x1b[1m${t}\x1b[22m`);
+  out = out.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_m: string, t: string) => c.italic(t));
   out = out.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
     (_m: string, text: string, url: string) => `${text} ${c.dim(`(${url})`)}`,
   );
-
-  // Headers: ### text, ## text, # text
-  if (/^#{1,3}\s/.test(out)) {
-    out = bold(c.yellow(out));
-  }
-
-  // Blockquotes
-  if (/^>\s/.test(out)) {
-    out = c.dim(out);
-  }
-
   return out;
 }
 
@@ -75,13 +48,14 @@ function renderMarkdown(text: string): string {
         codeLines = [];
       } else {
         inCodeBlock = false;
-        // Render collected code block
         if (codeLines.length > 0) {
-          result.push(c.dim(`  ┌─ ${codeLang || 'code'} ────────────────────────`));
+          const lang = codeLang || 'code';
+          const border = '─'.repeat(Math.min(termW() - 6, 40));
+          result.push(c.dim(`  ┌${border} ${lang} ${border}`));
           for (const cl of codeLines) {
-            result.push(`  │ ${c.dim(cl)}`);
+            result.push(`  │ ${cl}`);
           }
-          result.push(c.dim('  └─' + '─'.repeat(Math.min(50, codeLang.length > 0 ? codeLang.length + 8 : 4))));
+          result.push(c.dim(`  └${border}${'─'.repeat(lang.length + 1)}${border}`));
         }
         codeLines = [];
       }
@@ -93,16 +67,32 @@ function renderMarkdown(text: string): string {
       continue;
     }
 
-    // Horizontal rule
-    if (/^(---|\*\*\*|___)\s*$/.test(line.trim())) {
-      result.push(c.dim('  ───────────────'));
+    const trimmed = line.trim();
+    if (/^(---|\*\*\*|___)\s*$/.test(trimmed)) {
+      result.push('');
+      result.push(c.dim('  ─────────────────────────'));
+      result.push('');
       continue;
     }
 
-    result.push(renderMarkdownLine(line));
+    if (/^#{1,3}\s/.test(line)) {
+      result.push(`  ${c.bold(c.yellow(line))}`);
+      continue;
+    }
+
+    if (/^>\s/.test(line)) {
+      result.push(`  ${c.dim(line)}`);
+      continue;
+    }
+
+    if (/^[-*+]\s/.test(line.trim())) {
+      result.push(`  ${renderInlineMarkdown(line)}`);
+      continue;
+    }
+
+    result.push(`  ${renderInlineMarkdown(line)}`);
   }
 
-  // Unterminated code block
   if (inCodeBlock && codeLines.length > 0) {
     result.push(c.dim(`  ┌─ ${codeLang || 'code'}`));
     for (const cl of codeLines) result.push(`  │ ${c.dim(cl)}`);
@@ -112,31 +102,39 @@ function renderMarkdown(text: string): string {
   return result.join('\n');
 }
 
-// ─── Spinner ────────────────────────────────────────────────────────────────
+// ─── ProgressBar (spinner) ──────────────────────────────────────────
 
 class Spinner {
   private timer: ReturnType<typeof setInterval> | null = null;
-  private idx = 0;
-  private frames = ['◜', '◠', '◝', '◞', '◡', '◟'];
-  private prefix = '';
+  private label = '';
+  private startTime = 0;
+  private spinnerChars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
-  start(prefix = '') {
+  start(label = '') {
     this.stop();
-    this.idx = 0;
-    this.prefix = prefix;
-    process.stdout.write(prefix + ' ' + this.frames[0]);
-    this.timer = setInterval(() => {
-      this.idx = (this.idx + 1) % this.frames.length;
-      process.stdout.write(`\r${prefix} ${this.frames[this.idx]}`);
-    }, 100);
+    this.label = label;
+    this.startTime = Date.now();
+    this.draw();
+    this.timer = setInterval(() => this.draw(), 80);
+  }
+
+  private draw() {
+    const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+    const timeStr = elapsed >= 60 ? `${Math.floor(elapsed / 60)}m${elapsed % 60}s` : `${elapsed}s`;
+    const char = this.spinnerChars[Math.floor(Date.now() / 80) % this.spinnerChars.length];
+    const dots = '.'.repeat(3 - Math.min(3, Math.floor(elapsed / 2) % 4));
+    process.stdout.write(`\r  ${c.cyan(char)} ${c.dim(this.label)}${dots} ${c.dim(timeStr)}`);
+  }
+
+  updateLabel(label: string) {
+    this.label = label;
   }
 
   stop() {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
-      // Clear the line
-      process.stdout.write('\r' + ' '.repeat(this.prefix.length + 2) + '\r');
+      process.stdout.write('\r' + ' '.repeat(termW() - 4) + '\r');
     }
   }
 
@@ -145,7 +143,7 @@ class Spinner {
   }
 }
 
-// ─── CliUI ──────────────────────────────────────────────────────────────────
+// ─── CliUI ──────────────────────────────────────────────────────────
 
 export class CliUI {
   private rl: readline.Interface;
@@ -153,6 +151,7 @@ export class CliUI {
   private spinner = new Spinner();
   private streamBuf = '';
   private turnCount = 0;
+  private isFirstResponse = true;
 
   constructor() {
     this.rl = readline.createInterface({
@@ -174,129 +173,143 @@ export class CliUI {
     this.onInput = handler;
   }
 
-  // ─── Welcome ──────────────────────────────────────────────────
+  // ─── Welcome ──────────────────────────────────────────────────────
 
   welcome() {
     console.log('');
-    console.log(c.bold(c.green('  CodeYang')) + c.dim(' — AI Coding Agent'));
+    console.log(`  ${c.bold(c.green('CodeYang'))} ${c.dim(`v${VERSION}`)}  ${c.dim('—')}  ${c.dim('AI Coding Agent')}`);
     console.log('');
-    console.log(c.dim('  /clear  /sessions  /model  /mcp  ·  Ctrl+C  Exit'));
+    console.log(
+      `  ${c.dim('/clear')}  ${c.dim('/sessions')}  ${c.dim('/model')}  ${c.dim('/mcp')}  ${c.dim('·')}  ${c.dim('Ctrl+C to exit')}`,
+    );
     console.log('');
     hr('ready');
-    console.log('');
-    process.stdout.write('  ' + c.cyan('❯ '));
+    this.isFirstResponse = true;
   }
 
   promptUser() {
-    process.stdout.write('\n  ' + c.cyan('❯ '));
+    process.stdout.write(`\n  ${c.cyan('❯')} `);
   }
 
-  // ─── Messages ──────────────────────────────────────────────────
+  setToolProgressTotal(_total: number) {
+    // handled by individual tool calls
+  }
+
+  // ─── Messages ─────────────────────────────────────────────────────
 
   showUserMessage(text: string) {
     this.spinner.stop();
     this.turnCount++;
-    console.log('');
-    console.log(c.bold(c.yellow('  用户')));
+    process.stdout.write('\n');
+    hr();
+    console.log(`${c.bold(c.yellow('  User'))}${c.dim(':')}`);
     for (const line of text.split('\n')) {
-      console.log('  ' + line);
+      console.log(`  ${line}`);
     }
   }
 
   showSystemMessage(text: string) {
-    console.log(c.dim(`\n  ${text}\n`));
+    process.stdout.write('\n');
+    console.log(`  ${c.dim('·')} ${c.dim(text)}\n`);
+    this.promptUser();
   }
 
   showAgentStart() {
-    console.log('');
-    console.log(c.bold(c.green('  CodeYang')));
+    this.isFirstResponse = true;
+    process.stdout.write('\n');
+    console.log(`${c.bold(c.green('  CodeYang'))}${c.dim(':')}`);
+    process.stdout.write('\n');
   }
 
   showAgentDone() {
     this.streamBuf = '';
-    console.log('');
+    process.stdout.write('\n');
+    this.isFirstResponse = true;
   }
 
   showAgentText(text: string) {
     if (this.streamBuf) {
-      // Already streamed live — just add trailing newline and clear buffer
       process.stdout.write('\n');
       this.streamBuf = '';
       return;
     }
-    // Fallback: render with markdown (no streaming occurred)
     this.spinner.stop();
     const rendered = renderMarkdown(text);
-    for (const line of rendered.split('\n')) {
-      console.log('  ' + line);
-    }
+    console.log(rendered);
   }
 
   showAgentDelta(text: string) {
     if (this.spinner.active) {
       this.spinner.stop();
-      process.stdout.write('\n  ');
+      if (!this.isFirstResponse) {
+        process.stdout.write('\n');
+      }
+      this.isFirstResponse = false;
     }
-    // Indent continuation lines to match the leading '  '
     process.stdout.write(text.replace(/\n/g, '\n  '));
     this.streamBuf += text;
   }
 
-  startSpinner() {
-    this.spinner.start(c.dim('  │'));
+  startSpinner(label = 'thinking') {
+    this.spinner.start(label);
   }
 
   stopSpinner() {
     this.spinner.stop();
   }
 
-  // ─── Tools ─────────────────────────────────────────────────────
+  // ─── Tools ────────────────────────────────────────────────────────
 
   showToolCall(name: string, args: Record<string, unknown>) {
     this.spinner.stop();
     const argStr = Object.entries(args)
-      .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+      .map(([k, v]) => {
+        const s = typeof v === 'string' ? v : JSON.stringify(v);
+        return s.length > 60 ? `${k}="${s.slice(0, 60)}…"` : `${k}=${JSON.stringify(v)}`;
+      })
       .join(' ')
-      .slice(0, 120);
-    console.log('');
-    console.log(c.dim(`  ╭─ 🛠  ${c.yellow(name)}`));
-    console.log(c.dim(`  │   ${c.dim(argStr)}`));
-    console.log(c.dim('  ╰─'));
+      .slice(0, 100);
+    const icon = name === 'Question' ? '?' : '>';
+    process.stdout.write(`\n  ${c.dim(`${c.cyan(icon)} ${c.white(name)}`)} ${c.dim(argStr)}\n`);
   }
 
   showToolResult(output: string, isError: boolean) {
-    const head = output.split('\n')[0] || '(empty)';
-    const display = head.slice(0, 200);
-    const prefix = isError ? c.red('✗') : c.dim('→');
-    console.log(c.dim(`    ${prefix} ${display}`));
+    const firstLine = output.split('\n')[0] || '(empty)';
+    const display = firstLine.slice(0, 150);
+    if (isError) {
+      console.log(`  ${c.red('  ✗')} ${c.dim(display)}`);
+    } else {
+      console.log(`  ${c.dim('  ·')} ${c.dim(display)}`);
+    }
   }
 
-  // ─── Question ──────────────────────────────────────────────────
+  // ─── Question ─────────────────────────────────────────────────────
 
   showQuestion(question: string, options?: Array<{ label: string; description: string }>) {
     this.spinner.stop();
     console.log('');
-    console.log(c.yellow(`  ┌─ ? ${question}`));
+    console.log(`  ${c.yellow('?')} ${c.bold(question)}`);
 
     if (options && options.length > 0) {
+      console.log('');
       for (let i = 0; i < options.length; i++) {
-        const label = `  ${i + 1}. ${options[i].label}`;
-        console.log(c.yellow(label) + c.dim(`  — ${options[i].description}`));
+        console.log(`    ${c.cyan(`${i + 1}.`)} ${c.white(options[i].label)}`);
+        console.log(`       ${c.dim(options[i].description)}`);
       }
     }
-    console.log(c.yellow('  └─'));
+    console.log('');
     this.promptForAnswer();
   }
 
   promptForAnswer() {
-    process.stdout.write(c.yellow('  ▸ '));
+    process.stdout.write(`  ${c.yellow('▸')} `);
   }
 
-  // ─── Error ─────────────────────────────────────────────────────
+  // ─── Error ────────────────────────────────────────────────────────
 
   showError(err: string) {
     this.spinner.stop();
-    console.log(c.red(`\n  ✗ ${err}`));
+    console.log(`\n  ${c.red('✗')} ${c.red(err)}`);
   }
 
   close() {

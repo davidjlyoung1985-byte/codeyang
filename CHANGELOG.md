@@ -2,6 +2,12 @@
 
 All notable changes to CodeYang will be documented in this file.
 
+## [0.5.0] - 2026-06-04
+
+### Fixed
+
+- **NetworkTool tests** — replaced all httpbin.org live calls with `vi.mock('axios')`, all 272 tests now pass offline in ~25s (was 14 failing / 42s with network timeouts)
+
 ## [0.2.0] - 2026-05-31
 
 ### Added

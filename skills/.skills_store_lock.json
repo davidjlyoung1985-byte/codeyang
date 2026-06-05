@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "skills": {
+    "self-improving-agent": {
+      "name": "self-improving-agent",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=self-improving-agent",
+      "source": "community",
+      "version": "1.0.11",
+      "installedAt": "2026-06-05T00:13:35Z"
+    },
+    "find-skills": {
+      "name": "Find Skills",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=find-skills",
+      "source": "community",
+      "version": "0.1.0",
+      "installedAt": "2026-06-05T00:16:07Z"
+    },
+    "agent-browser": {
+      "name": "Agent Browser",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=agent-browser",
+      "source": "community",
+      "version": "0.2.0",
+      "installedAt": "2026-06-05T00:16:54Z"
+    },
+    "ontology": {
+      "name": "Ontology",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=ontology",
+      "source": "community",
+      "version": "0.1.2",
+      "installedAt": "2026-06-05T00:17:20Z"
+    },
+    "proactive-agent": {
+      "name": "Proactive Agent",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=proactive-agent",
+      "source": "community",
+      "version": "3.1.0",
+      "installedAt": "2026-06-05T00:17:51Z"
+    },
+    "codeconductor": {
+      "name": "CodeConductor.ai",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=codeconductor",
+      "source": "community",
+      "version": "1.0.1",
+      "installedAt": "2026-06-05T00:18:18Z"
+    },
+    "agent-browser-clawdbot": {
+      "name": "Agent Browser",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=agent-browser-clawdbot",
+      "source": "community",
+      "version": "0.1.0",
+      "installedAt": "2026-06-05T00:18:46Z"
+    },
+    "nano-pdf": {
+      "name": "Nano Pdf",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=nano-pdf",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:19:11Z"
+    },
+    "skill-creator": {
+      "name": "Skill Creator",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=skill-creator",
+      "source": "community",
+      "version": "0.1.0",
+      "installedAt": "2026-06-05T00:19:45Z"
+    }
+  }
+}

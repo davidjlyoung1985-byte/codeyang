@@ -10,6 +10,8 @@ const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 
 interface LocalConfig {
   apiKey?: string;
+  apiBaseURL?: string;
+  apiProvider?: string;
   mcpServers?: Record<string, McpServerConfig>;
 }
 
@@ -24,9 +26,11 @@ export async function loadLocalConfig(): Promise<void> {
   }
 }
 
-export async function saveApiKey(key: string): Promise<void> {
+export async function saveApiSettings(settings: { apiKey: string; apiBaseURL?: string; apiProvider?: string }): Promise<void> {
   await mkdir(CONFIG_DIR, { recursive: true });
-  localConfig.apiKey = key;
+  localConfig.apiKey = settings.apiKey;
+  if (settings.apiBaseURL) localConfig.apiBaseURL = settings.apiBaseURL;
+  if (settings.apiProvider) localConfig.apiProvider = settings.apiProvider;
   await writeFile(CONFIG_FILE, JSON.stringify(localConfig, null, 2), 'utf-8');
 }
 
@@ -40,18 +44,32 @@ export async function saveMcpServers(servers: Record<string, McpServerConfig>): 
   await writeFile(CONFIG_FILE, JSON.stringify(localConfig, null, 2), 'utf-8');
 }
 
+let modelOverride: string | undefined;
+
+export function setSessionApiKey(key: string) {
+  sessionApiKey = key;
+}
+
+let sessionApiKey = '';
+
 export const config = {
-  model: process.env['CODEYANG_MODEL'] || process.env['CODEX_MODEL'] || 'claude-sonnet-4-6',
-  get apiKey() {
-    return (
-      process.env['ANTHROPIC_API_KEY'] ||
-      process.env['CODEYANG_API_KEY'] ||
-      process.env['CODEX_API_KEY'] ||
-      localConfig.apiKey ||
-      ''
-    );
+  get model() {
+    if (modelOverride) return modelOverride;
+    return process.env['CODEYANG_MODEL'] || 'deepseek-chat';
   },
-  maxTokens: Number(process.env['CODEYANG_MAX_TOKENS'] || process.env['CODEX_MAX_TOKENS'] || '8192'),
+  set model(v: string) {
+    modelOverride = v;
+  },
+  get apiKey() {
+    return sessionApiKey || process.env['CODEYANG_API_KEY'] || process.env['DEEPSEEK_API_KEY'] || '';
+  },
+  get baseURL() {
+    return process.env['CODEYANG_BASE_URL'] || localConfig.apiBaseURL || 'https://api.deepseek.com/v1';
+  },
+  get provider() {
+    return localConfig.apiProvider || 'deepseek';
+  },
+  maxTokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
   getSystemPrompt(qtContext?: QtContext): string {
     let prompt = BASE_SYSTEM_PROMPT;
     if (qtContext?.isQtProject) {

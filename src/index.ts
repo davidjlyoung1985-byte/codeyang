@@ -2,18 +2,18 @@
 import * as readline from 'node:readline';
 import { CliUI } from './ui/CliUI.js';
 import { Agent } from './agent/Agent.js';
-import { config, loadLocalConfig, saveApiKey, getMcpServers } from './agent/config.js';
+import { config, loadLocalConfig, setSessionApiKey, getMcpServers } from './agent/config.js';
 import { saveSession, listSessions, loadSession, deleteSession } from './utils/sessionStore.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
 
-const VERSION = '0.4.0';
+const VERSION = '0.6.0';
 
-async function promptForApiKey(): Promise<string> {
+async function promptForDeepSeekKey(): Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question('Enter your Anthropic API key: ', (key) => {
+    rl.question('Enter your DeepSeek API key: ', (key) => {
       rl.close();
       resolve(key.trim());
     });
@@ -54,6 +54,7 @@ Options:
 Interactive Commands:
   /clear           Reset the conversation
   /sessions        List saved sessions
+  /tools           List all available tools
   /model           Show current model
   /model <name>    Switch model
   /mcp             Show MCP server status
@@ -75,16 +76,12 @@ Interactive Commands:
 
   await loadLocalConfig();
 
-  if (!config.apiKey) {
-    console.log('No API key found. Please enter your Anthropic API key.\n');
-    const key = await promptForApiKey();
-    if (!key) {
-      console.log('No API key provided. Exiting.');
-      process.exit(1);
-    }
-    await saveApiKey(key);
-    console.log('API key saved to ~/.codeyang/config.json\n');
+  const key = await promptForDeepSeekKey();
+  if (!key) {
+    console.log('No API key provided. Exiting.');
+    process.exit(1);
   }
+  setSessionApiKey(key);
 
   // Initialize MCP servers if configured
   const mcpMgr = new McpManager();
@@ -136,6 +133,12 @@ Interactive Commands:
     onAgentText(text) {
       ui.showAgentText(text);
     },
+    onAgentDelta(text) {
+      ui.showAgentDelta(text);
+    },
+    onToolBatch(total) {
+      ui.setToolProgressTotal(total);
+    },
     onToolStart(name, args) {
       ui.showToolCall(name, args);
     },
@@ -156,8 +159,8 @@ Interactive Commands:
 
     ui.showUserMessage(line);
     ui.showAgentStart();
-    // Show spinner during thinking
-    ui.startSpinner();
+    // Show progress bar during thinking
+    ui.startSpinner('thinking');
 
     try {
       await agent.run(line);
@@ -196,6 +199,18 @@ Interactive Commands:
       } else {
         for (const s of sessions) console.log(`  ${s.id}  ${s.title}  (${s.updatedAt})`);
       }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/tools') {
+      const { toolSchemas } = await import('./tools/registry.js');
+      const schemas = toolSchemas();
+      console.log(`\n  Available tools (${schemas.length}):`);
+      for (const t of schemas) {
+        console.log(`  · ${t.name.padEnd(18)} ${t.description.split('.')[0]}`);
+      }
+      console.log('');
       ui.promptUser();
       return;
     }

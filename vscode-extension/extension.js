@@ -13,6 +13,10 @@ const {
   executeGrep: _executeGrep,
   executeWebFetch: _executeWebFetch,
   executeTodoWrite: _executeTodoWrite,
+  executeSearch: _executeSearch,
+  executeImageInfo: _executeImageInfo,
+  executeImageToBase64: _executeImageToBase64,
+  executeListImages: _executeListImages,
 } = require('../../dist/cjs/tools.cjs');
 
 // ─── Configuration ──────────────────────────────────────────────────────────
@@ -114,6 +118,26 @@ async function execGrep(pattern, include, searchPath) {
   return _executeGrep(pattern, include, resolvedPath);
 }
 
+async function execSearch(query, rootDir, opts) {
+  const resolved = rootDir ? (path.isAbsolute(rootDir) ? rootDir : path.join(getWorkspaceRoot(), rootDir)) : getWorkspaceRoot();
+  return _executeSearch(query, resolved, opts || {});
+}
+
+async function execImageInfo(filePath) {
+  const resolved = path.isAbsolute(filePath) ? filePath : path.join(getWorkspaceRoot(), filePath);
+  return _executeImageInfo(resolved);
+}
+
+async function execImageToBase64(filePath, maxBytes) {
+  const resolved = path.isAbsolute(filePath) ? filePath : path.join(getWorkspaceRoot(), filePath);
+  return _executeImageToBase64(resolved, maxBytes);
+}
+
+async function execListImages(dirPath) {
+  const resolved = path.isAbsolute(dirPath) ? dirPath : path.join(getWorkspaceRoot(), dirPath);
+  return _executeListImages(resolved);
+}
+
 async function execTodoWrite(todos) {
   if (!Array.isArray(todos) || todos.length === 0) {
     return 'Usage: Provide a non-empty array of todo items with content, status, priority.';
@@ -137,6 +161,10 @@ const toolDefinitions = [
   { name: 'TodoWrite', description: 'Create and maintain a structured task list for the current session.', input_schema: { type: 'object', properties: { todos: { type: 'array', items: { type: 'object', properties: { content: { type: 'string' }, status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'] }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['content', 'status', 'priority'] }, description: 'The updated todo list' } }, required: ['todos'] } },
   { name: 'Question', description: 'Ask the user a question when you need clarification.', input_schema: { type: 'object', properties: { question: { type: 'string', description: 'The question to ask' }, options: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, description: { type: 'string' } }, required: ['label', 'description'] }, description: 'Available choices' } }, required: ['question'] } },
   { name: 'Task', description: 'Launch a sub-agent for complex multi-step tasks. Available in CLI mode only.', input_schema: { type: 'object', properties: { description: { type: 'string', description: 'Brief description of the task' }, prompt: { type: 'string', description: 'Detailed prompt for the sub-agent' }, subagent_type: { type: 'string', description: 'Type of sub-agent' } }, required: ['description', 'prompt'] } },
+  { name: 'Search', description: 'Search files by name and/or content. Returns ranked results.', input_schema: { type: 'object', properties: { query: { type: 'string', description: 'Search query' }, rootDir: { type: 'string' }, maxResults: { type: 'number' }, includeGlob: { type: 'string' }, searchContent: { type: 'boolean' }, searchNames: { type: 'boolean' } }, required: ['query'] } },
+  { name: 'ImageInfo', description: 'Read image metadata: format, dimensions, file size.', input_schema: { type: 'object', properties: { filePath: { type: 'string' } }, required: ['filePath'] } },
+  { name: 'ImageToBase64', description: 'Encode image to base64 data URI.', input_schema: { type: 'object', properties: { filePath: { type: 'string' }, maxBytes: { type: 'number' } }, required: ['filePath'] } },
+  { name: 'ListImages', description: 'List image files in a directory.', input_schema: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } },
 ];
 
 async function executeTool(name, args, panel) {
@@ -150,6 +178,10 @@ async function executeTool(name, args, panel) {
     case 'WebFetch': return await execWebFetch(String(args.url || ''), args.format ? String(args.format) : undefined);
     case 'TodoWrite': return await execTodoWrite(Array.isArray(args.todos) ? args.todos : []);
     case 'Task': return 'Sub-agent tasks are available in the CodeYang CLI. Please execute this work directly using the available tools (Read, Grep, Bash, etc.).';
+    case 'Search': return await execSearch(String(args.query || ''), args.rootDir ? String(args.rootDir) : undefined, { maxResults: args.maxResults, includeGlob: args.includeGlob, searchContent: args.searchContent, searchNames: args.searchNames });
+    case 'ImageInfo': return await execImageInfo(String(args.filePath || ''));
+    case 'ImageToBase64': return await execImageToBase64(String(args.filePath || ''), args.maxBytes);
+    case 'ListImages': return await execListImages(String(args.path || ''));
     case 'Question': {
       const q = String(args.question || '');
       const options = args.options;
@@ -299,28 +331,34 @@ async function runAgent(client, messages, panel) {
     messages.push({ role: 'assistant', content: assistantContent });
     if (toolCalls.length === 0) break;
 
-    const toolResults = [];
-    for (const tc of toolCalls) {
+    const toolResults = new Array(toolCalls.length);
+
+    // Handle Question first (blocks for user input)
+    for (let i = 0; i < toolCalls.length; i++) {
+      const tc = toolCalls[i];
       if (tc.name === 'Question') {
-        // Handle question inline in the tool loop
         const q = String(tc.input.question || '');
         panel.webview.postMessage({ type: 'question', question: q, options: tc.input.options || [] });
         const answer = await new Promise(resolve => { panel._questionResolve = resolve; });
-        toolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: answer, is_error: false });
-        continue;
+        toolResults[i] = { type: 'tool_result', tool_use_id: tc.id, content: answer, is_error: false };
       }
+    }
 
+    // Execute all non-Question tools in parallel
+    await Promise.all(toolCalls.map(async (tc, i) => {
+      if (tc.name === 'Question') return;
       panel.webview.postMessage({ type: 'toolCall', name: tc.name, args: JSON.stringify(tc.input).slice(0, 200) });
       try {
         const output = await executeTool(tc.name, tc.input, panel);
-        toolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: output, is_error: false });
+        toolResults[i] = { type: 'tool_result', tool_use_id: tc.id, content: output, is_error: false };
         panel.webview.postMessage({ type: 'toolResult', output: String(output).split('\n')[0]?.slice(0, 150) || '(empty)', isError: false });
       } catch (err) {
         const msg = err.message || String(err);
-        toolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: msg, is_error: true });
+        toolResults[i] = { type: 'tool_result', tool_use_id: tc.id, content: msg, is_error: true };
         panel.webview.postMessage({ type: 'toolResult', output: msg.slice(0, 150), isError: true });
       }
-    }
+    }));
+
     messages.push({ role: 'user', content: toolResults });
   }
 }

@@ -58,11 +58,13 @@ import {
 import { executeMathSolve } from '../math/MathSolve.js';
 import { executeMathPlot } from '../math/MathPlot.js';
 import { executeMathExplain } from '../math/MathExplain.js';
+import { executeSearch } from './SearchTool.js';
+import { executeImageInfo, executeImageToBase64, executeListImages } from './ImageTool.js';
 import type Anthropic from '@anthropic-ai/sdk';
 import type { McpManager } from '../mcp/McpManager.js';
 
 export interface ToolContext {
-  anthropicClient: Anthropic;
+  anthropicClient: Anthropic | null;
   model: string;
   maxTokens: number;
   cwd: string;
@@ -291,31 +293,36 @@ export const tools: ToolDefinition[] = [
   {
     name: 'Task',
     description:
-      'Launch a sub-agent to handle complex, multi-step tasks autonomously. ' +
-      'Use for independent subtasks that can run without shared state. ' +
-      'The sub-agent executes sequentially and returns a single final result. ' +
-      'IMPORTANT: Use this to parallelize independent work units.',
+      'Launch a sub-agent to handle a task autonomously. ' +
+      'Two modes: (1) prompt — single instruction string for simple tasks; ' +
+      '(2) subtasks array — multiple parallel subtasks for complex work. ' +
+      'Sub-agents run in parallel. Question and Task tools are disabled inside sub-agents.',
     parameters: {
       type: 'object',
       properties: {
-        description: { type: 'string', description: 'A short (3-5 word) description of the task' },
+        description: { type: 'string', description: 'Short description (3-5 words)' },
+        prompt: { type: 'string', description: 'Single instruction for the sub-agent (use instead of subtasks for simple tasks)' },
         subtasks: {
           type: 'array',
           items: { type: 'string' },
-          description: 'List of subtask descriptions to execute in order',
+          description: 'List of parallel subtask instructions (use instead of prompt for multi-step work)',
         },
       },
-      required: ['description', 'subtasks'],
+      required: ['description'],
     },
     execute: async (args) => {
       const desc = String(args['description'] ?? '');
-      const subtasks = (args['subtasks'] as string[]) ?? [];
+      const prompt = args['prompt'] ? String(args['prompt']) : undefined;
+      const subtasks = prompt ? [prompt] : ((args['subtasks'] as string[]) ?? []);
 
       if (!currentContext) {
         return 'Task sub-agent is not available: no tool context configured.';
       }
 
       const { anthropicClient, model, maxTokens, cwd } = currentContext;
+      if (!anthropicClient) {
+        return 'Task sub-agent is not available when using non-Anthropic providers.';
+      }
       return executeTask(anthropicClient, model, maxTokens, desc, subtasks, cwd);
     },
   },
@@ -1197,6 +1204,76 @@ export const tools: ToolDefinition[] = [
       const output = args['output'] ? String(args['output']) : undefined;
       return executeMathPlot(kind, output);
     },
+  },
+  {
+    name: 'Search',
+    description:
+      'Search for files by name and/or content in a directory. Returns ranked results: file name matches first, then content matches with line numbers. Faster than running Glob + Grep separately.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query (regex supported)' },
+        rootDir: { type: 'string', description: 'Root directory to search (default: cwd)' },
+        maxResults: { type: 'number', description: 'Maximum results to return (default: 20)' },
+        includeGlob: { type: 'string', description: 'File glob filter e.g. "*.ts" (optional)' },
+        searchContent: { type: 'boolean', description: 'Search file contents (default: true)' },
+        searchNames: { type: 'boolean', description: 'Search file names (default: true)' },
+        caseSensitive: { type: 'boolean', description: 'Case-sensitive search (default: false)' },
+      },
+      required: ['query'],
+    },
+    execute: async (args) => {
+      const query = String(args['query'] ?? '');
+      const rootDir = args['rootDir'] ? String(args['rootDir']) : undefined;
+      return executeSearch(query, rootDir, {
+        maxResults: args['maxResults'] !== undefined ? Number(args['maxResults']) : undefined,
+        includeGlob: args['includeGlob'] ? String(args['includeGlob']) : undefined,
+        searchContent: args['searchContent'] !== false,
+        searchNames: args['searchNames'] !== false,
+        caseSensitive: args['caseSensitive'] === true,
+      });
+    },
+  },
+  {
+    name: 'ImageInfo',
+    description: 'Read image file metadata: format, dimensions, file size. Supports PNG, JPEG, GIF, WEBP, BMP, ICO.',
+    parameters: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Path to the image file' },
+      },
+      required: ['filePath'],
+    },
+    execute: async (args) => executeImageInfo(String(args['filePath'] ?? '')),
+  },
+  {
+    name: 'ImageToBase64',
+    description: 'Encode an image file to a base64 data URI string. Max 5 MB by default.',
+    parameters: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Path to the image file' },
+        maxBytes: { type: 'number', description: 'Max file size in bytes (default: 5242880 = 5 MB)' },
+      },
+      required: ['filePath'],
+    },
+    execute: async (args) =>
+      executeImageToBase64(
+        String(args['filePath'] ?? ''),
+        args['maxBytes'] !== undefined ? Number(args['maxBytes']) : undefined,
+      ),
+  },
+  {
+    name: 'ListImages',
+    description: 'List all image files in a directory (PNG, JPEG, GIF, WEBP, BMP, ICO, SVG, TIFF).',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Directory path to scan' },
+      },
+      required: ['path'],
+    },
+    execute: async (args) => executeListImages(String(args['path'] ?? '')),
   },
   {
     name: 'MathExplain',
