@@ -4,7 +4,7 @@ import { CliUI } from './ui/CliUI.js';
 import { VERSION } from './version.js';
 import { Agent } from './agent/Agent.js';
 import { config, loadLocalConfig, setSessionApiKey, getMcpServers } from './agent/config.js';
-import { saveSession, listSessions, loadSession, deleteSession } from './utils/sessionStore.js';
+import { saveSession, listSessions, loadSession, deleteSession, searchSessions } from './utils/sessionStore.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
@@ -56,6 +56,7 @@ Options:
 Interactive Commands:
   /clear           Reset the conversation
   /sessions        List saved sessions
+  /sessions --search <keyword>  Search saved sessions
   /tools           List all available tools
   /model           Show current model
   /model <name>    Switch model
@@ -214,7 +215,25 @@ Interactive Commands:
       if (sessions.length === 0) {
         console.log('No saved sessions.');
       } else {
+        console.log(`  ${sessions.length} session(s):`);
         for (const s of sessions) console.log(`  ${s.id}  ${s.title}  (${s.updatedAt})`);
+      }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower.startsWith('/sessions --search ')) {
+      const keyword = line.slice(18).trim();
+      if (!keyword) {
+        console.log('  Usage: /sessions --search <keyword>');
+      } else {
+        const results = await searchSessions(keyword);
+        if (results.length === 0) {
+          console.log(`  No sessions found matching "${keyword}".`);
+        } else {
+          console.log(`  ${results.length} session(s) matching "${keyword}":`);
+          for (const r of results) console.log(`  ${r.id}  ${r.title}  (${r.matchCount} match(es))`);
+        }
       }
       ui.promptUser();
       return;

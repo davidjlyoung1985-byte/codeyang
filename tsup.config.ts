@@ -11,7 +11,6 @@ export default defineConfig([
     platform: 'node',
     target: 'node18',
     shims: true,
-    noExternal: [],
     external: ['eslint'],
   },
   // Shared tools (CJS) for VS Code extension

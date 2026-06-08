@@ -78,6 +78,52 @@ export async function listSessions(): Promise<SessionMeta[]> {
   return entries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
+export interface SessionSearchResult extends SessionMeta {
+  matchCount: number;
+}
+
+/**
+ * Search sessions by keyword. Checks title first (fast), then loads
+ * full sessions to search message content. Returns up to 20 results.
+ */
+export async function searchSessions(keyword: string): Promise<SessionSearchResult[]> {
+  await ensureDir();
+  const index = await readIndex();
+  const kw = keyword.toLowerCase();
+  const results: SessionSearchResult[] = [];
+
+  const entries = Object.values(index).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  for (const meta of entries) {
+    if (results.length >= 20) break;
+
+    // Quick match on title
+    if (meta.title.toLowerCase().includes(kw)) {
+      results.push({ ...meta, matchCount: 1 });
+      continue;
+    }
+
+    // Load session and search content
+    try {
+      const session = await loadSession(meta.id);
+      if (!session) continue;
+      let matchCount = 0;
+      for (const msg of session.messages) {
+        if (msg.content && msg.content.toLowerCase().includes(kw)) {
+          matchCount++;
+        }
+      }
+      if (matchCount > 0) {
+        results.push({ ...meta, matchCount });
+      }
+    } catch {
+      // Skip unreadable sessions
+    }
+  }
+
+  return results;
+}
+
 export async function deleteSession(id: string): Promise<boolean> {
   try {
     await unlink(join(SESSIONS_DIR, `${id}.json`));
