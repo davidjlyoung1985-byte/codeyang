@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // Mock config before importing Agent
 vi.mock('./config.js', () => ({
   config: {
-    model: 'claude-sonnet-4-20250514',
+    model: 'test-model',
     apiKey: 'test-key-12345',
     maxTokens: 8192,
     getSystemPrompt: vi.fn(() => 'You are a test agent.'),
@@ -44,40 +44,53 @@ vi.mock('../tools/registry.js', () => ({
   refreshMcpTools: vi.fn(),
 }));
 
-// Helpers for creating stream events
-function createTextDelta(text: string) {
-  return { type: 'content_block_delta', delta: { type: 'text_delta', text } };
+// ── StreamEvent helpers ──────────────────────
+// These generate StreamEvent objects matching the LLMClient interface,
+// making tests provider-agnostic (not tied to Anthropic SDK format).
+
+import type { StreamEvent } from './LLMClient.js';
+
+function textDelta(text: string): StreamEvent {
+  return { type: 'text_delta', text };
 }
 
-function createToolStart(index: number, id: string, name: string) {
-  return {
-    type: 'content_block_start',
-    index,
-    content_block: { type: 'tool_use', id, name },
-  };
+function toolCallStart(index: number, id: string, name: string): StreamEvent {
+  return { type: 'tool_call_start', toolCallIndex: index, toolCallId: id, toolCallName: name };
 }
 
-function createToolJsonDelta(index: number, json: string) {
-  return { type: 'content_block_delta', index, delta: { type: 'input_json_delta', partial_json: json } };
+function toolCallDelta(index: number, args: string): StreamEvent {
+  return { type: 'tool_call_delta', toolCallIndex: index, toolCallArgs: args };
 }
 
-function createBlockStop(index: number) {
-  return { type: 'content_block_stop', index };
+function toolCallEnd(index: number, id: string, args: string): StreamEvent {
+  return { type: 'tool_call_end', toolCallIndex: index, toolCallId: id, toolCallArgs: args };
 }
 
-// Mock Anthropic SDK — must use function() for constructor support
+function usage(inputTokens: number, outputTokens: number): StreamEvent {
+  return { type: 'usage', inputTokens, outputTokens };
+}
+
+/** Build an async generator from an array of StreamEvents for mock stream() */
+function makeStream(...events: StreamEvent[]): AsyncIterable<StreamEvent> {
+  return (async function* () {
+    for (const e of events) {
+      yield e;
+    }
+  })();
+}
+
+// ── Mock LLMClient (provider-agnostic) ────────
 const mockStream = vi.fn();
 
-vi.mock('@anthropic-ai/sdk', () => ({
-  default: function Anthropic(_opts: Record<string, unknown>) {
-    return {
-      messages: {
-        stream: mockStream,
-        create: vi.fn(),
-      },
-    };
-  },
-}));
+vi.mock('./LLMClient.js', async () => {
+  const actual = await vi.importActual('./LLMClient.js');
+  return {
+    ...actual,
+    createLLMClient: vi.fn(() => ({
+      stream: mockStream,
+    })),
+  };
+});
 
 // Now we can import Agent
 import { Agent, type AgentCallbacks } from './Agent.js';
@@ -182,35 +195,23 @@ describe('Agent', () => {
   });
 
   describe('run — streaming text', () => {
-    it('streams text response from Claude', async () => {
-      mockStream.mockReturnValue(
-        (async function* () {
-          yield createBlockStop(0);
-        })(),
-      );
+    it('streams text response from LLM', async () => {
+      mockStream.mockReturnValue(makeStream());
 
       await agent.run('test prompt');
 
       expect(mockStream).toHaveBeenCalledTimes(1);
     });
 
-    it('sends user message to Claude API', async () => {
-      mockStream.mockReturnValue(
-        (async function* () {
-          yield createBlockStop(0);
-        })(),
-      );
+    it('sends user message to LLM API', async () => {
+      mockStream.mockReturnValue(makeStream());
 
       await agent.run('hello');
       expect(mockStream).toHaveBeenCalled();
     });
 
     it('calls onUserMessage callback', async () => {
-      mockStream.mockReturnValue(
-        (async function* () {
-          yield createBlockStop(0);
-        })(),
-      );
+      mockStream.mockReturnValue(makeStream());
 
       const onUserMessage = vi.fn();
       agent.setCallbacks({ onUserMessage });
@@ -221,13 +222,7 @@ describe('Agent', () => {
     });
 
     it('calls onAgentDelta for streaming text', async () => {
-      mockStream.mockReturnValue(
-        (async function* () {
-          yield createTextDelta('Hello ');
-          yield createTextDelta('World');
-          yield createBlockStop(0);
-        })(),
-      );
+      mockStream.mockReturnValue(makeStream(textDelta('Hello '), textDelta('World')));
 
       const onAgentDelta = vi.fn();
       agent.setCallbacks({ onAgentDelta });
@@ -241,7 +236,7 @@ describe('Agent', () => {
   });
 
   describe('run — tool calls', () => {
-    it('executes tool calls from Claude and sends results back', async () => {
+    it('executes tool calls from LLM and sends results back', async () => {
       const toolCallsExecuted: string[] = [];
 
       mockToolExecute.mockImplementation(async (args: Record<string, unknown>) => {
@@ -252,16 +247,14 @@ describe('Agent', () => {
       let callIndex = 0;
       mockStream.mockImplementation(() => {
         callIndex++;
-        return (async function* () {
-          if (callIndex === 1) {
-            yield createToolStart(0, 'tc_001', 'Bash');
-            yield createToolJsonDelta(0, '{"command":"echo hello"}');
-            yield createBlockStop(0);
-          } else {
-            yield createTextDelta('Done.');
-            yield createBlockStop(0);
-          }
-        })();
+        if (callIndex === 1) {
+          return makeStream(
+            toolCallStart(0, 'tc_001', 'Bash'),
+            toolCallDelta(0, '{"command":"echo hello"}'),
+            toolCallEnd(0, 'tc_001', '{"command":"echo hello"}'),
+          );
+        }
+        return makeStream(textDelta('Done.'));
       });
 
       await agent.run('say hello');
@@ -273,16 +266,14 @@ describe('Agent', () => {
       let callIndex = 0;
       mockStream.mockImplementation(() => {
         callIndex++;
-        return (async function* () {
-          if (callIndex === 1) {
-            yield createToolStart(0, 'tc_002', 'UnknownTool');
-            yield createToolJsonDelta(0, '{"arg":"value"}');
-            yield createBlockStop(0);
-          } else {
-            yield createTextDelta('I tried.');
-            yield createBlockStop(0);
-          }
-        })();
+        if (callIndex === 1) {
+          return makeStream(
+            toolCallStart(0, 'tc_002', 'UnknownTool'),
+            toolCallDelta(0, '{"arg":"value"}'),
+            toolCallEnd(0, 'tc_002', '{"arg":"value"}'),
+          );
+        }
+        return makeStream(textDelta('I tried.'));
       });
 
       const onToolResult = vi.fn();
@@ -293,6 +284,40 @@ describe('Agent', () => {
       // Should report the unknown tool error
       const errorCalls = onToolResult.mock.calls.filter(([, , isError]: [string, string, boolean]) => isError === true);
       expect(errorCalls.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('run — token usage tracking', () => {
+    it('accumulates token usage from usage events', async () => {
+      mockStream.mockReturnValue(
+        makeStream(
+          textDelta('Hello'),
+          usage(10, 20),  // First usage event
+        ),
+      );
+
+      await agent.run('prompt 1');
+      expect(agent.getTokenUsage()).toEqual({ inputTokens: 10, outputTokens: 20 });
+
+      mockStream.mockReturnValue(
+        makeStream(
+          textDelta('World'),
+          usage(5, 15),  // Second usage event
+        ),
+      );
+
+      await agent.run('prompt 2');
+      expect(agent.getTokenUsage()).toEqual({ inputTokens: 15, outputTokens: 35 });
+    });
+
+    it('resets token usage on agent reset', async () => {
+      mockStream.mockReturnValue(makeStream(textDelta('Hello'), usage(10, 20)));
+
+      await agent.run('prompt');
+      expect(agent.getTokenUsage().inputTokens).toBe(10);
+
+      agent.reset();
+      expect(agent.getTokenUsage()).toEqual({ inputTokens: 0, outputTokens: 0 });
     });
   });
 });

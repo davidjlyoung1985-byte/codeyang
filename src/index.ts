@@ -8,6 +8,7 @@ import { saveSession, listSessions, loadSession, deleteSession } from './utils/s
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
+import { loadEnvFiles } from './utils/dotenv.js';
 
 async function promptForDeepSeekKey(): Promise<string> {
   return new Promise((resolve) => {
@@ -75,6 +76,9 @@ Interactive Commands:
     }
     process.exit(0);
   }
+
+  // Load .env / .env.local before anything else
+  loadEnvFiles();
 
   await loadLocalConfig();
 
