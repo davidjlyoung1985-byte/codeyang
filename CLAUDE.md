@@ -1,12 +1,12 @@
-# CodeYang v0.2.0 — Terminal AI Coding Agent
+# CodeYang v0.6.0 — Terminal AI Coding Agent
 
 ## Purpose
-Terminal-based AI coding agent powered by Claude, with optional VS Code extension.
+Provider-agnostic terminal AI coding agent. Defaults to DeepSeek, also supports Anthropic Claude and any OpenAI-compatible API.
 
 ## Tech Stack
 - **Runtime**: Node >=18, ESM (`"type": "module"`)
 - **Language**: TypeScript
-- **Key deps**: `@anthropic-ai/sdk` ^0.32.0, `@modelcontextprotocol/sdk` ^1.29.0, `execa` ^9.3.0, `picocolors` ^1.1.0
+- **Key deps**: `@anthropic-ai/sdk` ^0.32.0, `openai` ^6.42.0, `@modelcontextprotocol/sdk` ^1.29.0, `execa` ^9.3.0, `picocolors` ^1.1.0
 - **Build**: tsup (`src/index.ts` → `dist/index.js`, ESM, sourcemap, dts)
 - **Test**: vitest v4.1.7
 - **Lint**: eslint v10.4.1 (flat config) + typescript-eslint
@@ -31,14 +31,28 @@ Terminal-based AI coding agent powered by Claude, with optional VS Code extensio
 | Path | Purpose |
 |------|---------|
 | `src/index.ts` | CLI entry point |
-| `src/agent/` | Agent orchestration |
-| `src/mcp/` | MCP server logic / sub-agent delegation |
-| `src/tools/` | MCP tool handlers |
-| `src/ui/` | CLI UI / chat loop |
-| `src/utils/` | Shared utilities |
+| `src/version.ts` | Single version source |
+| `src/agent/` | Agent orchestration + provider-agnostic LLM client |
+| `src/mcp/` | MCP server logic |
+| `src/tools/` | Tool implementations (~25 built-in tools) |
+| `src/ui/` | CLI UI with markdown rendering |
+| `src/utils/` | Session store + dotenv loader |
+| `src/math/` | Math tools (on-demand registration) |
+| `src/qt/` | Qt project detection and tools |
 | `src/types.ts` | Shared type definitions |
-| `vscode-extension/` | VS Code extension (separate `package.json`) |
+| `vscode-extension/` | VS Code extension (Anthropic-only legacy) |
 | `.github/workflows/ci.yml` | CI: test + lint + build on Node 18/20/22 |
+
+## Key Features
+- Provider-agnostic: DeepSeek (default), Anthropic Claude, OpenAI-compatible
+- Task sub-agent works with all providers (not just Anthropic)
+- Session persistence with search (`/sessions --search <keyword>`)
+- Token usage tracking (`/stats`)
+- Smart startup: skips API key prompt if env var is set
+- `.env` / `.env.local` support
+- Configurable: `CODEYANG_RETRIES`, `CODEYANG_MAX_TURNS`, `CODEYANG_TEMPERATURE`
+- Math tools on-demand (not in default toolset to save context)
+- 322 tests across 18 test files
 
 ## Coding Conventions
 - TypeScript strict mode

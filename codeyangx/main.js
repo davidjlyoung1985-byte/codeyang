@@ -94,7 +94,7 @@ ipcMain.handle('getModel', async () => {
 });
 
 ipcMain.handle('getVersion', () => {
-  return '0.3.0';
+  return require('../package.json').version || '0.3.0';
 });
 
 ipcMain.handle('selectDirectory', async () => {
