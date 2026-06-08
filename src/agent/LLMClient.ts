@@ -2,12 +2,15 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 
 export interface StreamEvent {
-  type: 'text_delta' | 'tool_call_start' | 'tool_call_delta' | 'tool_call_end';
+  type: 'text_delta' | 'tool_call_start' | 'tool_call_delta' | 'tool_call_end' | 'usage';
   text?: string;
   toolCallIndex?: number;
   toolCallId?: string;
   toolCallName?: string;
   toolCallArgs?: string;
+  /** Token usage (emitted at end of stream) */
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 export interface LLMMessage {
@@ -175,6 +178,16 @@ class AnthropicClient implements LLMClient {
             };
           }
           break;
+
+        case 'message':
+          if (event.message?.usage) {
+            yield {
+              type: 'usage',
+              inputTokens: event.message.usage.input_tokens,
+              outputTokens: event.message.usage.output_tokens,
+            };
+          }
+          break;
       }
     }
   }
@@ -246,11 +259,21 @@ class OpenAICompatClient implements LLMClient {
         },
       })),
       stream: true,
+      stream_options: { include_usage: true },
     });
 
     const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
 
     for await (const chunk of stream) {
+      // Check for usage info (sent in the final chunk when stream_options.include_usage is true)
+      if (chunk.usage) {
+        yield {
+          type: 'usage',
+          inputTokens: chunk.usage.prompt_tokens,
+          outputTokens: chunk.usage.completion_tokens,
+        };
+      }
+
       const delta = chunk.choices[0]?.delta;
       if (!delta) continue;
 

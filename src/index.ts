@@ -59,6 +59,7 @@ Interactive Commands:
   /model           Show current model
   /model <name>    Switch model
   /mcp             Show MCP server status
+  /stats           Show token usage for this session
   /exit, /quit     Exit CodeYang`);
     process.exit(0);
   }
@@ -235,6 +236,18 @@ Interactive Commands:
       } else {
         console.log(`  Model: ${config.model}`);
       }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/stats') {
+      const usage = agent.getTokenUsage();
+      const total = usage.inputTokens + usage.outputTokens;
+      console.log(`  Token usage this session:`);
+      console.log(`    Input:  ${usage.inputTokens.toLocaleString()}`);
+      console.log(`    Output: ${usage.outputTokens.toLocaleString()}`);
+      console.log(`    Total:  ${total.toLocaleString()}`);
+      console.log(`    Model:  ${config.model}`);
       ui.promptUser();
       return;
     }

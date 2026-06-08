@@ -30,6 +30,10 @@ export class Agent {
   private lastAssistantText = '';
   private repeatCount = 0;
 
+  // Token usage tracking
+  private totalInputTokens = 0;
+  private totalOutputTokens = 0;
+
   constructor(private qtContext?: QtContext) {
     this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
   }
@@ -90,6 +94,13 @@ export class Agent {
     this.invalidateCache();
     this.lastAssistantText = '';
     this.repeatCount = 0;
+    this.totalInputTokens = 0;
+    this.totalOutputTokens = 0;
+  }
+
+  /** Get accumulated token usage for the current session */
+  getTokenUsage(): { inputTokens: number; outputTokens: number } {
+    return { inputTokens: this.totalInputTokens, outputTokens: this.totalOutputTokens };
   }
 
   answerQuestion(answer: string) {
@@ -180,6 +191,9 @@ export class Agent {
                 toolCalls.push({ id: accum.id!, name: accum.name!, input: {} });
               }
             }
+          } else if (event.type === 'usage') {
+            if (event.inputTokens) this.totalInputTokens += event.inputTokens;
+            if (event.outputTokens) this.totalOutputTokens += event.outputTokens;
           }
         }
 
