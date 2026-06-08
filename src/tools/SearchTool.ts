@@ -32,20 +32,39 @@ export async function executeSearch(
 
   const results: Array<{ type: 'name' | 'content'; path: string; line?: number; snippet?: string }> = [];
 
-  // 1. File name search via glob
+  // 1. File name search via glob — use pattern matching in glob itself for performance
   if (searchNames) {
-    const flag = caseSensitive ? '' : '(?i)';
-    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     try {
-      // glob all files then filter by name
-      const allFiles = await executeGlob(includeGlob ?? '**/*', rootDir);
-      for (const filePath of allFiles.split('\n').filter(Boolean)) {
-        const base = path.basename(filePath);
-        const re = caseSensitive ? new RegExp(escaped) : new RegExp(escaped, 'i');
-        if (re.test(base)) {
-          results.push({ type: 'name', path: filePath });
-          if (results.length >= maxResults) break;
+      // Build a smart glob pattern: embed the query as a wildcard so the
+      // directory walker prunes early instead of returning every file.
+      let namePattern: string;
+      if (includeGlob) {
+        // User-provided glob takes precedence
+        namePattern = includeGlob;
+      } else {
+        const hasGlobChars = /[*?[{]/.test(query);
+        if (hasGlobChars) {
+          // Query already contains glob syntax — use as-is
+          namePattern = query.startsWith('**/') ? query : `**/${query}`;
+        } else {
+          // Plain text query — embed as wildcard for fast matching
+          const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          namePattern = caseSensitive ? `**/*${escaped}*` : `**/*${escaped}*`;
         }
+      }
+
+      const matchedFiles = await executeGlob(namePattern, rootDir);
+      for (const filePath of matchedFiles.split('\n').filter(Boolean)) {
+        // For non-user-glob patterns, double-check basename to avoid
+        // matching directory names in the path (e.g., src/foo/bar.ts when searching "foo")
+        if (!includeGlob) {
+          const base = path.basename(filePath);
+          const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const re = caseSensitive ? new RegExp(escaped) : new RegExp(escaped, 'i');
+          if (!re.test(base)) continue;
+        }
+        results.push({ type: 'name', path: filePath });
+        if (results.length >= maxResults) break;
       }
     } catch {
       // ignore glob errors

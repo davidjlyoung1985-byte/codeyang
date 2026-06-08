@@ -26,6 +26,10 @@ function parseDotEnv(content: string): Array<{ key: string; value: string }> {
 }
 
 export function loadEnvFiles(cwd: string = process.cwd()): void {
+  // Track which keys were set by *this* loader so .env.local can override .env
+  // but never override pre-existing process.env values.
+  const loadedByUs = new Set<string>();
+
   for (const name of ['.env', '.env.local']) {
     const filePath = join(cwd, name);
     if (existsSync(filePath)) {
@@ -33,9 +37,12 @@ export function loadEnvFiles(cwd: string = process.cwd()): void {
         const content = readFileSync(filePath, 'utf-8');
         const entries = parseDotEnv(content);
         for (const { key, value } of entries) {
-          // Don't override existing env vars
-          if (!process.env[key]) {
+          // .env.local can override .env, but nothing overrides original env
+          if (name === '.env.local' && loadedByUs.has(key)) {
             process.env[key] = value;
+          } else if (!process.env[key]) {
+            process.env[key] = value;
+            loadedByUs.add(key);
           }
         }
       } catch {
