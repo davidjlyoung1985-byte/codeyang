@@ -55,9 +55,6 @@ import {
   executeCheckUrl,
   executeParseUrl,
 } from './NetworkTool.js';
-import { executeMathSolve } from '../math/MathSolve.js';
-import { executeMathPlot } from '../math/MathPlot.js';
-import { executeMathExplain } from '../math/MathExplain.js';
 import { executeSearch } from './SearchTool.js';
 import { executeImageInfo, executeImageToBase64, executeListImages } from './ImageTool.js';
 import type { LLMClient } from '../agent/LLMClient.js';
@@ -74,6 +71,7 @@ let currentContext: ToolContext | null = null;
 let mcpManager: McpManager | null = null;
 const mcpTools: ToolDefinition[] = [];
 const qtTools: ToolDefinition[] = [];
+const mathTools: ToolDefinition[] = [];
 
 export function setToolContext(ctx: ToolContext | null) {
   currentContext = ctx;
@@ -110,6 +108,12 @@ export async function refreshMcpTools(): Promise<void> {
 export function registerQtTools(toolDefs: ToolDefinition[]): void {
   qtTools.length = 0;
   qtTools.push(...toolDefs);
+}
+
+/** Register math tools (not loaded by default — call explicitly when needed). */
+export function registerMathTools(toolDefs: ToolDefinition[]): void {
+  mathTools.length = 0;
+  mathTools.push(...toolDefs);
 }
 
 export const tools: ToolDefinition[] = [
@@ -1160,51 +1164,7 @@ export const tools: ToolDefinition[] = [
       return executeParseUrl(urlString);
     },
   },
-  {
-    name: 'MathSolve',
-    description:
-      'Solve middle school math problems step by step with Chinese explanations. ' +
-      'Covers: linear equations (涓€鍏冧竴娆℃柟绋?, quadratic equations (涓€鍏冧簩娆℃柟绋?, ' +
-      'systems of equations (浜屽厓涓€娆℃柟绋嬬粍), Pythagorean theorem (鍕捐偂瀹氱悊), ' +
-      'circle geometry (鍦?, statistics (缁熻), and percentages (鐧惧垎姣?.',
-    parameters: {
-      type: 'object',
-      properties: {
-        problem: { type: 'string', description: 'The math problem to solve' },
-        type: {
-          type: 'string',
-          enum: ['linear', 'quadratic', 'system', 'pythagorean', 'circle', 'stats', 'percent'],
-          description: 'Problem type (auto-detected if not specified)',
-        },
-      },
-      required: ['problem'],
-    },
-    execute: async (args) => {
-      const problem = String(args['problem'] ?? '');
-      const type = args['type'] ? String(args['type']) : undefined;
-      return executeMathSolve(problem, type);
-    },
-  },
-  {
-    name: 'MathPlot',
-    description:
-      'Generate SVG mathematical diagrams. Supports: coordinate plane (鍧愭爣绯?, ' +
-      'function graphs (鍑芥暟鍥惧儚, e.g. func:x*2+1), triangle (涓夎褰?with labels), ' +
-      'bar charts (鏉″舰缁熻鍥? e.g. bar:A=5,B=8). Outputs SVG files viewable in browser.',
-    parameters: {
-      type: 'object',
-      properties: {
-        kind: { type: 'string', description: 'Plot kind: coordinate, func:<expr>, triangle, bar:<data>' },
-        output: { type: 'string', description: 'Output filename (default: auto-named .svg in project root)' },
-      },
-      required: ['kind'],
-    },
-    execute: async (args) => {
-      const kind = String(args['kind'] ?? '');
-      const output = args['output'] ? String(args['output']) : undefined;
-      return executeMathPlot(kind, output);
-    },
-  },
+
   {
     name: 'Search',
     description:
@@ -1275,30 +1235,15 @@ export const tools: ToolDefinition[] = [
     },
     execute: async (args) => executeListImages(String(args['path'] ?? '')),
   },
-  {
-    name: 'MathExplain',
-    description:
-      'Reference for middle school math concepts with formulas, examples, and common mistakes. ' +
-      'Topics: linear equations (涓€鍏冧竴娆℃柟绋?, quadratic equations (涓€鍏冧簩娆℃柟绋?, ' +
-      'Pythagorean theorem (鍕捐偂瀹氱悊), linear functions (涓€娆″嚱鏁?, ' +
-      'quadratic functions (浜屾鍑芥暟), circles (鍦?, statistics (缁熻), probability (姒傜巼).',
-    parameters: {
-      type: 'object',
-      properties: {
-        topic: { type: 'string', description: 'Topic name (Chinese or English). Leave empty to list all topics.' },
-      },
-      required: [],
-    },
-    execute: async (args) => {
-      const topic = args['topic'] ? String(args['topic']) : undefined;
-      return executeMathExplain(topic);
-    },
-  },
+
 ];
 
 export function getTool(name: string): ToolDefinition | undefined {
   return (
-    tools.find((t) => t.name === name) ?? mcpTools.find((t) => t.name === name) ?? qtTools.find((t) => t.name === name)
+    tools.find((t) => t.name === name) ??
+    mcpTools.find((t) => t.name === name) ??
+    qtTools.find((t) => t.name === name) ??
+    mathTools.find((t) => t.name === name)
   );
 }
 
@@ -1307,7 +1252,7 @@ export function toolSchemas(): Array<{
   description: string;
   input_schema: { type: 'object'; properties?: unknown; required?: string[]; [k: string]: unknown };
 }> {
-  const allTools = [...tools, ...mcpTools, ...qtTools];
+  const allTools = [...tools, ...mcpTools, ...qtTools, ...mathTools];
   return allTools.map((t) => ({
     name: t.name,
     description: t.description,
