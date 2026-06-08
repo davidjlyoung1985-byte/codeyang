@@ -9,6 +9,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { existsSync } from 'node:fs';
+import { VERSION } from './version.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..');
@@ -33,7 +34,7 @@ function findElectron(): string {
 
 const electronBin = findElectron();
 
-console.log('CodeYangX v0.3.0');
+console.log(`CodeYangX v${VERSION}`);
 console.log('Launching desktop window...\n');
 
 const child = spawn(electronBin, [mainJs], {

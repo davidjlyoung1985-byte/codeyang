@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 import * as readline from 'node:readline';
 import { CliUI } from './ui/CliUI.js';
+import { VERSION } from './version.js';
 import { Agent } from './agent/Agent.js';
 import { config, loadLocalConfig, setSessionApiKey, getMcpServers } from './agent/config.js';
 import { saveSession, listSessions, loadSession, deleteSession } from './utils/sessionStore.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
-
-const VERSION = '0.6.0';
 
 async function promptForDeepSeekKey(): Promise<string> {
   return new Promise((resolve) => {
