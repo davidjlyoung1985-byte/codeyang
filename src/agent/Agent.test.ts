@@ -7,6 +7,9 @@ vi.mock('./config.js', () => ({
     model: 'test-model',
     apiKey: 'test-key-12345',
     maxTokens: 8192,
+    maxRetries: 3,
+    maxTurns: 20,
+    temperature: 0.5,
     getSystemPrompt: vi.fn(() => 'You are a test agent.'),
   },
 }));
@@ -45,10 +48,9 @@ vi.mock('../tools/registry.js', () => ({
 }));
 
 // ── StreamEvent helpers ──────────────────────
-// These generate StreamEvent objects matching the LLMClient interface,
-// making tests provider-agnostic (not tied to Anthropic SDK format).
+// Generate StreamEvent objects matching LLMClient interface (provider-agnostic).
 
-import type { StreamEvent } from './LLMClient.js';
+import type { StreamEvent, LLMClient } from './LLMClient.js';
 
 function textDelta(text: string): StreamEvent {
   return { type: 'text_delta', text };
@@ -66,7 +68,7 @@ function toolCallEnd(index: number, id: string, args: string): StreamEvent {
   return { type: 'tool_call_end', toolCallIndex: index, toolCallId: id, toolCallArgs: args };
 }
 
-function usage(inputTokens: number, outputTokens: number): StreamEvent {
+function usageEvent(inputTokens: number, outputTokens: number): StreamEvent {
   return { type: 'usage', inputTokens, outputTokens };
 }
 
@@ -81,14 +83,15 @@ function makeStream(...events: StreamEvent[]): AsyncIterable<StreamEvent> {
 
 // ── Mock LLMClient (provider-agnostic) ────────
 const mockStream = vi.fn();
+const mockClient: LLMClient = { stream: mockStream };
 
-vi.mock('./LLMClient.js', async () => {
-  const actual = await vi.importActual('./LLMClient.js');
+// Mock only createLLMClient — keep rest of module real.
+// Use doMock + dontMock to avoid TS import confusion: inline the mock.
+vi.mock('./LLMClient.js', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('./LLMClient.js')>();
   return {
-    ...actual,
-    createLLMClient: vi.fn(() => ({
-      stream: mockStream,
-    })),
+    ...mod,
+    createLLMClient: vi.fn(() => mockClient),
   };
 });
 
@@ -117,7 +120,6 @@ describe('Agent', () => {
   describe('reset', () => {
     it('clears conversation state', () => {
       agent.reset();
-      // After reset, exportMessages should be empty
       const messages = agent.exportMessages();
       expect(messages).toHaveLength(0);
     });
@@ -141,7 +143,6 @@ describe('Agent', () => {
         onError: vi.fn(),
       };
       agent.setCallbacks(cbs);
-      // Not directly testable without running, but shouldn't throw
     });
   });
 
@@ -157,7 +158,6 @@ describe('Agent', () => {
         { role: 'user', content: 'Hello' },
         { role: 'assistant', content: 'Hi there' },
       ]);
-
       const exported = agent.exportMessages();
       expect(exported).toHaveLength(2);
       expect(exported[0]).toMatchObject({ role: 'user', content: 'Hello' });
@@ -177,7 +177,6 @@ describe('Agent', () => {
           content: '',
         },
       ]);
-
       const exported = agent.exportMessages();
       expect(exported).toHaveLength(2);
       expect(exported[0].toolCalls).toBeDefined();
@@ -197,38 +196,29 @@ describe('Agent', () => {
   describe('run — streaming text', () => {
     it('streams text response from LLM', async () => {
       mockStream.mockReturnValue(makeStream());
-
       await agent.run('test prompt');
-
       expect(mockStream).toHaveBeenCalledTimes(1);
     });
 
     it('sends user message to LLM API', async () => {
       mockStream.mockReturnValue(makeStream());
-
       await agent.run('hello');
       expect(mockStream).toHaveBeenCalled();
     });
 
     it('calls onUserMessage callback', async () => {
       mockStream.mockReturnValue(makeStream());
-
       const onUserMessage = vi.fn();
       agent.setCallbacks({ onUserMessage });
-
       await agent.run('test prompt');
-
       expect(onUserMessage).toHaveBeenCalledWith('test prompt');
     });
 
     it('calls onAgentDelta for streaming text', async () => {
       mockStream.mockReturnValue(makeStream(textDelta('Hello '), textDelta('World')));
-
       const onAgentDelta = vi.fn();
       agent.setCallbacks({ onAgentDelta });
-
       await agent.run('hi');
-
       expect(onAgentDelta).toHaveBeenCalledTimes(2);
       expect(onAgentDelta).toHaveBeenCalledWith('Hello ');
       expect(onAgentDelta).toHaveBeenCalledWith('World');
@@ -238,7 +228,6 @@ describe('Agent', () => {
   describe('run — tool calls', () => {
     it('executes tool calls from LLM and sends results back', async () => {
       const toolCallsExecuted: string[] = [];
-
       mockToolExecute.mockImplementation(async (args: Record<string, unknown>) => {
         toolCallsExecuted.push(String(args['command']));
         return 'executed ok';
@@ -258,7 +247,6 @@ describe('Agent', () => {
       });
 
       await agent.run('say hello');
-
       expect(toolCallsExecuted).toContain('echo hello');
     });
 
@@ -278,41 +266,28 @@ describe('Agent', () => {
 
       const onToolResult = vi.fn();
       agent.setCallbacks({ onToolResult });
-
       await expect(agent.run('use unknown')).resolves.toBeUndefined();
 
-      // Should report the unknown tool error
-      const errorCalls = onToolResult.mock.calls.filter(([, , isError]: [string, string, boolean]) => isError === true);
+      const errorCalls = onToolResult.mock.calls.filter(
+        ([, , isError]: [string, string, boolean]) => isError === true,
+      );
       expect(errorCalls.length).toBeGreaterThanOrEqual(1);
     });
   });
 
   describe('run — token usage tracking', () => {
     it('accumulates token usage from usage events', async () => {
-      mockStream.mockReturnValue(
-        makeStream(
-          textDelta('Hello'),
-          usage(10, 20),  // First usage event
-        ),
-      );
-
+      mockStream.mockReturnValue(makeStream(textDelta('Hello'), usageEvent(10, 20)));
       await agent.run('prompt 1');
       expect(agent.getTokenUsage()).toEqual({ inputTokens: 10, outputTokens: 20 });
 
-      mockStream.mockReturnValue(
-        makeStream(
-          textDelta('World'),
-          usage(5, 15),  // Second usage event
-        ),
-      );
-
+      mockStream.mockReturnValue(makeStream(textDelta('World'), usageEvent(5, 15)));
       await agent.run('prompt 2');
       expect(agent.getTokenUsage()).toEqual({ inputTokens: 15, outputTokens: 35 });
     });
 
     it('resets token usage on agent reset', async () => {
-      mockStream.mockReturnValue(makeStream(textDelta('Hello'), usage(10, 20)));
-
+      mockStream.mockReturnValue(makeStream(textDelta('Hello'), usageEvent(10, 20)));
       await agent.run('prompt');
       expect(agent.getTokenUsage().inputTokens).toBe(10);
 

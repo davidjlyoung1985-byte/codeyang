@@ -20,7 +20,7 @@ export class Agent {
   private history: LLMMessage[] = [];
   private cbs: AgentCallbacks = {};
   private questionResolve: ((answer: string) => void) | null = null;
-  private maxRetries = 3;
+  private maxRetries = config.maxRetries;
 
   // Tool result cache — avoid re-reading unchanged files within a session
   private toolCache = new Map<string, { result: string; timestamp: number }>();
@@ -146,7 +146,7 @@ export class Agent {
       cwd: process.cwd(),
     });
 
-    const maxTurns = 20;
+    const maxTurns = config.maxTurns;
 
     for (let turn = 0; turn < maxTurns; turn++) {
       if (process.env['CODEX_DEBUG']) {
@@ -161,7 +161,7 @@ export class Agent {
         for await (const event of this.client.stream({
           model: config.model,
           maxTokens: config.maxTokens,
-          temperature: 0.5,
+          temperature: config.temperature,
           system: config.getSystemPrompt(this.qtContext),
           messages,
           tools: toolSchemas() as ToolSchema[],

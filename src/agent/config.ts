@@ -70,6 +70,9 @@ export const config = {
     return localConfig.apiProvider || 'deepseek';
   },
   maxTokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
+  maxRetries: Number(process.env['CODEYANG_RETRIES'] || '3'),
+  maxTurns: Number(process.env['CODEYANG_MAX_TURNS'] || '20'),
+  temperature: Number(process.env['CODEYANG_TEMPERATURE'] || '0.5'),
   getSystemPrompt(qtContext?: QtContext): string {
     let prompt = BASE_SYSTEM_PROMPT;
     if (qtContext?.isQtProject) {
