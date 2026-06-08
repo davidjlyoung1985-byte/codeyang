@@ -1,9 +1,8 @@
 import * as readline from 'node:readline';
 import picocolors from 'picocolors';
+import { VERSION } from '../version.js';
 
 const c = picocolors;
-
-const VERSION = '0.6.0';
 
 function termW(): number {
   return Math.min(process.stdout.columns || 80, 120);
