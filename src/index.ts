@@ -50,6 +50,8 @@ Options:
   --list, -l       List saved sessions
   --resume <id>    Resume a saved session
   --delete <id>    Delete a saved session
+  --non-interactive
+  --quiet          Use configured API key without prompt (fails if unset)
 
 Interactive Commands:
   /clear           Reset the conversation
@@ -76,12 +78,23 @@ Interactive Commands:
 
   await loadLocalConfig();
 
-  const key = await promptForDeepSeekKey();
-  if (!key) {
-    console.log('No API key provided. Exiting.');
-    process.exit(1);
+  // Skip API key prompt if already configured via env var or config file
+  const existingKey = config.apiKey;
+  if (existingKey) {
+    setSessionApiKey(existingKey);
+    console.log(`  Using saved API key (${existingKey.slice(0, 8)}...)\n`);
+  } else {
+    if (args.includes('--non-interactive') || args.includes('--quiet')) {
+      console.error('No API key configured. Set CODEYANG_API_KEY or DEEPSEEK_API_KEY environment variable.');
+      process.exit(1);
+    }
+    const key = await promptForDeepSeekKey();
+    if (!key) {
+      console.log('No API key provided. Exiting.');
+      process.exit(1);
+    }
+    setSessionApiKey(key);
   }
-  setSessionApiKey(key);
 
   // Initialize MCP servers if configured
   const mcpMgr = new McpManager();

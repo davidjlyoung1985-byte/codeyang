@@ -61,7 +61,7 @@ export const config = {
     modelOverride = v;
   },
   get apiKey() {
-    return sessionApiKey || process.env['CODEYANG_API_KEY'] || process.env['DEEPSEEK_API_KEY'] || '';
+    return sessionApiKey || process.env['CODEYANG_API_KEY'] || process.env['DEEPSEEK_API_KEY'] || localConfig.apiKey || '';
   },
   get baseURL() {
     return process.env['CODEYANG_BASE_URL'] || localConfig.apiBaseURL || 'https://api.deepseek.com/v1';
