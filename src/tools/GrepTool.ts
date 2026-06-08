@@ -1,44 +1,17 @@
 import { readFile, readdir } from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
 import { join, isAbsolute, relative } from 'node:path';
+import { globToRegex } from '../utils/globMatch.js';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.next', 'build', '.turbo', 'coverage', '__pycache__']);
 
-/** Convert a glob-like include pattern to a proper regex. */
-function globToRegex(pattern: string): RegExp {
-  let regexStr = '';
-  for (let i = 0; i < pattern.length; i++) {
-    const ch = pattern[i];
-    switch (ch) {
-      case '*':
-        regexStr += '.*';
-        break;
-      case '?':
-        regexStr += '.';
-        break;
-      case '.':
-      case '^':
-      case '$':
-      case '+':
-      case '{':
-      case '}':
-      case '(':
-      case ')':
-      case '[':
-      case ']':
-      case '|':
-      case '\\':
-        regexStr += '\\' + ch;
-        break;
-      default:
-        regexStr += ch;
-    }
-  }
-  return new RegExp(regexStr);
-}
-
 /** Fast: try ripgrep if available. Returns null if rg not found or fails. */
-async function tryRipgrep(pattern: string, include: string | null, base: string, contextLines: number): Promise<string | null> {
+async function tryRipgrep(
+  pattern: string,
+  include: string | null,
+  base: string,
+  contextLines: number,
+): Promise<string | null> {
   try {
     const { execa } = await import('execa');
     const args: string[] = ['-n', '-i', '--no-heading', '-m', '20'];
@@ -68,7 +41,12 @@ async function tryRipgrep(pattern: string, include: string | null, base: string,
 }
 
 /** Streaming line-by-line grep for a single file with optional context lines. */
-async function grepFileLineStream(filePath: string, regex: RegExp, maxMatches: number, contextLines = 0): Promise<string[] | null> {
+async function grepFileLineStream(
+  filePath: string,
+  regex: RegExp,
+  maxMatches: number,
+  contextLines = 0,
+): Promise<string[] | null> {
   let content: string;
   try {
     content = await readFile(filePath, 'utf-8');

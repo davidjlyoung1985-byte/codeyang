@@ -246,7 +246,8 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         properties: {
           chartType: {
             type: 'string',
-            description: 'Specific chart type for detailed reference. Leave empty for overview. Types: line, scatter, bar, pie, spline, area, candlestick, boxplot, polar, financial.',
+            description:
+              'Specific chart type for detailed reference. Leave empty for overview. Types: line, scatter, bar, pie, spline, area, candlestick, boxplot, polar, financial.',
           },
         },
         required: [],

@@ -34,11 +34,7 @@ export async function executeJsonParse(input: string, isFile = true): Promise<st
 /**
  * Write JSON to a file
  */
-export async function executeJsonWrite(
-  filePath: string,
-  data: string,
-  pretty = true,
-): Promise<string> {
+export async function executeJsonWrite(filePath: string, data: string, pretty = true): Promise<string> {
   try {
     const absPath = path.resolve(filePath);
     let parsed: unknown;
@@ -66,11 +62,7 @@ export async function executeJsonWrite(
 /**
  * Query JSON using JSONPath-like dot notation
  */
-export async function executeJsonQuery(
-  input: string,
-  query: string,
-  isFile = true,
-): Promise<string> {
+export async function executeJsonQuery(input: string, query: string, isFile = true): Promise<string> {
   try {
     let jsonText: string;
 
@@ -100,7 +92,8 @@ export async function executeJsonQuery(
   }
 }
 
-function queryObject(obj: any, path: string): any {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function queryObject(obj: any, path: string): unknown {
   const parts = path.split('.').flatMap((part) => {
     // Handle array notation like "items[0]"
     const match = part.match(/^([^[]+)\[(\d+)\]$/);

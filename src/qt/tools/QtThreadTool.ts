@@ -3,8 +3,9 @@
  * Detects: GUI calls from non-GUI threads, missing mutex protection,
  * direct QThread subclassing anti-pattern, blocking in GUI thread, etc.
  */
-import { readdir, readFile } from 'node:fs/promises';
-import { join, relative, extname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { relative } from 'node:path';
+import { collectFiles } from '../shared.js';
 
 interface ThreadIssue {
   file: string;
@@ -25,21 +26,28 @@ export async function executeQtThread(cwd?: string): Promise<string> {
       const lines = content.split('\n');
 
       for (let i = 0; i < lines.length; i++) {
-        const line = lines[i], ln = i + 1;
+        const line = lines[i],
+          ln = i + 1;
 
         // Direct QThread subclassing (anti-pattern: prefer moveToThread)
         if (/class\s+\w+.*:\s*public\s+QThread\b/.test(line)) {
           issues.push({
-            file: rel, line: ln, severity: 'warning',
-            message: 'Direct QThread subclass detected. Prefer worker-object pattern: create QObject, moveToThread(). Only subclass QThread if you need to customize thread event loop behavior.',
+            file: rel,
+            line: ln,
+            severity: 'warning',
+            message:
+              'Direct QThread subclass detected. Prefer worker-object pattern: create QObject, moveToThread(). Only subclass QThread if you need to customize thread event loop behavior.',
           });
         }
 
         // Blocking wait in GUI thread
         if (/(?:waitForReadyRead|waitForConnected|waitForBytesWritten|waitForDisconnected)\s*\(/.test(line)) {
           issues.push({
-            file: rel, line: ln, severity: 'error',
-            message: 'Blocking wait method detected — this will freeze the GUI. Use async signals (readyRead, connected, finished) instead.',
+            file: rel,
+            line: ln,
+            severity: 'error',
+            message:
+              'Blocking wait method detected — this will freeze the GUI. Use async signals (readyRead, connected, finished) instead.',
           });
         }
 
@@ -48,7 +56,9 @@ export async function executeQtThread(cwd?: string): Promise<string> {
           const body = content.slice(i * 100);
           if (!/\.unlock\s*\(/.test(body.slice(0, 500)) && !/QMutexLocker/.test(body.slice(0, 500))) {
             issues.push({
-              file: rel, line: ln, severity: 'warning',
+              file: rel,
+              line: ln,
+              severity: 'warning',
               message: 'QMutex::lock() without matching unlock() nearby. Use QMutexLocker for RAII-style auto-unlock.',
             });
           }
@@ -57,8 +67,11 @@ export async function executeQtThread(cwd?: string): Promise<string> {
         // processEvents() in worker code (anti-pattern)
         if (/processEvents\s*\(/.test(line) && !content.includes('paintEvent')) {
           issues.push({
-            file: rel, line: ln, severity: 'warning',
-            message: 'QCoreApplication::processEvents() in non-GUI code. This is usually a workaround for a design issue. Fix the underlying async pattern instead.',
+            file: rel,
+            line: ln,
+            severity: 'warning',
+            message:
+              'QCoreApplication::processEvents() in non-GUI code. This is usually a workaround for a design issue. Fix the underlying async pattern instead.',
           });
         }
 
@@ -67,8 +80,11 @@ export async function executeQtThread(cwd?: string): Promise<string> {
           // Check if this file is likely a worker thread (has run() or moveToThread)
           if (/void\s+run\s*\(/.test(content)) {
             issues.push({
-              file: rel, line: ln, severity: 'error',
-              message: 'GUI operation called from QThread::run(). GUI methods must be called from the main thread. Use QMetaObject::invokeMethod() with Qt::QueuedConnection.',
+              file: rel,
+              line: ln,
+              severity: 'error',
+              message:
+                'GUI operation called from QThread::run(). GUI methods must be called from the main thread. Use QMetaObject::invokeMethod() with Qt::QueuedConnection.',
             });
           }
         }
@@ -78,8 +94,11 @@ export async function executeQtThread(cwd?: string): Promise<string> {
           const ctx = content.slice(Math.max(0, i - 5) * 100, i * 100 + 200);
           if (/\bQThread\b|run\s*\(|moveToThread/.test(ctx)) {
             issues.push({
-              file: rel, line: ln, severity: 'info',
-              message: 'Direct delete in thread context. Consider using deleteLater() for QObjects with event loop affinity.',
+              file: rel,
+              line: ln,
+              severity: 'info',
+              message:
+                'Direct delete in thread context. Consider using deleteLater() for QObjects with event loop affinity.',
             });
           }
         }
@@ -89,8 +108,11 @@ export async function executeQtThread(cwd?: string): Promise<string> {
           const surrounding = content.slice(i * 100, i * 100 + 200);
           if (!/QFutureWatcher|\.then\s*\(|\.onFailed|\.isFinished/.test(surrounding)) {
             issues.push({
-              file: rel, line: ln, severity: 'info',
-              message: 'QtConcurrent::run() without error handling. Attach QFutureWatcher or use .then()/.onFailed() to handle results and errors.',
+              file: rel,
+              line: ln,
+              severity: 'info',
+              message:
+                'QtConcurrent::run() without error handling. Attach QFutureWatcher or use .then()/.onFailed() to handle results and errors.',
             });
           }
         }
@@ -98,12 +120,16 @@ export async function executeQtThread(cwd?: string): Promise<string> {
         // QReadWriteLock: lockForWrite without unlock
         if (/lockForWrite\s*\(/.test(line) && !content.slice(i * 100, i * 100 + 300).includes('unlock')) {
           issues.push({
-            file: rel, line: ln, severity: 'warning',
+            file: rel,
+            line: ln,
+            severity: 'warning',
             message: 'lockForWrite() without unlock() — may deadlock. Use QReadLocker/QWriteLocker for RAII.',
           });
         }
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
 
   return formatThreadReport(issues);
@@ -140,20 +166,5 @@ function formatThreadReport(issues: ThreadIssue[]): string {
 }
 
 async function collectSourceFiles(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist', '3rdparty']);
-  async function walk(d: string) {
-    let entries;
-    try { entries = await readdir(d, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !skip.has(entry.name)) await walk(full);
-      } else if (entry.isFile() && ['.cpp', '.h', '.hpp'].includes(extname(entry.name).toLowerCase())) {
-        results.push(full);
-      }
-    }
-  }
-  await walk(dir);
-  return results;
+  return collectFiles(dir, { extensions: new Set(['.cpp', '.h', '.hpp']) });
 }

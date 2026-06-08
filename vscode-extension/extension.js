@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
+const https = require('https');
 
-// Shared tools from main project (CJS build)
 const {
   executeRead: _executeRead,
   executeWrite: _executeWrite,
@@ -19,12 +19,31 @@ const {
   executeListImages: _executeListImages,
 } = require('../../dist/cjs/tools.cjs');
 
-// ─── Configuration ──────────────────────────────────────────────────────────
+// ─── Provider-agnostic config ──────────────────────────────────────
+
+const SUPPORTED_PROVIDERS = {
+  deepseek: {
+    name: 'DeepSeek',
+    baseURL: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+    apiKeyEnvVars: ['CODEYANG_API_KEY', 'DEEPSEEK_API_KEY'],
+    type: 'openai',
+  },
+  anthropic: {
+    name: 'Anthropic',
+    baseURL: 'https://api.anthropic.com',
+    defaultModel: 'claude-sonnet-4-20250514',
+    apiKeyEnvVars: ['ANTHROPIC_API_KEY'],
+    type: 'anthropic',
+  },
+};
+
 function getApiKey() {
   const cfgKey = vscode.workspace.getConfiguration('codeyang').get('apiKey', '');
   if (cfgKey) return cfgKey;
-  if (process.env['ANTHROPIC_API_KEY']) return process.env['ANTHROPIC_API_KEY'];
-  if (process.env['CODEYANG_API_KEY']) return process.env['CODEYANG_API_KEY'];
+  for (const envVar of ['CODEYANG_API_KEY', 'DEEPSEEK_API_KEY', 'ANTHROPIC_API_KEY']) {
+    if (process.env[envVar]) return process.env[envVar];
+  }
   try {
     const cfgPath = path.join(os.homedir(), '.codeyang', 'config.json');
     const data = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
@@ -33,46 +52,56 @@ function getApiKey() {
   return null;
 }
 
+function getProviderType() {
+  const baseUrl = getApiBaseUrl();
+  const model = getModel();
+  if (baseUrl && (baseUrl.includes('anthropic') || baseUrl.includes('api.anthropic.com'))) return 'anthropic';
+  if (model && model.includes('claude')) return 'anthropic';
+  return 'openai';
+}
+
 function getApiBaseUrl() {
   const cfgBase = vscode.workspace.getConfiguration('codeyang').get('apiBaseUrl', '');
   if (cfgBase) return cfgBase;
-  if (process.env['ANTHROPIC_BASE_URL']) return process.env['ANTHROPIC_BASE_URL'];
+  if (process.env['CODEYANG_BASE_URL']) return process.env['CODEYANG_BASE_URL'];
   try {
     const cfgPath = path.join(os.homedir(), '.codeyang', 'config.json');
     const data = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
     if (data.apiBaseUrl) return data.apiBaseUrl;
   } catch {}
-  return 'https://api.anthropic.com';
+  return 'https://api.deepseek.com/v1';
 }
 
 function getModel() {
   return vscode.workspace.getConfiguration('codeyang').get('model', '') ||
     process.env['CODEYANG_MODEL'] ||
-    'claude-sonnet-4-20250514';
+    'deepseek-chat';
 }
 
-async function saveApiKey(key, baseUrl) {
-  // Save to VS Code settings
+async function saveApiKey(key, baseUrl, model) {
   await vscode.workspace.getConfiguration('codeyang').update('apiKey', key, true);
   if (baseUrl) {
     await vscode.workspace.getConfiguration('codeyang').update('apiBaseUrl', baseUrl, true);
   }
-  // Also save to ~/.codeyang/config.json for CLI
+  if (model) {
+    await vscode.workspace.getConfiguration('codeyang').update('model', model, true);
+  }
   const dir = path.join(os.homedir(), '.codeyang');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const config = { apiKey: key };
   if (baseUrl) config.apiBaseUrl = baseUrl;
+  if (model) config.model = model;
   fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config, null, 2));
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────
+
 function getWorkspaceRoot() {
   const folders = vscode.workspace.workspaceFolders;
   return folders && folders.length > 0 ? folders[0].uri.fsPath : process.cwd();
 }
 
-// ─── Tools ──────────────────────────────────────────────────────────────────
-// Wrappers that resolve paths relative to workspace root before calling shared tools
+// ─── Tools ─────────────────────────────────────────────────────────
 
 async function execRead(filePath, offset, limit) {
   const resolved = path.isAbsolute(filePath) ? filePath : path.join(getWorkspaceRoot(), filePath);
@@ -149,20 +178,21 @@ async function execTodoWrite(todos) {
   })));
 }
 
-// ─── Tool Definitions ───────────────────────────────────────────────────────
+// ─── Tool Definitions ──────────────────────────────────────────────
+
 const toolDefinitions = [
   { name: 'Bash', description: 'Execute a shell command.', input_schema: { type: 'object', properties: { command: { type: 'string', description: 'Command to run' }, cwd: { type: 'string' } }, required: ['command'] } },
   { name: 'Read', description: 'Read a file or list a directory.', input_schema: { type: 'object', properties: { filePath: { type: 'string', description: 'File or directory path' }, offset: { type: 'number' }, limit: { type: 'number' } }, required: ['filePath'] } },
-  { name: 'Write', description: 'Write content to a file. Creates parent directories if needed.', input_schema: { type: 'object', properties: { filePath: { type: 'string', description: 'Path to the file' }, content: { type: 'string', description: 'Content to write' } }, required: ['filePath', 'content'] } },
-  { name: 'Edit', description: 'Edit a file by replacing exact text. Use replaceAll for renaming.', input_schema: { type: 'object', properties: { filePath: { type: 'string', description: 'Path to the file' }, oldString: { type: 'string', description: 'Text to replace' }, newString: { type: 'string', description: 'Replacement text' }, replaceAll: { type: 'boolean' } }, required: ['filePath', 'oldString', 'newString'] } },
+  { name: 'Write', description: 'Write content to a file.', input_schema: { type: 'object', properties: { filePath: { type: 'string', description: 'Path to the file' }, content: { type: 'string', description: 'Content to write' } }, required: ['filePath', 'content'] } },
+  { name: 'Edit', description: 'Edit a file by replacing exact text.', input_schema: { type: 'object', properties: { filePath: { type: 'string', description: 'Path to the file' }, oldString: { type: 'string', description: 'Text to replace' }, newString: { type: 'string', description: 'Replacement text' }, replaceAll: { type: 'boolean' } }, required: ['filePath', 'oldString', 'newString'] } },
   { name: 'Glob', description: 'Search for files matching a glob pattern.', input_schema: { type: 'object', properties: { pattern: { type: 'string', description: 'Glob pattern' }, root: { type: 'string' } }, required: ['pattern'] } },
   { name: 'Grep', description: 'Search file contents for a regex pattern.', input_schema: { type: 'object', properties: { pattern: { type: 'string', description: 'Regex pattern' }, include: { type: 'string' }, path: { type: 'string' } }, required: ['pattern'] } },
-  { name: 'WebFetch', description: 'Fetch content from a URL. Converts HTML to readable text.', input_schema: { type: 'object', properties: { url: { type: 'string', description: 'URL to fetch' }, format: { type: 'string', enum: ['text', 'html'] } }, required: ['url'] } },
-  { name: 'TodoWrite', description: 'Create and maintain a structured task list for the current session.', input_schema: { type: 'object', properties: { todos: { type: 'array', items: { type: 'object', properties: { content: { type: 'string' }, status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'] }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['content', 'status', 'priority'] }, description: 'The updated todo list' } }, required: ['todos'] } },
+  { name: 'WebFetch', description: 'Fetch content from a URL.', input_schema: { type: 'object', properties: { url: { type: 'string', description: 'URL to fetch' }, format: { type: 'string', enum: ['text', 'html'] } }, required: ['url'] } },
+  { name: 'TodoWrite', description: 'Create and maintain a structured task list.', input_schema: { type: 'object', properties: { todos: { type: 'array', items: { type: 'object', properties: { content: { type: 'string' }, status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'] }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['content', 'status', 'priority'] }, description: 'The updated todo list' } }, required: ['todos'] } },
   { name: 'Question', description: 'Ask the user a question when you need clarification.', input_schema: { type: 'object', properties: { question: { type: 'string', description: 'The question to ask' }, options: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, description: { type: 'string' } }, required: ['label', 'description'] }, description: 'Available choices' } }, required: ['question'] } },
-  { name: 'Task', description: 'Launch a sub-agent for complex multi-step tasks. Available in CLI mode only.', input_schema: { type: 'object', properties: { description: { type: 'string', description: 'Brief description of the task' }, prompt: { type: 'string', description: 'Detailed prompt for the sub-agent' }, subagent_type: { type: 'string', description: 'Type of sub-agent' } }, required: ['description', 'prompt'] } },
-  { name: 'Search', description: 'Search files by name and/or content. Returns ranked results.', input_schema: { type: 'object', properties: { query: { type: 'string', description: 'Search query' }, rootDir: { type: 'string' }, maxResults: { type: 'number' }, includeGlob: { type: 'string' }, searchContent: { type: 'boolean' }, searchNames: { type: 'boolean' } }, required: ['query'] } },
-  { name: 'ImageInfo', description: 'Read image metadata: format, dimensions, file size.', input_schema: { type: 'object', properties: { filePath: { type: 'string' } }, required: ['filePath'] } },
+  { name: 'Task', description: 'Launch a sub-agent for complex multi-step tasks.', input_schema: { type: 'object', properties: { description: { type: 'string', description: 'Brief description of the task' }, prompt: { type: 'string', description: 'Detailed prompt for the sub-agent' } }, required: ['description', 'prompt'] } },
+  { name: 'Search', description: 'Search files by name and/or content.', input_schema: { type: 'object', properties: { query: { type: 'string', description: 'Search query' }, rootDir: { type: 'string' }, maxResults: { type: 'number' }, includeGlob: { type: 'string' }, searchContent: { type: 'boolean' }, searchNames: { type: 'boolean' } }, required: ['query'] } },
+  { name: 'ImageInfo', description: 'Read image metadata.', input_schema: { type: 'object', properties: { filePath: { type: 'string' } }, required: ['filePath'] } },
   { name: 'ImageToBase64', description: 'Encode image to base64 data URI.', input_schema: { type: 'object', properties: { filePath: { type: 'string' }, maxBytes: { type: 'number' } }, required: ['filePath'] } },
   { name: 'ListImages', description: 'List image files in a directory.', input_schema: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } },
 ];
@@ -177,32 +207,23 @@ async function executeTool(name, args, panel) {
     case 'Grep': return await execGrep(String(args.pattern || ''), args.include ? String(args.include) : undefined, args.path ? String(args.path) : undefined);
     case 'WebFetch': return await execWebFetch(String(args.url || ''), args.format ? String(args.format) : undefined);
     case 'TodoWrite': return await execTodoWrite(Array.isArray(args.todos) ? args.todos : []);
-    case 'Task': return 'Sub-agent tasks are available in the CodeYang CLI. Please execute this work directly using the available tools (Read, Grep, Bash, etc.).';
+    case 'Task': return 'Sub-agent tasks are available in the CLI. Please execute directly using available tools.';
     case 'Search': return await execSearch(String(args.query || ''), args.rootDir ? String(args.rootDir) : undefined, { maxResults: args.maxResults, includeGlob: args.includeGlob, searchContent: args.searchContent, searchNames: args.searchNames });
     case 'ImageInfo': return await execImageInfo(String(args.filePath || ''));
     case 'ImageToBase64': return await execImageToBase64(String(args.filePath || ''), args.maxBytes);
     case 'ListImages': return await execListImages(String(args.path || ''));
     case 'Question': {
       const q = String(args.question || '');
-      const options = args.options;
-      let result = `[QUESTION] ${q}`;
-      if (options && options.length > 0) {
-        const opts = options.map((o, i) => `  ${i + 1}. ${o.label} — ${o.description}`).join('\n');
-        result += '\n\nOptions:\n' + opts;
-      }
-      // Show question to user and wait for answer
-      panel.webview.postMessage({ type: 'question', question: q, options: options || [] });
-      const answer = await new Promise(resolve => {
-        // Store resolve function for the main message handler to use
-        panel._questionResolve = resolve;
-      });
+      panel.webview.postMessage({ type: 'question', question: q, options: args.options || [] });
+      const answer = await new Promise(resolve => { panel._questionResolve = resolve; });
       return `[ANSWER] ${answer}`;
     }
     default: return 'Unknown tool: ' + name;
   }
 }
 
-// ─── Retry ──────────────────────────────────────────────────────────────────
+// ─── Retry ─────────────────────────────────────────────────────────
+
 async function withRetry(fn, label, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -231,22 +252,21 @@ async function withRetry(fn, label, maxRetries = 3) {
   }
 }
 
-// ─── Session persistence ─────────────────────────────────────────────────────
+// ─── Session persistence ───────────────────────────────────────────
+
 const SESSION_DIR = path.join(os.homedir(), '.codeyang', 'vscode-sessions');
 
 function saveSession(messages) {
   if (messages.length === 0) return;
   try {
     if (!fs.existsSync(SESSION_DIR)) fs.mkdirSync(SESSION_DIR, { recursive: true });
-    // Auto-generate title from first user message
     const firstUserMsg = messages.find(m => m.role === 'user');
     const title = firstUserMsg
       ? String(firstUserMsg.content || '').slice(0, 60).replace(/\n/g, ' ')
       : 'untitled';
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const session = {
-      id,
-      title,
+      id, title,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       messages: messages.map(m => ({
@@ -260,9 +280,109 @@ function saveSession(messages) {
   }
 }
 
-// ─── Agent Loop ─────────────────────────────────────────────────────────────
-async function runAgent(client, messages, panel) {
+// ─── OpenAI-compatible SSE stream helper ───────────────────────────
+
+function openaiStreamRequest(apiKey, baseURL, model, systemPrompt, messages, tools) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      model,
+      max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
+      temperature: 0.5,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
+      tools,
+      stream: true,
+    });
+
+    const url = new URL(baseURL + '/chat/completions');
+    const opts = {
+      hostname: url.hostname,
+      port: url.port || 443,
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+
+    const req = https.request(opts, (res) => {
+      const result = {
+        textBlocks: [],
+        toolCalls: [],
+        assistantText: '',
+      };
+
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk.toString();
+        const lines = data.split('\n');
+        data = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === '[DONE]') continue;
+
+          try {
+            const event = JSON.parse(jsonStr);
+            const choice = event.choices && event.choices[0];
+            if (!choice) continue;
+
+            const delta = choice.delta || {};
+            if (delta.content) {
+              result.textBlocks.push({ type: 'text', text: delta.content });
+              result.assistantText += delta.content;
+            }
+
+            if (delta.tool_calls) {
+              for (const tc of delta.tool_calls) {
+                const idx = tc.index;
+                if (!result.toolCalls[idx]) {
+                  result.toolCalls[idx] = { id: tc.id || '', name: '', input: {}, _args: '' };
+                }
+                if (tc.function) {
+                  if (tc.function.name) result.toolCalls[idx].name = tc.function.name;
+                  if (tc.function.arguments) result.toolCalls[idx]._args += tc.function.arguments;
+                }
+              }
+            }
+          } catch {}
+        }
+      });
+
+      res.on('end', () => {
+        if (res.statusCode >= 400) {
+          let errMsg = 'HTTP ' + res.statusCode;
+          try {
+            const err = JSON.parse(data);
+            errMsg = err.error?.message || err.error?.code || errMsg;
+          } catch {}
+          reject(new Error(errMsg));
+          return;
+        }
+        // Finalize tool call arguments
+        for (const tc of result.toolCalls) {
+          if (tc && tc._args) {
+            try { tc.input = JSON.parse(tc._args); } catch { tc.input = {}; }
+            delete tc._args;
+          }
+        }
+        resolve(result);
+      });
+    });
+
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+// ─── Agent Loop ────────────────────────────────────────────────────
+
+async function runAgent(apiKey, baseUrl, model, messages, panel) {
   const MAX_TURNS = 15;
+  const provider = getProviderType();
   const systemPrompt = [
     'You are CodeYang, an AI coding agent inside VS Code.',
     'Help users with coding, debugging, code explanation, and project navigation.',
@@ -273,59 +393,98 @@ async function runAgent(client, messages, panel) {
   ].join('\n');
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const stream = await withRetry(
-      () => client.messages.stream({
-        model: getModel(),
-        max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
-        temperature: 0.5,
-        system: systemPrompt,
-        messages,
-        tools: toolDefinitions,
-      }),
-      'Anthropic streaming API',
-    );
+    let contentBlocks;
+    let toolCalls;
+    let assistantText;
 
-    const contentBlocks = [];
-    let currentBlockIndex = -1;
+    if (provider === 'anthropic') {
+      const { Anthropic } = require('@anthropic-ai/sdk');
+      const client = new Anthropic({ apiKey, baseURL: baseUrl });
 
-    for await (const event of stream) {
-      switch (event.type) {
-        case 'content_block_start':
-          currentBlockIndex = event.index;
-          contentBlocks[currentBlockIndex] = event.content_block;
-          break;
-        case 'content_block_delta':
-          if (event.delta?.type === 'text_delta' && event.delta.text) {
-            panel.webview.postMessage({ type: 'append', content: event.delta.text });
-            if (contentBlocks[currentBlockIndex]?.type === 'text') {
-              contentBlocks[currentBlockIndex].text = (contentBlocks[currentBlockIndex].text || '') + event.delta.text;
+      const stream = await withRetry(
+        () => client.messages.stream({
+          model,
+          max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
+          temperature: 0.5,
+          system: systemPrompt,
+          messages,
+          tools: toolDefinitions,
+        }),
+        'Anthropic streaming API',
+      );
+
+      const blocks = [];
+      let currentIndex = -1;
+
+      for await (const event of stream) {
+        switch (event.type) {
+          case 'content_block_start':
+            currentIndex = event.index;
+            blocks[currentIndex] = event.content_block;
+            break;
+          case 'content_block_delta':
+            if (event.delta?.type === 'text_delta' && event.delta.text) {
+              panel.webview.postMessage({ type: 'append', content: event.delta.text });
+              if (blocks[currentIndex]?.type === 'text') {
+                blocks[currentIndex].text = (blocks[currentIndex].text || '') + event.delta.text;
+              }
+            } else if (event.delta?.type === 'input_json_delta' && event.delta.partial_json) {
+              if (blocks[currentIndex]?.type === 'tool_use') {
+                blocks[currentIndex].input_json = (blocks[currentIndex].input_json || '') + event.delta.partial_json;
+              }
             }
-          } else if (event.delta?.type === 'input_json_delta' && event.delta.partial_json) {
-            if (contentBlocks[currentBlockIndex]?.type === 'tool_use') {
-              contentBlocks[currentBlockIndex].input_json = (contentBlocks[currentBlockIndex].input_json || '') + event.delta.partial_json;
+            break;
+          case 'content_block_stop':
+            if (blocks[currentIndex]?.type === 'tool_use') {
+              try { blocks[currentIndex].input = JSON.parse(blocks[currentIndex].input_json || '{}'); }
+              catch { blocks[currentIndex].input = {}; }
             }
+            break;
+        }
+      }
+
+      contentBlocks = blocks;
+      toolCalls = [];
+      assistantText = '';
+
+      for (const block of contentBlocks) {
+        if (!block) continue;
+        if (block.type === 'text') assistantText += (block.text || '');
+        else if (block.type === 'tool_use') toolCalls.push({ id: block.id, name: block.name, input: block.input || {} });
+      }
+    } else {
+      const result = await withRetry(
+        () => openaiStreamRequest(apiKey, baseUrl, model, systemPrompt, messages, toolDefinitions),
+        'OpenAI streaming API',
+      );
+
+      toolCalls = result.toolCalls.filter(Boolean);
+      assistantText = result.assistantText;
+
+      // Send text back to webview in real-time
+      if (result.textBlocks.length > 0) {
+        for (const block of result.textBlocks) {
+          if (block.type === 'text' && block.text) {
+            panel.webview.postMessage({ type: 'append', content: block.text });
           }
-          break;
-        case 'content_block_stop':
-          if (contentBlocks[currentBlockIndex]?.type === 'tool_use') {
-            try { contentBlocks[currentBlockIndex].input = JSON.parse(contentBlocks[currentBlockIndex].input_json || '{}'); }
-            catch { contentBlocks[currentBlockIndex].input = {}; }
-          }
-          break;
+        }
       }
     }
 
-    let assistantText = '';
-    const toolCalls = [];
-    for (const block of contentBlocks) {
-      if (!block) continue;
-      if (block.type === 'text') assistantText += (block.text || '');
-      else if (block.type === 'tool_use') toolCalls.push({ id: block.id, name: block.name, input: block.input || {} });
-    }
+    const assistantContent = [];
 
-    const assistantContent = contentBlocks
-      .filter(b => b && (b.type === 'text' || b.type === 'tool_use'))
-      .map(b => b.type === 'text' ? { type: 'text', text: b.text || '' } : { type: 'tool_use', id: b.id, name: b.name, input: b.input || {} });
+    if (provider === 'anthropic') {
+      for (const block of contentBlocks) {
+        if (!block) continue;
+        if (block.type === 'text') assistantContent.push({ type: 'text', text: block.text || '' });
+        else if (block.type === 'tool_use') assistantContent.push({ type: 'tool_use', id: block.id, name: block.name, input: block.input || {} });
+      }
+    } else {
+      if (assistantText) assistantContent.push({ type: 'text', text: assistantText });
+      for (const tc of toolCalls) {
+        assistantContent.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input });
+      }
+    }
 
     if (assistantContent.length === 0) break;
     messages.push({ role: 'assistant', content: assistantContent });
@@ -333,7 +492,6 @@ async function runAgent(client, messages, panel) {
 
     const toolResults = new Array(toolCalls.length);
 
-    // Handle Question first (blocks for user input)
     for (let i = 0; i < toolCalls.length; i++) {
       const tc = toolCalls[i];
       if (tc.name === 'Question') {
@@ -344,7 +502,6 @@ async function runAgent(client, messages, panel) {
       }
     }
 
-    // Execute all non-Question tools in parallel
     await Promise.all(toolCalls.map(async (tc, i) => {
       if (tc.name === 'Question') return;
       panel.webview.postMessage({ type: 'toolCall', name: tc.name, args: JSON.stringify(tc.input).slice(0, 200) });
@@ -363,10 +520,10 @@ async function runAgent(client, messages, panel) {
   }
 }
 
-// ─── Extension Activation ───────────────────────────────────────────────────
+// ─── Extension Activation ──────────────────────────────────────────
+
 let panel = null;
 let history = [];
-let anthropicClient = null;
 
 function createOrShowPanel(context) {
   if (panel) {
@@ -388,33 +545,14 @@ function createOrShowPanel(context) {
     panel.webview.html = '<html><body><p>chat.html not found</p></body></html>';
   }
 
-  let webviewReady = false;
-
   panel.onDidDispose(() => { panel = null; history = []; });
 
-  // Handle messages from the webview
   panel.webview.onDidReceiveMessage(async (msg) => {
-    // First message: webview is ready, send API key status
     if (msg.type === 'ready') {
-      webviewReady = true;
-      const hasKey = !!getApiKey();
-      if (hasKey) {
-        try {
-          const { Anthropic } = require('@anthropic-ai/sdk');
-          const baseUrl = getApiBaseUrl();
-          anthropicClient = new Anthropic({
-            apiKey: getApiKey(),
-            baseURL: baseUrl
-          });
-        } catch {}
-        panel.webview.postMessage({ type: 'apiKeySet' });
-      } else {
-        panel.webview.postMessage({ type: 'showSetup' });
-      }
+      panel.webview.postMessage({ type: 'showSetup' });
       return;
     }
 
-    // Handle question answers
     if (msg.type === 'questionAnswer' && panel._questionResolve) {
       panel._questionResolve(msg.answer);
       panel._questionResolve = null;
@@ -424,41 +562,20 @@ function createOrShowPanel(context) {
     switch (msg.type) {
       case 'setApiKey': {
         if (msg.key && msg.key.trim()) {
-          const baseUrl = msg.baseUrl && msg.baseUrl.trim() ? msg.baseUrl.trim() : 'https://api.anthropic.com';
-          await saveApiKey(msg.key.trim(), baseUrl);
-          try {
-            const { Anthropic } = require('@anthropic-ai/sdk');
-            anthropicClient = new Anthropic({
-              apiKey: msg.key.trim(),
-              baseURL: baseUrl
-            });
-            panel.webview.postMessage({ type: 'apiKeySet' });
-            vscode.window.showInformationMessage(`CodeYang: Connected to ${baseUrl}`);
-          } catch (err) {
-            panel.webview.postMessage({ type: 'error', message: 'Failed to initialize: ' + err.message });
-          }
+          const baseUrl = msg.baseUrl && msg.baseUrl.trim() ? msg.baseUrl.trim() : 'https://api.deepseek.com/v1';
+          const model = msg.model && msg.model.trim() ? msg.model.trim() : 'deepseek-chat';
+          await saveApiKey(msg.key.trim(), baseUrl, model);
+          panel.webview.postMessage({ type: 'apiKeySet' });
+          vscode.window.showInformationMessage(`CodeYang: Connected to ${baseUrl} (${model})`);
         }
         break;
       }
 
       case 'chat': {
-        if (!anthropicClient) {
-          const key = getApiKey();
-          if (!key) {
-            panel.webview.postMessage({ type: 'error', message: 'API key not configured. Please enter your Anthropic API key above.' });
-            return;
-          }
-          try {
-            const { Anthropic } = require('@anthropic-ai/sdk');
-            const baseUrl = getApiBaseUrl();
-            anthropicClient = new Anthropic({
-              apiKey: key,
-              baseURL: baseUrl
-            });
-          } catch (err) {
-            panel.webview.postMessage({ type: 'error', message: 'Failed to initialize Anthropic client: ' + err.message });
-            return;
-          }
+        const key = getApiKey();
+        if (!key) {
+          panel.webview.postMessage({ type: 'error', message: 'API key not configured. Please enter your API key above.' });
+          return;
         }
 
         const userText = msg.text;
@@ -466,24 +583,28 @@ function createOrShowPanel(context) {
         panel.webview.postMessage({ type: 'addMessage', role: 'assistant', content: '' });
 
         try {
+          const baseUrl = getApiBaseUrl();
+          const model = getModel();
           const messages = history.slice();
-          await runAgent(anthropicClient, messages, panel);
+          await runAgent(key, baseUrl, model, messages, panel);
           history = messages;
-          saveSession(history);  // Persist after each exchange
+          saveSession(history);
           panel.webview.postMessage({ type: 'done' });
         } catch (err) {
           const errMsg = err.message || String(err);
           console.error('Agent error:', err);
 
           if (errMsg.includes('401') || errMsg.includes('authentication') || errMsg.includes('api key') || errMsg.includes('invalid_api_key')) {
-            panel.webview.postMessage({ type: 'error', message: 'Invalid API key. Please check your Anthropic API key (should start with sk-ant-) and try again.' });
+            panel.webview.postMessage({ type: 'error', message: 'Invalid API key. Please check your API key and try again.' });
             panel.webview.postMessage({ type: 'showSetup' });
-          } else if (errMsg.includes('503') || errMsg.includes('500') || errMsg.includes('Internal server error')) {
-            panel.webview.postMessage({ type: 'error', message: 'Anthropic API server is temporarily unavailable (503/500 error). Please try again in a few moments.' });
-          } else if (errMsg.includes('429') || errMsg.includes('rate_limit')) {
-            panel.webview.postMessage({ type: 'error', message: 'Rate limit exceeded. Please wait a moment and try again.' });
+          } else if (errMsg.includes('503') || errMsg.includes('500') || errMsg.includes('Internal server error') || errMsg.includes('upstream_error')) {
+            panel.webview.postMessage({ type: 'error', message: 'API server is temporarily unavailable. Please try again later.' });
+          } else if (errMsg.includes('429') || errMsg.includes('rate_limit') || errMsg.includes('insufficient_quota')) {
+            panel.webview.postMessage({ type: 'error', message: 'Rate limit exceeded or insufficient quota. Please wait and try again.' });
+          } else if (errMsg.includes('Insufficient Balance') || errMsg.includes('insufficient_balance')) {
+            panel.webview.postMessage({ type: 'error', message: 'Insufficient API balance. Please top up your account.' });
           } else if (errMsg.includes('ENOTFOUND') || errMsg.includes('ECONNREFUSED') || errMsg.includes('network')) {
-            panel.webview.postMessage({ type: 'error', message: 'Network error: Cannot connect to Anthropic API. Please check your internet connection.' });
+            panel.webview.postMessage({ type: 'error', message: 'Network error: Cannot connect to API. Please check your internet connection and API base URL.' });
           } else {
             panel.webview.postMessage({ type: 'error', message: 'Error: ' + errMsg });
           }

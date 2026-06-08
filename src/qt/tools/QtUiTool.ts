@@ -2,8 +2,9 @@
  * QtUiTool — Parse Qt Designer .ui XML files.
  * Reads widget hierarchy, object names, layouts, and signal-slot connections defined in the UI.
  */
-import { readFile, readdir } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { relative } from 'node:path';
+import { collectFiles } from '../shared.js';
 
 interface WidgetInfo {
   className: string;
@@ -57,28 +58,7 @@ export async function executeQtUi(uiPath?: string, cwd?: string): Promise<string
 }
 
 async function findUiFiles(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist']);
-
-  async function walk(d: string) {
-    let entries;
-    try {
-      entries = await readdir(d, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !skip.has(entry.name)) await walk(full);
-      } else if (entry.isFile() && entry.name.endsWith('.ui')) {
-        results.push(full);
-      }
-    }
-  }
-
-  await walk(dir);
-  return results;
+  return collectFiles(dir, { extensions: new Set(['.ui']) });
 }
 
 function parseUiFile(filePath: string, content: string): UiAnalysis {

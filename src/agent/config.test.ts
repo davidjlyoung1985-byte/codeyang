@@ -17,7 +17,7 @@ describe('config', () => {
     expect(typeof config.apiKey).toBe('string');
   });
 
-  it('defaults to claude-sonnet model', () => {
-    expect(config.model).toMatch(/claude/);
+  it('defaults to deepseek-chat model', () => {
+    expect(config.model).toBe('deepseek-chat');
   });
 });

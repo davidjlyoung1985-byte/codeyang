@@ -49,11 +49,7 @@ export async function executeGitStatus(cwd?: string, short = false): Promise<str
 /**
  * Show git diff
  */
-export async function executeGitDiff(
-  cwd?: string,
-  staged = false,
-  filePath?: string,
-): Promise<string> {
+export async function executeGitDiff(cwd?: string, staged = false, filePath?: string): Promise<string> {
   const args = ['diff'];
   if (staged) {
     args.push('--cached');
@@ -74,11 +70,7 @@ export async function executeGitDiff(
 /**
  * Create a git commit
  */
-export async function executeGitCommit(
-  message: string,
-  cwd?: string,
-  addAll = false,
-): Promise<string> {
+export async function executeGitCommit(message: string, cwd?: string, addAll = false): Promise<string> {
   // Stage files if requested
   if (addAll) {
     const addResult = await executeGitCommand(['add', '-A'], cwd);
@@ -118,11 +110,7 @@ export async function executeGitBranch(cwd?: string, remotes = false): Promise<s
 /**
  * Create or switch to a branch
  */
-export async function executeGitCheckout(
-  branch: string,
-  cwd?: string,
-  create = false,
-): Promise<string> {
+export async function executeGitCheckout(branch: string, cwd?: string, create = false): Promise<string> {
   const args = ['checkout'];
   if (create) {
     args.push('-b');
@@ -141,11 +129,7 @@ export async function executeGitCheckout(
 /**
  * Show git log
  */
-export async function executeGitLog(
-  cwd?: string,
-  maxCount = 10,
-  oneline = false,
-): Promise<string> {
+export async function executeGitLog(cwd?: string, maxCount = 10, oneline = false): Promise<string> {
   const args = ['log', `--max-count=${maxCount}`];
   if (oneline) {
     args.push('--oneline');
@@ -163,12 +147,7 @@ export async function executeGitLog(
 /**
  * Push to remote
  */
-export async function executeGitPush(
-  cwd?: string,
-  remote = 'origin',
-  branch?: string,
-  force = false,
-): Promise<string> {
+export async function executeGitPush(cwd?: string, remote = 'origin', branch?: string, force = false): Promise<string> {
   const args = ['push'];
   if (force) {
     args.push('--force');
@@ -190,11 +169,7 @@ export async function executeGitPush(
 /**
  * Pull from remote
  */
-export async function executeGitPull(
-  cwd?: string,
-  remote = 'origin',
-  branch?: string,
-): Promise<string> {
+export async function executeGitPull(cwd?: string, remote = 'origin', branch?: string): Promise<string> {
   const args = ['pull'];
   args.push(remote);
   if (branch) {
@@ -213,11 +188,7 @@ export async function executeGitPull(
 /**
  * Clone a repository
  */
-export async function executeGitClone(
-  url: string,
-  destination?: string,
-  cwd?: string,
-): Promise<string> {
+export async function executeGitClone(url: string, destination?: string, cwd?: string): Promise<string> {
   const args = ['clone', url];
   if (destination) {
     args.push(destination);
@@ -253,11 +224,7 @@ export async function executeGitAdd(files: string[], cwd?: string): Promise<stri
 /**
  * Unstage files
  */
-export async function executeGitReset(
-  files?: string[],
-  cwd?: string,
-  hard = false,
-): Promise<string> {
+export async function executeGitReset(files?: string[], cwd?: string, hard = false): Promise<string> {
   const args = ['reset'];
   if (hard) {
     args.push('--hard');
@@ -306,11 +273,7 @@ export async function executeGitStash(
 /**
  * Merge branches
  */
-export async function executeGitMerge(
-  branch: string,
-  cwd?: string,
-  noFf = false,
-): Promise<string> {
+export async function executeGitMerge(branch: string, cwd?: string, noFf = false): Promise<string> {
   const args = ['merge'];
   if (noFf) {
     args.push('--no-ff');

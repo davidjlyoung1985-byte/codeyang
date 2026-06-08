@@ -1,0 +1,227 @@
+{
+  "version": 1,
+  "skills": {
+    "brainstorming": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/brainstorming/SKILL.md",
+      "computedHash": "f483c304fcde060211ffae00f49bb728536e7e7613c99db45b5b924d9fc17243"
+    },
+    "dispatching-parallel-agents": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/dispatching-parallel-agents/SKILL.md",
+      "computedHash": "e21044ae7496fc285f1df9ff3fb518a3a20bea6f5216c1f59f4987e12c769a0a"
+    },
+    "executing-plans": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/executing-plans/SKILL.md",
+      "computedHash": "b41c919caf1bb07fbacb0e29899ac513f9eb11cd4dd695975ad352c2c03cc4d7"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "9e1c8b3103f92fa8092568a44fe64858de7c5c9dc65ce4bea8f168080e889cfd"
+    },
+    "finishing-a-development-branch": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/finishing-a-development-branch/SKILL.md",
+      "computedHash": "932d23af11a3eb2b758f5b1d9aec7b6d28ddd26658328414f87f34dff7179d19"
+    },
+    "git-master": {
+      "source": "josiahsiegel/claude-plugin-marketplace",
+      "sourceType": "github",
+      "skillPath": "plugins/git-master/skills/git-master/SKILL.md",
+      "computedHash": "6b736d159a0a019491d30655de36c4bc6610fe3b30e78b4b415ca96b359233d1"
+    },
+    "git-release": {
+      "source": "wojons/skills",
+      "sourceType": "github",
+      "skillPath": "skills/git-release/SKILL.md",
+      "computedHash": "488d1d65aeef6caf5da276674a952eae5504fc70f631efbdfe53b7fc11c13947"
+    },
+    "gpt-image-2": {
+      "source": "gargantuax/openskills",
+      "sourceType": "github",
+      "skillPath": "skills/gpt-image-2/SKILL.md",
+      "computedHash": "080d4e9fd857936fe417db8871511b2cfae1efc61a9e157b63f405502c470da6"
+    },
+    "hf-cli": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/hf-cli/SKILL.md",
+      "computedHash": "9c7898271b6c2f7878cbcd7674f0cd631335f779ab10114138453aa95535440e"
+    },
+    "huggingface-best": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-best/SKILL.md",
+      "computedHash": "78d3afd3ef471164191519c13a16df0317884e20a6289c7f1a01bebe35352299"
+    },
+    "huggingface-community-evals": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-community-evals/SKILL.md",
+      "computedHash": "51b42948064ee943df2995af543c7d011d0786eb8ee04392eb9ea60e359833b2"
+    },
+    "huggingface-datasets": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-datasets/SKILL.md",
+      "computedHash": "d28d1ee4a61133ab6c1e12c74094681c2026c7e656784bd09831f91618fd0120"
+    },
+    "huggingface-gradio": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-gradio/SKILL.md",
+      "computedHash": "176783c67b865fa77395b45776a34ea67214911d8ed6a188da661d59a1197a8b"
+    },
+    "huggingface-llm-trainer": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-llm-trainer/SKILL.md",
+      "computedHash": "b082b292469b6a9959aa702c9cc5878fd5a328d86226322f49dc06b1055994bd"
+    },
+    "huggingface-local-models": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-local-models/SKILL.md",
+      "computedHash": "3cbaf709aa2712d7ec028d1a376557e49bdb37395708a7c152f95398eb0e4e5b"
+    },
+    "huggingface-paper-publisher": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-paper-publisher/SKILL.md",
+      "computedHash": "996d4a2a9d46e04396da4e47c4e82e830c79053acaac56b6b9beb6951f6c375a"
+    },
+    "huggingface-papers": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-papers/SKILL.md",
+      "computedHash": "2ebe1d72b530d4d3cef0d6345d3f5cc892446af73efe0227038def6a1a3cd658"
+    },
+    "huggingface-spaces": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-spaces/SKILL.md",
+      "computedHash": "d3677d2eec0998f1bce832165c4c03de0ceb9b67406b3d7c6fea9d5624efa305"
+    },
+    "huggingface-tool-builder": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-tool-builder/SKILL.md",
+      "computedHash": "af775b66feb5b2df24d7a5dd512a46e6b406244dd54ae69dd50caf99c63d8f83"
+    },
+    "huggingface-trackio": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-trackio/SKILL.md",
+      "computedHash": "ef514cc43f6810244b12fe35b6544d897255d786b23aa793ce6add0ce103e1fd"
+    },
+    "huggingface-vision-trainer": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-vision-trainer/SKILL.md",
+      "computedHash": "16b4be9f325dfcb0b01e8c7a3514dc437558e74a93a7c6ddf8636baa94fcf5b1"
+    },
+    "huggingface-zerogpu": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/huggingface-zerogpu/SKILL.md",
+      "computedHash": "94f89502a679c5bb899617014cd1d801771941d2cc5824d6bdcccb892047356f"
+    },
+    "nanobanana": {
+      "source": "gargantuax/openskills",
+      "sourceType": "github",
+      "skillPath": "skills/nanobanana/SKILL.md",
+      "computedHash": "3a97d5bd40961a2b3b05e0906960b41775c64254ad4661dcb19bf00074976956"
+    },
+    "receiving-code-review": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/receiving-code-review/SKILL.md",
+      "computedHash": "2760c85d4f4117b0006e7ba755f4bbd61f8f4c185f347999763c97f507274e30"
+    },
+    "requesting-code-review": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/requesting-code-review/SKILL.md",
+      "computedHash": "874f3786b05007a8b4a60452a4cd89b9917c645d34b6b1e40ea05037d12f0e67"
+    },
+    "skill-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/skill-creator/SKILL.md",
+      "computedHash": "7e3c9cd74e9e2b4828527a857170e86310f2dab5ea8030a9043df2c7e6c88857"
+    },
+    "subagent-driven-development": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/subagent-driven-development/SKILL.md",
+      "computedHash": "b38be2f3a092d758127f6d47e77c2493885aebf38aae359e4c786df2c343b837"
+    },
+    "systematic-debugging": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/systematic-debugging/SKILL.md",
+      "computedHash": "7246fdd3a795fc3daff0af72044ca99bf836e4e6a46844742858786fdfb86488"
+    },
+    "test-driven-development": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/test-driven-development/SKILL.md",
+      "computedHash": "126f1ebf6ccd414f42544f6e83d8cc5adb089e1108eaffb7c400701e37eecd9f"
+    },
+    "train-sentence-transformers": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/train-sentence-transformers/SKILL.md",
+      "computedHash": "8c284897fb4891d1c4045faa0b371f028deb6fbe4fe10cf6d527c6eac13b26ba"
+    },
+    "transformers-js": {
+      "source": "huggingface/skills",
+      "sourceType": "github",
+      "skillPath": "skills/transformers-js/SKILL.md",
+      "computedHash": "1fca591721276bc2bc240759320a10ed5165602c9dd639265d359acee5fb6388"
+    },
+    "using-git-worktrees": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/using-git-worktrees/SKILL.md",
+      "computedHash": "bd10bc57c23040630b17c877a9bc7b4be40c35161a2e2f110d770d78e3b0a4ff"
+    },
+    "using-superpowers": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/using-superpowers/SKILL.md",
+      "computedHash": "de10fd3ff46d797acc92b9df6b3ea456a5cd1d095b73c90bc921e83cce4c5bb9"
+    },
+    "verification-before-completion": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/verification-before-completion/SKILL.md",
+      "computedHash": "9b446f0c7fe1cfb560b1d34439523b1a76d5f177290007b2c053a1c749a4a8ba"
+    },
+    "wooyun-legacy": {
+      "source": "tanweai/wooyun-legacy",
+      "sourceType": "github",
+      "skillPath": "plugins/wooyun-legacy/skills/wooyun-legacy/SKILL.md",
+      "computedHash": "02883fb5c7692581775684a0f451e5c579f7ff90746cb5d68f0e51025266f492"
+    },
+    "writing-plans": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/writing-plans/SKILL.md",
+      "computedHash": "2b986445454a025ca2c3839f8a2024747e8cce0517948437232cd113d2719060"
+    },
+    "writing-skills": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/writing-skills/SKILL.md",
+      "computedHash": "b0e3065034610df41b9119445b5fd052042752bb3e598ca66aea2403a7c7685e"
+    }
+  }
+}

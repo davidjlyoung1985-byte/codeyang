@@ -2,14 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
-import {
-  executeCopy,
-  executeMove,
-  executeDelete,
-  executeMkdir,
-  executeList,
-  executeExists,
-} from './FileSystemTool.js';
+import { executeCopy, executeMove, executeDelete, executeMkdir, executeList, executeExists } from './FileSystemTool.js';
 
 const TEST_DIR = path.join(process.cwd(), '.test-fs-tools');
 

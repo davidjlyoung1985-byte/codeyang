@@ -1,21 +1,12 @@
-/**
- * CodeYangX — Desktop AI Coding Agent
- * Electron main process
- */
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { spawn } = require('child_process');
 
 const tools = require('./tools.cjs');
 const { getMcpManager } = require('./mcp.cjs');
 
 let mainWindow = null;
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Window Creation
-// ═══════════════════════════════════════════════════════════════════════════════
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -24,7 +15,6 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     title: 'CodeYangX - AI Coding Agent',
-    icon: path.join(__dirname, 'icon.png'),
     backgroundColor: '#0d1117',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -32,7 +22,6 @@ function createWindow() {
       nodeIntegration: false,
     },
     titleBarStyle: 'hiddenInset',
-    frame: true,
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
@@ -42,13 +31,8 @@ function createWindow() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// App Lifecycle
-// ═══════════════════════════════════════════════════════════════════════════════
-
 app.whenReady().then(() => {
   createWindow();
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -60,42 +44,88 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Config
-// ═══════════════════════════════════════════════════════════════════════════════
-
 const CONFIG_DIR = path.join(os.homedir(), '.codeyang');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-ipcMain.handle('getApiKey', async () => {
+function readConfig() {
   try {
-    if (!fs.existsSync(CONFIG_FILE)) return process.env['ANTHROPIC_API_KEY'] || null;
-    const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
-    return data.apiKey || process.env['ANTHROPIC_API_KEY'] || null;
+    if (!fs.existsSync(CONFIG_FILE)) return {};
+    return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
   } catch {
-    return process.env['ANTHROPIC_API_KEY'] || null;
+    return {};
   }
+}
+
+function writeConfig(data) {
+  if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  const existing = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8')) : {};
+  Object.assign(existing, data);
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(existing, null, 2));
+}
+
+// ─── Provider config ───────────────────────────────────────────────
+
+const SUPPORTED_PROVIDERS = {
+  deepseek: {
+    name: 'DeepSeek',
+    baseURL: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+    apiKeyEnv: ['CODEYANG_API_KEY', 'DEEPSEEK_API_KEY'],
+    headerFormat: 'bearer',
+    apiType: 'openai',
+  },
+  anthropic: {
+    name: 'Anthropic',
+    baseURL: 'https://api.anthropic.com/v1',
+    defaultModel: 'claude-sonnet-4-20250514',
+    apiKeyEnv: ['ANTHROPIC_API_KEY'],
+    headerFormat: 'x-api-key',
+    apiType: 'anthropic',
+  },
+};
+
+function getProvider() {
+  const conf = readConfig();
+  const name = conf.apiProvider || process.env['CODEYANG_PROVIDER'] || 'deepseek';
+  const provider = SUPPORTED_PROVIDERS[name];
+  if (!provider) return SUPPORTED_PROVIDERS.deepseek;
+  return provider;
+}
+
+// ─── IPC Handlers ──────────────────────────────────────────────────
+
+ipcMain.handle('getProviderConfig', () => {
+  const provider = getProvider();
+  const conf = readConfig();
+  return {
+    type: provider.apiType,
+    baseURL: conf.apiBaseURL || process.env['CODEYANG_BASE_URL'] || provider.baseURL,
+    model: conf.model || process.env['CODEYANG_MODEL'] || provider.defaultModel,
+  };
 });
 
-ipcMain.handle('saveApiKey', async (_event, key) => {
-  try {
-    if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true });
-    const existing = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8')) : {};
-    existing.apiKey = key;
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(existing, null, 2));
-    return true;
-  } catch {
-    return false;
+ipcMain.handle('getApiKey', () => {
+  const conf = readConfig();
+  if (conf.apiKey) return conf.apiKey;
+  // Try all env vars for the current provider
+  const provider = getProvider();
+  for (const envVar of provider.apiKeyEnv) {
+    if (process.env[envVar]) return process.env[envVar];
   }
+  return process.env['CODEYANG_API_KEY'] || null;
 });
 
-ipcMain.handle('getModel', async () => {
-  return process.env['CODEYANG_MODEL'] || 'claude-sonnet-4-20250514';
+ipcMain.handle('saveApiKey', (_event, key) => {
+  writeConfig({ apiKey: key });
+  return true;
 });
 
-ipcMain.handle('getVersion', () => {
-  return '0.3.0';
+ipcMain.handle('getModel', () => {
+  const conf = readConfig();
+  return conf.model || process.env['CODEYANG_MODEL'] || getProvider().defaultModel;
 });
+
+ipcMain.handle('getVersion', () => '0.3.0');
 
 ipcMain.handle('selectDirectory', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
@@ -105,13 +135,9 @@ ipcMain.handle('selectDirectory', async () => {
   return result.canceled ? null : result.filePaths[0] || null;
 });
 
-ipcMain.handle('getWorkingDir', () => {
-  return process.cwd();
-});
+ipcMain.handle('getWorkingDir', () => process.cwd());
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Tool Execution — unified IPC handler
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Tool Execution ────────────────────────────────────────────────
 
 ipcMain.handle('executeTool', async (_event, name, args, cwd) => {
   const dir = cwd || process.cwd();
@@ -165,7 +191,12 @@ ipcMain.handle('executeTool', async (_event, name, args, cwd) => {
         return await tools.executeWebFetch(url);
       }
 
-      // Math tools
+      case 'Remember':
+      case 'Recall':
+      case 'Forget':
+      case 'ListMemories':
+        return await tools.executeMemoryTool(name, args);
+
       case 'MathSolve': {
         const problem = String(args.problem || '');
         const type = args.type ? String(args.type) : undefined;
@@ -183,13 +214,8 @@ ipcMain.handle('executeTool', async (_event, name, args, cwd) => {
         return tools.executeMathExplain(topic);
       }
 
-      // Qt tools
-      case 'QtBuild': {
-        const bs = (args.buildSystem || 'auto');
-        const target = args.target ? String(args.target) : '';
-        const bd = args.cwd || dir;
-        return await tools.executeQtBuild(bs, target, bd);
-      }
+      case 'QtBuild':
+        return await tools.executeQtBuild(args.buildSystem || 'auto', args.target || '', args.cwd || dir);
       case 'QtSignals':
         return await tools.executeQtSignals(args.cwd || dir);
       case 'QtProFile':
@@ -218,7 +244,6 @@ ipcMain.handle('executeTool', async (_event, name, args, cwd) => {
         return await tools.executeQtThread(dir);
 
       default:
-        // MCP tools: mcp__serverName__toolName
         if (name.startsWith('mcp__')) {
           const mcp = getMcpManager();
           const result = await mcp.callTool(name, args);
@@ -231,9 +256,7 @@ ipcMain.handle('executeTool', async (_event, name, args, cwd) => {
   }
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Sub-Agent (Task Tool)
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Sub-Agent (Task Tool) ────────────────────────────────────────
 
 ipcMain.handle('executeSubAgent', async (_event, apiKey, model, description, prompt, cwd) => {
   try {
@@ -243,9 +266,7 @@ ipcMain.handle('executeSubAgent', async (_event, apiKey, model, description, pro
   }
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MCP Server Management
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── MCP Server Management ────────────────────────────────────────
 
 ipcMain.handle('mcpInit', async () => {
   try {
@@ -260,7 +281,7 @@ ipcMain.handle('mcpRefreshTools', async () => {
   try {
     const mcp = getMcpManager();
     return await mcp.refreshTools();
-  } catch (err) {
+  } catch {
     return [];
   }
 });
@@ -281,13 +302,11 @@ ipcMain.handle('mcpGetStatus', async () => {
 
 ipcMain.handle('mcpGetTools', async () => {
   const mcp = getMcpManager();
-  return mcp.mcpTools.map(function (t) {
-    return {
-      qualifiedName: t.qualifiedName,
-      serverName: t.serverName,
-      name: t.name,
-      description: t.description,
-      inputSchema: t.inputSchema,
-    };
-  });
+  return mcp.mcpTools.map((t) => ({
+    qualifiedName: t.qualifiedName,
+    serverName: t.serverName,
+    name: t.name,
+    description: t.description,
+    inputSchema: t.inputSchema,
+  }));
 });

@@ -3,8 +3,9 @@
  * Detects common issues: versioned imports, missing type annotations,
  * anti-patterns (anchors + x/y, deep nesting), and QML-C++ integration points.
  */
-import { readFile, readdir } from 'node:fs/promises';
-import { join, relative, extname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { relative } from 'node:path';
+import { collectFiles } from '../shared.js';
 
 interface QmlIssue {
   file: string;
@@ -47,26 +48,7 @@ export async function executeQtQml(cwd?: string): Promise<string> {
 }
 
 async function findQmlFiles(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist']);
-  async function walk(d: string) {
-    let entries;
-    try {
-      entries = await readdir(d, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !skip.has(entry.name)) await walk(full);
-      } else if (entry.isFile() && extname(entry.name).toLowerCase() === '.qml') {
-        results.push(full);
-      }
-    }
-  }
-  await walk(dir);
-  return results;
+  return collectFiles(dir, { extensions: new Set(['.qml']) });
 }
 
 function analyzeQmlFile(filePath: string, content: string): QmlAnalysis {

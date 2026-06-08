@@ -1,25 +1,13 @@
-/**
- * CodeYangX — Renderer Process
- * Chat UI, markdown rendering, streaming agent loop, tool call display.
- * All tool execution is delegated to the main process via IPC.
- */
 const { codeyangx } = window;
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// State
-// ═══════════════════════════════════════════════════════════════════════════════
-
 let apiKey = null;
+let providerConfig = null;
 let currentDir = null;
 let isProcessing = false;
 let pendingQuestion = null;
 let abortController = null;
-let mcpTools = [];           // Dynamic MCP tool schemas
-let mcpInitialized = false;  // Whether MCP servers are connected
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// DOM Elements
-// ═══════════════════════════════════════════════════════════════════════════════
+let mcpTools = [];
+let mcpInitialized = false;
 
 const $setup = document.getElementById('setup');
 const $app = document.getElementById('app');
@@ -30,12 +18,9 @@ const $status = document.getElementById('status');
 const $currentDir = document.getElementById('currentDir');
 const $welcome = document.getElementById('welcome');
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Init
-// ═══════════════════════════════════════════════════════════════════════════════
-
 async function init() {
   apiKey = await codeyangx.getApiKey();
+  providerConfig = await codeyangx.getProviderConfig();
   currentDir = await codeyangx.getWorkingDir();
   if (currentDir) $currentDir.textContent = currentDir;
   showApp();
@@ -49,49 +34,45 @@ function showApp() {
   $input.focus();
 
   if (!apiKey) {
-    var warnEl = document.getElementById('welcome');
-    if (warnEl) {
-      warnEl.innerHTML = '<div style="font-size:40px;margin-bottom:12px;">></div>' +
+    const welEl = document.getElementById('welcome');
+    if (welEl) {
+      const provider = providerConfig?.type === 'anthropic' ? 'Anthropic' : 'DeepSeek';
+      welEl.innerHTML =
+        '<div style="font-size:40px;margin-bottom:12px;">></div>' +
         '<div style="font-size:16px;color:var(--yellow);font-weight:600;">No API Key Configured</div>' +
-        '<div style="margin-top:8px;font-size:13px;">Set ANTHROPIC_API_KEY environment variable or save key in ~/.codeyang/config.json</div>' +
+        '<div style="margin-top:8px;font-size:13px;">Set ' + provider + ' API key in ~/.codeyang/config.json</div>' +
         '<div style="margin-top:12px;font-size:13px;">Or type your key below to save it:</div>';
     }
-    $input.placeholder = 'Paste your Anthropic API key (sk-ant-...) to save it...';
+    $input.placeholder = 'Paste your API key...';
     $status.textContent = 'Enter API key to start';
   } else {
-    // Initialize MCP servers in background
     initMcpServers();
   }
 }
 
-/** Initialize MCP servers and register their tools */
 async function initMcpServers() {
   try {
     const result = await codeyangx.mcpInit();
     if (result && result.tools && result.tools.length > 0) {
-      mcpTools = result.tools.map(function (t) {
-        return {
-          name: t.qualifiedName,
-          description: '[MCP:' + t.serverName + '] ' + t.description,
-          input_schema: t.inputSchema || { type: 'object', properties: {} },
-        };
-      });
+      mcpTools = result.tools.map((t) => ({
+        name: t.qualifiedName,
+        description: '[MCP:' + t.serverName + '] ' + t.description,
+        input_schema: t.inputSchema || { type: 'object', properties: {} },
+      }));
       mcpInitialized = true;
     }
     if (result && result.status) {
-      var logParts = [];
-      for (var name in result.status) {
-        var s = result.status[name];
+      const logParts = [];
+      for (const name in result.status) {
+        const s = result.status[name];
         logParts.push(name + ': ' + (s.connected ? s.toolCount + ' tools' : 'ERROR: ' + s.error));
       }
       if (logParts.length > 0) {
         $status.textContent = 'MCP: ' + logParts.join(' | ');
-        setTimeout(function () { $status.textContent = ''; }, 5000);
+        setTimeout(() => { $status.textContent = ''; }, 5000);
       }
     }
-  } catch {
-    // MCP might not be configured — that's fine
-  }
+  } catch {}
 }
 
 async function saveKey() {
@@ -102,10 +83,6 @@ async function saveKey() {
   showApp();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Directory
-// ═══════════════════════════════════════════════════════════════════════════════
-
 async function selectDirectory() {
   const dir = await codeyangx.selectDirectory();
   if (dir) {
@@ -113,10 +90,6 @@ async function selectDirectory() {
     $currentDir.textContent = dir;
   }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Chat Management
-// ═══════════════════════════════════════════════════════════════════════════════
 
 function clearChat() {
   const kids = Array.from($chat.children);
@@ -157,60 +130,44 @@ function createToolBlock(name, args) {
   return { block, pre: block.querySelector('pre') };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Markdown Rendering
-// ═══════════════════════════════════════════════════════════════════════════════
-
 function renderMarkdown(text) {
   let html = text;
 
-  // Code blocks
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function (_, lang, code) {
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
     return '<div class="code-block"><div class="lang">' + (lang || 'code') + '</div><pre>' + escapeHtml(code.trim()) + '</pre></div>';
   });
 
-  // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Bold / Italic
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-  // Headers
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
-  // Horizontal rules
   html = html.replace(/^---$/gm, '<hr style="border:0;border-top:1px solid var(--border);margin:12px 0">');
 
-  // Tables
-  html = html.replace(/\|(.+)\|\n\|[-|\s]+\|\n((?:\|.+\|\n?)*)/g, function (_, header, rows) {
-    const hCells = header.split('|').filter(function (c) { return c.trim(); });
-    const rLines = rows.trim().split('\n').filter(function (r) { return r.trim(); });
-    var table = '<table><thead><tr>';
-    hCells.forEach(function (h) { table += '<th>' + h.trim() + '</th>'; });
+  html = html.replace(/\|(.+)\|\n\|[-|\s]+\|\n((?:\|.+\|\n?)*)/g, (_, header, rows) => {
+    const hCells = header.split('|').filter((c) => c.trim());
+    const rLines = rows.trim().split('\n').filter((r) => r.trim());
+    let table = '<table><thead><tr>';
+    hCells.forEach((h) => { table += '<th>' + h.trim() + '</th>'; });
     table += '</tr></thead><tbody>';
-    rLines.forEach(function (r) {
+    rLines.forEach((r) => {
       table += '<tr>';
-      r.split('|').filter(function (c) { return c.trim() !== ''; }).forEach(function (c) { table += '<td>' + c.trim() + '</td>'; });
+      r.split('|').filter((c) => c.trim() !== '').forEach((c) => { table += '<td>' + c.trim() + '</td>'; });
       table += '</tr>';
     });
     table += '</tbody></table>';
     return table;
   });
 
-  // Lists
   html = html.replace(/^[\t ]*- (.+)$/gm, '<li>$1</li>');
   html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
 
-  // Blockquotes
   html = html.replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid var(--accent);padding:4px 12px;margin:4px 0;color:var(--text2)">$1</blockquote>');
-
-  // Links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
 
-  // Line breaks
   html = html.replace(/\n\n/g, '</p><p>');
   html = html.replace(/\n/g, '<br>');
   if (!html.startsWith('<')) html = '<p>' + html + '</p>';
@@ -228,30 +185,24 @@ function setContent(el, text) {
   $chat.scrollTop = $chat.scrollHeight;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Streaming Agent Loop
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Provider-Agnostic API Call ────────────────────────────────────
 
 async function sendMessage(userText) {
   if (isProcessing) return;
 
-  // If no API key yet, treat first input as API key
   if (!apiKey) {
-    if (userText.startsWith('sk-ant-')) {
-      await codeyangx.saveApiKey(userText.trim());
-      apiKey = userText.trim();
-      $input.placeholder = 'Type your message...';
-      $status.textContent = 'API key saved. Ready.';
-      var welEl = document.getElementById('welcome');
-      if (welEl) {
-        welEl.innerHTML = '<div style="font-size:40px;margin-bottom:12px;">></div>' +
-          '<div style="font-size:16px;color:var(--accent);font-weight:600;">CodeYangX Ready</div>' +
-          '<div style="margin-top:8px;font-size:13px;">Ask me anything about your code.</div>';
-      }
-      initMcpServers();
-    } else {
-      $status.textContent = 'Invalid API key format. Should start with sk-ant-';
+    await codeyangx.saveApiKey(userText.trim());
+    apiKey = userText.trim();
+    $input.placeholder = 'Type your message...';
+    $status.textContent = 'API key saved. Ready.';
+    const welEl = document.getElementById('welcome');
+    if (welEl) {
+      welEl.innerHTML =
+        '<div style="font-size:40px;margin-bottom:12px;">></div>' +
+        '<div style="font-size:16px;color:var(--accent);font-weight:600;">CodeYangX Ready</div>' +
+        '<div style="margin-top:8px;font-size:13px;">Ask me anything about your code.</div>';
     }
+    initMcpServers();
     return;
   }
 
@@ -263,10 +214,9 @@ async function sendMessage(userText) {
   addUserMessage(userText);
   const contentEl = createAssistantBlock();
 
-  const messages = [
-    { role: 'user', content: userText }
-  ];
+  const isAnthropic = providerConfig?.type === 'anthropic';
 
+  const messages = [{ role: 'user', content: userText }];
   const tools = getToolSchemas();
 
   try {
@@ -279,42 +229,70 @@ async function sendMessage(userText) {
     while (continueLoop && turn < MAX_TURNS) {
       turn++;
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-beta': 'tools-2024-04-04',
-        },
-        body: JSON.stringify({
-          model: await codeyangx.getModel(),
-          max_tokens: 8192,
-          temperature: 0.5,
-          system: getSystemPrompt(),
-          messages,
-          tools,
-          stream: true,
-        }),
-        signal: abortController.signal,
-      });
+      const model = await codeyangx.getModel();
+      const baseURL = providerConfig?.baseURL || 'https://api.deepseek.com/v1';
+
+      let response;
+      if (isAnthropic) {
+        response = await fetch(baseURL + '/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-beta': 'tools-2024-04-04',
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 8192,
+            temperature: 0.5,
+            system: getSystemPrompt(),
+            messages,
+            tools,
+            stream: true,
+          }),
+          signal: abortController.signal,
+        });
+      } else {
+        response = await fetch(baseURL + '/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + apiKey,
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 8192,
+            temperature: 0.5,
+            messages: [{ role: 'system', content: getSystemPrompt() }, ...messages],
+            tools,
+            stream: true,
+          }),
+          signal: abortController.signal,
+        });
+      }
 
       if (!response.ok) {
-        const err = await response.json().catch(function () { return {}; });
+        let errMsg = 'HTTP ' + response.status;
+        try {
+          const err = await response.json();
+          errMsg = err.error?.message || err.error?.code || JSON.stringify(err);
+        } catch {}
         if (response.status === 401) {
           appendText(contentEl, '\n\n**Error**: Invalid API key. Please restart and re-enter your key.');
           apiKey = null;
         } else {
-          appendText(contentEl, '\n\n**Error**: HTTP ' + response.status + ' — ' + (err.error && err.error.message ? err.error.message : 'Unknown error'));
+          appendText(contentEl, '\n\n**Error**: ' + errMsg);
         }
         break;
       }
 
-      // Parse SSE stream
-      const streamResult = await parseSSEStream(response);
+      const streamResult = isAnthropic
+        ? await parseAnthropicSSE(response, contentEl)
+        : await parseOpenAISSE(response, contentEl);
+
       const { textBlocks, toolCalls, assistantText } = streamResult;
 
-      // Anti-repetition check
       if (assistantText && assistantText === lastText) {
         repeatCount++;
         if (repeatCount >= 1) {
@@ -326,7 +304,6 @@ async function sendMessage(userText) {
       }
       lastText = assistantText;
 
-      // Build assistant content for messages
       const assistantContent = [];
       for (const b of textBlocks) {
         if (b.type === 'text') {
@@ -345,11 +322,9 @@ async function sendMessage(userText) {
         break;
       }
 
-      // Execute tools — parallel, but Question first
       const toolResults = new Array(toolCalls.length);
       const toolResultIds = new Array(toolCalls.length);
 
-      // Handle Question + Task tools first (they block or take extra time)
       for (let i = 0; i < toolCalls.length; i++) {
         const tc = toolCalls[i];
         toolResultIds[i] = tc.id;
@@ -382,13 +357,10 @@ async function sendMessage(userText) {
         }
       }
 
-      // Execute non-Question, non-Task tools via IPC (parallel)
-      const parallelTasks = toolCalls.map(async function (tc, i) {
+      const parallelTasks = toolCalls.map(async (tc, i) => {
         if (tc.name === 'Question' || tc.name === 'Task') return;
-
         toolResultIds[i] = tc.id;
         const { block, pre } = createToolBlock(tc.name, tc.input);
-
         try {
           const output = await codeyangx.executeTool(tc.name, tc.input, currentDir);
           pre.textContent = output;
@@ -402,15 +374,12 @@ async function sendMessage(userText) {
 
       await Promise.all(parallelTasks);
 
-      // Push tool results into messages
-      const resultContent = toolResults.map(function (tr, i) {
-        return {
-          type: 'tool_result',
-          tool_use_id: toolResultIds[i] || 'unknown',
-          content: tr ? tr.content : '',
-          is_error: false,
-        };
-      });
+      const resultContent = toolResults.map((tr, i) => ({
+        type: 'tool_result',
+        tool_use_id: toolResultIds[i] || 'unknown',
+        content: tr ? tr.content : '',
+        is_error: false,
+      }));
 
       messages.push({ role: 'user', content: resultContent });
     }
@@ -426,15 +395,93 @@ async function sendMessage(userText) {
   $input.focus();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SSE Streaming Parser
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── OpenAI-compatible SSE Parser ──────────────────────────────────
 
-async function parseSSEStream(response) {
+async function parseOpenAISSE(response, contentEl) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  const textBlocks = [];      // { type, text }
-  const toolCalls = [];       // { id, name, input }
+  const textAccum = [];
+  const toolCalls = [];
+  let buffer = '';
+  let currentToolIdx = -1;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const jsonStr = line.slice(6).trim();
+      if (!jsonStr || jsonStr === '[DONE]') continue;
+
+      let event;
+      try { event = JSON.parse(jsonStr); } catch { continue; }
+
+      const choice = event.choices && event.choices[0];
+      if (!choice) continue;
+
+      const delta = choice.delta || {};
+
+      if (delta.content) {
+        const container = document.querySelector('.assistant-msg:last-of-type .content');
+        if (container) {
+          container.innerHTML = container.innerHTML + renderMarkdown(delta.content);
+          $chat.scrollTop = $chat.scrollHeight;
+        }
+        textAccum.push(delta.content);
+      }
+
+      if (delta.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const idx = tc.index;
+          if (tc.id) {
+            toolCalls[idx] = { id: tc.id, name: '', input: {} };
+            currentToolIdx = idx;
+          }
+          if (tc.function) {
+            if (tc.function.name) {
+              if (!toolCalls[idx]) toolCalls[idx] = { id: '', name: '', input: {} };
+              toolCalls[idx].name = tc.function.name;
+            }
+            if (tc.function.arguments) {
+              if (!toolCalls[idx]) toolCalls[idx] = { id: '', name: '', input: {} };
+              if (!toolCalls[idx]._args) toolCalls[idx]._args = '';
+              toolCalls[idx]._args += tc.function.arguments;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Finalize tool call arguments
+  for (const tc of toolCalls) {
+    if (tc && tc._args) {
+      try { tc.input = JSON.parse(tc._args); } catch { tc.input = {}; }
+      delete tc._args;
+    }
+  }
+
+  const textBlocks = textAccum.length > 0 ? [{ type: 'text', text: textAccum.join('') }] : [];
+
+  return {
+    textBlocks,
+    toolCalls: toolCalls.filter(Boolean),
+    assistantText: textAccum.join(''),
+  };
+}
+
+// ─── Anthropic SSE Parser ──────────────────────────────────────────
+
+async function parseAnthropicSSE(response, contentEl) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const textBlocks = [];
+  const toolCalls = [];
   let currentBlock = null;
   let currentBlockIdx = -1;
   let buffer = '';
@@ -446,7 +493,6 @@ async function parseSSEStream(response) {
 
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split('\n');
-    // Keep the last partial line
     buffer = lines.pop() || '';
 
     for (const line of lines) {
@@ -455,8 +501,7 @@ async function parseSSEStream(response) {
       if (jsonStr === '[DONE]') continue;
 
       let event;
-      try { event = JSON.parse(jsonStr); }
-      catch { continue; }
+      try { event = JSON.parse(jsonStr); } catch { continue; }
 
       switch (event.type) {
         case 'content_block_start': {
@@ -479,7 +524,6 @@ async function parseSSEStream(response) {
           if (!delta) break;
 
           if (delta.type === 'text_delta' && delta.text) {
-            // Live text rendering
             const container = document.querySelector('.assistant-msg:last-of-type .content');
             if (container) {
               container.innerHTML = container.innerHTML + renderMarkdown(delta.text);
@@ -506,7 +550,7 @@ async function parseSSEStream(response) {
                 name: currentBlock.name,
                 input: currentBlock.input,
               });
-            } catch (e) {
+            } catch {
               currentBlock.input = {};
               toolCalls.push({
                 id: currentBlock.id,
@@ -533,16 +577,12 @@ async function parseSSEStream(response) {
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Question Dialog
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Question Dialog ───────────────────────────────────────────────
 
 function askQuestion(q, opts) {
-  return new Promise(function (resolve) {
+  return new Promise((resolve) => {
     if (opts && opts.length > 0) {
-      const optHtml = opts.map(function (o, i) {
-        return (i + 1) + '. **' + o.label + '** — ' + o.description;
-      }).join('\n');
+      const optHtml = opts.map((o, i) => (i + 1) + '. **' + o.label + '** — ' + o.description).join('\n');
       appendText(createAssistantBlock(), '**Question**: ' + q + '\n\n' + optHtml + '\n\n*Reply with the option number or your answer...*');
     } else {
       appendText(createAssistantBlock(), '**Question**: ' + q + '\n\n*Type your answer...*');
@@ -553,129 +593,50 @@ function askQuestion(q, opts) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Tool Schemas — all 28 tools
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Tool Schemas ──────────────────────────────────────────────────
 
 function getToolSchemas() {
-  var schemas = [
-    // ── Core tools ──
-    {
-      name: 'Bash', description: 'Execute a shell command. Use for running code, tests, file operations, etc.',
-      input_schema: { type: 'object', properties: { command: { type: 'string', description: 'The command to execute' }, cwd: { type: 'string', description: 'Working directory (optional)' } }, required: ['command'] },
-    },
-    {
-      name: 'Read', description: 'Read the contents of a file or list a directory. For files, optionally specify offset and limit for large files.',
-      input_schema: { type: 'object', properties: { filePath: { type: 'string', description: 'Path to the file' }, offset: { type: 'number', description: 'Starting line (0-indexed)' }, limit: { type: 'number', description: 'Number of lines to read' } }, required: ['filePath'] },
-    },
-    {
-      name: 'Write', description: 'Write content to a file. Creates parent directories if needed.',
-      input_schema: { type: 'object', properties: { filePath: { type: 'string', description: 'Path to the file' }, content: { type: 'string', description: 'Content to write' } }, required: ['filePath', 'content'] },
-    },
-    {
-      name: 'Edit', description: 'Edit a file by replacing exact text. Use for surgical code changes.',
-      input_schema: { type: 'object', properties: { filePath: { type: 'string' }, oldString: { type: 'string' }, newString: { type: 'string' }, replaceAll: { type: 'boolean' } }, required: ['filePath', 'oldString', 'newString'] },
-    },
-    {
-      name: 'Glob', description: 'Search for files matching a glob pattern (e.g. "**/*.ts").',
-      input_schema: { type: 'object', properties: { pattern: { type: 'string' }, root: { type: 'string' } }, required: ['pattern'] },
-    },
-    {
-      name: 'Grep', description: 'Search file contents for a regex pattern.',
-      input_schema: { type: 'object', properties: { pattern: { type: 'string' }, include: { type: 'string' }, path: { type: 'string' } }, required: ['pattern'] },
-    },
-    {
-      name: 'TodoWrite', description: 'Create and maintain a structured task list.',
-      input_schema: { type: 'object', properties: { todos: { type: 'array', items: { type: 'object', properties: { content: { type: 'string' }, status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'] }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['content', 'status', 'priority'] } } }, required: ['todos'] },
-    },
-    {
-      name: 'WebFetch', description: 'Fetches content from a specified URL and returns it as text.',
-      input_schema: { type: 'object', properties: { url: { type: 'string' }, format: { type: 'string', enum: ['text', 'html'] } }, required: ['url'] },
-    },
-    {
-      name: 'Question', description: 'Ask the user a question when you need clarification or a decision.',
-      input_schema: { type: 'object', properties: { question: { type: 'string' }, options: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, description: { type: 'string' } }, required: ['label', 'description'] } } }, required: ['question'] },
-    },
-    {
-      name: 'Task', description: 'Launch a sub-agent to handle complex, multi-step tasks autonomously. Use for independent subtasks (code research, search, file analysis) that can run without shared state.',
-      input_schema: { type: 'object', properties: { description: { type: 'string', description: 'Short name for this sub-agent task' }, prompt: { type: 'string', description: 'Detailed instructions for the sub-agent' } }, required: ['description', 'prompt'] },
-    },
+  const schemas = [
+    { name: 'Bash', description: 'Execute a shell command.', input_schema: { type: 'object', properties: { command: { type: 'string' }, cwd: { type: 'string' } }, required: ['command'] } },
+    { name: 'Read', description: 'Read file contents or list a directory.', input_schema: { type: 'object', properties: { filePath: { type: 'string' }, offset: { type: 'number' }, limit: { type: 'number' } }, required: ['filePath'] } },
+    { name: 'Write', description: 'Write content to a file.', input_schema: { type: 'object', properties: { filePath: { type: 'string' }, content: { type: 'string' } }, required: ['filePath', 'content'] } },
+    { name: 'Edit', description: 'Edit a file by replacing exact text.', input_schema: { type: 'object', properties: { filePath: { type: 'string' }, oldString: { type: 'string' }, newString: { type: 'string' }, replaceAll: { type: 'boolean' } }, required: ['filePath', 'oldString', 'newString'] } },
+    { name: 'Glob', description: 'Search for files matching a glob pattern.', input_schema: { type: 'object', properties: { pattern: { type: 'string' }, root: { type: 'string' } }, required: ['pattern'] } },
+    { name: 'Grep', description: 'Search file contents for a regex pattern.', input_schema: { type: 'object', properties: { pattern: { type: 'string' }, include: { type: 'string' }, path: { type: 'string' } }, required: ['pattern'] } },
+    { name: 'TodoWrite', description: 'Create and maintain a structured task list.', input_schema: { type: 'object', properties: { todos: { type: 'array', items: { type: 'object', properties: { content: { type: 'string' }, status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'cancelled'] }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['content', 'status', 'priority'] } } }, required: ['todos'] } },
+    { name: 'WebFetch', description: 'Fetch content from a URL.', input_schema: { type: 'object', properties: { url: { type: 'string' }, format: { type: 'string', enum: ['text', 'html'] } }, required: ['url'] } },
+    { name: 'Question', description: 'Ask the user a question.', input_schema: { type: 'object', properties: { question: { type: 'string' }, options: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, description: { type: 'string' } }, required: ['label', 'description'] } } }, required: ['question'] } },
+    { name: 'Task', description: 'Launch a sub-agent for complex multi-step tasks.', input_schema: { type: 'object', properties: { description: { type: 'string' }, prompt: { type: 'string' } }, required: ['description', 'prompt'] } },
 
-    // ── Math tools ──
-    {
-      name: 'MathSolve', description: 'Solve middle school math problems step by step. Covers: linear/quadratic equations, systems, Pythagorean theorem, circle geometry, statistics, percentages, trig, sequences, coordinate geometry.',
-      input_schema: { type: 'object', properties: { problem: { type: 'string', description: 'The math problem to solve' }, type: { type: 'string', enum: ['linear', 'quadratic', 'system', 'pythagorean', 'circle', 'stats', 'percent', 'trig', 'sequence', 'coord'], description: 'Problem type (auto-detected if not specified)' } }, required: ['problem'] },
-    },
-    {
-      name: 'MathPlot', description: 'Generate SVG mathematical diagrams. Supports: coordinate plane, function graphs, bar charts, pie charts, scatter plots.',
-      input_schema: { type: 'object', properties: { kind: { type: 'string', description: 'Plot kind: coordinate, func:<expr>, bar:<data>, pie:<data>, scatter:<data>' }, output: { type: 'string', description: 'Output filename (optional)' } }, required: ['kind'] },
-    },
-    {
-      name: 'MathExplain', description: 'Reference for Chinese middle school math concepts with formulas, examples, and common mistakes. Topics: equations, functions, geometry, statistics, probability.',
-      input_schema: { type: 'object', properties: { topic: { type: 'string', description: 'Topic name (Chinese or English). Omit to list all topics.' } }, required: [] },
-    },
+    // Memory tools
+    { name: 'Remember', description: 'Save a fact or preference to persistent memory.', input_schema: { type: 'object', properties: { key: { type: 'string' }, value: { type: 'string' }, type: { type: 'string', enum: ['fact', 'preference', 'project', 'instruction', 'context'] } }, required: ['key', 'value'] } },
+    { name: 'Recall', description: 'Retrieve memories by key, id, or search query.', input_schema: { type: 'object', properties: { id: { type: 'string' }, query: { type: 'string' } } } },
+    { name: 'Forget', description: 'Delete a memory by its key or id.', input_schema: { type: 'object', properties: { key: { type: 'string' } }, required: ['key'] } },
+    { name: 'ListMemories', description: 'List all saved memories, optionally filtered by type.', input_schema: { type: 'object', properties: { type: { type: 'string', enum: ['fact', 'preference', 'project', 'instruction', 'context'] } } } },
 
-    // ── Qt tools ──
-    {
-      name: 'QtBuild', description: 'Build the current Qt project. Detects the build system automatically and provides Qt-specific diagnostics.',
-      input_schema: { type: 'object', properties: { target: { type: 'string', description: 'Build target name (default: all)' }, buildSystem: { type: 'string', enum: ['qmake', 'cmake', 'auto'] }, cwd: { type: 'string' } }, required: [] },
-    },
-    {
-      name: 'QtSignals', description: 'Analyze signal-slot connections in the Qt project. Finds connect() calls, detects old-style macros, identifies auto-connections.',
-      input_schema: { type: 'object', properties: { cwd: { type: 'string' } }, required: [] },
-    },
-    {
-      name: 'QtProFile', description: 'Read and analyze a .pro (qmake project) file. Lists Qt modules, sources, headers, forms, and resources.',
-      input_schema: { type: 'object', properties: { proPath: { type: 'string', description: 'Path to the .pro file' } }, required: [] },
-    },
-    {
-      name: 'QtMigration', description: 'Analyze Qt5 code for Qt6 compatibility issues. Provides migration guidance for 30+ common API changes.',
-      input_schema: { type: 'object', properties: { cwd: { type: 'string' } }, required: [] },
-    },
-    {
-      name: 'QtUi', description: 'Analyze a .ui form file. Shows widget tree, layouts, connections, and properties.',
-      input_schema: { type: 'object', properties: { filePath: { type: 'string', description: 'Path to the .ui file' } }, required: ['filePath'] },
-    },
-    {
-      name: 'QtQml', description: 'Analyze a QML file. Lists imports, components, IDs, signals, and properties.',
-      input_schema: { type: 'object', properties: { filePath: { type: 'string', description: 'Path to the .qml file' } }, required: ['filePath'] },
-    },
-    {
-      name: 'QtTestGen', description: 'Generate QTest boilerplate from C++ headers.',
-      input_schema: { type: 'object', properties: { filePath: { type: 'string', description: 'Path to C++ header or source directory' } }, required: ['filePath'] },
-    },
-    {
-      name: 'QtTestRunner', description: 'Run QTest test targets and parse XML output for results.',
-      input_schema: { type: 'object', properties: { target: { type: 'string', description: 'Test target name' } }, required: [] },
-    },
-    {
-      name: 'QtCoverage', description: 'Analyze test coverage gaps between test files and source files.',
-      input_schema: { type: 'object', properties: { cwd: { type: 'string' } }, required: [] },
-    },
-    {
-      name: 'QtGraphics', description: 'QPainter and QGraphicsView best practices and anti-pattern reference.',
-      input_schema: { type: 'object', properties: { cwd: { type: 'string' } }, required: [] },
-    },
-    {
-      name: 'QtCharts', description: 'Qt Charts code reference and generator for common chart types.',
-      input_schema: { type: 'object', properties: { kind: { type: 'string', enum: ['line', 'bar', 'pie', 'scatter'] } }, required: [] },
-    },
-    {
-      name: 'QtMath', description: 'Qt math utilities reference (QtMath, qSin, qCos, etc.) with optional expression evaluation.',
-      input_schema: { type: 'object', properties: { expr: { type: 'string', description: 'Math expression to evaluate' } }, required: [] },
-    },
-    {
-      name: 'QtModelView', description: 'Qt Model/View architecture guide with best practices and anti-patterns.',
-      input_schema: { type: 'object', properties: { cwd: { type: 'string' } }, required: [] },
-    },
-    {
-      name: 'QtThread', description: 'Qt threading and concurrency best practices with moveToThread() patterns.',
-      input_schema: { type: 'object', properties: { cwd: { type: 'string' } }, required: [] },
-    },
+    // Math
+    { name: 'MathSolve', description: 'Solve math problems step by step.', input_schema: { type: 'object', properties: { problem: { type: 'string' }, type: { type: 'string', enum: ['linear', 'quadratic', 'system', 'pythagorean', 'circle', 'stats', 'percent', 'trig', 'sequence', 'coord'] } }, required: ['problem'] } },
+    { name: 'MathPlot', description: 'Generate SVG mathematical diagrams.', input_schema: { type: 'object', properties: { kind: { type: 'string' }, output: { type: 'string' } }, required: ['kind'] } },
+    { name: 'MathExplain', description: 'Reference for math concepts.', input_schema: { type: 'object', properties: { topic: { type: 'string' } } } },
+
+    // Qt
+    { name: 'QtBuild', description: 'Build the current Qt project.', input_schema: { type: 'object', properties: { target: { type: 'string' }, buildSystem: { type: 'string', enum: ['qmake', 'cmake', 'auto'] }, cwd: { type: 'string' } } } },
+    { name: 'QtSignals', description: 'Analyze signal-slot connections.', input_schema: { type: 'object', properties: { cwd: { type: 'string' } } } },
+    { name: 'QtProFile', description: 'Read a .pro file.', input_schema: { type: 'object', properties: { proPath: { type: 'string' } } } },
+    { name: 'QtMigration', description: 'Analyze Qt5 code for Qt6 compatibility.', input_schema: { type: 'object', properties: { cwd: { type: 'string' } } } },
+    { name: 'QtUi', description: 'Analyze a .ui form file.', input_schema: { type: 'object', properties: { filePath: { type: 'string' } }, required: ['filePath'] } },
+    { name: 'QtQml', description: 'Analyze a QML file.', input_schema: { type: 'object', properties: { filePath: { type: 'string' } }, required: ['filePath'] } },
+    { name: 'QtTestGen', description: 'Generate QTest boilerplate.', input_schema: { type: 'object', properties: { filePath: { type: 'string' } }, required: ['filePath'] } },
+    { name: 'QtTestRunner', description: 'Run QTest test targets.', input_schema: { type: 'object', properties: { target: { type: 'string' } } } },
+    { name: 'QtCoverage', description: 'Analyze test coverage gaps.', input_schema: { type: 'object', properties: { cwd: { type: 'string' } } } },
+    { name: 'QtGraphics', description: 'QPainter/QGraphicsView reference.', input_schema: { type: 'object', properties: { cwd: { type: 'string' } } } },
+    { name: 'QtCharts', description: 'Qt Charts code reference.', input_schema: { type: 'object', properties: { kind: { type: 'string', enum: ['line', 'bar', 'pie', 'scatter'] } } } },
+    { name: 'QtMath', description: 'Qt math utilities reference.', input_schema: { type: 'object', properties: { expr: { type: 'string' } } } },
+    { name: 'QtModelView', description: 'Qt Model/View architecture guide.', input_schema: { type: 'object', properties: { cwd: { type: 'string' } } } },
+    { name: 'QtThread', description: 'Qt threading best practices.', input_schema: { type: 'object', properties: { cwd: { type: 'string' } } } },
   ];
 
-  // Append MCP tools dynamically
-  for (var i = 0; i < mcpTools.length; i++) {
+  for (let i = 0; i < mcpTools.length; i++) {
     schemas.push(mcpTools[i]);
   }
 
@@ -683,42 +644,40 @@ function getToolSchemas() {
 }
 
 function getSystemPrompt() {
+  const providerName = providerConfig?.type === 'anthropic' ? 'Claude' : 'DeepSeek';
   return [
-    'You are CodeYangX, an AI coding agent in a desktop application powered by Claude.',
+    'You are CodeYangX, an AI coding agent in a desktop application powered by ' + providerName + '.',
     'Help users with coding, debugging, explanation, and code modification.',
     '',
     '## Available Tools',
-    'You have access to these tool categories:',
-    '- **Core**: Bash, Read, Write, Edit, Glob, Grep, TodoWrite, WebFetch, Question',
-    '- **Task**: Launch sub-agents to handle complex, multi-step work autonomously',
-    '- **Math**: MathSolve (solver), MathPlot (charts), MathExplain (reference)',
-    '- **Qt**: QtBuild, QtSignals, QtProFile, QtMigration, QtUi, QtQml, QtTestGen, QtTestRunner, QtCoverage, QtGraphics, QtCharts, QtMath, QtModelView, QtThread',
-    mcpTools.length > 0 ? '- **MCP**: ' + mcpTools.length + ' external tools from configured servers' : '',
+    'Core: Bash, Read, Write, Edit, Glob, Grep, TodoWrite, WebFetch, Question',
+    'Memory: Remember, Recall, Forget, ListMemories (persistent across sessions)',
+    'Task: Launch sub-agents for complex multi-step work',
+    'Math: MathSolve, MathPlot, MathExplain',
+    'Qt: QtBuild, QtSignals, QtProFile, QtMigration, QtUi, QtQml, QtTestGen, QtTestRunner, QtCoverage, QtGraphics, QtCharts, QtMath, QtModelView, QtThread',
+    mcpTools.length > 0 ? 'MCP: ' + mcpTools.length + ' external tools' : '',
     '',
     '## Guidelines',
-    '- Be concise but thorough. Use markdown for code blocks and formatting.',
-    '- When making file changes, use Edit for surgical changes (preferred) or Write for full rewrites.',
+    '- Be concise but thorough. Use markdown for code blocks.',
+    '- For file changes, prefer Edit (surgical) over Write (full rewrite).',
     '- Use Bash to run commands, build projects, run tests.',
     '- Use Grep to search code, Glob to find files.',
-    '- Use the Task tool to delegate complex subtasks to sub-agents.',
+    '- Use Remember/Recall to persist and retrieve information across sessions.',
+    '- Use Task to delegate complex subtasks.',
     '- Create todo lists with TodoWrite for multi-step tasks.',
     currentDir ? 'Working directory: ' + currentDir : '',
   ].filter(Boolean).join('\n');
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Helpers
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Helpers ───────────────────────────────────────────────────────
 
 function escapeHtml(text) {
   return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Input Handling
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Input Handling ────────────────────────────────────────────────
 
-$input.addEventListener('keydown', function (e) {
+$input.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     const text = $input.value.trim();
@@ -736,7 +695,7 @@ $input.addEventListener('keydown', function (e) {
   }
 });
 
-$sendBtn.addEventListener('click', function () {
+$sendBtn.addEventListener('click', () => {
   const text = $input.value.trim();
   if (!text) return;
   $input.value = '';
@@ -749,21 +708,12 @@ $sendBtn.addEventListener('click', function () {
   sendMessage(text);
 });
 
-// Auto-resize textarea
-$input.addEventListener('input', function () {
+$input.addEventListener('input', () => {
   $input.style.height = 'auto';
   $input.style.height = Math.min($input.scrollHeight, 150) + 'px';
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Global Functions
-// ═══════════════════════════════════════════════════════════════════════════════
-
 window.selectDirectory = selectDirectory;
 window.clearChat = clearChat;
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Start
-// ═══════════════════════════════════════════════════════════════════════════════
 
 init();

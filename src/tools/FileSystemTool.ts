@@ -99,7 +99,7 @@ export async function executeMove(sourcePath: string, destPath: string, overwrit
     try {
       await fs.rename(absSource, absDest);
       return `Moved: ${sourcePath} -> ${destPath}`;
-    } catch (renameErr) {
+    } catch {
       // If rename fails (e.g., cross-device), fall back to copy+delete
       const sourceStats = await fs.stat(absSource);
       if (sourceStats.isDirectory()) {
@@ -179,11 +179,7 @@ export async function executeMkdir(dirPath: string, recursive = true): Promise<s
 /**
  * List directory with detailed information
  */
-export async function executeList(
-  dirPath: string,
-  showHidden = false,
-  details = false,
-): Promise<string> {
+export async function executeList(dirPath: string, showHidden = false, details = false): Promise<string> {
   try {
     const absPath = path.resolve(dirPath);
 

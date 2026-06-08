@@ -23,7 +23,9 @@ afterEach(async () => {
 async function createFile(name: string, content: string): Promise<string> {
   const p = join(tempDir, name);
   const d = join(tempDir, name).split('/').slice(0, -1).join('/');
-  try { await mkdir(d, { recursive: true }); } catch {}
+  try {
+    await mkdir(d, { recursive: true });
+  } catch {}
   await writeFile(p, content, 'utf-8');
   return p;
 }
@@ -118,7 +120,9 @@ describe('QtMigration direct', () => {
 
 describe('QtUi direct', () => {
   it('parses widget count from .ui file', async () => {
-    await createFile('main.ui', `<?xml version="1.0"?>
+    await createFile(
+      'main.ui',
+      `<?xml version="1.0"?>
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -127,14 +131,17 @@ describe('QtUi direct', () => {
    <widget class="QLabel" name="label1"/>
   </widget>
  </widget>
-</ui>`);
+</ui>`,
+    );
     const r = await executeQtUi(undefined, tempDir);
     expect(r).toContain('widgets');
     expect(r).not.toContain('No .ui files');
   });
 
   it('parses connections in .ui', async () => {
-    await createFile('dlg.ui', `<?xml version="1.0"?>
+    await createFile(
+      'dlg.ui',
+      `<?xml version="1.0"?>
 <ui version="4.0">
  <class>Dialog</class>
  <widget class="QDialog" name="Dialog">
@@ -148,7 +155,8 @@ describe('QtUi direct', () => {
    <slot>accept()</slot>
   </connection>
  </connections>
-</ui>`);
+</ui>`,
+    );
     const r = await executeQtUi(undefined, tempDir);
     expect(r).toContain('Connections:');
     expect(r).toContain('okBtn');
@@ -168,7 +176,10 @@ describe('QtUi direct', () => {
 
 describe('QtQml direct', () => {
   it('detects versioned QtQuick import', async () => {
-    await createFile('app.qml', 'import QtQuick 2.15\nimport QtQuick.Controls 2.5\n\nRectangle { width: 100; height: 100 }');
+    await createFile(
+      'app.qml',
+      'import QtQuick 2.15\nimport QtQuick.Controls 2.5\n\nRectangle { width: 100; height: 100 }',
+    );
     const r = await executeQtQml(tempDir);
     expect(r).toContain('QML');
   });
@@ -191,22 +202,26 @@ describe('QtQml direct', () => {
 
 describe('QtSignals direct', () => {
   it('finds new-style connect() calls', async () => {
-    await createFile('conn.cpp',
+    await createFile(
+      'conn.cpp',
       '#include <QObject>\n' +
-      'void setup(QObject *a, QObject *b) {\n' +
-      '    QObject::connect(a, &MyClass::valueChanged, b, &MyClass::onValueChanged);\n' +
-      '}');
+        'void setup(QObject *a, QObject *b) {\n' +
+        '    QObject::connect(a, &MyClass::valueChanged, b, &MyClass::onValueChanged);\n' +
+        '}',
+    );
     const r = await executeQtSignals(tempDir);
     expect(r).toContain('New-Style');
     expect(r).toContain('valueChanged');
   });
 
   it('finds old-style SIGNAL/SLOT macros', async () => {
-    await createFile('oldconn.cpp',
+    await createFile(
+      'oldconn.cpp',
       '#include <QObject>\n' +
-      'void setup(QObject *a, QObject *b) {\n' +
-      '    connect(a, SIGNAL(ready), b, SLOT(handleReady));\n' +
-      '}');
+        'void setup(QObject *a, QObject *b) {\n' +
+        '    connect(a, SIGNAL(ready), b, SLOT(handleReady));\n' +
+        '}',
+    );
     const r = await executeQtSignals(tempDir);
     expect(r).toContain('Old-Style');
     expect(r).toContain('ready');
@@ -224,12 +239,14 @@ describe('QtSignals direct', () => {
 
 describe('QtProFile direct', () => {
   it('parses QT modules from .pro', async () => {
-    await createFile('test.pro',
+    await createFile(
+      'test.pro',
       'QT += core gui widgets\n' +
-      'TEMPLATE = app\n' +
-      'TARGET = myapp\n' +
-      'SOURCES += main.cpp widget.cpp\n' +
-      'HEADERS += widget.h\n');
+        'TEMPLATE = app\n' +
+        'TARGET = myapp\n' +
+        'SOURCES += main.cpp widget.cpp\n' +
+        'HEADERS += widget.h\n',
+    );
     const r = await executeQtProFile(join(tempDir, 'test.pro'), tempDir);
     expect(r).toContain('core');
     expect(r).toContain('gui');

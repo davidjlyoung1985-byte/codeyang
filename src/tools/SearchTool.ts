@@ -1,4 +1,3 @@
-import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
 import { executeGrep } from './GrepTool.js';
@@ -19,13 +18,7 @@ export async function executeSearch(
     caseSensitive?: boolean;
   } = {},
 ): Promise<string> {
-  const {
-    maxResults = 20,
-    includeGlob,
-    searchContent = true,
-    searchNames = true,
-    caseSensitive = false,
-  } = options;
+  const { maxResults = 20, includeGlob, searchContent = true, searchNames = true, caseSensitive = false } = options;
 
   if (!query.trim()) return 'Error: query cannot be empty';
   if (!existsSync(rootDir)) return `Error: directory not found: ${rootDir}`;
@@ -34,7 +27,6 @@ export async function executeSearch(
 
   // 1. File name search via glob
   if (searchNames) {
-    const flag = caseSensitive ? '' : '(?i)';
     const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     try {
       // glob all files then filter by name
@@ -81,7 +73,12 @@ export async function executeSearch(
           if (lineMatch && currentFile) {
             const absPath = path.isAbsolute(currentFile) ? currentFile : path.join(rootDir, currentFile);
             if (!results.find((r) => r.path === absPath && r.type === 'name')) {
-              results.push({ type: 'content', path: absPath, line: Number(lineMatch[1]), snippet: lineMatch[2].trim() });
+              results.push({
+                type: 'content',
+                path: absPath,
+                line: Number(lineMatch[1]),
+                snippet: lineMatch[2].trim(),
+              });
             }
           } else if (!line.startsWith(' ') && !line.match(/^\d/)) {
             // treat as a file path header

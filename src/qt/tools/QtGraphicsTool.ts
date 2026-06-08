@@ -2,8 +2,9 @@
  * QtGraphics — Analyze QPainter, QGraphicsView, and rendering code.
  * Detects anti-patterns, performance issues, and rendering correctness problems.
  */
-import { readFile, readdir } from 'node:fs/promises';
-import { join, relative, extname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { relative } from 'node:path';
+import { collectFiles } from '../shared.js';
 
 interface GraphicsIssue {
   file: string;
@@ -23,7 +24,9 @@ export async function executeQtGraphics(cwd?: string): Promise<string> {
     try {
       const content = await readFile(file, 'utf-8');
       issues.push(...analyzeGraphicsCode(file, content, base));
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
 
   return formatGraphicsReport(issues, base);
@@ -55,11 +58,18 @@ function analyzeGraphicsCode(filePath: string, content: string, base: string): G
       if (insidePainter && !hasSaveRestore) {
         // Check for state changes between begin and end
         const body = lines.slice(painterLineStart - 1, i).join('\n');
-        if (/(?:setPen|setBrush|setFont|setTransform|translate|rotate|scale|setClipPath|setClipRect|setOpacity|setCompositionMode)\s*\(/.test(body)) {
+        if (
+          /(?:setPen|setBrush|setFont|setTransform|translate|rotate|scale|setClipPath|setClipRect|setOpacity|setCompositionMode)\s*\(/.test(
+            body,
+          )
+        ) {
           issues.push({
-            file: relPath, line: painterLineStart, severity: 'warning',
+            file: relPath,
+            line: painterLineStart,
+            severity: 'warning',
             category: 'QPainter',
-            message: 'State changes without save()/restore() may affect subsequent painting. Wrap in painter.save()/painter.restore().',
+            message:
+              'State changes without save()/restore() may affect subsequent painting. Wrap in painter.save()/painter.restore().',
             snippet: lines[painterLineStart - 1].trim().slice(0, 100),
           });
         }
@@ -71,9 +81,12 @@ function analyzeGraphicsCode(filePath: string, content: string, base: string): G
     // ─── Anti-aliasing missing for text ───────────────────────────────────
     if (/p(?:ainter)?\.draw(?:Text|StaticText)\s*\(/.test(line)) {
       issues.push({
-        file: relPath, line: ln, severity: 'info',
+        file: relPath,
+        line: ln,
+        severity: 'info',
         category: 'QPainter',
-        message: 'Text rendered without Antialiasing hint. Call painter.setRenderHint(QPainter::Antialiasing) or QPainter::TextAntialiasing for better rendering.',
+        message:
+          'Text rendered without Antialiasing hint. Call painter.setRenderHint(QPainter::Antialiasing) or QPainter::TextAntialiasing for better rendering.',
         snippet: line.trim().slice(0, 100),
       });
     }
@@ -81,7 +94,9 @@ function analyzeGraphicsCode(filePath: string, content: string, base: string): G
     // ─── QPixmap in paintEvent (slow) ─────────────────────────────────────
     if (/\bQPixmap\b/.test(line) && isInsidePaintEvent(lines, i)) {
       issues.push({
-        file: relPath, line: ln, severity: 'warning',
+        file: relPath,
+        line: ln,
+        severity: 'warning',
         category: 'Performance',
         message: 'QPixmap created inside paintEvent(). Move to member variable and update only when needed.',
         snippet: line.trim().slice(0, 100),
@@ -91,7 +106,9 @@ function analyzeGraphicsCode(filePath: string, content: string, base: string): G
     // ─── Direct drawImage without caching ─────────────────────────────────
     if (/p(?:ainter)?\.drawImage\s*\(.*QImage\s*\(/.test(line)) {
       issues.push({
-        file: relPath, line: ln, severity: 'warning',
+        file: relPath,
+        line: ln,
+        severity: 'warning',
         category: 'Performance',
         message: 'QImage constructed inline in drawImage(). Load and cache the image outside the paint loop.',
         snippet: line.trim().slice(0, 100),
@@ -101,20 +118,32 @@ function analyzeGraphicsCode(filePath: string, content: string, base: string): G
     // ─── QGraphicsScene clear() with many items ───────────────────────────
     if (/scene.*->\s*clear\s*\(\)/.test(line)) {
       issues.push({
-        file: relPath, line: ln, severity: 'warning',
+        file: relPath,
+        line: ln,
+        severity: 'warning',
         category: 'QGraphicsView',
-        message: 'QGraphicsScene::clear() deletes all items synchronously. For many items, consider removeItem() followed by deleteLater().',
+        message:
+          'QGraphicsScene::clear() deletes all items synchronously. For many items, consider removeItem() followed by deleteLater().',
         snippet: line.trim().slice(0, 100),
       });
     }
 
     // ─── QGraphicsItem without caching ────────────────────────────────────
-    if (/class\s+\w+.*:\s*public\s+QGraphics\w+/.test(line) && !content.slice(i, i + 20).includes('DeviceCoordinateCache')) {
-      if (content.slice(i - 100, i + 500).includes('paint(') && !content.slice(i - 100, i + 500).includes('setCacheMode')) {
+    if (
+      /class\s+\w+.*:\s*public\s+QGraphics\w+/.test(line) &&
+      !content.slice(i, i + 20).includes('DeviceCoordinateCache')
+    ) {
+      if (
+        content.slice(i - 100, i + 500).includes('paint(') &&
+        !content.slice(i - 100, i + 500).includes('setCacheMode')
+      ) {
         issues.push({
-          file: relPath, line: ln, severity: 'info',
+          file: relPath,
+          line: ln,
+          severity: 'info',
           category: 'QGraphicsView',
-          message: 'QGraphicsItem with custom paint() but no cache mode set. Add setCacheMode(DeviceCoordinateCache) for static items.',
+          message:
+            'QGraphicsItem with custom paint() but no cache mode set. Add setCacheMode(DeviceCoordinateCache) for static items.',
           snippet: line.trim().slice(0, 100),
         });
       }
@@ -125,7 +154,9 @@ function analyzeGraphicsCode(filePath: string, content: string, base: string): G
       const hasEnd = content.slice(i).includes('.end()');
       if (!hasEnd) {
         issues.push({
-          file: relPath, line: ln, severity: 'error',
+          file: relPath,
+          line: ln,
+          severity: 'error',
           category: 'QPainter',
           message: 'QPainter::begin() without matching end(). The painter must be properly ended to release resources.',
           snippet: line.trim().slice(0, 100),
@@ -134,11 +165,18 @@ function analyzeGraphicsCode(filePath: string, content: string, base: string): G
     }
 
     // ─── Direct QWidget::paintEvent without QStylePainter ─────────────────
-    if (line.includes('paintEvent') && line.includes('QWidget') && !content.slice(i, i + 500).includes('QStylePainter')) {
+    if (
+      line.includes('paintEvent') &&
+      line.includes('QWidget') &&
+      !content.slice(i, i + 500).includes('QStylePainter')
+    ) {
       issues.push({
-        file: relPath, line: ln, severity: 'info',
+        file: relPath,
+        line: ln,
+        severity: 'info',
         category: 'QPainter',
-        message: 'Custom paintEvent without QStylePainter. Use QStylePainter for proper style integration, or QPainter for fully custom drawing.',
+        message:
+          'Custom paintEvent without QStylePainter. Use QStylePainter for proper style integration, or QPainter for fully custom drawing.',
         snippet: line.trim().slice(0, 100),
       });
     }
@@ -146,7 +184,9 @@ function analyzeGraphicsCode(filePath: string, content: string, base: string): G
     // ─── setPen/setBrush with QColor() temporary ──────────────────────────
     if (/p(?:ainter)?\.(?:setPen|setBrush)\s*\(\s*Q(?:Pen|Brush)\s*\(\s*QColor\s*\(/.test(line)) {
       issues.push({
-        file: relPath, line: ln, severity: 'info',
+        file: relPath,
+        line: ln,
+        severity: 'info',
         category: 'Performance',
         message: 'Temporary QPen/QBrush created inline. Store frequently-used pens/brushes as member variables.',
         snippet: line.trim().slice(0, 100),
@@ -156,7 +196,9 @@ function analyzeGraphicsCode(filePath: string, content: string, base: string): G
     // ─── QPixmap::grabWidget() removed in Qt6 ─────────────────────────────
     if (/\bQPixmap::grabWidget\b|\.grabWidget\s*\(/.test(line)) {
       issues.push({
-        file: relPath, line: ln, severity: 'error',
+        file: relPath,
+        line: ln,
+        severity: 'error',
         category: 'Migration',
         message: 'QPixmap::grabWidget() removed in Qt6. Use QWidget::grab() instead.',
         snippet: line.trim().slice(0, 100),
@@ -166,7 +208,9 @@ function analyzeGraphicsCode(filePath: string, content: string, base: string): G
     // ─── update() called inside paintEvent ────────────────────────────────
     if (isInsidePaintEvent(lines, i) && /\bupdate\s*\(/.test(line)) {
       issues.push({
-        file: relPath, line: ln, severity: 'error',
+        file: relPath,
+        line: ln,
+        severity: 'error',
         category: 'QPainter',
         message: 'update() called inside paintEvent() — this creates an infinite paint loop. Remove it.',
         snippet: line.trim().slice(0, 100),
@@ -193,22 +237,7 @@ function isInsidePaintEvent(lines: string[], currentLine: number): boolean {
 // ─── File Collection ─────────────────────────────────────────────────────────
 
 async function collectSourceFiles(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist', '3rdparty']);
-  async function walk(d: string) {
-    let entries;
-    try { entries = await readdir(d, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !skip.has(entry.name)) await walk(full);
-      } else if (entry.isFile() && ['.cpp', '.h', '.hpp', '.cxx'].includes(extname(entry.name).toLowerCase())) {
-        results.push(full);
-      }
-    }
-  }
-  await walk(dir);
-  return results;
+  return collectFiles(dir, { extensions: new Set(['.cpp', '.h', '.hpp', '.cxx']) });
 }
 
 // ─── Report Formatting ───────────────────────────────────────────────────────

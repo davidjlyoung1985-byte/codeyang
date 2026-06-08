@@ -58,7 +58,9 @@ interface TopicEntry {
 
 const TOPICS: TopicEntry[] = [
   {
-    name: '一元一次方程', nameEmoji: '', desc: 'Linear equations with one variable',
+    name: '一元一次方程',
+    nameEmoji: '',
+    desc: 'Linear equations with one variable',
     aliases: ['linear', '一次方程', '方程'],
     content: `### 一元一次方程 \\(ax + b = 0\\)
 
@@ -87,7 +89,9 @@ const TOPICS: TopicEntry[] = [
 - 有括号时先**去括号** (注意分配律)`,
   },
   {
-    name: '一元二次方程', nameEmoji: '', desc: 'Quadratic equations',
+    name: '一元二次方程',
+    nameEmoji: '',
+    desc: 'Quadratic equations',
     aliases: ['quadratic', '二次方程'],
     content: `### 一元二次方程 \\(ax^2 + bx + c = 0\\) (a ≠ 0)
 
@@ -123,7 +127,9 @@ x₂ = (-3 - 5) / 2 = **-4**
 - 因式分解优先于公式法 (更快更准)`,
   },
   {
-    name: '勾股定理', nameEmoji: '', desc: 'Pythagorean theorem',
+    name: '勾股定理',
+    nameEmoji: '',
+    desc: 'Pythagorean theorem',
     aliases: ['pythagorean', '勾股', '直角三角形'],
     content: `### 勾股定理 \\(a^2 + b^2 = c^2\\)
 
@@ -152,7 +158,9 @@ x₂ = (-3 - 5) / 2 = **-4**
 - 45°-45°-90° 三角形: 直角边:直角边:斜边 = 1:1:√2`,
   },
   {
-    name: '一次函数', nameEmoji: '', desc: 'Linear functions y = kx + b',
+    name: '一次函数',
+    nameEmoji: '',
+    desc: 'Linear functions y = kx + b',
     aliases: ['function', '函数', '一次函数', '线性函数'],
     content: `### 一次函数 \\(y = kx + b\\)
 
@@ -183,7 +191,9 @@ x₂ = (-3 - 5) / 2 = **-4**
 - 一次函数与方程的联系: 交点即方程的解`,
   },
   {
-    name: '二次函数', nameEmoji: '', desc: 'Quadratic functions y = ax² + bx + c',
+    name: '二次函数',
+    nameEmoji: '',
+    desc: 'Quadratic functions y = ax² + bx + c',
     aliases: ['quadfunc', '二次函数', '抛物线'],
     content: `### 二次函数 \\(y = ax^2 + bx + c\\) (a ≠ 0)
 
@@ -215,7 +225,9 @@ x₂ = (-3 - 5) / 2 = **-4**
 - 二次函数在顶点处取极值`,
   },
   {
-    name: '圆', nameEmoji: '', desc: 'Circle geometry',
+    name: '圆',
+    nameEmoji: '',
+    desc: 'Circle geometry',
     aliases: ['circle', 'circle'],
     content: `### 圆的基本公式
 
@@ -240,7 +252,9 @@ x₂ = (-3 - 5) / 2 = **-4**
 - 扇形公式中 n 是圆心角度数, 不是弧度`,
   },
   {
-    name: '统计', nameEmoji: '', desc: 'Basic statistics',
+    name: '统计',
+    nameEmoji: '',
+    desc: 'Basic statistics',
     aliases: ['stats', '统计', '统计量'],
     content: `### 基本统计量
 
@@ -267,7 +281,9 @@ x₂ = (-3 - 5) / 2 = **-4**
 - 先排序再找中位数`,
   },
   {
-    name: '概率', nameEmoji: '', desc: 'Basic probability',
+    name: '概率',
+    nameEmoji: '',
+    desc: 'Basic probability',
     aliases: ['probability', '概率'],
     content: `### 概率基础
 

@@ -12,16 +12,18 @@ export interface StreamEvent {
 
 export interface LLMMessage {
   role: 'user' | 'assistant';
-  content: string | Array<{
-    type: 'text' | 'tool_use' | 'tool_result';
-    text?: string;
-    id?: string;
-    name?: string;
-    input?: unknown;
-    tool_use_id?: string;
-    content?: string;
-    is_error?: boolean;
-  }>;
+  content:
+    | string
+    | Array<{
+        type: 'text' | 'tool_use' | 'tool_result';
+        text?: string;
+        id?: string;
+        name?: string;
+        input?: unknown;
+        tool_use_id?: string;
+        content?: string;
+        is_error?: boolean;
+      }>;
 }
 
 export interface ToolSchema {
@@ -140,9 +142,7 @@ class OpenAICompatClient implements LLMClient {
     messages: LLMMessage[];
     tools: ToolSchema[];
   }): AsyncIterable<StreamEvent> {
-    const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: 'system', content: params.system },
-    ];
+    const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [{ role: 'system', content: params.system }];
 
     for (const msg of params.messages) {
       if (typeof msg.content === 'string') {

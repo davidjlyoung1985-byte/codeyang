@@ -67,8 +67,10 @@ The SVG will be saved to the project directory unless \`output\` is specified.`;
 // ─── SVG Generators ──────────────────────────────────────────────────────────
 
 async function generateCoordinatePlane(outputPath?: string): Promise<string> {
-  const w = 400, h = 400;
-  const cx = 200, cy = 200;
+  const w = 400,
+    h = 400;
+  const cx = 200,
+    cy = 200;
   const scale = 40; // pixels per unit
   const range = 5; // [-5, 5]
 
@@ -94,23 +96,23 @@ async function generateCoordinatePlane(outputPath?: string): Promise<string> {
   svg += `    <polygon points="0 0, 8 3, 0 6" fill="#333"/>\n`;
   svg += `  </marker>\n`;
   svg += `</defs>\n`;
-  svg += `<line x1="${cx}" y1="0" x2="${cx}" y2="0" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>\n`;
-  svg += `<line x1="${w}" y1="${cy}" x2="${w}" y2="${cy}" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>\n`;
+  svg += `<line x1="${cx}" y1="5" x2="${cx}" y2="-5" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>\n`;
+  svg += `<line x1="${w - 5}" y1="${cy}" x2="${w + 5}" y2="${cy}" stroke="#333" stroke-width="2" marker-end="url(#arrow)"/>\n`;
 
   // Labels
-  svg += `<text x="${w-10}" y="${cy-10}" font-size="14" fill="#333" font-family="sans-serif">x</text>\n`;
-  svg += `<text x="${cx+5}" y="15" font-size="14" fill="#333" font-family="sans-serif">y</text>\n`;
-  svg += `<text x="${cx+3}" y="${cy+15}" font-size="12" fill="#333">O</text>\n`;
+  svg += `<text x="${w - 10}" y="${cy - 10}" font-size="14" fill="#333" font-family="sans-serif">x</text>\n`;
+  svg += `<text x="${cx + 5}" y="15" font-size="14" fill="#333" font-family="sans-serif">y</text>\n`;
+  svg += `<text x="${cx + 3}" y="${cy + 15}" font-size="12" fill="#333">O</text>\n`;
 
   // Tick marks and numbers
   for (let i = -range; i <= range; i++) {
     if (i === 0) continue;
     const x = cx + i * scale;
     const y = cy - i * scale;
-    svg += `<line x1="${x}" y1="${cy-3}" x2="${x}" y2="${cy+3}" stroke="#333"/>\n`;
-    svg += `<text x="${x-3}" y="${cy+16}" font-size="11" fill="#555" text-anchor="middle">${i}</text>\n`;
-    svg += `<line x1="${cx-3}" y1="${y}" x2="${cx+3}" y2="${y}" stroke="#333"/>\n`;
-    svg += `<text x="${cx-6}" y="${y+5}" font-size="11" fill="#555" text-anchor="end">${i}</text>\n`;
+    svg += `<line x1="${x}" y1="${cy - 3}" x2="${x}" y2="${cy + 3}" stroke="#333"/>\n`;
+    svg += `<text x="${x - 3}" y="${cy + 16}" font-size="11" fill="#555" text-anchor="middle">${i}</text>\n`;
+    svg += `<line x1="${cx - 3}" y1="${y}" x2="${cx + 3}" y2="${y}" stroke="#333"/>\n`;
+    svg += `<text x="${cx - 6}" y="${y + 5}" font-size="11" fill="#555" text-anchor="end">${i}</text>\n`;
   }
 
   svg += '</svg>';
@@ -118,8 +120,10 @@ async function generateCoordinatePlane(outputPath?: string): Promise<string> {
 }
 
 async function generateFunctionGraph(fnExpr: string, outputPath?: string): Promise<string> {
-  const w = 400, h = 400;
-  const cx = 200, cy = 200;
+  const w = 400,
+    h = 400;
+  const cx = 200,
+    cy = 200;
   const scale = 40;
   const range = 5;
 
@@ -155,8 +159,8 @@ async function generateFunctionGraph(fnExpr: string, outputPath?: string): Promi
   // Axes
   svg += `<line x1="${cx}" y1="0" x2="${cx}" y2="${h}" stroke="#333" stroke-width="2"/>\n`;
   svg += `<line x1="0" y1="${cy}" x2="${w}" y2="${cy}" stroke="#333" stroke-width="2"/>\n`;
-  svg += `<text x="${w-10}" y="${cy-10}" font-size="14">x</text>\n`;
-  svg += `<text x="${cx+5}" y="15" font-size="14">y</text>\n`;
+  svg += `<text x="${w - 10}" y="${cy - 10}" font-size="14">x</text>\n`;
+  svg += `<text x="${cx + 5}" y="15" font-size="14">y</text>\n`;
 
   // Function curve
   let path = '';
@@ -187,7 +191,8 @@ async function generateFunctionGraph(fnExpr: string, outputPath?: string): Promi
 }
 
 async function generateTriangle(outputPath?: string): Promise<string> {
-  const w = 300, h = 300;
+  const w = 300,
+    h = 300;
   // Triangle corners
   const A = { x: 50, y: 250 };
   const B = { x: 250, y: 250 };
@@ -200,9 +205,9 @@ async function generateTriangle(outputPath?: string): Promise<string> {
   svg += `<polygon points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/>\n`;
 
   // Labels at corners
-  svg += `<text x="${A.x-15}" y="${A.y+20}" font-size="16" font-weight="bold" fill="#333">A</text>\n`;
-  svg += `<text x="${B.x+5}" y="${B.y+20}" font-size="16" font-weight="bold" fill="#333">B</text>\n`;
-  svg += `<text x="${C.x-5}" y="${C.y-15}" font-size="16" font-weight="bold" fill="#333">C</text>\n`;
+  svg += `<text x="${A.x - 15}" y="${A.y + 20}" font-size="16" font-weight="bold" fill="#333">A</text>\n`;
+  svg += `<text x="${B.x + 5}" y="${B.y + 20}" font-size="16" font-weight="bold" fill="#333">B</text>\n`;
+  svg += `<text x="${C.x - 5}" y="${C.y - 15}" font-size="16" font-weight="bold" fill="#333">C</text>\n`;
 
   // Side labels
   const midAB = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 + 20 };
@@ -214,7 +219,7 @@ async function generateTriangle(outputPath?: string): Promise<string> {
 
   // Right angle mark at corner A (for right triangle)
   const sizeR = 15;
-  svg += `<polyline points="${A.x+sizeR},${A.y} ${A.x+sizeR},${A.y-sizeR} ${A.x},${A.y-sizeR}" fill="none" stroke="#333" stroke-width="1.5"/>\n`;
+  svg += `<polyline points="${A.x + sizeR},${A.y} ${A.x + sizeR},${A.y - sizeR} ${A.x},${A.y - sizeR}" fill="none" stroke="#333" stroke-width="1.5"/>\n`;
 
   svg += '</svg>';
   return saveOrReturn(svg, outputPath || 'triangle.svg', 'Triangle ABC');
@@ -222,10 +227,13 @@ async function generateTriangle(outputPath?: string): Promise<string> {
 
 async function generateBarChart(dataStr: string, outputPath?: string): Promise<string> {
   // Parse "A=5,B=8,C=3,D=6"
-  const pairs = dataStr.split(/[,，]/).map((p) => {
-    const parts = p.split('=');
-    return { label: parts[0]?.trim() || '', value: parseFloat(parts[1]) || 0 };
-  }).filter((p) => p.label);
+  const pairs = dataStr
+    .split(/[,，]/)
+    .map((p) => {
+      const parts = p.split('=');
+      return { label: parts[0]?.trim() || '', value: parseFloat(parts[1]) || 0 };
+    })
+    .filter((p) => p.label);
 
   if (pairs.length === 0) return '**Error**: no data. Use format: `bar:A=5,B=8,C=3`';
 
@@ -249,21 +257,21 @@ async function generateBarChart(dataStr: string, outputPath?: string): Promise<s
     const color = colors[i % colors.length];
     svg += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${color}" rx="3"/>\n`;
     // Value on top
-    svg += `<text x="${x + barW/2}" y="${y - 5}" font-size="13" font-weight="bold" fill="#333" text-anchor="middle">${pairs[i].value}</text>\n`;
+    svg += `<text x="${x + barW / 2}" y="${y - 5}" font-size="13" font-weight="bold" fill="#333" text-anchor="middle">${pairs[i].value}</text>\n`;
     // Label below
-    svg += `<text x="${x + barW/2}" y="${top + chartH + 20}" font-size="12" fill="#555" text-anchor="middle">${pairs[i].label}</text>\n`;
+    svg += `<text x="${x + barW / 2}" y="${top + chartH + 20}" font-size="12" fill="#555" text-anchor="middle">${pairs[i].label}</text>\n`;
   }
 
   // Y axis
-  svg += `<line x1="${left-10}" y1="${top}" x2="${left-10}" y2="${top+chartH}" stroke="#333" stroke-width="1.5"/>\n`;
+  svg += `<line x1="${left - 10}" y1="${top}" x2="${left - 10}" y2="${top + chartH}" stroke="#333" stroke-width="1.5"/>\n`;
   // X axis
-  svg += `<line x1="${left-10}" y1="${top+chartH}" x2="${w-10}" y2="${top+chartH}" stroke="#333" stroke-width="1.5"/>\n`;
+  svg += `<line x1="${left - 10}" y1="${top + chartH}" x2="${w - 10}" y2="${top + chartH}" stroke="#333" stroke-width="1.5"/>\n`;
 
   // Y ticks
   for (let v = 0; v <= maxVal; v += Math.ceil(maxVal / 5) || 1) {
     const y = top + chartH - (v / maxVal) * chartH;
-    svg += `<line x1="${left-15}" y1="${y}" x2="${left-10}" y2="${y}" stroke="#333"/>\n`;
-    svg += `<text x="${left-20}" y="${y+4}" font-size="11" fill="#555" text-anchor="end">${v}</text>\n`;
+    svg += `<line x1="${left - 15}" y1="${y}" x2="${left - 10}" y2="${y}" stroke="#333"/>\n`;
+    svg += `<text x="${left - 20}" y="${y + 4}" font-size="11" fill="#555" text-anchor="end">${v}</text>\n`;
   }
 
   svg += '</svg>';
@@ -302,15 +310,21 @@ async function saveOrReturn(svg: string, filename: string, title: string): Promi
 // ─── Pie Chart ───────────────────────────────────────────────────────────────
 
 async function generatePieChart(dataStr: string, outputPath?: string): Promise<string> {
-  const pairs = dataStr.split(/[,，]/).map((p) => {
-    const parts = p.split('=');
-    return { label: parts[0]?.trim() || '', value: parseFloat(parts[1]) || 0 };
-  }).filter((p) => p.label);
+  const pairs = dataStr
+    .split(/[,，]/)
+    .map((p) => {
+      const parts = p.split('=');
+      return { label: parts[0]?.trim() || '', value: parseFloat(parts[1]) || 0 };
+    })
+    .filter((p) => p.label);
 
   if (pairs.length === 0) return '**Error**: no data. Use format: `pie:A=30,B=20,C=15`';
 
-  const w = 360, h = 320;
-  const cx = 160, cy = 150, r = 120;
+  const w = 360,
+    h = 320;
+  const cx = 160,
+    cy = 150,
+    r = 120;
   const total = pairs.reduce((s, p) => s + p.value, 0);
 
   let svg = svgHeader(w, h);
@@ -336,8 +350,8 @@ async function generatePieChart(dataStr: string, outputPath?: string): Promise<s
 
     // Label
     const midAngle = startAngle + angle / 2;
-    const lx = cx + (r * 0.7) * Math.cos(midAngle);
-    const ly = cy + (r * 0.7) * Math.sin(midAngle);
+    const lx = cx + r * 0.7 * Math.cos(midAngle);
+    const ly = cy + r * 0.7 * Math.sin(midAngle);
     const label = `${pairs[i].label} ${Math.round(pct * 100)}%`;
     svg += `<text x="${lx}" y="${ly}" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle" dominant-baseline="middle">${label}</text>\n`;
 
@@ -370,15 +384,18 @@ async function generateScatterPlot(dataStr: string, outputPath?: string): Promis
 
   if (pts.length === 0) return '**Error**: no data. Use format: `scatter:(1,2),(3,5),(5,3),(7,8)`';
 
-  const w = 400, h = 400;
+  const w = 400,
+    h = 400;
   const margin = 50;
   const pw = w - 2 * margin;
   const ph = h - 2 * margin;
 
   const xs = pts.map((p) => p[0]);
   const ys = pts.map((p) => p[1]);
-  const xMin = Math.min(...xs), xMax = Math.max(...xs);
-  const yMin = Math.min(...ys), yMax = Math.max(...ys);
+  const xMin = Math.min(...xs),
+    xMax = Math.max(...xs);
+  const yMin = Math.min(...ys),
+    yMax = Math.max(...ys);
   const xRange = xMax - xMin || 1;
   const yRange = yMax - yMin || 1;
 
@@ -389,26 +406,27 @@ async function generateScatterPlot(dataStr: string, outputPath?: string): Promis
   svg += `<rect width="${w}" height="${h}" fill="#fafafa"/>\n`;
 
   // Axes
-  svg += `<line x1="${margin}" y1="${margin+ph}" x2="${margin+pw}" y2="${margin+ph}" stroke="#333" stroke-width="1.5"/>\n`;
-  svg += `<line x1="${margin}" y1="${margin}" x2="${margin}" y2="${margin+ph}" stroke="#333" stroke-width="1.5"/>\n`;
+  svg += `<line x1="${margin}" y1="${margin + ph}" x2="${margin + pw}" y2="${margin + ph}" stroke="#333" stroke-width="1.5"/>\n`;
+  svg += `<line x1="${margin}" y1="${margin}" x2="${margin}" y2="${margin + ph}" stroke="#333" stroke-width="1.5"/>\n`;
 
   // Ticks
   for (let i = 0; i <= 4; i++) {
     const x = margin + (i / 4) * pw;
     const val = xMin + (i / 4) * xRange;
-    svg += `<text x="${x}" y="${margin+ph+18}" font-size="11" fill="#555" text-anchor="middle">${formatNumS(val)}</text>\n`;
+    svg += `<text x="${x}" y="${margin + ph + 18}" font-size="11" fill="#555" text-anchor="middle">${formatNumS(val)}</text>\n`;
   }
   for (let i = 0; i <= 4; i++) {
     const y = margin + ph - (i / 4) * ph;
     const val = yMin + (i / 4) * yRange;
-    svg += `<text x="${margin-8}" y="${y+4}" font-size="11" fill="#555" text-anchor="end">${formatNumS(val)}</text>\n`;
+    svg += `<text x="${margin - 8}" y="${y + 4}" font-size="11" fill="#555" text-anchor="end">${formatNumS(val)}</text>\n`;
   }
 
   // Points
   for (const [x, y] of pts) {
-    const px = toX(x), py = toY(y);
+    const px = toX(x),
+      py = toY(y);
     svg += `<circle cx="${px}" cy="${py}" r="5" fill="#e74c3c" opacity="0.8"/>\n`;
-    svg += `<text x="${px+7}" y="${py-7}" font-size="10" fill="#555">(${formatNumS(x)},${formatNumS(y)})</text>\n`;
+    svg += `<text x="${px + 7}" y="${py - 7}" font-size="10" fill="#555">(${formatNumS(x)},${formatNumS(y)})</text>\n`;
   }
 
   svg += '</svg>';

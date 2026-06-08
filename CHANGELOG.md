@@ -2,11 +2,70 @@
 
 All notable changes to CodeYang will be documented in this file.
 
-## [0.5.0] - 2026-06-04
+## [0.6.0] - 2026-07-10
+
+### Changed
+
+- **README fully rewritten** — corrected provider from Claude to DeepSeek/OpenAI-compatible, added missing tools (Memory, Image, Math, Search, MCP, Qt), fixed environment variable docs and interactive command reference
+- **Version unified** — package.json, CLI, MCP client, and UI now all report 0.6.0 consistently
+- **Anti-repetition threshold raised** — from 1 repeat to 2, preventing false positives on legitimate repeated patterns
+
+### Removed
+
+- **Unused `jiti` dependency** — was never imported anywhere in the codebase
+- **Redundant `form-data` dependency** — axios handles multipart natively
 
 ### Fixed
 
-- **NetworkTool tests** — replaced all httpbin.org live calls with `vi.mock('axios')`, all 272 tests now pass offline in ~25s (was 14 failing / 42s with network timeouts)
+- **MCP client hardcoded version** — was `0.3.0`, now `0.6.0` in sync with the rest of the project
+
+## [0.5.0] - 2026-06-15
+
+### Added
+
+- **Math module** — expression solver (MathSolve), SVG plotter (MathPlot), concept explainer (MathExplain)
+- **MCP manager dynamic refresh** — `refreshTools()` allows discovering newly added MCP tools without restart
+- **Multi-provider LLM client** — OpenAI-compatible (DeepSeek default) and Anthropic fallback
+
+### Changed
+
+- **CLI entry point refactored** — modular arg parsing, API key resolution flow
+- **Agent callbacks** — streaming deltas for real-time token display
+- **Tool context injection** — per-session cwd, model, and maxTokens context
+
+## [0.4.0] - 2026-06-08
+
+### Added
+
+- **Full Git version control** — 16 Git tools (status, diff, commit, branch, checkout, log, push, pull, clone, add, reset, stash, merge, remote, current-branch, blame)
+- **Code analysis tools** — AST parsing, code structure analysis, cyclomatic complexity, ESLint runner, dependency finder, line counter
+- **Network tools** — HTTP requests, file download/upload, API calls, URL check/parse
+- **Data format tools** — JSON Parse/Write/Query, YAML Parse/Write, CSV Parse/Write, XML Parse/Write, JSON-YAML Convert
+- **File system tools** — Copy, Move, Delete, Mkdir, List, Exists
+- **Search tool** — combined file name + content search with ranked results
+- **Image tools** — ImageInfo, ImageToBase64, ListImages
+- **Memory system** — persistent key-value memory with Remember/Recall/Forget/ListMemories and 5 types (fact, preference, project, instruction, context)
+- **API key config save** — first-run key prompt now offers to save to `~/.codeyang/config.json`
+- **`--api-key` CLI argument** to pass API key directly
+- **Environment variables** documentation in `--help` output
+- **CLAUDE.md** project documentation
+- **Electron desktop app** (CodeYangX) — via `codeyangx` entry point
+
+### Changed
+
+- **Prime provider switched** from Anthropic SDK to OpenAI-compatible (DeepSeek default) with Anthropic fallback
+- **CLI UI redesign** — modern terminal style with OpenCode-inspired markdown rendering
+- **Streaming output** — real-time token display with parallel tool execution
+- **Session persistence** — now uses indexed metadata for fast listing
+- **Tool registry** — supports MCP-discovered tools and Qt project injection
+- **System prompt** — optimized for brevity, speed, and accuracy
+
+### Fixed
+
+- **Test isolation** — all 290 tests pass offline without network (axios mocked)
+- **Anti-repetition** — loop detection prevents agent infinite loops
+- **Tool caching** — Read/Glob results cached 5s to avoid redundant file reads
+- **SIGINT handling** — double Ctrl+C guard prevents accidental data loss
 
 ## [0.2.0] - 2026-05-31
 

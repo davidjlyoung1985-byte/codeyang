@@ -26,7 +26,7 @@ export class McpClient {
   constructor(serverName: string, config: McpServerConfig) {
     this.serverName = serverName;
     this.config = config;
-    this.client = new Client({ name: 'codeyang', version: '0.3.0' }, { capabilities: {} });
+    this.client = new Client({ name: 'codeyang', version: '0.6.0' }, { capabilities: {} });
   }
 
   get tools(): McpToolDef[] {

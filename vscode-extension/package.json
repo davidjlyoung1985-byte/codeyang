@@ -2,7 +2,7 @@
   "name": "codeyang-vscode",
   "displayName": "CodeYang AI Agent",
   "version": "0.2.0",
-  "description": "AI coding agent powered by Claude — chat with tool-using CodeYang inside VS Code",
+  "description": "AI coding agent — chat with tool-using CodeYang inside VS Code",
   "publisher": "codeyang",
   "engines": {
     "vscode": "^1.85.0"
@@ -27,18 +27,18 @@
       "properties": {
         "codeyang.apiKey": {
           "type": "string",
-          "description": "Anthropic API Key for CodeYang AI agent",
+          "description": "API Key for CodeYang AI agent (supports DeepSeek, Anthropic)",
           "default": ""
         },
         "codeyang.apiBaseUrl": {
           "type": "string",
-          "description": "API Base URL (default: https://api.anthropic.com)",
-          "default": "https://api.anthropic.com"
+          "description": "API Base URL (default: https://api.deepseek.com/v1)",
+          "default": "https://api.deepseek.com/v1"
         },
         "codeyang.model": {
           "type": "string",
-          "description": "Claude model to use (e.g. claude-sonnet-4-20250514)",
-          "default": "claude-sonnet-4-20250514"
+          "description": "Model to use (e.g. deepseek-chat, claude-sonnet-4-20250514)",
+          "default": "deepseek-chat"
         }
       }
     }

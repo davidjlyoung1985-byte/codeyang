@@ -3,6 +3,7 @@ import { config } from './config.js';
 import { toolSchemas, getTool, setToolContext } from '../tools/registry.js';
 import type { QtContext } from '../qt/index.js';
 import { createLLMClient, type LLMClient, type LLMMessage, type ToolSchema } from './LLMClient.js';
+import { getMemorySummary } from '../utils/memoryStore.js';
 
 export interface AgentCallbacks {
   onUserMessage?: (text: string) => void;
@@ -30,8 +31,24 @@ export class Agent {
   private lastAssistantText = '';
   private repeatCount = 0;
 
+  // Persistent memory cache
+  private memorySummary: string | null = null;
+  private memoryLoadFailure = false;
+
   constructor(private qtContext?: QtContext) {
     this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
+  }
+
+  private async ensureMemoryLoaded(): Promise<string> {
+    if (this.memorySummary === null && !this.memoryLoadFailure) {
+      try {
+        this.memorySummary = await getMemorySummary();
+      } catch {
+        this.memoryLoadFailure = true;
+        this.memorySummary = '';
+      }
+    }
+    return this.memorySummary ?? '';
   }
 
   private cacheKey(name: string, args: Record<string, unknown>): string {
@@ -147,11 +164,16 @@ export class Agent {
         const toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
         const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
 
+        const memoryContext = await this.ensureMemoryLoaded();
+        const systemPrompt = memoryContext
+          ? config.getSystemPrompt(this.qtContext) + '\n\n## Your Memory\n' + memoryContext
+          : config.getSystemPrompt(this.qtContext);
+
         for await (const event of this.client.stream({
           model: config.model,
           maxTokens: config.maxTokens,
           temperature: 0.5,
-          system: config.getSystemPrompt(this.qtContext),
+          system: systemPrompt,
           messages,
           tools: toolSchemas() as ToolSchema[],
         })) {
@@ -204,10 +226,10 @@ export class Agent {
 
       if (assistantText) {
         // Anti-repetition: check BEFORE displaying to user.
-        // Break if the same text appears twice in a row (1 repeat).
+        // Break if the same text appears 3+ times in a row (2 repeats).
         if (assistantText === this.lastAssistantText) {
           this.repeatCount++;
-          if (this.repeatCount >= 1) {
+          if (this.repeatCount >= 2) {
             this.cbs.onError?.('Agent loop detected — stopping to avoid repetition');
             this.history = this.jsonClone(messages);
             break;

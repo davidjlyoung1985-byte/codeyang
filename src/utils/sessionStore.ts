@@ -64,7 +64,10 @@ export async function listSessions(): Promise<SessionMeta[]> {
 
   // If index is empty, fall back to scanning files (backward compat)
   if (entries.length === 0) {
-    const files = (await readdir(SESSIONS_DIR)).filter((f) => f.endsWith('.json')).sort().reverse();
+    const files = (await readdir(SESSIONS_DIR))
+      .filter((f) => f.endsWith('.json'))
+      .sort()
+      .reverse();
     const sessions: SessionMeta[] = [];
     for (const f of files) {
       try {

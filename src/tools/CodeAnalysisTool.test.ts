@@ -59,10 +59,7 @@ describe('CodeAnalysisTool', () => {
   describe('executeAnalyzeCode', () => {
     it('should analyze imports', async () => {
       const file = path.join(TEST_DIR, 'test.js');
-      await fs.writeFile(
-        file,
-        `import fs from 'fs';\nimport path from 'path';\nconst x = 1;`,
-      );
+      await fs.writeFile(file, `import fs from 'fs';\nimport path from 'path';\nconst x = 1;`);
 
       const result = await executeAnalyzeCode(file, 'javascript');
 
@@ -73,10 +70,7 @@ describe('CodeAnalysisTool', () => {
 
     it('should analyze functions', async () => {
       const file = path.join(TEST_DIR, 'test.js');
-      await fs.writeFile(
-        file,
-        `function foo(a, b) { return a + b; }\nconst bar = (x) => x * 2;`,
-      );
+      await fs.writeFile(file, `function foo(a, b) { return a + b; }\nconst bar = (x) => x * 2;`);
 
       const result = await executeAnalyzeCode(file, 'javascript');
 
@@ -87,10 +81,7 @@ describe('CodeAnalysisTool', () => {
 
     it('should analyze classes', async () => {
       const file = path.join(TEST_DIR, 'test.js');
-      await fs.writeFile(
-        file,
-        `class MyClass {\n  method1() {}\n  method2() {}\n}`,
-      );
+      await fs.writeFile(file, `class MyClass {\n  method1() {}\n  method2() {}\n}`);
 
       const result = await executeAnalyzeCode(file, 'javascript');
 
@@ -101,10 +92,7 @@ describe('CodeAnalysisTool', () => {
 
     it('should analyze variables', async () => {
       const file = path.join(TEST_DIR, 'test.js');
-      await fs.writeFile(
-        file,
-        `const x = 1;\nlet y = 2;\nvar z = 3;`,
-      );
+      await fs.writeFile(file, `const x = 1;\nlet y = 2;\nvar z = 3;`);
 
       const result = await executeAnalyzeCode(file, 'javascript');
 
@@ -116,10 +104,7 @@ describe('CodeAnalysisTool', () => {
 
     it('should analyze exports', async () => {
       const file = path.join(TEST_DIR, 'test.js');
-      await fs.writeFile(
-        file,
-        `export function foo() {}\nexport const bar = 1;`,
-      );
+      await fs.writeFile(file, `export function foo() {}\nexport const bar = 1;`);
 
       const result = await executeAnalyzeCode(file, 'javascript');
 
@@ -132,10 +117,7 @@ describe('CodeAnalysisTool', () => {
   describe('executeComplexity', () => {
     it('should calculate complexity for simple code', async () => {
       const file = path.join(TEST_DIR, 'test.js');
-      await fs.writeFile(
-        file,
-        `function foo() { return 1; }`,
-      );
+      await fs.writeFile(file, `function foo() { return 1; }`);
 
       const result = await executeComplexity(file);
 
@@ -189,10 +171,7 @@ describe('CodeAnalysisTool', () => {
   describe('executeLint', () => {
     it('should find no issues in clean code', async () => {
       const file = path.join(TEST_DIR, 'test.js');
-      await fs.writeFile(
-        file,
-        `const x = 1;\nconsole.log(x);`,
-      );
+      await fs.writeFile(file, `const x = 1;\nconsole.log(x);`);
 
       const result = await executeLint(file, false);
 
@@ -201,10 +180,7 @@ describe('CodeAnalysisTool', () => {
 
     it('should find unused variables', async () => {
       const file = path.join(TEST_DIR, 'test.js');
-      await fs.writeFile(
-        file,
-        `const x = 1;\nconst y = 2;\nconsole.log(x);`,
-      );
+      await fs.writeFile(file, `const x = 1;\nconst y = 2;\nconsole.log(x);`);
 
       const result = await executeLint(file, false);
 
@@ -234,10 +210,7 @@ describe('CodeAnalysisTool', () => {
         },
       };
 
-      await fs.writeFile(
-        path.join(TEST_DIR, 'package.json'),
-        JSON.stringify(pkgJson, null, 2),
-      );
+      await fs.writeFile(path.join(TEST_DIR, 'package.json'), JSON.stringify(pkgJson, null, 2));
 
       const result = await executeFindDeps(TEST_DIR);
 

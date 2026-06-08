@@ -63,6 +63,146 @@
       "source": "community",
       "version": "0.1.0",
       "installedAt": "2026-06-05T00:19:45Z"
+    },
+    "github": {
+      "name": "Github",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=github",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:23:41Z"
+    },
+    "summarize": {
+      "name": "Summarize",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=summarize",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:23:42Z"
+    },
+    "tavily-search": {
+      "name": "Tavily Web Search",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=tavily-search",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:23:44Z"
+    },
+    "brave-search": {
+      "name": "Brave Search",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=brave-search",
+      "source": "community",
+      "version": "1.0.1",
+      "installedAt": "2026-06-05T00:23:45Z"
+    },
+    "baidu-search": {
+      "name": "baidu web search",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=baidu-search",
+      "source": "community",
+      "version": "1.1.0",
+      "installedAt": "2026-06-05T00:23:46Z"
+    },
+    "humanizer": {
+      "name": "Humanizer",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=humanizer",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:23:47Z"
+    },
+    "weather": {
+      "name": "Weather",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=weather",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:23:48Z"
+    },
+    "youtube-watcher": {
+      "name": "YouTube Watcher",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=youtube-watcher",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:23:50Z"
+    },
+    "notion": {
+      "name": "Notion",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=notion",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:23:51Z"
+    },
+    "obsidian": {
+      "name": "Obsidian",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=obsidian",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:23:52Z"
+    },
+    "frontend-design": {
+      "name": "Frontend Design",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=frontend-design",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:23:53Z"
+    },
+    "api-gateway": {
+      "name": "API Gateway",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=api-gateway",
+      "source": "community",
+      "version": "1.0.54",
+      "installedAt": "2026-06-05T00:23:57Z"
+    },
+    "gmail": {
+      "name": "Gmail",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=gmail",
+      "source": "community",
+      "version": "1.0.6",
+      "installedAt": "2026-06-05T00:23:59Z"
+    },
+    "slack": {
+      "name": "Slack",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=slack",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:24:00Z"
+    },
+    "trello": {
+      "name": "Trello",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=trello",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:24:01Z"
+    },
+    "auto-updater": {
+      "name": "Auto-Updater Skill",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=auto-updater",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:24:02Z"
+    },
+    "openai-whisper": {
+      "name": "Openai Whisper",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=openai-whisper",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:24:03Z"
+    },
+    "video-frames": {
+      "name": "Video Frames",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=video-frames",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:24:04Z"
+    },
+    "stock-analysis": {
+      "name": "Stock Analysis",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=stock-analysis",
+      "source": "community",
+      "version": "6.2.0",
+      "installedAt": "2026-06-05T00:24:06Z"
+    },
+    "mcporter": {
+      "name": "Mcporter",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=mcporter",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-05T00:24:07Z"
     }
   }
 }

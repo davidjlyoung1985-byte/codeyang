@@ -2,8 +2,9 @@
  * QtMigrationTool — Scan a Qt project for deprecated Qt5 APIs that need Qt6 migration.
  * Covers 30+ common API changes. Each finding includes the file, line, and migration advice.
  */
-import { readdir, readFile } from 'node:fs/promises';
-import { join, relative, extname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { relative, extname } from 'node:path';
+import { collectFiles, SOURCE_EXTS, QML_EXTS } from '../shared.js';
 
 interface MigrationFinding {
   file: string;
@@ -377,12 +378,10 @@ const RULES: MigrationRule[] = [
 
 // ─── Scanner ─────────────────────────────────────────────────────────────────
 
-const SOURCE_EXTS = new Set(['.cpp', '.h', '.hpp', '.cxx', '.cc']);
-const QML_EXTS = new Set(['.qml']);
-
 export async function executeQtMigration(cwd?: string): Promise<string> {
   const base = cwd || process.cwd();
-  const files = await collectFiles(base);
+  const allExts = new Set([...SOURCE_EXTS, ...QML_EXTS]);
+  const files = await collectFiles(base, { extensions: allExts });
   const findings: MigrationFinding[] = [];
 
   for (const file of files) {
@@ -490,34 +489,4 @@ export async function executeQtMigration(cwd?: string): Promise<string> {
   }
 
   return lines.join('\n');
-}
-
-async function collectFiles(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist', '3rdparty', 'third_party']);
-
-  async function walk(d: string) {
-    let entries;
-    try {
-      entries = await readdir(d, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !skip.has(entry.name)) {
-          await walk(full);
-        }
-      } else if (entry.isFile()) {
-        const ext = extname(entry.name).toLowerCase();
-        if (SOURCE_EXTS.has(ext) || QML_EXTS.has(ext)) {
-          results.push(full);
-        }
-      }
-    }
-  }
-
-  await walk(dir);
-  return results;
 }

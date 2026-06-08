@@ -11,7 +11,7 @@ export async function executeHttpRequest(
   url: string,
   method: Method = 'GET',
   headers?: Record<string, string>,
-  body?: any,
+  body?: unknown,
   timeout = 30000,
 ): Promise<string> {
   try {
@@ -36,16 +36,21 @@ export async function executeHttpRequest(
     };
 
     return JSON.stringify(result, null, 2);
-  } catch (err: any) {
-    if (err.response) {
-      return JSON.stringify({
-        error: 'HTTP Error',
-        status: err.response.status,
-        statusText: err.response.statusText,
-        data: err.response.data,
-      }, null, 2);
+  } catch (err) {
+    const axiosErr = err as { response?: { status: number; statusText: string; data: unknown }; message?: string };
+    if (axiosErr.response) {
+      return JSON.stringify(
+        {
+          error: 'HTTP Error',
+          status: axiosErr.response.status,
+          statusText: axiosErr.response.statusText,
+          data: axiosErr.response.data,
+        },
+        null,
+        2,
+      );
     }
-    const msg = err.message || String(err);
+    const msg = axiosErr.message || String(err);
     return `Error: ${msg}`;
   }
 }
@@ -53,11 +58,7 @@ export async function executeHttpRequest(
 /**
  * Download file from URL to local path
  */
-export async function executeDownloadFile(
-  url: string,
-  destPath: string,
-  timeout = 60000,
-): Promise<string> {
+export async function executeDownloadFile(url: string, destPath: string, timeout = 60000): Promise<string> {
   try {
     const absPath = path.resolve(destPath);
     const dir = path.dirname(absPath);
@@ -83,8 +84,9 @@ export async function executeDownloadFile(
     const stats = await fs.stat(absPath);
 
     return `Downloaded: ${url}\nSaved to: ${absPath}\nSize: ${stats.size} bytes`;
-  } catch (err: any) {
-    const msg = err.message || String(err);
+  } catch (err) {
+    const axiosErr = err as { message?: string };
+    const msg = axiosErr.message || String(err);
     return `Error downloading file: ${msg}`;
   }
 }
@@ -116,21 +118,30 @@ export async function executeUploadFile(
       timeout,
     });
 
-    return JSON.stringify({
-      status: response.status,
-      statusText: response.statusText,
-      data: response.data,
-    }, null, 2);
-  } catch (err: any) {
-    if (err.response) {
-      return JSON.stringify({
-        error: 'Upload Error',
-        status: err.response.status,
-        statusText: err.response.statusText,
-        data: err.response.data,
-      }, null, 2);
+    return JSON.stringify(
+      {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+      },
+      null,
+      2,
+    );
+  } catch (err) {
+    const axiosErr = err as { response?: { status: number; statusText: string; data: unknown }; message?: string };
+    if (axiosErr.response) {
+      return JSON.stringify(
+        {
+          error: 'Upload Error',
+          status: axiosErr.response.status,
+          statusText: axiosErr.response.statusText,
+          data: axiosErr.response.data,
+        },
+        null,
+        2,
+      );
     }
-    const msg = err.message || String(err);
+    const msg = axiosErr.message || String(err);
     return `Error uploading file: ${msg}`;
   }
 }
@@ -141,7 +152,7 @@ export async function executeUploadFile(
 export async function executeApiCall(
   url: string,
   method: Method = 'GET',
-  body?: any,
+  body?: unknown,
   headers?: Record<string, string>,
   timeout = 30000,
 ): Promise<string> {
@@ -162,34 +173,44 @@ export async function executeApiCall(
 
     const response = await axios(config);
 
-    return JSON.stringify({
-      success: true,
-      status: response.status,
-      data: response.data,
-    }, null, 2);
-  } catch (err: any) {
-    if (err.response) {
-      return JSON.stringify({
-        success: false,
-        status: err.response.status,
-        error: err.response.data,
-      }, null, 2);
+    return JSON.stringify(
+      {
+        success: true,
+        status: response.status,
+        data: response.data,
+      },
+      null,
+      2,
+    );
+  } catch (err) {
+    const axiosErr = err as { response?: { status: number; data: unknown }; message?: string };
+    if (axiosErr.response) {
+      return JSON.stringify(
+        {
+          success: false,
+          status: axiosErr.response.status,
+          error: axiosErr.response.data,
+        },
+        null,
+        2,
+      );
     }
-    const msg = err.message || String(err);
-    return JSON.stringify({
-      success: false,
-      error: msg,
-    }, null, 2);
+    const msg = axiosErr.message || String(err);
+    return JSON.stringify(
+      {
+        success: false,
+        error: msg,
+      },
+      null,
+      2,
+    );
   }
 }
 
 /**
  * Check if URL is accessible and return status info
  */
-export async function executeCheckUrl(
-  url: string,
-  timeout = 10000,
-): Promise<string> {
+export async function executeCheckUrl(url: string, timeout = 10000): Promise<string> {
   try {
     const startTime = Date.now();
     const response = await axios.head(url, {
@@ -207,8 +228,9 @@ export async function executeCheckUrl(
       `Server: ${response.headers['server'] || 'N/A'}`,
       `Accessible: ${response.status >= 200 && response.status < 400 ? 'Yes' : 'No'}`,
     ].join('\n');
-  } catch (err: any) {
-    const msg = err.message || String(err);
+  } catch (err) {
+    const axiosErr = err as { message?: string };
+    const msg = axiosErr.message || String(err);
     return `URL check failed: ${msg}`;
   }
 }
@@ -238,8 +260,8 @@ export function executeParseUrl(urlString: string): string {
       `Query Parameters: ${Object.keys(params).length}`,
       ...Object.entries(params).map(([key, value]) => `  - ${key}: ${value}`),
     ].join('\n');
-  } catch (err: any) {
-    const msg = err.message || String(err);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     return `Error parsing URL: ${msg}`;
   }
 }

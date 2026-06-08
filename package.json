@@ -1,7 +1,7 @@
 {
   "name": "codeyang",
-  "version": "0.4.0",
-  "description": "Terminal-based AI coding agent powered by Claude",
+  "version": "0.6.0",
+  "description": "Terminal-based AI coding agent with 60+ tools, MCP support, and session persistence",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,6 +17,14 @@
     "node": ">=18"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davidjlyoung1985-byte/codeyang.git"
+  },
+  "homepage": "https://github.com/davidjlyoung1985-byte/codeyang#readme",
+  "bugs": {
+    "url": "https://github.com/davidjlyoung1985-byte/codeyang/issues"
+  },
   "scripts": {
     "build": "tsup --config tsup.config.ts",
     "dev": "tsup src/index.ts --format esm --clean --sourcemap --watch --outDir dist",
@@ -24,6 +32,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm run build",
     "lint": "eslint src/ --ext .ts",
     "lint:fix": "eslint src/ --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -43,12 +52,12 @@
     "execa": "^9.3.0",
     "fast-xml-parser": "^5.8.0",
     "form-data": "^4.0.5",
-    "jiti": "^2.7.0",
     "openai": "^6.42.0",
     "picocolors": "^1.1.0",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@types/babel__traverse": "^7.28.0",
     "@types/node": "^25.9.1",
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.1",

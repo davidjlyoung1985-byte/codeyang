@@ -1351,15 +1351,116 @@ function executeQtThread(cwd) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Memory
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const MEMORY_DIR = path.join(os.homedir(), '.codeyang', 'memory');
+
+async function ensureMemoryDir() {
+  await fs.promises.mkdir(MEMORY_DIR, { recursive: true });
+}
+
+function sanitizeKey(key) {
+  return key.toLowerCase().replace(/[^a-z0-9_-]/g, '_').slice(0, 100);
+}
+
+const crypto = require('crypto');
+
+async function executeMemoryTool(name, args) {
+  await ensureMemoryDir();
+
+  const tools_ = {
+    Remember: async () => {
+      const key = String(args.key || '').trim();
+      const value = String(args.value || '').trim();
+      const type = ['fact', 'preference', 'project', 'instruction', 'context'].includes(args.type) ? args.type : 'fact';
+      if (!key || !value) return '{"error":"key and value are required"}';
+      const id = Date.now().toString(36) + '-' + crypto.randomUUID().slice(0, 8);
+      const now = new Date().toISOString();
+      const mem = { id, key: sanitizeKey(key), value, type, createdAt: now, updatedAt: now };
+      await fs.promises.writeFile(path.join(MEMORY_DIR, id + '.json'), JSON.stringify(mem, null, 2));
+      return JSON.stringify({ id: mem.id, key: mem.key, type: mem.type });
+    },
+    Recall: async () => {
+      await ensureMemoryDir();
+      const id = String(args.id || '').trim();
+      const query = String(args.query || '').trim();
+      let files;
+      try { files = await fs.promises.readdir(MEMORY_DIR); } catch { return '[]'; }
+      const all = [];
+      for (const f of files) {
+        if (!f.endsWith('.json')) continue;
+        try {
+          const data = JSON.parse(await fs.promises.readFile(path.join(MEMORY_DIR, f), 'utf-8'));
+          all.push(data);
+        } catch {}
+      }
+
+      if (id) {
+        const found = all.find(function (m) { return m.id === id; });
+        return found ? JSON.stringify(found) : '{"error":"memory not found"}';
+      }
+      if (query) {
+        const q = query.toLowerCase();
+        const filtered = all.filter(function (m) { return m.key.includes(q) || m.value.toLowerCase().includes(q); });
+        return JSON.stringify(filtered);
+      }
+      return JSON.stringify(all);
+    },
+    Forget: async () => {
+      const key = String(args.key || args.id || '').trim();
+      if (!key) return '{"error":"key or id is required"}';
+      try {
+        await fs.promises.unlink(path.join(MEMORY_DIR, key + '.json'));
+        return JSON.stringify({ deleted: true });
+      } catch {}
+      // Try to find by key
+      let files;
+      try { files = await fs.promises.readdir(MEMORY_DIR); } catch { return '{"deleted":false}'; }
+      for (const f of files) {
+        if (!f.endsWith('.json')) continue;
+        try {
+          const data = JSON.parse(await fs.promises.readFile(path.join(MEMORY_DIR, f), 'utf-8'));
+          if (data.key === sanitizeKey(key)) {
+            await fs.promises.unlink(path.join(MEMORY_DIR, f));
+            return JSON.stringify({ deleted: true, key: data.key });
+          }
+        } catch {}
+      }
+      return '{"deleted":false}';
+    },
+    ListMemories: async () => {
+      await ensureMemoryDir();
+      const type = String(args.type || '').trim();
+      let files;
+      try { files = await fs.promises.readdir(MEMORY_DIR); } catch { return '[]'; }
+      const all = [];
+      for (const f of files) {
+        if (!f.endsWith('.json')) continue;
+        try {
+          const data = JSON.parse(await fs.promises.readFile(path.join(MEMORY_DIR, f), 'utf-8'));
+          all.push(data);
+        } catch {}
+      }
+      const filtered = type ? all.filter(function (m) { return m.type === type; }) : all;
+      return JSON.stringify(filtered);
+    },
+  };
+
+  const fn = tools_[name];
+  if (!fn) return '{"error":"unknown memory tool: ' + name + '"}';
+  return await fn();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Task Sub-Agent
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const https = require('https');
 const http = require('http');
 
-/** Get all tool schemas as a flat array for the Anthropic API */
-function getToolSchemasForAgent() {
-  return [
+function getToolSchemasForAgent(isAnthropic) {
+  const schemas = [
     { name: 'Bash', description: 'Execute a shell command.', input_schema: { type: 'object', properties: { command: { type: 'string' }, cwd: { type: 'string' } }, required: ['command'] } },
     { name: 'Read', description: 'Read a file or list a directory.', input_schema: { type: 'object', properties: { filePath: { type: 'string' }, offset: { type: 'number' }, limit: { type: 'number' } }, required: ['filePath'] } },
     { name: 'Write', description: 'Write content to a file.', input_schema: { type: 'object', properties: { filePath: { type: 'string' }, content: { type: 'string' } }, required: ['filePath', 'content'] } },
@@ -1367,28 +1468,34 @@ function getToolSchemasForAgent() {
     { name: 'Glob', description: 'Search for files matching a glob pattern.', input_schema: { type: 'object', properties: { pattern: { type: 'string' }, root: { type: 'string' } }, required: ['pattern'] } },
     { name: 'Grep', description: 'Search file contents for a regex pattern.', input_schema: { type: 'object', properties: { pattern: { type: 'string' }, include: { type: 'string' }, path: { type: 'string' } }, required: ['pattern'] } },
   ];
+
+  // Anthropic uses a different tool format
+  if (!isAnthropic) {
+    return schemas;
+  }
+
+  return schemas.map(function (t) {
+    return {
+      name: t.name,
+      description: t.description,
+      input_schema: t.input_schema,
+    };
+  });
 }
 
 const SUBAGENT_SYSTEM =
   'You are a sub-agent in an AI coding tool. Execute the assigned task using available tools. ' +
   'Stay focused. Return a concise, structured result. Maximum 10 turns.';
 
-/**
- * Execute a sub-agent task.
- * @param {string} apiKey
- * @param {string} model
- * @param {string} description - short task description
- * @param {string} prompt - detailed task prompt
- * @param {string} cwd - working directory
- * @returns {Promise<string>}
- */
 async function executeSubAgent(apiKey, model, description, prompt, cwd) {
   const dir = cwd || process.cwd();
-  const messages = [
-    { role: 'user', content: 'Task: ' + prompt + '\n\nWorking directory: ' + dir + '\n\nUse tools to read files, search, and run commands. Return findings concisely.' },
-  ];
+  const isAnthropic = model && model.includes('claude');
 
-  const tools = getToolSchemasForAgent();
+  const msg = 'Task: ' + prompt + '\n\nWorking directory: ' + dir + '\n\nUse tools to read files, search, and run commands. Return findings concisely.';
+  const messages = isAnthropic
+    ? [{ role: 'user', content: msg }]
+    : [{ role: 'system', content: SUBAGENT_SYSTEM }, { role: 'user', content: msg }];
+
   const results = [];
   results.push('## Sub-Agent: ' + description + '\n');
   results.push('Working directory: ' + dir + '\n');
@@ -1396,34 +1503,56 @@ async function executeSubAgent(apiKey, model, description, prompt, cwd) {
   const maxTurns = 10;
 
   for (let turn = 0; turn < maxTurns; turn++) {
-    const resp = await anthropicRequest(apiKey, model, SUBAGENT_SYSTEM, messages, tools);
+    let resp;
+    if (isAnthropic) {
+      resp = await anthropicRequest(apiKey, model, SUBAGENT_SYSTEM, messages, getToolSchemasForAgent(true));
+    } else {
+      resp = await openaiRequest(apiKey, model, messages, getToolSchemasForAgent(false));
+    }
 
-    const blocks = resp.content || [];
     let textOutput = '';
     const toolCalls = [];
 
-    for (const b of blocks) {
-      if (b.type === 'text') {
-        textOutput += (b.text || '');
-      } else if (b.type === 'tool_use') {
-        toolCalls.push({ id: b.id, name: b.name, input: b.input || {} });
+    if (isAnthropic) {
+      const blocks = resp.content || [];
+      for (const b of blocks) {
+        if (b.type === 'text') textOutput += (b.text || '');
+        else if (b.type === 'tool_use') toolCalls.push({ id: b.id, name: b.name, input: b.input || {} });
+      }
+    } else {
+      const choice = resp.choices && resp.choices[0];
+      if (choice) {
+        textOutput = choice.message.content || '';
+        if (choice.message.tool_calls) {
+          for (const tc of choice.message.tool_calls) {
+            let input = {};
+            try { input = JSON.parse(tc.function.arguments || '{}'); } catch {}
+            toolCalls.push({ id: tc.id, name: tc.function.name, input });
+          }
+        }
       }
     }
 
     // Build assistant content
-    const assistantContent = blocks
-      .filter(function (b) { return b.type === 'text' || b.type === 'tool_use'; })
-      .map(function (b) {
-        if (b.type === 'text') return { type: 'text', text: b.text || '' };
-        return { type: 'tool_use', id: b.id, name: b.name, input: JSON.parse(JSON.stringify(b.input || {})) };
-      });
-    messages.push({ role: 'assistant', content: assistantContent });
+    const assistantContent = isAnthropic
+      ? resp.content.filter((b) => b.type === 'text' || b.type === 'tool_use')
+      : [];
+
+    if (!isAnthropic) {
+      const ac = [];
+      if (textOutput) ac.push({ type: 'text', text: textOutput });
+      for (const tc of toolCalls) {
+        ac.push({ type: 'tool_use', id: tc.id, name: tc.name, input: JSON.parse(JSON.stringify(tc.input)) });
+      }
+      messages.push({ role: 'assistant', content: ac });
+    } else {
+      messages.push({ role: 'assistant', content: assistantContent });
+    }
 
     if (textOutput) results.push(textOutput);
 
     if (toolCalls.length === 0) break;
 
-    // Execute tools
     const toolResults = [];
     for (const tc of toolCalls) {
       const tName = tc.name;
@@ -1454,16 +1583,15 @@ async function executeSubAgent(apiKey, model, description, prompt, cwd) {
   return results.join('\n');
 }
 
-/** Make a non-streaming Anthropic API request. */
 function anthropicRequest(apiKey, model, system, messages, tools) {
   return new Promise(function (resolve, reject) {
     const body = JSON.stringify({
-      model: model,
+      model,
       max_tokens: 4096,
       temperature: 0.5,
-      system: system,
-      messages: messages,
-      tools: tools,
+      system,
+      messages,
+      tools,
     });
 
     const url = new URL('https://api.anthropic.com/v1/messages');
@@ -1504,6 +1632,52 @@ function anthropicRequest(apiKey, model, system, messages, tools) {
   });
 }
 
+function openaiRequest(apiKey, model, messages, tools) {
+  return new Promise(function (resolve, reject) {
+    const body = JSON.stringify({
+      model,
+      max_tokens: 4096,
+      temperature: 0.5,
+      messages,
+      tools: tools,
+    });
+
+    const url = new URL('https://api.deepseek.com/v1/chat/completions');
+    const opts = {
+      hostname: url.hostname,
+      port: url.port || 443,
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+
+    const req = https.request(opts, function (res) {
+      var data = '';
+      res.on('data', function (c) { data += c; });
+      res.on('end', function () {
+        try {
+          const json = JSON.parse(data);
+          if (res.statusCode >= 400) {
+            reject(new Error('Sub-agent API error: HTTP ' + res.statusCode + ' — ' + (json.error && json.error.message ? json.error.message : 'unknown')));
+          } else {
+            resolve(json);
+          }
+        } catch (e) {
+          reject(new Error('Sub-agent: failed to parse API response'));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Exports
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1517,6 +1691,7 @@ module.exports = {
   executeGrep,
   executeTodoWrite,
   executeWebFetch,
+  executeMemoryTool,
   executeMathSolve,
   executeMathPlot,
   executeMathExplain,

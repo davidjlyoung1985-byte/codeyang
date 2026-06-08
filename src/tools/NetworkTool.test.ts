@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { existsSync, PassThrough } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { Readable } from 'node:stream';
 
 // Mock axios before importing NetworkTool

@@ -331,13 +331,15 @@ signals:
   });
 
   it('QtGraphics analyzes painter code', async () => {
-    await createFile('widget.cpp', 
+    await createFile(
+      'widget.cpp',
       'void MyWidget::paintEvent(QPaintEvent *) {\n' +
-      '    QPainter p(this);\n' +
-      '    p.setPen(Qt::red);\n' +
-      '    p.drawText(10, 10, "Hello");\n' +
-      '    p.end();\n' +
-      '}');
+        '    QPainter p(this);\n' +
+        '    p.setPen(Qt::red);\n' +
+        '    p.drawText(10, 10, "Hello");\n' +
+        '    p.end();\n' +
+        '}',
+    );
     const tools = createQtTools(ctx);
     const gfxTool = tools.find((t) => t.name === 'QtGraphics');
     expect(gfxTool).toBeDefined();
@@ -347,7 +349,8 @@ signals:
   });
 
   it('QtModelView analyzes model/view code', async () => {
-    await createFile('mymodel.h',
+    await createFile(
+      'mymodel.h',
       `class MyModel : public QAbstractItemModel {
     Q_OBJECT
 public:
@@ -356,7 +359,8 @@ public:
         return QVariant();
     }
     void addRow() { beginInsertRows(QModelIndex(), 0, 0); }
-};`);
+};`,
+    );
     const tools = createQtTools(ctx);
     const mvTool = tools.find((t) => t.name === 'QtModelView');
     expect(mvTool).toBeDefined();
@@ -365,7 +369,8 @@ public:
   });
 
   it('QtThread detects QThread subclass anti-pattern', async () => {
-    await createFile('worker.h',
+    await createFile(
+      'worker.h',
       `class Worker : public QThread {
     Q_OBJECT
     void run() override {
@@ -373,7 +378,8 @@ public:
     }
 signals:
     void resultReady();
-};`);
+};`,
+    );
     const tools = createQtTools(ctx);
     const threadTool = tools.find((t) => t.name === 'QtThread');
     expect(threadTool).toBeDefined();

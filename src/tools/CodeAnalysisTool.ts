@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
-import { parse as babelParse } from '@babel/parser';
+import { parse as babelParse, type ParserPlugin } from '@babel/parser';
 import traverse from '@babel/traverse';
 import { parse as acornParse } from 'acorn';
 import * as acornWalk from 'acorn-walk';
@@ -22,7 +22,7 @@ export async function executeParseAst(
 
     const code = await fs.readFile(absPath, 'utf-8');
 
-    const plugins: any[] = ['jsx'];
+    const plugins: ParserPlugin[] = ['jsx'];
     if (language === 'typescript') {
       plugins.push('typescript');
     }
@@ -38,10 +38,10 @@ export async function executeParseAst(
       program: {
         type: ast.program.type,
         bodyLength: ast.program.body.length,
-        statements: ast.program.body.map((node: any) => ({
-          type: node.type,
-          start: node.start,
-          end: node.end,
+        statements: ast.program.body.map((node: unknown) => ({
+          type: (node as { type: string }).type,
+          start: (node as { start?: number }).start,
+          end: (node as { end?: number }).end,
         })),
       },
     };
@@ -68,7 +68,7 @@ export async function executeAnalyzeCode(
 
     const code = await fs.readFile(absPath, 'utf-8');
 
-    const plugins: any[] = ['jsx'];
+    const plugins: ParserPlugin[] = ['jsx'];
     if (language === 'typescript') {
       plugins.push('typescript');
     }
@@ -87,14 +87,17 @@ export async function executeAnalyzeCode(
     };
 
     traverse(ast, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ImportDeclaration(path: any) {
         analysis.imports.push(path.node.source.value);
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ExportNamedDeclaration(path: any) {
         if (path.node.declaration) {
           if (path.node.declaration.type === 'FunctionDeclaration') {
             analysis.exports.push(path.node.declaration.id?.name || 'anonymous');
           } else if (path.node.declaration.type === 'VariableDeclaration') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             path.node.declaration.declarations.forEach((d: any) => {
               if (d.id.name) {
                 analysis.exports.push(d.id.name);
@@ -103,6 +106,7 @@ export async function executeAnalyzeCode(
           }
         }
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       FunctionDeclaration(path: any) {
         analysis.functions.push({
           name: path.node.id?.name || 'anonymous',
@@ -110,6 +114,7 @@ export async function executeAnalyzeCode(
           params: path.node.params.length,
         });
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ArrowFunctionExpression(path: any) {
         if (path.parent.type === 'VariableDeclarator' && path.parent.id.name) {
           analysis.functions.push({
@@ -119,7 +124,9 @@ export async function executeAnalyzeCode(
           });
         }
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ClassDeclaration(path: any) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const methods = path.node.body.body.filter((n: any) => n.type === 'ClassMethod').length;
         analysis.classes.push({
           name: path.node.id?.name || 'anonymous',
@@ -127,7 +134,9 @@ export async function executeAnalyzeCode(
           methods,
         });
       },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       VariableDeclaration(path: any) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         path.node.declarations.forEach((d: any) => {
           if (d.id.name) {
             analysis.variables.push({
@@ -186,7 +195,6 @@ export async function executeComplexity(filePath: string): Promise<string> {
 
     let complexity = 0;
     let maxDepth = 0;
-    let currentDepth = 0;
     let functions = 0;
     let branches = 0;
 
@@ -194,12 +202,14 @@ export async function executeComplexity(filePath: string): Promise<string> {
       ast,
       { depth: 0 },
       {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         FunctionDeclaration(node: any, state: any, c: any) {
           functions++;
           const newState = { depth: state.depth + 1 };
           if (newState.depth > maxDepth) maxDepth = newState.depth;
           c(node.body, newState);
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ArrowFunctionExpression(node: any, state: any, c: any) {
           functions++;
           const newState = { depth: state.depth + 1 };
@@ -208,29 +218,36 @@ export async function executeComplexity(filePath: string): Promise<string> {
             c(node.body, newState);
           }
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         IfStatement(node: any, state: any, c: any) {
           complexity++;
           branches++;
           c(node.consequent, state);
           if (node.alternate) c(node.alternate, state);
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         WhileStatement(node: any, state: any, c: any) {
           complexity++;
           c(node.body, state);
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ForStatement(node: any, state: any, c: any) {
           complexity++;
           c(node.body, state);
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         SwitchCase(node: any, state: any, c: any) {
           complexity++;
           branches++;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           node.consequent.forEach((n: any) => c(n, state));
         },
-        ConditionalExpression(node: any) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ConditionalExpression(_node: any) {
           complexity++;
           branches++;
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         LogicalExpression(node: any) {
           if (node.operator === '&&' || node.operator === '||') {
             complexity++;
@@ -271,10 +288,7 @@ function getComplexityRating(complexity: number, functions: number): string {
 /**
  * Run ESLint on a file
  */
-export async function executeLint(
-  filePath: string,
-  fix = false,
-): Promise<string> {
+export async function executeLint(filePath: string, fix = false): Promise<string> {
   try {
     const absPath = path.resolve(filePath);
     if (!existsSync(absPath)) {
@@ -330,17 +344,11 @@ export async function executeLint(
       return `✓ No issues found in ${filePath}`;
     }
 
-    const output = [
-      `File: ${filePath}`,
-      `Errors: ${result.errorCount}, Warnings: ${result.warningCount}`,
-      ``,
-    ];
+    const output = [`File: ${filePath}`, `Errors: ${result.errorCount}, Warnings: ${result.warningCount}`, ``];
 
     result.messages.forEach((msg) => {
       const severity = msg.severity === 2 ? 'Error' : 'Warning';
-      output.push(
-        `${severity} at line ${msg.line}:${msg.column}`,
-      );
+      output.push(`${severity} at line ${msg.line}:${msg.column}`);
       output.push(`  ${msg.message}`);
       output.push(`  Rule: ${msg.ruleId || 'unknown'}`);
       output.push('');
@@ -412,7 +420,7 @@ export async function executeCountLines(filePath: string): Promise<string> {
     const content = await fs.readFile(absPath, 'utf-8');
     const lines = content.split('\n');
 
-    let totalLines = lines.length;
+    const totalLines = lines.length;
     let codeLines = 0;
     let commentLines = 0;
     let blankLines = 0;

@@ -9,10 +9,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sa
 
 #setup-banner { background: #0e639c; color: #fff; padding: 10px 16px; font-size: 13px; text-align: center; display: none; }
 #setup-banner.visible { display: block; }
-#setup-area { padding: 16px; border-bottom: 1px solid #333; background: #252526; display: none; gap: 8px; }
+#setup-area { padding: 16px; border-bottom: 1px solid #333; background: #252526; display: none; gap: 8px; flex-direction: column; }
 #setup-area.visible { display: flex; }
-#setup-area input { flex: 1; background: #3c3c3c; color: #d4d4d4; border: 1px solid #555; border-radius: 6px; padding: 8px 12px; font-family: "Cascadia Code", Consolas, monospace; font-size: 13px; outline: none; }
-#setup-area input:focus { border-color: #0e639c; }
+.setup-row { display: flex; gap: 8px; align-items: center; }
+.setup-row label { min-width: 100px; font-size: 13px; color: #d4d4d4; }
+#setup-area input, #setup-area select {
+  flex: 1; background: #3c3c3c; color: #d4d4d4; border: 1px solid #555; border-radius: 6px;
+  padding: 8px 12px; font-family: "Cascadia Code", Consolas, monospace; font-size: 13px; outline: none;
+}
+#setup-area input:focus, #setup-area select:focus { border-color: #0e639c; }
 #setup-area button { background: #0e639c; color: #fff; border: none; border-radius: 6px; padding: 8px 20px; font-size: 13px; cursor: pointer; white-space: nowrap; }
 #setup-area button:hover { background: #1177bb; }
 #setup-area button:disabled { opacity: 0.5; cursor: default; }
@@ -60,21 +65,25 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sa
 </style>
 </head>
 <body>
-<div id="setup-banner">Configuration Required. Enter API settings below to get started.</div>
-<div id="setup-area" style="flex-direction: column; gap: 12px;">
-  <div style="display: flex; gap: 8px; align-items: center;">
-    <label style="min-width: 80px; font-size: 13px;">API Base URL:</label>
-    <input type="text" id="api-base-input" placeholder="https://api.anthropic.com" style="flex: 1;" />
+<div id="setup-banner">Configuration Required — enter API settings below</div>
+<div id="setup-area" style="display:flex;">
+  <div class="setup-row">
+    <label>API Base URL:</label>
+    <input type="text" id="api-base-input" value="https://api.deepseek.com/v1" />
   </div>
-  <div style="display: flex; gap: 8px; align-items: center;">
-    <label style="min-width: 80px; font-size: 13px;">API Key:</label>
-    <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="flex: 1;" />
+  <div class="setup-row">
+    <label>Model:</label>
+    <input type="text" id="api-model-input" value="deepseek-chat" placeholder="deepseek-chat, claude-sonnet-4-20250514..." />
   </div>
-  <div style="display: flex; justify-content: flex-end;">
+  <div class="setup-row">
+    <label>API Key:</label>
+    <input type="password" id="api-key-input" placeholder="Paste your API key..." />
+  </div>
+  <div class="setup-row" style="justify-content: flex-end;">
     <button id="save-key-btn" onclick="saveApiKey()">Connect</button>
   </div>
 </div>
-<div id="setup-hint">Default API base: https://api.anthropic.com | Get your key at: https://console.anthropic.com/</div>
+<div id="setup-hint" style="display:block;">Default: DeepSeek (https://api.deepseek.com/v1) · For Anthropic, change URL to https://api.anthropic.com and model to claude-sonnet-4-20250514</div>
 <div id="messages"></div>
 <div id="loading"><span class="spinner"></span> CodeYang is thinking...</div>
 <div id="error-banner"></div>
@@ -99,6 +108,7 @@ var setupBanner = document.getElementById('setup-banner');
 var setupHint = document.getElementById('setup-hint');
 var apiKeyInput = document.getElementById('api-key-input');
 var apiBaseInput = document.getElementById('api-base-input');
+var apiModelInput = document.getElementById('api-model-input');
 var assistantMsgDiv = null;
 var hasApiKey = false;
 var questionArea = document.getElementById('question-area');
@@ -113,18 +123,18 @@ window.addEventListener('message', function(event) {
   switch (msg.type) {
     case 'apiKeySet':
       hasApiKey = true;
-      setupArea.classList.remove('visible');
-      setupBanner.classList.remove('visible');
-      setupHint.classList.remove('visible');
+      setupArea.style.display = 'none';
+      setupBanner.style.display = 'none';
+      setupHint.style.display = 'none';
       addSystemMessage('Connected successfully. You can now start chatting!');
       input.focus();
       break;
 
     case 'showSetup':
       hasApiKey = false;
-      setupArea.classList.add('visible');
-      setupBanner.classList.add('visible');
-      setupHint.classList.add('visible');
+      setupArea.style.display = 'flex';
+      setupBanner.style.display = 'block';
+      setupHint.style.display = 'block';
       break;
 
     case 'addMessage':
@@ -171,7 +181,6 @@ window.addEventListener('message', function(event) {
       assistantMsgDiv = null;
       errorBanner.textContent = msg.message;
       errorBanner.style.display = 'block';
-      // Keep error visible longer
       setTimeout(function() { errorBanner.style.display = 'none'; }, 15000);
       break;
   }
@@ -222,19 +231,19 @@ function addToolResult(output, isError) {
 
 function saveApiKey() {
   var key = apiKeyInput.value.trim();
-  var baseUrl = apiBaseInput.value.trim() || 'https://api.anthropic.com';
+  var baseUrl = apiBaseInput.value.trim() || 'https://api.deepseek.com/v1';
+  var model = apiModelInput.value.trim() || 'deepseek-chat';
   if (!key) {
     addSystemMessage('Please enter your API key.');
     return;
   }
   apiKeyInput.value = '';
-  apiBaseInput.value = '';
-  vscode.postMessage({ type: 'setApiKey', key: key, baseUrl: baseUrl });
+  vscode.postMessage({ type: 'setApiKey', key: key, baseUrl: baseUrl, model: model });
 }
 
 function send() {
   if (!hasApiKey) {
-    addSystemMessage('Please enter your Anthropic API key above first.');
+    addSystemMessage('Please enter your API key above first.');
     return;
   }
   var text = input.value.trim();
@@ -300,7 +309,6 @@ function renderMarkdown(md) {
   return '<p>' + md + '</p>';
 }
 
-// Signal that the webview is ready to receive messages
 vscode.postMessage({ type: 'ready' });
 </script>
 </body>

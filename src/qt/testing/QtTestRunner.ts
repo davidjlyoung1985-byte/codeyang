@@ -84,7 +84,8 @@ function parseQTestXml(xml: string): TestResult | null {
 
   // Parse failures
   const failures: Array<{ test: string; message: string; file: string; line: number }> = [];
-  const failureRegex = /<Incident\s+type="(?:fail|xpass)"[\s\S]*?<Description>[\s\S]*?<!\[CDATA\[([\s\S]*?)\]\]>[\s\S]*?<\/Description>/g;
+  const failureRegex =
+    /<Incident\s+type="(?:fail|xpass)"[\s\S]*?<Description>[\s\S]*?<!\[CDATA\[([\s\S]*?)\]\]>[\s\S]*?<\/Description>/g;
   const fileRegex = /<Incident\s+type="(?:fail|xpass)"[\s\S]*?<File>([^<]+)<\/File>[\s\S]*?<Line>(\d+)<\/Line>/g;
 
   let fm;

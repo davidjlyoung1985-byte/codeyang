@@ -6,7 +6,10 @@ export async function executeMathSolve(problem: string, type?: string): Promise<
   const p = problem.trim();
 
   // ─── Linear equation ───────────────────────────────────────────────────
-  if (type === 'linear' || /^[\d\sxX+\-*/.()=]+\s*$/.test(p) && p.includes('=') && !p.includes('^') && !p.includes('²')) {
+  if (
+    type === 'linear' ||
+    (/^[\d\sxX+\-*/.()=]+\s*$/.test(p) && p.includes('=') && !p.includes('^') && !p.includes('²'))
+  ) {
     return solveLinear(p);
   }
 
@@ -165,7 +168,10 @@ function solveQuadratic(expr: string): string {
   lines.push(`\n方程: \`${expr}\`\n`);
 
   // Clean and parse: ax² + bx + c = 0
-  const cleaned = expr.replace(/\s+/g, '').replace(/[xX]/g, 'x').replace(/²|²|\^2|\*\*2/g, '^2');
+  const cleaned = expr
+    .replace(/\s+/g, '')
+    .replace(/[xX]/g, 'x')
+    .replace(/²|²|\^2|\*\*2/g, '^2');
   lines.push(`标准形式: ${cleaned}`);
   lines.push('');
 
@@ -191,9 +197,9 @@ function solveQuadratic(expr: string): string {
   }
   if (!match) return '无法解析二次方程。请使用格式: `ax² + bx + c = 0`, 例如 `x² + 3x - 4 = 0`';
 
-  const a = match[1] ? (parseFloat(match[1]) || (match[1] === '-' ? -1 : 1)) : 1;
+  const a = match[1] ? parseFloat(match[1]) || (match[1] === '-' ? -1 : 1) : 1;
   const bRaw = match[2];
-  const b = bRaw === '+' || bRaw === '' ? 1 : bRaw === '-' ? -1 : (parseFloat(bRaw) || 0);
+  const b = bRaw === '+' || bRaw === '' ? 1 : bRaw === '-' ? -1 : parseFloat(bRaw) || 0;
   const c = parseFloat(match[3]) || 0;
 
   return solveQuadraticCore(a, b, c, lines);
@@ -357,7 +363,7 @@ function solvePythagorean(expr: string): string {
 
   // Right triangle area
   if (a && b) {
-    lines.push(`\n三角形面积 = (a × b) / 2 = ${formatNum(a * b / 2)}`);
+    lines.push(`\n三角形面积 = (a × b) / 2 = ${formatNum((a * b) / 2)}`);
   }
 
   return lines.join('\n');
@@ -406,7 +412,10 @@ function solveStats(expr: string): string {
   if (!numMatch) return '请提供数据。例如: `mean [2, 5, 8, 3, 7]`';
 
   const numStr = numMatch[1] || numMatch[2];
-  const nums = numStr.split(/[,，\s]+/).map(Number).filter((n) => !isNaN(n));
+  const nums = numStr
+    .split(/[,，\s]+/)
+    .map(Number)
+    .filter((n) => !isNaN(n));
 
   if (nums.length === 0) return '未找到有效数值。';
 
@@ -449,8 +458,11 @@ function solveStats(expr: string): string {
   let maxFreq = 0;
   const modes: number[] = [];
   for (const [n, f] of freq) {
-    if (f > maxFreq) { maxFreq = f; modes.length = 0; modes.push(n); }
-    else if (f === maxFreq) modes.push(n);
+    if (f > maxFreq) {
+      maxFreq = f;
+      modes.length = 0;
+      modes.push(n);
+    } else if (f === maxFreq) modes.push(n);
   }
   lines.push('### 众数');
   if (maxFreq <= 1) lines.push('没有众数 (所有值出现次数相同)');
@@ -487,7 +499,7 @@ function solvePercent(expr: string): string {
   if (ofMatch) {
     const pct = parseFloat(ofMatch[1]);
     const total = parseFloat(ofMatch[2]);
-    const result = total * pct / 100;
+    const result = (total * pct) / 100;
     lines.push(`${pct}% of ${total}:`);
     lines.push(`${total} × ${pct}% = ${total} × ${pct}/100`);
     lines.push(`= ${total} × ${pct / 100}`);
@@ -584,15 +596,15 @@ function solveTriangle(expr: string): string {
   const B = BMatch ? parseFloat(BMatch[1]) : undefined;
   const C = CMatch ? parseFloat(CMatch[1]) : undefined;
 
-  const deg = (d: number) => d * Math.PI / 180;
-  const rad = (r: number) => r * 180 / Math.PI;
+  const deg = (d: number) => (d * Math.PI) / 180;
+  const rad = (r: number) => (r * 180) / Math.PI;
 
   // SSS: three sides given → use law of cosines
   if (a && b && c) {
     lines.push('已知三边 (SSS), 用余弦定理:');
-    const cosA = (b*b + c*c - a*a) / (2*b*c);
-    const cosB = (a*a + c*c - b*b) / (2*a*c);
-    const cosC = (a*a + b*b - c*c) / (2*a*b);
+    const cosA = (b * b + c * c - a * a) / (2 * b * c);
+    const cosB = (a * a + c * c - b * b) / (2 * a * c);
+    const cosC = (a * a + b * b - c * c) / (2 * a * b);
     const angleA = Math.acos(Math.max(-1, Math.min(1, cosA)));
     const angleB = Math.acos(Math.max(-1, Math.min(1, cosB)));
     const angleC = Math.acos(Math.max(-1, Math.min(1, cosC)));
@@ -611,25 +623,25 @@ function solveTriangle(expr: string): string {
 
   // SAS: two sides and included angle
   if (a && b && C) {
-    const c2 = a*a + b*b - 2*a*b*Math.cos(deg(C));
+    const c2 = a * a + b * b - 2 * a * b * Math.cos(deg(C));
     const sideC = Math.sqrt(c2);
     lines.push('已知两边及夹角 (SAS):');
     lines.push(`c² = a² + b² - 2ab·cos C`);
     lines.push(`= ${a}² + ${b}² - 2×${a}×${b}×cos(${C}°)`);
-    lines.push(`= ${formatNum(a*a + b*b)} - ${formatNum(2*a*b)}×${formatNum(Math.cos(deg(C)))}`);
+    lines.push(`= ${formatNum(a * a + b * b)} - ${formatNum(2 * a * b)}×${formatNum(Math.cos(deg(C)))}`);
     lines.push(`= ${formatNum(c2)}`);
     lines.push(`c = **${formatNum(sideC)}**`);
     return lines.join('\n');
   }
   if (b && c && A) {
-    const a2 = b*b + c*c - 2*b*c*Math.cos(deg(A));
+    const a2 = b * b + c * c - 2 * b * c * Math.cos(deg(A));
     const sideA = Math.sqrt(a2);
     lines.push(`a² = ${b}² + ${c}² - 2×${b}×${c}×cos(${A}°) = ${formatNum(a2)}`);
     lines.push(`a = **${formatNum(sideA)}**`);
     return lines.join('\n');
   }
   if (a && c && B) {
-    const b2 = a*a + c*c - 2*a*c*Math.cos(deg(B));
+    const b2 = a * a + c * c - 2 * a * c * Math.cos(deg(B));
     const sideB = Math.sqrt(b2);
     lines.push(`b = **${formatNum(sideB)}**`);
     return lines.join('\n');
@@ -661,7 +673,7 @@ function solveAngleConversion(expr: string): string {
 
   if (degMatch) {
     const deg = parseFloat(degMatch[1]);
-    const rad = deg * Math.PI / 180;
+    const rad = (deg * Math.PI) / 180;
     lines.push(`${deg}° = ${formatNum(rad)} rad`);
     const f = toFraction(deg / 180);
     if (f) lines.push(`= ${f}π rad`);
@@ -669,7 +681,7 @@ function solveAngleConversion(expr: string): string {
   if (radMatch && !degMatch) {
     const num = radMatch[1] ? parseFloat(radMatch[1]) : 1;
     const rad = Math.PI / num;
-    const deg = rad * 180 / Math.PI;
+    const deg = (rad * 180) / Math.PI;
     lines.push(`π/${num} rad = ${formatNum(deg)}°`);
   }
 
@@ -678,11 +690,13 @@ function solveAngleConversion(expr: string): string {
   lines.push('| 度 | 弧度 | sin | cos | tan |');
   lines.push('|---|------|-----|-----|-----|');
   for (const angle of [0, 30, 45, 60, 90, 120, 135, 150, 180]) {
-    const r = angle * Math.PI / 180;
+    const r = (angle * Math.PI) / 180;
     const s = Math.sin(r);
     const c = Math.cos(r);
     const t = Math.abs(s) < 1e-10 ? 0 : Math.abs(c) < 1e-10 ? '∞' : formatNum(s / c);
-    lines.push(`| ${angle}° | ${angle === 0 ? '0' : angle === 90 ? 'π/2' : angle === 180 ? 'π' : angle === 45 ? 'π/4' : angle === 60 ? 'π/3' : angle === 30 ? 'π/6' : `π/${formatNum(180/angle)}`} | ${formatNum(s)} | ${formatNum(c)} | ${t} |`);
+    lines.push(
+      `| ${angle}° | ${angle === 0 ? '0' : angle === 90 ? 'π/2' : angle === 180 ? 'π' : angle === 45 ? 'π/4' : angle === 60 ? 'π/3' : angle === 30 ? 'π/6' : `π/${formatNum(180 / angle)}`} | ${formatNum(s)} | ${formatNum(c)} | ${t} |`,
+    );
   }
 
   return lines.join('\n');
@@ -699,7 +713,7 @@ function solveBasicTrig(fn: string, valueStr: string, variable?: string): string
 
   if (fnLower === 'sin') {
     const angleRad = Math.asin(value);
-    const angleDeg = angleRad * 180 / Math.PI;
+    const angleDeg = (angleRad * 180) / Math.PI;
     lines.push(`${varName} = arcsin(${value})`);
     lines.push(`= **${formatNum(angleDeg)}°** (主值, ${formatNum(angleRad)} rad)`);
     if (Math.abs(angleDeg - Math.round(angleDeg)) < 0.001) {
@@ -711,13 +725,13 @@ function solveBasicTrig(fn: string, valueStr: string, variable?: string): string
     lines.push(`tan ${varName} = ${formatNum(Math.tan(angleRad))}`);
   } else if (fnLower === 'cos') {
     const angleRad = Math.acos(value);
-    const angleDeg = angleRad * 180 / Math.PI;
+    const angleDeg = (angleRad * 180) / Math.PI;
     lines.push(`${varName} = arccos(${value})`);
     lines.push(`= **${formatNum(angleDeg)}°** (0°~180°)`);
     lines.push(`\nsin ${varName} = ${formatNum(Math.sin(angleRad))}`);
   } else if (fnLower === 'tan') {
     const angleRad = Math.atan(value);
-    const angleDeg = angleRad * 180 / Math.PI;
+    const angleDeg = (angleRad * 180) / Math.PI;
     lines.push(`${varName} = arctan(${value})`);
     lines.push(`= **${formatNum(angleDeg)}°** (主值, -90°~90°)`);
   } else {
@@ -761,7 +775,7 @@ function solveSequence(expr: string): string {
     lines.push('');
 
     // Sum
-    const Sn = n * (a1 + an) / 2;
+    const Sn = (n * (a1 + an)) / 2;
     lines.push(`**前 n 项和**: Sₙ = n(a₁ + aₙ)/2`);
     lines.push(`S${n} = ${n}×(${a1}+${an})/2 = **${Sn}**`);
     lines.push('');
@@ -776,10 +790,10 @@ function solveSequence(expr: string): string {
 
     const an = a1 * Math.pow(ratio, n - 1);
     lines.push(`**通项公式**: aₙ = a₁ × q^(n-1)`);
-    lines.push(`a${n} = ${a1} × ${ratio}^${n-1} = **${formatNum(an)}**`);
+    lines.push(`a${n} = ${a1} × ${ratio}^${n - 1} = **${formatNum(an)}**`);
     lines.push('');
 
-    const Sn = Math.abs(ratio - 1) < 1e-10 ? a1 * n : a1 * (1 - Math.pow(ratio, n)) / (1 - ratio);
+    const Sn = Math.abs(ratio - 1) < 1e-10 ? a1 * n : (a1 * (1 - Math.pow(ratio, n))) / (1 - ratio);
     lines.push(`**前 n 项和**: Sₙ = a₁(1-qⁿ)/(1-q)  (q≠1)`);
     lines.push(`S${n} = ${formatNum(Sn)}`);
     lines.push('');
@@ -809,7 +823,7 @@ function solveCoordinate(expr: string): string {
       lines.push('');
       lines.push(`d = √[(x₂-x₁)² + (y₂-y₁)²]`);
       lines.push(`= √[(${x2}-${x1})² + (${y2}-${y1})²]`);
-      lines.push(`= √[${(x2-x1)**2} + ${(y2-y1)**2}]`);
+      lines.push(`= √[${(x2 - x1) ** 2} + ${(y2 - y1) ** 2}]`);
       lines.push(`= √${formatNum(dist * dist)}`);
       lines.push(`= **${formatNum(dist)}**`);
       return lines.join('\n');

@@ -2,7 +2,7 @@
 import * as readline from 'node:readline';
 import { CliUI } from './ui/CliUI.js';
 import { Agent } from './agent/Agent.js';
-import { config, loadLocalConfig, setSessionApiKey, getMcpServers } from './agent/config.js';
+import { config, loadLocalConfig, setSessionApiKey, getMcpServers, saveApiSettings } from './agent/config.js';
 import { saveSession, listSessions, loadSession, deleteSession } from './utils/sessionStore.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
@@ -10,14 +10,51 @@ import { detectQtProject, createQtTools } from './qt/index.js';
 
 const VERSION = '0.6.0';
 
-async function promptForDeepSeekKey(): Promise<string> {
+async function promptForApiKey(): Promise<string> {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question('Enter your DeepSeek API key: ', (key) => {
+    rl.question('Enter your API key: ', (key) => {
       rl.close();
       resolve(key.trim());
     });
   });
+}
+
+/** Confirm boolean from stdin */
+async function confirmSave(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question('Save this key to config for future sessions? (y/N): ', (ans) => {
+      rl.close();
+      resolve(ans.trim().toLowerCase() === 'y' || ans.trim().toLowerCase() === 'yes');
+    });
+  });
+}
+
+async function resolveApiKey(): Promise<string> {
+  // Priority: CLI arg > env var > saved config > prompt
+  const args = process.argv.slice(2);
+  const argIdx = args.indexOf('--api-key');
+  if (argIdx !== -1 && args[argIdx + 1]) {
+    return args[argIdx + 1];
+  }
+
+  const fromEnv = config.apiKey;
+  if (fromEnv) return fromEnv;
+
+  const key = await promptForApiKey();
+  if (!key) {
+    console.log('No API key provided. Exiting.');
+    process.exit(1);
+  }
+
+  const shouldSave = await confirmSave();
+  if (shouldSave) {
+    await saveApiSettings({ apiKey: key });
+    console.log('API key saved to ~/.codeyang/config.json');
+  }
+
+  return key;
 }
 
 async function main() {
@@ -45,11 +82,19 @@ async function main() {
 Usage: codeyang [options]
 
 Options:
-  --help, -h       Show this help message
-  --version, -V    Show version number
-  --list, -l       List saved sessions
-  --resume <id>    Resume a saved session
-  --delete <id>    Delete a saved session
+  --help, -h          Show this help message
+  --version, -V       Show version number
+  --list, -l          List saved sessions
+  --resume <id>       Resume a saved session
+  --delete <id>       Delete a saved session
+  --api-key <key>     Set API key directly (overrides env/config)
+
+Environment Variables:
+  CODEYANG_API_KEY          API key for the LLM provider
+  CODEYANG_MODEL            Model name (default: deepseek-chat)
+  CODEYANG_BASE_URL         Custom API base URL
+  CODEYANG_MAX_TOKENS       Max tokens per response (default: 8192)
+  DEEPSEEK_API_KEY          Alternative env var for API key
 
 Interactive Commands:
   /clear           Reset the conversation
@@ -58,7 +103,10 @@ Interactive Commands:
   /model           Show current model
   /model <name>    Switch model
   /mcp             Show MCP server status
-  /exit, /quit     Exit CodeYang`);
+  /exit, /quit     Exit CodeYang
+
+API Key priority: --api-key arg > CODEYANG_API_KEY > saved config > prompt
+Keys entered interactively can be saved to ~/.codeyang/config.json`);
     process.exit(0);
   }
 
@@ -76,11 +124,7 @@ Interactive Commands:
 
   await loadLocalConfig();
 
-  const key = await promptForDeepSeekKey();
-  if (!key) {
-    console.log('No API key provided. Exiting.');
-    process.exit(1);
-  }
+  const key = await resolveApiKey();
   setSessionApiKey(key);
 
   // Initialize MCP servers if configured
@@ -288,5 +332,3 @@ main().catch((err) => {
   console.error('Fatal error:', err);
   process.exit(1);
 });
-
-

@@ -7,9 +7,10 @@
  *
  * Reports untested: classes, signals, slots, properties, and connections.
  */
-import { readdir, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
-import { join, extname, basename } from 'node:path';
+import { basename } from 'node:path';
+import { collectFiles } from '../shared.js';
 
 interface CoverableItem {
   className: string;
@@ -127,11 +128,6 @@ export async function executeQtCoverage(cwd?: string): Promise<string> {
     if (connTested) report.coveredItems++;
   }
 
-  // Class-level coverage
-  for (const item of report.items) {
-    if (item.tested) report.coveredItems++;
-  }
-
   return formatCoverageReport(report, base);
 }
 
@@ -202,62 +198,20 @@ function extractClassNames(content: string, _filePath: string): ParsedClass[] {
 }
 
 async function findQtHeaders(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist', 'moc_', 'ui_', 'qrc_']);
-  async function walk(d: string) {
-    let entries;
-    try { entries = await readdir(d, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !skip.has(entry.name) && !entry.name.startsWith('moc_') && !entry.name.startsWith('ui_')) {
-          await walk(full);
-        }
-      } else if (entry.isFile() && ['.h', '.hpp'].includes(extname(entry.name).toLowerCase()) && !entry.name.startsWith('moc_') && !entry.name.startsWith('ui_')) {
-        results.push(full);
-      }
-    }
-  }
-  await walk(dir);
-  return results;
+  return collectFiles(dir, {
+    extensions: new Set(['.h', '.hpp']),
+    skipPrefixes: ['moc_', 'ui_'],
+  });
 }
 
 async function findTestFiles(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist']);
-  async function walk(d: string) {
-    let entries;
-    try { entries = await readdir(d, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !skip.has(entry.name)) await walk(full);
-      } else if (entry.isFile() && (entry.name.startsWith('tst_') || entry.name.endsWith('_test.cpp') || entry.name.endsWith('Test.cpp'))) {
-        results.push(full);
-      }
-    }
-  }
-  await walk(dir);
-  return results;
+  return collectFiles(dir, {
+    fileFilter: (n) => n.startsWith('tst_') || n.endsWith('_test.cpp') || n.endsWith('Test.cpp'),
+  });
 }
 
 async function findSourceFiles(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist']);
-  async function walk(d: string) {
-    let entries;
-    try { entries = await readdir(d, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !skip.has(entry.name)) await walk(full);
-      } else if (entry.isFile() && ['.cpp', '.h', '.hpp', '.cxx'].includes(extname(entry.name).toLowerCase())) {
-        results.push(full);
-      }
-    }
-  }
-  await walk(dir);
-  return results;
+  return collectFiles(dir, { extensions: new Set(['.cpp', '.h', '.hpp', '.cxx']) });
 }
 
 function findMatchingTest(className: string, testFiles: string[]): string | undefined {
@@ -271,7 +225,7 @@ function findMatchingTest(className: string, testFiles: string[]): string | unde
 function hasSignalTest(testFile: string, className: string, signal: string): boolean {
   try {
     const content = readFileSync(testFile, 'utf-8');
-    return content.includes(`test_signal_${signal}`) || content.includes(`QSignalSpy`) && content.includes(signal);
+    return content.includes(`test_signal_${signal}`) || (content.includes(`QSignalSpy`) && content.includes(signal));
   } catch {
     return false;
   }
@@ -289,7 +243,10 @@ function hasSlotTest(testFile: string, className: string, slot: string): boolean
 function hasPropertyTest(testFile: string, propName: string): boolean {
   try {
     const content = readFileSync(testFile, 'utf-8');
-    return content.includes(`test_property_${propName}`) || content.includes(`"${propName}"`) && content.includes('QCOMPARE');
+    return (
+      content.includes(`test_property_${propName}`) ||
+      (content.includes(`"${propName}"`) && content.includes('QCOMPARE'))
+    );
   } catch {
     return false;
   }
@@ -317,7 +274,9 @@ async function extractConnections(files: string[]): Promise<Connection[]> {
           slot: `${m[5]}::${m[6]}`,
         });
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return results;
 }

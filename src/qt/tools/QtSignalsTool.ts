@@ -2,8 +2,9 @@
  * QtSignalsTool — Analyze signal-slot connections in a Qt project.
  * Scans .h/.cpp files for connect() calls, SIGNAL/SLOT macros, and auto-connections.
  */
-import { readdir, readFile } from 'node:fs/promises';
-import { join, relative, extname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { relative } from 'node:path';
+import { collectFiles, SOURCE_EXTS } from '../shared.js';
 
 interface SignalConnection {
   file: string;
@@ -16,7 +17,7 @@ interface SignalConnection {
   auto: boolean; // on_widgetName_signalName() auto-connection
 }
 
-const SOURCE_EXTS = new Set(['.cpp', '.h', '.hpp', '.cxx']);
+const SKIP_SIGNALS = new Set(['node_modules', '.git', 'build', 'dist']);
 
 export async function executeQtSignals(cwd?: string): Promise<string> {
   const base = cwd || process.cwd();
@@ -129,31 +130,9 @@ export async function executeQtSignals(cwd?: string): Promise<string> {
 }
 
 async function collectSourceFiles(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist', '.moc', 'moc_', 'ui_']);
-
-  async function walk(d: string) {
-    let entries;
-    try {
-      entries = await readdir(d, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !skip.has(entry.name)) {
-          await walk(full);
-        }
-      } else if (entry.isFile()) {
-        const ext = extname(entry.name).toLowerCase();
-        if (SOURCE_EXTS.has(ext) && !entry.name.startsWith('moc_') && !entry.name.startsWith('ui_')) {
-          results.push(full);
-        }
-      }
-    }
-  }
-
-  await walk(dir);
-  return results;
+  return collectFiles(dir, {
+    skipDirs: SKIP_SIGNALS,
+    extensions: SOURCE_EXTS,
+    skipPrefixes: ['moc_', 'ui_'],
+  });
 }

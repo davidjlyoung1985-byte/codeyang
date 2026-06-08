@@ -171,7 +171,7 @@ function evaluateExpression(expr: string): string {
     lines.push(`\`${sanitized}\` = **${result}**`);
 
     // Also show hex for integers
-    if (Number.isInteger(result) && result >= 0 && result <= 0xFFFFFFFF) {
+    if (Number.isInteger(result) && result >= 0 && result <= 0xffffffff) {
       lines.push(`Hex: 0x${result.toString(16).toUpperCase()}`);
     }
 
@@ -179,7 +179,6 @@ function evaluateExpression(expr: string): string {
     if (Number.isInteger(result) && result >= 0 && result <= 255) {
       lines.push(`Binary: 0b${result.toString(2)}`);
     }
-
   } catch (err) {
     return `**Error**: could not evaluate \`${sanitized}\` — ${err instanceof Error ? err.message : String(err)}`;
   }

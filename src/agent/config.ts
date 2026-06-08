@@ -26,7 +26,11 @@ export async function loadLocalConfig(): Promise<void> {
   }
 }
 
-export async function saveApiSettings(settings: { apiKey: string; apiBaseURL?: string; apiProvider?: string }): Promise<void> {
+export async function saveApiSettings(settings: {
+  apiKey: string;
+  apiBaseURL?: string;
+  apiProvider?: string;
+}): Promise<void> {
   await mkdir(CONFIG_DIR, { recursive: true });
   localConfig.apiKey = settings.apiKey;
   if (settings.apiBaseURL) localConfig.apiBaseURL = settings.apiBaseURL;
@@ -106,5 +110,10 @@ You have file, shell, search, and editing tools. Use them.
 ## Tools
 - Prefer reading existing files over creating new ones
 - Bash: safe commands first, ask before destructive operations
-- WebFetch: use for real docs, not speculation`;
+- WebFetch: use for real docs, not speculation
 
+## Memory
+- Use Remember to save important facts, preferences, and decisions
+- Use Recall to retrieve what was saved in previous sessions
+- Use Forget to remove outdated memories
+- Memory persists across sessions — use it to build context over time`;

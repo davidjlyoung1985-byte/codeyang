@@ -1,0 +1,3038 @@
+{
+  "scriptCompleted": true,
+  "files": [
+    {
+      "path": ".claude/settings.json",
+      "language": "json",
+      "sizeLines": 20,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "language": "yaml",
+      "sizeLines": 54,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".learnings/ERRORS.md",
+      "language": "markdown",
+      "sizeLines": 5,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".learnings/FEATURE_REQUESTS.md",
+      "language": "markdown",
+      "sizeLines": 5,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".learnings/LEARNINGS.md",
+      "language": "markdown",
+      "sizeLines": 7,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/codeyang-dev/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 53,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand-chat/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 55,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand-dashboard/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 105,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand-diff/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 72,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand-domain/extract-domain-context.py",
+      "language": "python",
+      "sizeLines": 428,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".opencode/skills/understand-domain/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 140,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand-explain/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 58,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand-knowledge/merge-knowledge-graph.py",
+      "language": "python",
+      "sizeLines": 397,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".opencode/skills/understand-knowledge/parse-knowledge-base.py",
+      "language": "python",
+      "sizeLines": 509,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".opencode/skills/understand-knowledge/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 132,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand-onboard/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 55,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/build-fingerprints.mjs",
+      "language": "javascript",
+      "sizeLines": 90,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".opencode/skills/understand/compute-batches.mjs",
+      "language": "javascript",
+      "sizeLines": 555,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".opencode/skills/understand/extract-import-map.mjs",
+      "language": "javascript",
+      "sizeLines": 1567,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".opencode/skills/understand/extract-structure.mjs",
+      "language": "javascript",
+      "sizeLines": 334,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".opencode/skills/understand/frameworks/django.md",
+      "language": "markdown",
+      "sizeLines": 67,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/frameworks/express.md",
+      "language": "markdown",
+      "sizeLines": 57,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/frameworks/fastapi.md",
+      "language": "markdown",
+      "sizeLines": 58,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/frameworks/flask.md",
+      "language": "markdown",
+      "sizeLines": 53,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/frameworks/gin.md",
+      "language": "markdown",
+      "sizeLines": 59,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/frameworks/nextjs.md",
+      "language": "markdown",
+      "sizeLines": 59,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/frameworks/rails.md",
+      "language": "markdown",
+      "sizeLines": 65,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/frameworks/react.md",
+      "language": "markdown",
+      "sizeLines": 55,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/frameworks/spring.md",
+      "language": "markdown",
+      "sizeLines": 59,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/frameworks/vue.md",
+      "language": "markdown",
+      "sizeLines": 59,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/cpp.md",
+      "language": "markdown",
+      "sizeLines": 47,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/csharp.md",
+      "language": "markdown",
+      "sizeLines": 46,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/css.md",
+      "language": "markdown",
+      "sizeLines": 37,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/dockerfile.md",
+      "language": "markdown",
+      "sizeLines": 34,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/go.md",
+      "language": "markdown",
+      "sizeLines": 47,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/graphql.md",
+      "language": "markdown",
+      "sizeLines": 35,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/html.md",
+      "language": "markdown",
+      "sizeLines": 34,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/java.md",
+      "language": "markdown",
+      "sizeLines": 45,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/javascript.md",
+      "language": "markdown",
+      "sizeLines": 46,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/json.md",
+      "language": "markdown",
+      "sizeLines": 34,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/kotlin.md",
+      "language": "markdown",
+      "sizeLines": 45,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/markdown.md",
+      "language": "markdown",
+      "sizeLines": 34,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/php.md",
+      "language": "markdown",
+      "sizeLines": 46,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/protobuf.md",
+      "language": "markdown",
+      "sizeLines": 34,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/python.md",
+      "language": "markdown",
+      "sizeLines": 48,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/ruby.md",
+      "language": "markdown",
+      "sizeLines": 46,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/rust.md",
+      "language": "markdown",
+      "sizeLines": 47,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/shell.md",
+      "language": "markdown",
+      "sizeLines": 35,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/sql.md",
+      "language": "markdown",
+      "sizeLines": 36,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/swift.md",
+      "language": "markdown",
+      "sizeLines": 46,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/terraform.md",
+      "language": "markdown",
+      "sizeLines": 38,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/typescript.md",
+      "language": "markdown",
+      "sizeLines": 46,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/languages/yaml.md",
+      "language": "markdown",
+      "sizeLines": 35,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/locales/en.md",
+      "language": "markdown",
+      "sizeLines": 43,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/locales/ja.md",
+      "language": "markdown",
+      "sizeLines": 48,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/locales/ko.md",
+      "language": "markdown",
+      "sizeLines": 48,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/locales/ru.md",
+      "language": "markdown",
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/locales/zh-TW.md",
+      "language": "markdown",
+      "sizeLines": 48,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/locales/zh.md",
+      "language": "markdown",
+      "sizeLines": 48,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".opencode/skills/understand/merge-batch-graphs.py",
+      "language": "python",
+      "sizeLines": 1164,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".opencode/skills/understand/merge-subdomain-graphs.py",
+      "language": "python",
+      "sizeLines": 308,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".opencode/skills/understand/scan-project.mjs",
+      "language": "javascript",
+      "sizeLines": 802,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".opencode/skills/understand/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 853,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".prettierignore",
+      "language": "unknown",
+      "sizeLines": 4,
+      "fileCategory": "code"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "language": "markdown",
+      "sizeLines": 39,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "CLAUDE.md",
+      "language": "markdown",
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "codeyangx/index.html",
+      "language": "html",
+      "sizeLines": 235,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "codeyangx/main.js",
+      "language": "javascript",
+      "sizeLines": 312,
+      "fileCategory": "code"
+    },
+    {
+      "path": "codeyangx/mcp.cjs",
+      "language": "javascript",
+      "sizeLines": 208,
+      "fileCategory": "code"
+    },
+    {
+      "path": "codeyangx/package.json",
+      "language": "json",
+      "sizeLines": 4,
+      "fileCategory": "config"
+    },
+    {
+      "path": "codeyangx/preload.js",
+      "language": "javascript",
+      "sizeLines": 27,
+      "fileCategory": "code"
+    },
+    {
+      "path": "codeyangx/renderer.js",
+      "language": "javascript",
+      "sizeLines": 719,
+      "fileCategory": "code"
+    },
+    {
+      "path": "codeyangx/tools.cjs",
+      "language": "javascript",
+      "sizeLines": 1713,
+      "fileCategory": "code"
+    },
+    {
+      "path": "eslint.config.js",
+      "language": "javascript",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "memory/ontology/graph.jsonl",
+      "language": "jsonl",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": "opencode.json",
+      "language": "json",
+      "sizeLines": 36,
+      "fileCategory": "config"
+    },
+    {
+      "path": "package.json",
+      "language": "json",
+      "sizeLines": 64,
+      "fileCategory": "config"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 193,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/.skills_store_lock.json",
+      "language": "json",
+      "sizeLines": 208,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/agent-browser-clawdbot/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/agent-browser-clawdbot/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 206,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/agent-browser/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/agent-browser/CONTRIBUTING.md",
+      "language": "markdown",
+      "sizeLines": 63,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/agent-browser/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 328,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/active-campaign/README.md",
+      "language": "markdown",
+      "sizeLines": 222,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/acuity-scheduling/README.md",
+      "language": "markdown",
+      "sizeLines": 156,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/airtable/README.md",
+      "language": "markdown",
+      "sizeLines": 150,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/apify/README.md",
+      "language": "markdown",
+      "sizeLines": 247,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/apollo/README.md",
+      "language": "markdown",
+      "sizeLines": 214,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/asana/README.md",
+      "language": "markdown",
+      "sizeLines": 285,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/attio/README.md",
+      "language": "markdown",
+      "sizeLines": 293,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/basecamp/README.md",
+      "language": "markdown",
+      "sizeLines": 150,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/baserow/README.md",
+      "language": "markdown",
+      "sizeLines": 162,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/beehiiv/README.md",
+      "language": "markdown",
+      "sizeLines": 135,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/box/README.md",
+      "language": "markdown",
+      "sizeLines": 294,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/brave-search/README.md",
+      "language": "markdown",
+      "sizeLines": 152,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/brevo/README.md",
+      "language": "markdown",
+      "sizeLines": 231,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/buffer/README.md",
+      "language": "markdown",
+      "sizeLines": 176,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/cal-com/README.md",
+      "language": "markdown",
+      "sizeLines": 218,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/calendly/README.md",
+      "language": "markdown",
+      "sizeLines": 110,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/callrail/README.md",
+      "language": "markdown",
+      "sizeLines": 180,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/chargebee/README.md",
+      "language": "markdown",
+      "sizeLines": 204,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/clickfunnels/README.md",
+      "language": "markdown",
+      "sizeLines": 276,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/clicksend/README.md",
+      "language": "markdown",
+      "sizeLines": 154,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/clickup/README.md",
+      "language": "markdown",
+      "sizeLines": 157,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/clio/README.md",
+      "language": "markdown",
+      "sizeLines": 355,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/clockify/README.md",
+      "language": "markdown",
+      "sizeLines": 192,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/coda/README.md",
+      "language": "markdown",
+      "sizeLines": 225,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/cognito-forms/README.md",
+      "language": "markdown",
+      "sizeLines": 123,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/companycam/README.md",
+      "language": "markdown",
+      "sizeLines": 268,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/confluence/README.md",
+      "language": "markdown",
+      "sizeLines": 210,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/constant-contact/README.md",
+      "language": "markdown",
+      "sizeLines": 500,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/dropbox-business/README.md",
+      "language": "markdown",
+      "sizeLines": 569,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/dropbox/README.md",
+      "language": "markdown",
+      "sizeLines": 325,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/elevenlabs/README.md",
+      "language": "markdown",
+      "sizeLines": 119,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/eventbrite/README.md",
+      "language": "markdown",
+      "sizeLines": 216,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/exa/README.md",
+      "language": "markdown",
+      "sizeLines": 198,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/facebook-page/README.md",
+      "language": "markdown",
+      "sizeLines": 133,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/fal-ai/README.md",
+      "language": "markdown",
+      "sizeLines": 111,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/fathom/README.md",
+      "language": "markdown",
+      "sizeLines": 87,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/firebase/README.md",
+      "language": "markdown",
+      "sizeLines": 141,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/firecrawl/README.md",
+      "language": "markdown",
+      "sizeLines": 198,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/fireflies/README.md",
+      "language": "markdown",
+      "sizeLines": 105,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/front/README.md",
+      "language": "markdown",
+      "sizeLines": 281,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/getresponse/README.md",
+      "language": "markdown",
+      "sizeLines": 162,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/github/README.md",
+      "language": "markdown",
+      "sizeLines": 463,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-ads/README.md",
+      "language": "markdown",
+      "sizeLines": 202,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-analytics-admin/README.md",
+      "language": "markdown",
+      "sizeLines": 211,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-analytics-data/README.md",
+      "language": "markdown",
+      "sizeLines": 152,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-apps-script/README.md",
+      "language": "markdown",
+      "sizeLines": 139,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-bigquery/README.md",
+      "language": "markdown",
+      "sizeLines": 185,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-calendar/README.md",
+      "language": "markdown",
+      "sizeLines": 223,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-classroom/README.md",
+      "language": "markdown",
+      "sizeLines": 146,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-contacts/README.md",
+      "language": "markdown",
+      "sizeLines": 141,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-docs/README.md",
+      "language": "markdown",
+      "sizeLines": 179,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-drive/README.md",
+      "language": "markdown",
+      "sizeLines": 351,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-forms/README.md",
+      "language": "markdown",
+      "sizeLines": 207,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-mail/README.md",
+      "language": "markdown",
+      "sizeLines": 253,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-meet/README.md",
+      "language": "markdown",
+      "sizeLines": 123,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-merchant/README.md",
+      "language": "markdown",
+      "sizeLines": 182,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-play/README.md",
+      "language": "markdown",
+      "sizeLines": 149,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-search-console/README.md",
+      "language": "markdown",
+      "sizeLines": 190,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-sheets/README.md",
+      "language": "markdown",
+      "sizeLines": 291,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-slides/README.md",
+      "language": "markdown",
+      "sizeLines": 217,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-tag-manager/README.md",
+      "language": "markdown",
+      "sizeLines": 123,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-tasks/README.md",
+      "language": "markdown",
+      "sizeLines": 252,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/google-workspace-admin/README.md",
+      "language": "markdown",
+      "sizeLines": 238,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/grafana/README.md",
+      "language": "markdown",
+      "sizeLines": 188,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/granola-mcp/README.md",
+      "language": "markdown",
+      "sizeLines": 193,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/granola-mcp/schemas/get_meeting_transcript.json",
+      "language": "json",
+      "sizeLines": 19,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/granola-mcp/schemas/get_meetings.json",
+      "language": "json",
+      "sizeLines": 24,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/granola-mcp/schemas/list_meetings.json",
+      "language": "json",
+      "sizeLines": 30,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/granola-mcp/schemas/query_granola_meetings.json",
+      "language": "json",
+      "sizeLines": 27,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/gumroad/README.md",
+      "language": "markdown",
+      "sizeLines": 149,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/highlevel-pit/README.md",
+      "language": "markdown",
+      "sizeLines": 268,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/hubspot/README.md",
+      "language": "markdown",
+      "sizeLines": 505,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/instantly/README.md",
+      "language": "markdown",
+      "sizeLines": 190,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/jira/README.md",
+      "language": "markdown",
+      "sizeLines": 291,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/jobber/README.md",
+      "language": "markdown",
+      "sizeLines": 170,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/jotform/README.md",
+      "language": "markdown",
+      "sizeLines": 191,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/kaggle/README.md",
+      "language": "markdown",
+      "sizeLines": 146,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/keap/README.md",
+      "language": "markdown",
+      "sizeLines": 192,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/kibana/README.md",
+      "language": "markdown",
+      "sizeLines": 185,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/kit/README.md",
+      "language": "markdown",
+      "sizeLines": 223,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/klaviyo/README.md",
+      "language": "markdown",
+      "sizeLines": 304,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/lemlist/README.md",
+      "language": "markdown",
+      "sizeLines": 171,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/linear/README.md",
+      "language": "markdown",
+      "sizeLines": 301,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/linkedin-community-management/README.md",
+      "language": "markdown",
+      "sizeLines": 170,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/linkedin/README.md",
+      "language": "markdown",
+      "sizeLines": 365,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/mailchimp/README.md",
+      "language": "markdown",
+      "sizeLines": 215,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/mailerlite/README.md",
+      "language": "markdown",
+      "sizeLines": 240,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/mailgun/README.md",
+      "language": "markdown",
+      "sizeLines": 296,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/make/README.md",
+      "language": "markdown",
+      "sizeLines": 216,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/manus/README.md",
+      "language": "markdown",
+      "sizeLines": 151,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/manychat/README.md",
+      "language": "markdown",
+      "sizeLines": 214,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/memelord/README.md",
+      "language": "markdown",
+      "sizeLines": 83,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/microsoft-excel/README.md",
+      "language": "markdown",
+      "sizeLines": 176,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/microsoft-teams/README.md",
+      "language": "markdown",
+      "sizeLines": 308,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/microsoft-to-do/README.md",
+      "language": "markdown",
+      "sizeLines": 168,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/monday/README.md",
+      "language": "markdown",
+      "sizeLines": 209,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/motion/README.md",
+      "language": "markdown",
+      "sizeLines": 172,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/netlify/README.md",
+      "language": "markdown",
+      "sizeLines": 160,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/README.md",
+      "language": "markdown",
+      "sizeLines": 571,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-create-comment.json",
+      "language": "json",
+      "sizeLines": 413,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-create-database.json",
+      "language": "json",
+      "sizeLines": 46,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-create-pages.json",
+      "language": "json",
+      "sizeLines": 106,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-duplicate-page.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-fetch.json",
+      "language": "json",
+      "sizeLines": 24,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-get-comments.json",
+      "language": "json",
+      "sizeLines": 28,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-get-teams.json",
+      "language": "json",
+      "sizeLines": 17,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-get-users.json",
+      "language": "json",
+      "sizeLines": 35,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-move-pages.json",
+      "language": "json",
+      "sizeLines": 102,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-search.json",
+      "language": "json",
+      "sizeLines": 78,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-update-data-source.json",
+      "language": "json",
+      "sizeLines": 37,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion-mcp/schemas/notion-update-page.json",
+      "language": "json",
+      "sizeLines": 68,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/notion/README.md",
+      "language": "markdown",
+      "sizeLines": 465,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/one-drive/README.md",
+      "language": "markdown",
+      "sizeLines": 224,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/one-note/README.md",
+      "language": "markdown",
+      "sizeLines": 153,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/outlook/README.md",
+      "language": "markdown",
+      "sizeLines": 412,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/pdf-co/README.md",
+      "language": "markdown",
+      "sizeLines": 321,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/pipedrive/README.md",
+      "language": "markdown",
+      "sizeLines": 163,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/podio/README.md",
+      "language": "markdown",
+      "sizeLines": 220,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/posthog/README.md",
+      "language": "markdown",
+      "sizeLines": 168,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/quickbooks/README.md",
+      "language": "markdown",
+      "sizeLines": 385,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/quo/README.md",
+      "language": "markdown",
+      "sizeLines": 190,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/reducto/README.md",
+      "language": "markdown",
+      "sizeLines": 147,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/resend/README.md",
+      "language": "markdown",
+      "sizeLines": 384,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/salesforce/README.md",
+      "language": "markdown",
+      "sizeLines": 304,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/sendgrid/README.md",
+      "language": "markdown",
+      "sizeLines": 141,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/sentry/README.md",
+      "language": "markdown",
+      "sizeLines": 157,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/sharepoint/README.md",
+      "language": "markdown",
+      "sizeLines": 276,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/signnow/README.md",
+      "language": "markdown",
+      "sizeLines": 98,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/slack/README.md",
+      "language": "markdown",
+      "sizeLines": 782,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/snapchat/README.md",
+      "language": "markdown",
+      "sizeLines": 152,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/squarespace/README.md",
+      "language": "markdown",
+      "sizeLines": 327,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/squareup/README.md",
+      "language": "markdown",
+      "sizeLines": 600,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/stripe/README.md",
+      "language": "markdown",
+      "sizeLines": 431,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/README.md",
+      "language": "markdown",
+      "sizeLines": 170,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/accept_meeting_invite.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/add_subtasks_to_task.json",
+      "language": "json",
+      "sizeLines": 28,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/add_task_to_channel.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/align_task_with_objective.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/append_task_notes.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/change_backlog_folder.json",
+      "language": "json",
+      "sizeLines": 17,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/create_braindump_task.json",
+      "language": "json",
+      "sizeLines": 26,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/create_calendar_event.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/create_channel.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/create_follow_up_task_from_email.json",
+      "language": "json",
+      "sizeLines": 22,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/create_task.json",
+      "language": "json",
+      "sizeLines": 22,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/create_weekly_objective.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/decline_meeting_invite.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/delete_all_incomplete_recurring_task_instances.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/delete_calendar_event.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/delete_email_thread.json",
+      "language": "json",
+      "sizeLines": 22,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/delete_task.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/edit_subtask_title.json",
+      "language": "json",
+      "sizeLines": 22,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/edit_task_recurrence_rule.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/edit_task_time_estimate.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/edit_task_title.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/get_archived_tasks.json",
+      "language": "json",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/get_backlog_tasks.json",
+      "language": "json",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/get_task_time_estimate.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/import_task_from_calendar_event.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/list_email_threads.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/log_user_feedback.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/mark_email_thread_as_read.json",
+      "language": "json",
+      "sizeLines": 22,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/mark_subtask_as_completed.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/mark_subtask_as_incomplete.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/mark_task_as_completed.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/mark_task_as_incomplete.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/move_calendar_event.json",
+      "language": "json",
+      "sizeLines": 22,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/move_task_from_backlog.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/move_task_to_backlog.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/move_task_to_day.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/reorder_tasks.json",
+      "language": "json",
+      "sizeLines": 21,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/reposition_task_in_backlog.json",
+      "language": "json",
+      "sizeLines": 26,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/restore_task.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/schedule_next_call.json",
+      "language": "json",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/search_tasks.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/set_calendar_event_allow_task_projections.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/set_shutdown_time.json",
+      "language": "json",
+      "sizeLines": 22,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/start_task_timer.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/stop_task_timer.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/timebox_a_task_to_calendar.json",
+      "language": "json",
+      "sizeLines": 22,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/toggle_auto_import_events.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/unarchive_task.json",
+      "language": "json",
+      "sizeLines": 18,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/update_all_incomplete_recurring_task_instances.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/update_calendar_preferences.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/sunsama-mcp/schemas/update_import_event_filters.json",
+      "language": "json",
+      "sizeLines": 17,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/api-gateway/references/supabase/README.md",
+      "language": "markdown",
+      "sizeLines": 197,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/systeme/README.md",
+      "language": "markdown",
+      "sizeLines": 216,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/tally/README.md",
+      "language": "markdown",
+      "sizeLines": 176,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/tavily/README.md",
+      "language": "markdown",
+      "sizeLines": 137,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/telegram/README.md",
+      "language": "markdown",
+      "sizeLines": 197,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/ticktick/README.md",
+      "language": "markdown",
+      "sizeLines": 119,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/todoist/README.md",
+      "language": "markdown",
+      "sizeLines": 178,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/toggl-track/README.md",
+      "language": "markdown",
+      "sizeLines": 189,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/trello/README.md",
+      "language": "markdown",
+      "sizeLines": 309,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/twenty/README.md",
+      "language": "markdown",
+      "sizeLines": 193,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/twilio/README.md",
+      "language": "markdown",
+      "sizeLines": 172,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/typeform/README.md",
+      "language": "markdown",
+      "sizeLines": 187,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/unbounce/README.md",
+      "language": "markdown",
+      "sizeLines": 149,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/vercel/README.md",
+      "language": "markdown",
+      "sizeLines": 204,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/vimeo/README.md",
+      "language": "markdown",
+      "sizeLines": 125,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/wati/README.md",
+      "language": "markdown",
+      "sizeLines": 218,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/whatsapp-business/README.md",
+      "language": "markdown",
+      "sizeLines": 214,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/woocommerce/README.md",
+      "language": "markdown",
+      "sizeLines": 279,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/wordpress/README.md",
+      "language": "markdown",
+      "sizeLines": 170,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/wrike/README.md",
+      "language": "markdown",
+      "sizeLines": 233,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/xero/README.md",
+      "language": "markdown",
+      "sizeLines": 204,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/youtube-analytics/README.md",
+      "language": "markdown",
+      "sizeLines": 113,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/youtube-reporting/README.md",
+      "language": "markdown",
+      "sizeLines": 86,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/youtube/README.md",
+      "language": "markdown",
+      "sizeLines": 268,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoho-bigin/README.md",
+      "language": "markdown",
+      "sizeLines": 106,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoho-bookings/README.md",
+      "language": "markdown",
+      "sizeLines": 112,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoho-books/README.md",
+      "language": "markdown",
+      "sizeLines": 153,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoho-calendar/README.md",
+      "language": "markdown",
+      "sizeLines": 120,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoho-crm/README.md",
+      "language": "markdown",
+      "sizeLines": 162,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoho-inventory/README.md",
+      "language": "markdown",
+      "sizeLines": 216,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoho-mail/README.md",
+      "language": "markdown",
+      "sizeLines": 214,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoho-people/README.md",
+      "language": "markdown",
+      "sizeLines": 155,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoho-projects/README.md",
+      "language": "markdown",
+      "sizeLines": 242,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoho-recruit/README.md",
+      "language": "markdown",
+      "sizeLines": 155,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoom-admin/README.md",
+      "language": "markdown",
+      "sizeLines": 157,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/references/zoom/README.md",
+      "language": "markdown",
+      "sizeLines": 201,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/skill-card.md",
+      "language": "markdown",
+      "sizeLines": 46,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/api-gateway/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 900,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/auto-updater/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/auto-updater/references/agent-guide.md",
+      "language": "markdown",
+      "sizeLines": 152,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/auto-updater/references/summary-examples.md",
+      "language": "markdown",
+      "sizeLines": 109,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/auto-updater/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 149,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/baidu-search/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/baidu-search/references/apikey-fetch.md",
+      "language": "markdown",
+      "sizeLines": 58,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/baidu-search/scripts/search.py",
+      "language": "python",
+      "sizeLines": 123,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/baidu-search/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 63,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/brave-search/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/brave-search/content.js",
+      "language": "javascript",
+      "sizeLines": 86,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/brave-search/package.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/brave-search/search.js",
+      "language": "javascript",
+      "sizeLines": 179,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/brave-search/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 57,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/codeconductor/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/codeconductor/skills.md",
+      "language": "markdown",
+      "sizeLines": 72,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/find-skills/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/find-skills/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 133,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/frontend-design/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/frontend-design/LICENSE.txt",
+      "language": "txt",
+      "sizeLines": 190,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/frontend-design/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 42,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/github/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/github/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 47,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/gmail/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/gmail/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 542,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/humanizer/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/humanizer/README.md",
+      "language": "markdown",
+      "sizeLines": 82,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/humanizer/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 437,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/mcporter/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/mcporter/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 38,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/nano-pdf/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/nano-pdf/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 20,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/notion/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/notion/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 156,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/obsidian/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/obsidian/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 55,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/ontology/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/ontology/references/queries.md",
+      "language": "markdown",
+      "sizeLines": 211,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/ontology/references/schema.md",
+      "language": "markdown",
+      "sizeLines": 322,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/ontology/scripts/ontology.py",
+      "language": "python",
+      "sizeLines": 580,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/ontology/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 232,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/openai-whisper/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/openai-whisper/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 19,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/proactive-agent/assets/AGENTS.md",
+      "language": "markdown",
+      "sizeLines": 155,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/assets/HEARTBEAT.md",
+      "language": "markdown",
+      "sizeLines": 128,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/assets/MEMORY.md",
+      "language": "markdown",
+      "sizeLines": 47,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/assets/ONBOARDING.md",
+      "language": "markdown",
+      "sizeLines": 103,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/assets/SOUL.md",
+      "language": "markdown",
+      "sizeLines": 40,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/assets/TOOLS.md",
+      "language": "markdown",
+      "sizeLines": 55,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/assets/USER.md",
+      "language": "markdown",
+      "sizeLines": 36,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/references/onboarding-flow.md",
+      "language": "markdown",
+      "sizeLines": 158,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/references/security-patterns.md",
+      "language": "markdown",
+      "sizeLines": 109,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/scripts/security-audit.sh",
+      "language": "shell",
+      "sizeLines": 149,
+      "fileCategory": "script"
+    },
+    {
+      "path": "skills/proactive-agent/SKILL-v2.3-backup.md",
+      "language": "markdown",
+      "sizeLines": 554,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/SKILL-v3-draft.md",
+      "language": "markdown",
+      "sizeLines": 499,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/proactive-agent/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 632,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/self-improving-agent/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/self-improving-agent/assets/ERRORS.md",
+      "language": "markdown",
+      "sizeLines": 5,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/self-improving-agent/assets/FEATURE_REQUESTS.md",
+      "language": "markdown",
+      "sizeLines": 5,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/self-improving-agent/assets/LEARNINGS.md",
+      "language": "markdown",
+      "sizeLines": 45,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/self-improving-agent/assets/SKILL-TEMPLATE.md",
+      "language": "markdown",
+      "sizeLines": 177,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/self-improving-agent/hooks/openclaw/handler.js",
+      "language": "javascript",
+      "sizeLines": 112,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/self-improving-agent/hooks/openclaw/handler.ts",
+      "language": "typescript",
+      "sizeLines": 111,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/self-improving-agent/hooks/openclaw/HOOK.md",
+      "language": "markdown",
+      "sizeLines": 23,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/self-improving-agent/README.md",
+      "language": "markdown",
+      "sizeLines": 14,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/self-improving-agent/references/examples.md",
+      "language": "markdown",
+      "sizeLines": 374,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/self-improving-agent/references/hooks-setup.md",
+      "language": "markdown",
+      "sizeLines": 225,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/self-improving-agent/references/openclaw-integration.md",
+      "language": "markdown",
+      "sizeLines": 254,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/self-improving-agent/scripts/activator.sh",
+      "language": "shell",
+      "sizeLines": 20,
+      "fileCategory": "script"
+    },
+    {
+      "path": "skills/self-improving-agent/scripts/error-detector.sh",
+      "language": "shell",
+      "sizeLines": 55,
+      "fileCategory": "script"
+    },
+    {
+      "path": "skills/self-improving-agent/scripts/extract-skill.sh",
+      "language": "shell",
+      "sizeLines": 221,
+      "fileCategory": "script"
+    },
+    {
+      "path": "skills/self-improving-agent/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 644,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/skill-creator/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/skill-creator/LICENSE.txt",
+      "language": "txt",
+      "sizeLines": 201,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/skill-creator/references/output-patterns.md",
+      "language": "markdown",
+      "sizeLines": 82,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/skill-creator/references/workflows.md",
+      "language": "markdown",
+      "sizeLines": 27,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/skill-creator/scripts/init_skill.py",
+      "language": "python",
+      "sizeLines": 303,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/skill-creator/scripts/package_skill.py",
+      "language": "python",
+      "sizeLines": 110,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/skill-creator/scripts/quick_validate.py",
+      "language": "python",
+      "sizeLines": 94,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/skill-creator/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 356,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/slack/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/slack/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 143,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/stock-analysis/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/stock-analysis/App-Plan.md",
+      "language": "markdown",
+      "sizeLines": 442,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/stock-analysis/docs/ARCHITECTURE.md",
+      "language": "markdown",
+      "sizeLines": 408,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/stock-analysis/docs/CONCEPT.md",
+      "language": "markdown",
+      "sizeLines": 233,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/stock-analysis/docs/HOT_SCANNER.md",
+      "language": "markdown",
+      "sizeLines": 288,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/stock-analysis/docs/README.md",
+      "language": "markdown",
+      "sizeLines": 95,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/stock-analysis/docs/USAGE.md",
+      "language": "markdown",
+      "sizeLines": 465,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/stock-analysis/README.md",
+      "language": "markdown",
+      "sizeLines": 214,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/stock-analysis/scripts/analyze_stock.py",
+      "language": "python",
+      "sizeLines": 2532,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/stock-analysis/scripts/dividends.py",
+      "language": "python",
+      "sizeLines": 365,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/stock-analysis/scripts/hot_scanner.py",
+      "language": "python",
+      "sizeLines": 582,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/stock-analysis/scripts/portfolio.py",
+      "language": "python",
+      "sizeLines": 548,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/stock-analysis/scripts/rumor_scanner.py",
+      "language": "python",
+      "sizeLines": 342,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/stock-analysis/scripts/test_stock_analysis.py",
+      "language": "python",
+      "sizeLines": 381,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/stock-analysis/scripts/watchlist.py",
+      "language": "python",
+      "sizeLines": 336,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/stock-analysis/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 248,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/stock-analysis/TODO.md",
+      "language": "markdown",
+      "sizeLines": 394,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/summarize/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/summarize/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/tavily-search/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/tavily-search/scripts/extract.mjs",
+      "language": "javascript",
+      "sizeLines": 59,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/tavily-search/scripts/search.mjs",
+      "language": "javascript",
+      "sizeLines": 101,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/tavily-search/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 38,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/trello/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/trello/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 84,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/video-frames/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/video-frames/scripts/frame.sh",
+      "language": "shell",
+      "sizeLines": 81,
+      "fileCategory": "script"
+    },
+    {
+      "path": "skills/video-frames/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 29,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/weather/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/weather/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/youtube-watcher/_meta.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/youtube-watcher/scripts/get_transcript.py",
+      "language": "python",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    },
+    {
+      "path": "skills/youtube-watcher/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 48,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "src/agent/Agent.test.ts",
+      "language": "typescript",
+      "sizeLines": 298,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/agent/Agent.ts",
+      "language": "typescript",
+      "sizeLines": 418,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/agent/config.test.ts",
+      "language": "typescript",
+      "sizeLines": 23,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/agent/config.ts",
+      "language": "typescript",
+      "sizeLines": 119,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/agent/LLMClient.ts",
+      "language": "typescript",
+      "sizeLines": 234,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/codeyangx.ts",
+      "language": "typescript",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/index.ts",
+      "language": "typescript",
+      "sizeLines": 290,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/math/index.test.ts",
+      "language": "typescript",
+      "sizeLines": 147,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/math/index.ts",
+      "language": "typescript",
+      "sizeLines": 6,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/math/MathExplain.ts",
+      "language": "typescript",
+      "sizeLines": 313,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/math/MathPlot.ts",
+      "language": "typescript",
+      "sizeLines": 439,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/math/MathSolve.ts",
+      "language": "typescript",
+      "sizeLines": 883,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/mcp/McpClient.ts",
+      "language": "typescript",
+      "sizeLines": 110,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/mcp/McpManager.ts",
+      "language": "typescript",
+      "sizeLines": 128,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/mcp/types.ts",
+      "language": "typescript",
+      "sizeLines": 8,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/detector.ts",
+      "language": "typescript",
+      "sizeLines": 110,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/index.test.ts",
+      "language": "typescript",
+      "sizeLines": 389,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/index.ts",
+      "language": "typescript",
+      "sizeLines": 7,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/prompt.ts",
+      "language": "typescript",
+      "sizeLines": 143,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/shared.ts",
+      "language": "typescript",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/testing/QtCoverage.ts",
+      "language": "typescript",
+      "sizeLines": 325,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/testing/QtTestGen.ts",
+      "language": "typescript",
+      "sizeLines": 497,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/testing/QtTestRunner.ts",
+      "language": "typescript",
+      "sizeLines": 144,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools.test.ts",
+      "language": "typescript",
+      "sizeLines": 269,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools.ts",
+      "language": "typescript",
+      "sizeLines": 329,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtBuildTool.ts",
+      "language": "typescript",
+      "sizeLines": 111,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtChartsTool.ts",
+      "language": "typescript",
+      "sizeLines": 216,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtGraphicsTool.ts",
+      "language": "typescript",
+      "sizeLines": 278,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtMathTool.ts",
+      "language": "typescript",
+      "sizeLines": 187,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtMigrationTool.ts",
+      "language": "typescript",
+      "sizeLines": 492,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtModelViewTool.ts",
+      "language": "typescript",
+      "sizeLines": 168,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtProFileTool.ts",
+      "language": "typescript",
+      "sizeLines": 159,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtQmlTool.ts",
+      "language": "typescript",
+      "sizeLines": 221,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtSignalsTool.ts",
+      "language": "typescript",
+      "sizeLines": 138,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtThreadTool.ts",
+      "language": "typescript",
+      "sizeLines": 170,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/qt/tools/QtUiTool.ts",
+      "language": "typescript",
+      "sizeLines": 158,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/BashTool.ts",
+      "language": "typescript",
+      "sizeLines": 26,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/CodeAnalysisTool.test.ts",
+      "language": "typescript",
+      "sizeLines": 280,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/CodeAnalysisTool.ts",
+      "language": "typescript",
+      "sizeLines": 471,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/DataTool.test.ts",
+      "language": "typescript",
+      "sizeLines": 328,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/DataTool.ts",
+      "language": "typescript",
+      "sizeLines": 356,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/EditTool.ts",
+      "language": "typescript",
+      "sizeLines": 73,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/FileSystemTool.test.ts",
+      "language": "typescript",
+      "sizeLines": 303,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/FileSystemTool.ts",
+      "language": "typescript",
+      "sizeLines": 260,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/GitTool.test.ts",
+      "language": "typescript",
+      "sizeLines": 315,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/GitTool.ts",
+      "language": "typescript",
+      "sizeLines": 335,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/GlobTool.ts",
+      "language": "typescript",
+      "sizeLines": 50,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/GrepTool.ts",
+      "language": "typescript",
+      "sizeLines": 121,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/ImageTool.test.ts",
+      "language": "typescript",
+      "sizeLines": 108,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/ImageTool.ts",
+      "language": "typescript",
+      "sizeLines": 135,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/index.test.ts",
+      "language": "typescript",
+      "sizeLines": 220,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/mcp.test.ts",
+      "language": "typescript",
+      "sizeLines": 226,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/MemoryTool.ts",
+      "language": "typescript",
+      "sizeLines": 67,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/NetworkTool.test.ts",
+      "language": "typescript",
+      "sizeLines": 312,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/NetworkTool.ts",
+      "language": "typescript",
+      "sizeLines": 267,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/ReadTool.ts",
+      "language": "typescript",
+      "sizeLines": 50,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/registry.ts",
+      "language": "typescript",
+      "sizeLines": 1391,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/SearchTool.test.ts",
+      "language": "typescript",
+      "sizeLines": 69,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/SearchTool.ts",
+      "language": "typescript",
+      "sizeLines": 116,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/shared.ts",
+      "language": "typescript",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/TaskTool.ts",
+      "language": "typescript",
+      "sizeLines": 142,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/TodoWriteTool.ts",
+      "language": "typescript",
+      "sizeLines": 94,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/tools.test.ts",
+      "language": "typescript",
+      "sizeLines": 258,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/WebFetchTool.ts",
+      "language": "typescript",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/tools/WriteTool.ts",
+      "language": "typescript",
+      "sizeLines": 11,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/types.ts",
+      "language": "typescript",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/ui/CliUI.ts",
+      "language": "typescript",
+      "sizeLines": 319,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/utils/globMatch.ts",
+      "language": "typescript",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/utils/memoryStore.ts",
+      "language": "typescript",
+      "sizeLines": 144,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/utils/sessionStore.test.ts",
+      "language": "typescript",
+      "sizeLines": 46,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/utils/sessionStore.ts",
+      "language": "typescript",
+      "sizeLines": 94,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tsconfig.json",
+      "language": "json",
+      "sizeLines": 17,
+      "fileCategory": "config"
+    },
+    {
+      "path": "tsup.config.ts",
+      "language": "typescript",
+      "sizeLines": 28,
+      "fileCategory": "code"
+    },
+    {
+      "path": "vitest.config.ts",
+      "language": "typescript",
+      "sizeLines": 14,
+      "fileCategory": "code"
+    },
+    {
+      "path": "vscode-extension/.vscodeignore",
+      "language": "unknown",
+      "sizeLines": 3,
+      "fileCategory": "code"
+    },
+    {
+      "path": "vscode-extension/chat.html",
+      "language": "html",
+      "sizeLines": 315,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "vscode-extension/extension.js",
+      "language": "javascript",
+      "sizeLines": 630,
+      "fileCategory": "code"
+    },
+    {
+      "path": "vscode-extension/package.json",
+      "language": "json",
+      "sizeLines": 49,
+      "fileCategory": "config"
+    }
+  ],
+  "totalFiles": 501,
+  "filteredByIgnore": 0,
+  "estimatedComplexity": "very-large",
+  "stats": {
+    "filesScanned": 501,
+    "byCategory": {
+      "config": 104,
+      "infra": 1,
+      "docs": 277,
+      "code": 112,
+      "markup": 2,
+      "script": 5
+    },
+    "byLanguage": {
+      "json": 104,
+      "yaml": 1,
+      "markdown": 275,
+      "python": 18,
+      "javascript": 17,
+      "unknown": 2,
+      "html": 2,
+      "jsonl": 1,
+      "txt": 2,
+      "shell": 5,
+      "typescript": 74
+    }
+  }
+}

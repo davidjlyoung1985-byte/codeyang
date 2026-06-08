@@ -1,4 +1,5 @@
-﻿import type { ToolDefinition } from '../types.js';
+﻿import type { Method } from 'axios';
+import type { ToolDefinition } from '../types.js';
 import { executeBash } from './BashTool.js';
 import { executeRead } from './ReadTool.js';
 import { executeWrite } from './WriteTool.js';
@@ -60,6 +61,7 @@ import { executeMathPlot } from '../math/MathPlot.js';
 import { executeMathExplain } from '../math/MathExplain.js';
 import { executeSearch } from './SearchTool.js';
 import { executeImageInfo, executeImageToBase64, executeListImages } from './ImageTool.js';
+import { executeRemember, executeRecall, executeForget, executeListMemories } from './MemoryTool.js';
 import type Anthropic from '@anthropic-ai/sdk';
 import type { McpManager } from '../mcp/McpManager.js';
 
@@ -301,7 +303,10 @@ export const tools: ToolDefinition[] = [
       type: 'object',
       properties: {
         description: { type: 'string', description: 'Short description (3-5 words)' },
-        prompt: { type: 'string', description: 'Single instruction for the sub-agent (use instead of subtasks for simple tasks)' },
+        prompt: {
+          type: 'string',
+          description: 'Single instruction for the sub-agent (use instead of subtasks for simple tasks)',
+        },
         subtasks: {
           type: 'array',
           items: { type: 'string' },
@@ -357,6 +362,67 @@ export const tools: ToolDefinition[] = [
       }
       return `[QUESTION] ${q}`;
     },
+  },
+  {
+    name: 'Remember',
+    description:
+      'Save a fact, preference, or piece of information to persistent memory. Use for user preferences, project details, decisions, or anything worth remembering across sessions.',
+    parameters: {
+      type: 'object',
+      properties: {
+        key: {
+          type: 'string',
+          description: 'A short, descriptive key (e.g. "user_name", "project_goal", "preferred_test_framework")',
+        },
+        value: { type: 'string', description: 'The content to remember' },
+        type: {
+          type: 'string',
+          enum: ['fact', 'preference', 'project', 'instruction', 'context'],
+          description: 'Category of memory (default: fact)',
+        },
+      },
+      required: ['key', 'value'],
+    },
+    execute: async (args) => executeRemember(args),
+  },
+  {
+    name: 'Recall',
+    description: 'Retrieve memories by key, id, or search query. Returns matching memories from persistent storage.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Memory ID to retrieve (optional)' },
+        query: { type: 'string', description: 'Search query to find related memories (optional)' },
+      },
+    },
+    execute: async (args) => executeRecall(args),
+  },
+  {
+    name: 'Forget',
+    description: 'Delete a memory by its key or id.',
+    parameters: {
+      type: 'object',
+      properties: {
+        key: { type: 'string', description: 'Memory key or id to delete' },
+      },
+      required: ['key'],
+    },
+    execute: async (args) => executeForget(args),
+  },
+  {
+    name: 'ListMemories',
+    description: 'List all saved memories, optionally filtered by type.',
+    parameters: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['fact', 'preference', 'project', 'instruction', 'context'],
+          description: 'Filter by type (optional)',
+        },
+      },
+    },
+    execute: async (args) => executeListMemories(args),
   },
   {
     name: 'Copy',
@@ -1042,12 +1108,17 @@ export const tools: ToolDefinition[] = [
   },
   {
     name: 'HttpRequest',
-    description: 'Send HTTP request with configurable method, headers, and body. Returns response with status, headers, and data.',
+    description:
+      'Send HTTP request with configurable method, headers, and body. Returns response with status, headers, and data.',
     parameters: {
       type: 'object',
       properties: {
         url: { type: 'string', description: 'Target URL' },
-        method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], description: 'HTTP method (default: GET)' },
+        method: {
+          type: 'string',
+          enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+          description: 'HTTP method (default: GET)',
+        },
         headers: { type: 'object', description: 'Request headers (optional)' },
         body: { type: 'string', description: 'Request body for POST/PUT/PATCH (optional)' },
         timeout: { type: 'number', description: 'Timeout in milliseconds (default: 30000)' },
@@ -1056,7 +1127,7 @@ export const tools: ToolDefinition[] = [
     },
     execute: async (args) => {
       const url = String(args['url'] ?? '');
-      const method = (args['method'] as any) || 'GET';
+      const method = (args['method'] as Method) || 'GET';
       const headers = args['headers'] as Record<string, string> | undefined;
       const body = args['body'] ? String(args['body']) : undefined;
       const timeout = args['timeout'] !== undefined ? Number(args['timeout']) : 30000;
@@ -1112,7 +1183,11 @@ export const tools: ToolDefinition[] = [
       type: 'object',
       properties: {
         url: { type: 'string', description: 'API endpoint URL' },
-        method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], description: 'HTTP method (default: GET)' },
+        method: {
+          type: 'string',
+          enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+          description: 'HTTP method (default: GET)',
+        },
         body: { type: 'object', description: 'JSON request body (optional)' },
         headers: { type: 'object', description: 'Additional headers (optional)' },
         timeout: { type: 'number', description: 'Timeout in milliseconds (default: 30000)' },
@@ -1121,7 +1196,7 @@ export const tools: ToolDefinition[] = [
     },
     execute: async (args) => {
       const url = String(args['url'] ?? '');
-      const method = (args['method'] as any) || 'GET';
+      const method = (args['method'] as Method) || 'GET';
       const body = args['body'];
       const headers = args['headers'] as Record<string, string> | undefined;
       const timeout = args['timeout'] !== undefined ? Number(args['timeout']) : 30000;
@@ -1164,9 +1239,9 @@ export const tools: ToolDefinition[] = [
     name: 'MathSolve',
     description:
       'Solve middle school math problems step by step with Chinese explanations. ' +
-      'Covers: linear equations (涓€鍏冧竴娆℃柟绋?, quadratic equations (涓€鍏冧簩娆℃柟绋?, ' +
-      'systems of equations (浜屽厓涓€娆℃柟绋嬬粍), Pythagorean theorem (鍕捐偂瀹氱悊), ' +
-      'circle geometry (鍦?, statistics (缁熻), and percentages (鐧惧垎姣?.',
+      'Covers: linear equations (一元一次方程), quadratic equations (一元二次方程), ' +
+      'systems of equations (二元一次方程组), Pythagorean theorem (勾股定理), ' +
+      'circle geometry (圆), statistics (统计), and percentages (百分比).',
     parameters: {
       type: 'object',
       properties: {
@@ -1188,9 +1263,9 @@ export const tools: ToolDefinition[] = [
   {
     name: 'MathPlot',
     description:
-      'Generate SVG mathematical diagrams. Supports: coordinate plane (鍧愭爣绯?, ' +
-      'function graphs (鍑芥暟鍥惧儚, e.g. func:x*2+1), triangle (涓夎褰?with labels), ' +
-      'bar charts (鏉″舰缁熻鍥? e.g. bar:A=5,B=8). Outputs SVG files viewable in browser.',
+      'Generate SVG mathematical diagrams. Supports: coordinate plane (坐标系), ' +
+      'function graphs (函数图像, e.g. func:x*2+1), triangle (三角形 with labels), ' +
+      'bar charts (条形统计图 e.g. bar:A=5,B=8). Outputs SVG files viewable in browser.',
     parameters: {
       type: 'object',
       properties: {
@@ -1279,9 +1354,9 @@ export const tools: ToolDefinition[] = [
     name: 'MathExplain',
     description:
       'Reference for middle school math concepts with formulas, examples, and common mistakes. ' +
-      'Topics: linear equations (涓€鍏冧竴娆℃柟绋?, quadratic equations (涓€鍏冧簩娆℃柟绋?, ' +
-      'Pythagorean theorem (鍕捐偂瀹氱悊), linear functions (涓€娆″嚱鏁?, ' +
-      'quadratic functions (浜屾鍑芥暟), circles (鍦?, statistics (缁熻), probability (姒傜巼).',
+      'Topics: linear equations (一元一次方程), quadratic equations (一元二次方程), ' +
+      'Pythagorean theorem (勾股定理), linear functions (一次函数), ' +
+      'quadratic functions (二次函数), circles (圆), statistics (统计), probability (概率).',
     parameters: {
       type: 'object',
       properties: {
@@ -1314,5 +1389,3 @@ export function toolSchemas(): Array<{
     input_schema: t.parameters as { type: 'object'; properties?: unknown; required?: string[]; [k: string]: unknown },
   }));
 }
-
-

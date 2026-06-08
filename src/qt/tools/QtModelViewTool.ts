@@ -1,8 +1,9 @@
 /**
  * QtModelView — Analyze Model/View architecture patterns and detect anti-patterns.
  */
-import { readdir, readFile } from 'node:fs/promises';
-import { join, relative, extname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { relative } from 'node:path';
+import { collectFiles } from '../shared.js';
 
 interface MVIssue {
   file: string;
@@ -12,9 +13,12 @@ interface MVIssue {
 }
 export async function executeQtModelView(cwd?: string): Promise<string> {
   const base = cwd || process.cwd();
-  const files = await collectFiles(base);
+  const files = await collectCppFiles(base);
   const issues: MVIssue[] = [];
-  let modelCount = 0, viewCount = 0, delegateCount = 0, proxyCount = 0;
+  let modelCount = 0,
+    viewCount = 0,
+    delegateCount = 0,
+    proxyCount = 0;
 
   for (const file of files) {
     try {
@@ -29,44 +33,78 @@ export async function executeQtModelView(cwd?: string): Promise<string> {
       if (/class\s+\w+.*:\s*public\s+QSortFilterProxyModel/.test(content)) proxyCount++;
 
       for (let i = 0; i < lines.length; i++) {
-        const line = lines[i], ln = i + 1;
+        const line = lines[i],
+          ln = i + 1;
 
         // beginInsertRows without endInsertRows
         if (/beginInsertRows\s*\(/.test(line)) {
           const remaining = content.slice(lines.slice(0, i).join('\n').length);
           if (!remaining.includes('endInsertRows')) {
-            issues.push({ file: rel, line: ln, severity: 'error', message: 'beginInsertRows() without matching endInsertRows() — views will crash.' });
+            issues.push({
+              file: rel,
+              line: ln,
+              severity: 'error',
+              message: 'beginInsertRows() without matching endInsertRows() — views will crash.',
+            });
           }
         }
 
         // beginResetModel in a loop (expensive)
         if (/beginResetModel/.test(line)) {
-          issues.push({ file: rel, line: ln, severity: 'warning', message: 'beginResetModel() is expensive. For single-row changes, use beginInsertRows/beginRemoveRows instead.' });
+          issues.push({
+            file: rel,
+            line: ln,
+            severity: 'warning',
+            message:
+              'beginResetModel() is expensive. For single-row changes, use beginInsertRows/beginRemoveRows instead.',
+          });
         }
 
         // setModel() on a view that already has a model without disconnect
         if (/setModel\s*\(/.test(line) && content.slice(i).includes('setModel(')) {
           const prev = content.slice(0, content.indexOf(line) + line.length).match(/setModel\s*\(/g);
           if (prev && prev.length > 1) {
-            issues.push({ file: rel, line: ln, severity: 'warning', message: 'Multiple setModel() calls. Disconnect old model first or reuse the same model.' });
+            issues.push({
+              file: rel,
+              line: ln,
+              severity: 'warning',
+              message: 'Multiple setModel() calls. Disconnect old model first or reuse the same model.',
+            });
           }
         }
 
         // Tree model: missing parent() implementation
         if (/QAbstractItemModel/.test(content) && !/::parent\s*\(/.test(content)) {
           if (content.includes('QAbstractItemModel') && !issues.some((x) => x.message.includes('parent()'))) {
-            issues.push({ file: rel, line: 1, severity: 'error', message: 'QAbstractItemModel subclass must implement parent() — required for tree models and view navigation.' });
+            issues.push({
+              file: rel,
+              line: 1,
+              severity: 'error',
+              message:
+                'QAbstractItemModel subclass must implement parent() — required for tree models and view navigation.',
+            });
           }
         }
 
         // index() with createIndex in every call (no caching)
         if (/return\s+createIndex\s*\(/.test(line) && !content.includes('QModelIndex')) {
-          issues.push({ file: rel, line: ln, severity: 'warning', message: 'createIndex() called inline — consider caching frequent indexes as member variables.' });
+          issues.push({
+            file: rel,
+            line: ln,
+            severity: 'warning',
+            message: 'createIndex() called inline — consider caching frequent indexes as member variables.',
+          });
         }
 
         // data() with role==Qt::DisplayRole that allocates memory
         if (/role\s*==\s*Qt::DisplayRole/.test(line) && /new\s+|QString\s*\(/.test(line)) {
-          issues.push({ file: rel, line: ln, severity: 'warning', message: 'data() called frequently — avoid allocations in DisplayRole handler. Return cached/const strings.' });
+          issues.push({
+            file: rel,
+            line: ln,
+            severity: 'warning',
+            message:
+              'data() called frequently — avoid allocations in DisplayRole handler. Return cached/const strings.',
+          });
         }
 
         // Missing call to base data() for unhandled roles
@@ -74,11 +112,19 @@ export async function executeQtModelView(cwd?: string): Promise<string> {
         if (dataFn && !content.includes('baseClass::data') && !content.includes('QAbstractItemModel::data')) {
           const hasDefault = content.indexOf('return QVariant()') > 0 || content.indexOf('return {}') > 0;
           if (!hasDefault && !issues.some((x) => x.message.includes('base class data'))) {
-            issues.push({ file: rel, line: 1, severity: 'info', message: 'Custom data() should call base class data() for unhandled roles to support built-in roles (ToolTipRole, StatusTipRole, etc.).' });
+            issues.push({
+              file: rel,
+              line: 1,
+              severity: 'info',
+              message:
+                'Custom data() should call base class data() for unhandled roles to support built-in roles (ToolTipRole, StatusTipRole, etc.).',
+            });
           }
         }
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
 
   return formatMVReport(issues, { modelCount, viewCount, delegateCount, proxyCount });
@@ -87,7 +133,9 @@ export async function executeQtModelView(cwd?: string): Promise<string> {
 function formatMVReport(issues: MVIssue[], counts: Record<string, number>): string {
   const lines: string[] = [];
   lines.push('## Qt Model/View Architecture Analysis\n');
-  lines.push(`Components: ${counts.modelCount} model(s), ${counts.viewCount} view(s), ${counts.delegateCount} delegate(s), ${counts.proxyCount} proxy/ies\n`);
+  lines.push(
+    `Components: ${counts.modelCount} model(s), ${counts.viewCount} view(s), ${counts.delegateCount} delegate(s), ${counts.proxyCount} proxy/ies\n`,
+  );
 
   if (issues.length === 0) {
     lines.push('No Model/View issues found. Architecture looks clean.');
@@ -115,18 +163,6 @@ function formatMVReport(issues: MVIssue[], counts: Record<string, number>): stri
   return lines.join('\n');
 }
 
-async function collectFiles(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist']);
-  async function walk(d: string) {
-    let entries;
-    try { entries = await readdir(d, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) { if (!entry.name.startsWith('.') && !skip.has(entry.name)) await walk(full); }
-      else if (entry.isFile() && ['.cpp', '.h', '.hpp'].includes(extname(entry.name).toLowerCase())) results.push(full);
-    }
-  }
-  await walk(dir);
-  return results;
+async function collectCppFiles(dir: string): Promise<string[]> {
+  return collectFiles(dir, { extensions: new Set(['.cpp', '.h', '.hpp']) });
 }

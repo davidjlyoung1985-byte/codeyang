@@ -7,8 +7,9 @@
  *   - Properties (Q_PROPERTY read/write/notify)
  *   - Invokable methods (Q_INVOKABLE)
  */
-import { readFile, readdir } from 'node:fs/promises';
-import { join, relative, extname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { join, relative } from 'node:path';
+import { collectFiles } from '../shared.js';
 
 interface ClassInfo {
   className: string;
@@ -82,32 +83,19 @@ export async function executeQtTestGen(headerPath?: string, cwd?: string): Promi
   }
 
   if (files.length > 5) {
-    results.push(`\n> Showing first 5 files. ${files.length - 5} more available. Use QtTestGen with a specific header path.`);
+    results.push(
+      `\n> Showing first 5 files. ${files.length - 5} more available. Use QtTestGen with a specific header path.`,
+    );
   }
 
   return results.join('\n');
 }
 
 async function findHeaders(dir: string): Promise<string[]> {
-  const results: string[] = [];
-  const skip = new Set(['node_modules', '.git', 'build', 'dist', 'moc_', 'ui_']);
-  async function walk(d: string) {
-    let entries;
-    try { entries = await readdir(d, { withFileTypes: true }); } catch { return; }
-    for (const entry of entries) {
-      const full = join(d, entry.name);
-      if (entry.isDirectory()) {
-        if (!entry.name.startsWith('.') && !skip.has(entry.name)) await walk(full);
-      } else if (entry.isFile()) {
-        const ext = extname(entry.name).toLowerCase();
-        if (['.h', '.hpp'].includes(ext) && !entry.name.startsWith('moc_') && !entry.name.startsWith('ui_')) {
-          results.push(full);
-        }
-      }
-    }
-  }
-  await walk(dir);
-  return results;
+  return collectFiles(dir, {
+    extensions: new Set(['.h', '.hpp']),
+    skipPrefixes: ['moc_', 'ui_'],
+  });
 }
 
 function parseClasses(filePath: string, content: string): ClassInfo[] {
@@ -184,7 +172,10 @@ function parseClasses(filePath: string, content: string): ClassInfo[] {
           ci.constructors.push(m.signature);
           continue;
         }
-        if (publicSection.includes(`Q_INVOKABLE ${m.signature}`) || publicSection.includes(`Q_INVOKABLE\n${m.signature}`)) {
+        if (
+          publicSection.includes(`Q_INVOKABLE ${m.signature}`) ||
+          publicSection.includes(`Q_INVOKABLE\n${m.signature}`)
+        ) {
           ci.invokables.push(m.name);
         }
         ci.publicMethods.push(m);
@@ -201,10 +192,7 @@ function parseClasses(filePath: string, content: string): ClassInfo[] {
 function extractSection(body: string, label: string): string | null {
   // Stop at next access label (with optional "slots") or closing brace
   const accessLabels = '(?:signals|Q_SIGNALS|public|private|protected|Q_SLOTS)';
-  const pattern = new RegExp(
-    `${label}\\s*:([\\s\\S]*?)(?=\\n\\s*(?:${accessLabels}(?:\\s+slots)?\\s*:|\\}))`,
-    'im',
-  );
+  const pattern = new RegExp(`${label}\\s*:([\\s\\S]*?)(?=\\n\\s*(?:${accessLabels}(?:\\s+slots)?\\s*:|\\}))`, 'im');
   const m = body.match(pattern);
   return m ? m[1] : null;
 }
@@ -216,7 +204,15 @@ function parseMethodDeclarations(section: string): MethodInfo[] {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('Q_') || trimmed.startsWith('#') || !trimmed.endsWith(';')) continue;
+    if (
+      !trimmed ||
+      trimmed.startsWith('//') ||
+      trimmed.startsWith('/*') ||
+      trimmed.startsWith('Q_') ||
+      trimmed.startsWith('#') ||
+      !trimmed.endsWith(';')
+    )
+      continue;
 
     // Skip access labels, macro lines
     if (/^(public|private|protected|signals|Q_SIGNALS|Q_SLOTS)\b/.test(trimmed)) continue;
@@ -444,7 +440,11 @@ function generateTestCode(ci: ClassInfo, _base: string): string {
   lines.push('```\n');
 
   // Test plan summary
-  const totalTests = 1 + ci.publicMethods.length + ci.publicSlots.length + ci.signals.length +
+  const totalTests =
+    1 +
+    ci.publicMethods.length +
+    ci.publicSlots.length +
+    ci.signals.length +
     ci.properties.filter((p) => p.hasRead).length +
     ci.properties.filter((p) => p.hasWrite).length +
     ci.properties.filter((p) => p.hasNotify).length +
@@ -452,10 +452,14 @@ function generateTestCode(ci: ClassInfo, _base: string): string {
 
   lines.push(`**Generated test plan**: ${totalTests} test methods`);
   lines.push(`- Constructor: 1`);
-  if (ci.publicMethods.length) lines.push(`- Public methods: ${ci.publicMethods.length} (${ci.publicMethods.map((m) => m.name).join(', ')})`);
-  if (ci.publicSlots.length) lines.push(`- Public slots: ${ci.publicSlots.length} (${ci.publicSlots.map((s) => s.name).join(', ')})`);
-  if (ci.signals.length) lines.push(`- Signals (QSignalSpy): ${ci.signals.length} (${ci.signals.map((s) => s.name).join(', ')})`);
-  if (ci.properties.length) lines.push(`- Properties: ${ci.properties.length} (${ci.properties.map((p) => p.name).join(', ')})`);
+  if (ci.publicMethods.length)
+    lines.push(`- Public methods: ${ci.publicMethods.length} (${ci.publicMethods.map((m) => m.name).join(', ')})`);
+  if (ci.publicSlots.length)
+    lines.push(`- Public slots: ${ci.publicSlots.length} (${ci.publicSlots.map((s) => s.name).join(', ')})`);
+  if (ci.signals.length)
+    lines.push(`- Signals (QSignalSpy): ${ci.signals.length} (${ci.signals.map((s) => s.name).join(', ')})`);
+  if (ci.properties.length)
+    lines.push(`- Properties: ${ci.properties.length} (${ci.properties.map((p) => p.name).join(', ')})`);
   if (ci.invokables.length) lines.push(`- Q_INVOKABLE: ${ci.invokables.join(', ')}`);
 
   lines.push(`\n> Add this file to your .pro: \`SOURCES += tst_${ci.className.toLowerCase()}.cpp\``);
@@ -467,15 +471,27 @@ function generateTestCode(ci: ClassInfo, _base: string): string {
 
 function qtTypeToQvariant(type: string): string {
   switch (type) {
-    case 'int': return 'Int';
-    case 'double': case 'float': case 'qreal': return 'Double';
-    case 'bool': return 'Bool';
-    case 'QString': return 'String';
-    case 'QByteArray': return 'ByteArray';
-    case 'QUrl': return 'Url';
-    case 'QColor': return 'Color';
-    case 'QDate': return 'Date';
-    case 'QTime': return 'Time';
-    default: return 'UserType';
+    case 'int':
+      return 'Int';
+    case 'double':
+    case 'float':
+    case 'qreal':
+      return 'Double';
+    case 'bool':
+      return 'Bool';
+    case 'QString':
+      return 'String';
+    case 'QByteArray':
+      return 'ByteArray';
+    case 'QUrl':
+      return 'Url';
+    case 'QColor':
+      return 'Color';
+    case 'QDate':
+      return 'Date';
+    case 'QTime':
+      return 'Time';
+    default:
+      return 'UserType';
   }
 }
