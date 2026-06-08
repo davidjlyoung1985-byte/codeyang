@@ -129,7 +129,7 @@ export class Agent {
     this.cbs.onUserMessage?.(prompt);
 
     setToolContext({
-      anthropicClient: null,
+      llmClient: this.client,
       model: config.model,
       maxTokens: config.maxTokens,
       cwd: process.cwd(),

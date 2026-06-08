@@ -60,11 +60,11 @@ import { executeMathPlot } from '../math/MathPlot.js';
 import { executeMathExplain } from '../math/MathExplain.js';
 import { executeSearch } from './SearchTool.js';
 import { executeImageInfo, executeImageToBase64, executeListImages } from './ImageTool.js';
-import type Anthropic from '@anthropic-ai/sdk';
+import type { LLMClient } from '../agent/LLMClient.js';
 import type { McpManager } from '../mcp/McpManager.js';
 
 export interface ToolContext {
-  anthropicClient: Anthropic | null;
+  llmClient: LLMClient | null;
   model: string;
   maxTokens: number;
   cwd: string;
@@ -319,11 +319,11 @@ export const tools: ToolDefinition[] = [
         return 'Task sub-agent is not available: no tool context configured.';
       }
 
-      const { anthropicClient, model, maxTokens, cwd } = currentContext;
-      if (!anthropicClient) {
-        return 'Task sub-agent is not available when using non-Anthropic providers.';
+      const { llmClient, model, maxTokens, cwd } = currentContext;
+      if (!llmClient) {
+        return 'Task sub-agent is not available: LLM client not configured.';
       }
-      return executeTask(anthropicClient, model, maxTokens, desc, subtasks, cwd);
+      return executeTask(llmClient, model, maxTokens, desc, subtasks, cwd);
     },
   },
   {
