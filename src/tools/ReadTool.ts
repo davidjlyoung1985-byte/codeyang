@@ -1,8 +1,8 @@
 import { readFile, stat, readdir } from 'node:fs/promises';
-import { join, isAbsolute } from 'node:path';
+import { resolveSafePath } from './shared.js';
 
 export async function executeRead(filePath: string, offset?: number, limit?: number): Promise<string> {
-  const resolved = isAbsolute(filePath) ? filePath : join(process.cwd(), filePath);
+  const resolved = resolveSafePath(filePath);
 
   let stats;
   try {

@@ -1,0 +1,490 @@
+$ npm test 2>&1
+[exit 1]
+
+> codeyang@0.6.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.7 [39m[90mE:/Qt/ai-code-agent[39m
+
+ [31m❯[39m src/tools/MemoryTool.test.ts [2m([22m[2m20 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 51[2mms[22m[39m
+       [32m✓[39m saves a memory with key, value, and default type (fact)[32m 8[2mms[22m[39m
+       [32m✓[39m saves a memory with a custom type[32m 1[2mms[22m[39m
+       [32m✓[39m falls back to "fact" for invalid type[32m 1[2mms[22m[39m
+       [32m✓[39m returns error when key is missing[32m 1[2mms[22m[39m
+       [32m✓[39m returns error when value is missing[32m 1[2mms[22m[39m
+       [32m✓[39m trims whitespace from key and value[32m 1[2mms[22m[39m
+       [32m✓[39m retrieves a memory by id[32m 1[2mms[22m[39m
+       [32m✓[39m returns error when memory by id is not found[32m 1[2mms[22m[39m
+       [32m✓[39m searches memories by query[32m 1[2mms[22m[39m
+       [32m✓[39m falls back to getMemoryByKey when search returns empty[32m 2[2mms[22m[39m
+       [32m✓[39m lists all memories when no id or query given[32m 2[2mms[22m[39m
+       [32m✓[39m deletes a memory by id[32m 1[2mms[22m[39m
+       [32m✓[39m deletes a memory by key when id delete fails[32m 1[2mms[22m[39m
+       [32m✓[39m returns deleted:false when neither id nor key matches[32m 1[2mms[22m[39m
+       [32m✓[39m returns error when no key or id provided[32m 1[2mms[22m[39m
+       [32m✓[39m favors "key" over "id" when both provided (key used as id first)[32m 1[2mms[22m[39m
+       [32m✓[39m lists all memories when no type filter[32m 1[2mms[22m[39m
+       [32m✓[39m filters memories by type[32m 2[2mms[22m[39m
+       [32m✓[39m returns empty array when no memories exist[32m 0[2mms[22m[39m
+[31m       [31m×[31m handles store throwing an error[39m[32m 18[2mms[22m[39m
+ [31m❯[39m src/tools/TaskTool.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[32m 49[2mms[22m[39m
+[31m     [31m×[31m executes a single subtask and returns text response[39m[32m 28[2mms[22m[39m
+[31m     [31m×[31m executes tool calls and sends results back[39m[32m 4[2mms[22m[39m
+[31m     [31m×[31m blocks Question and Task tools in sub-agents, continues on next turn[39m[32m 3[2mms[22m[39m
+[31m     [31m×[31m handles unknown tools gracefully — marks error and continues[39m[32m 3[2mms[22m[39m
+[31m     [31m×[31m handles consumeStream errors gracefully[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m handles multiple parallel subtasks[39m[32m 3[2mms[22m[39m
+     [32m✓[39m stops after max 10 turns[32m 2[2mms[22m[39m
+ [32m✓[39m src/utils/dotenv.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 63[2mms[22m[39m
+ [32m✓[39m src/utils/sessionStore.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 109[2mms[22m[39m
+ [32m✓[39m src/ui/CliUI.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+ [32m✓[39m src/tools/ImageTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 229[2mms[22m[39m
+ [31m❯[39m src/tools/registry.test.ts [2m([22m[2m16 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 107[2mms[22m[39m
+       [32m✓[39m finds built-in tools by name[32m 7[2mms[22m[39m
+       [32m✓[39m returns undefined for unknown tools[32m 1[2mms[22m[39m
+       [32m✓[39m is case-sensitive[32m 1[2mms[22m[39m
+       [32m✓[39m finds Read tool[32m 3[2mms[22m[39m
+       [32m✓[39m finds Write tool[32m 1[2mms[22m[39m
+       [32m✓[39m finds GitStatus tool[32m 1[2mms[22m[39m
+       [32m✓[39m finds Question tool[32m 1[2mms[22m[39m
+       [32m✓[39m returns an array of schemas[32m 2[2mms[22m[39m
+       [32m✓[39m includes built-in tools[32m 6[2mms[22m[39m
+       [32m✓[39m every schema has name, description, and input_schema[32m 41[2mms[22m[39m
+       [32m✓[39m adds Qt tools to the registry which getTool can find[32m 1[2mms[22m[39m
+       [32m✓[39m replaces previously registered Qt tools[32m 1[2mms[22m[39m
+       [32m✓[39m included Qt tools in toolSchemas[32m 1[2mms[22m[39m
+[31m       [31m×[31m adds math tools to the registry which getTool can find[39m[32m 28[2mms[22m[39m
+[31m       [31m×[31m replaces previously registered math tools[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m included math tools in toolSchemas[39m[32m 3[2mms[22m[39m
+ [32m✓[39m src/tools/NetworkTool.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 334[2mms[22m[39m
+ [32m✓[39m src/tools/GlobTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 337[2mms[22m[39m
+ [32m✓[39m src/tools/index.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 132[2mms[22m[39m
+ [32m✓[39m src/tools/FileSystemTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 487[2mms[22m[39m
+ [32m✓[39m src/tools/DataTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 376[2mms[22m[39m
+ [32m✓[39m src/qt/tools.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 358[2mms[22m[39m
+ [32m✓[39m src/math/index.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [31m❯[39m src/agent/Agent.test.ts [2m([22m[2m17 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 53[2mms[22m[39m
+       [32m✓[39m creates an Agent with apiKey set[32m 5[2mms[22m[39m
+       [32m✓[39m clears conversation state[32m 2[2mms[22m[39m
+       [32m✓[39m is not waiting for answer initially[32m 0[2mms[22m[39m
+       [32m✓[39m can cancel a question without error[32m 1[2mms[22m[39m
+       [32m✓[39m accepts and stores callbacks[32m 1[2mms[22m[39m
+       [32m✓[39m returns empty array for fresh agent[32m 2[2mms[22m[39m
+       [32m✓[39m restores user and assistant messages[32m 3[2mms[22m[39m
+       [32m✓[39m restores messages with tool calls[32m 1[2mms[22m[39m
+       [32m✓[39m handles messages without tool calls/result[32m 1[2mms[22m[39m
+       [32m✓[39m streams text response from LLM[32m 9[2mms[22m[39m
+       [32m✓[39m sends user message to LLM API[32m 1[2mms[22m[39m
+       [32m✓[39m calls onUserMessage callback[32m 1[2mms[22m[39m
+       [32m✓[39m calls onAgentDelta for streaming text[32m 1[2mms[22m[39m
+       [32m✓[39m executes tool calls from LLM and sends results back[32m 3[2mms[22m[39m
+       [32m✓[39m handles unknown tools gracefully[32m 4[2mms[22m[39m
+[31m       [31m×[31m accumulates token usage from usage events[39m[32m 11[2mms[22m[39m
+[31m       [31m×[31m resets token usage on agent reset[39m[32m 2[2mms[22m[39m
+ [32m✓[39m src/qt/index.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 168[2mms[22m[39m
+ [32m✓[39m src/agent/config.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/tools/SearchTool.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1346[2mms[22m[39m
+     [33m[2m✓[22m[39m finds files by content [33m 760[2mms[22m[39m
+ [32m✓[39m src/tools/CodeAnalysisTool.test.ts [2m([22m[2m19 tests[22m[2m)[22m[33m 318[2mms[22m[39m
+ [32m✓[39m src/tools/tools.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 2615[2mms[22m[39m
+     [33m[2m✓[22m[39m executes a simple echo command [33m 706[2mms[22m[39m
+     [33m[2m✓[22m[39m returns exit code for failing commands [33m 547[2mms[22m[39m
+     [33m[2m✓[22m[39m handles command with cwd parameter [33m 501[2mms[22m[39m
+ [32m✓[39m src/tools/mcp.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [31m❯[39m src/tools/GitTool.test.ts [2m([22m[2m23 tests[22m[2m | [22m[31m11 failed[39m[2m)[22m[33m 17062[2mms[22m[39m
+       [33m[2m✓[22m[39m should show clean status for new repo [33m 1030[2mms[22m[39m
+       [33m[2m✓[22m[39m should show untracked files [33m 780[2mms[22m[39m
+       [33m[2m✓[22m[39m should show modified files [33m 1060[2mms[22m[39m
+       [33m[2m✓[22m[39m should show short format [33m 595[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage files [33m 691[2mms[22m[39m
+       [33m[2m✓[22m[39m should fail with no files [33m 370[2mms[22m[39m
+[31m       [31m×[31m should create commit with staged files[39m[33m 3225[2mms[22m[39m
+[31m       [31m×[31m should stage all and commit with addAll=true[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m should fail with no staged changes[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should list branches[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m should show multiple branches[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should create and switch to new branch[39m[32m 8[2mms[22m[39m
+[31m       [31m×[31m should switch to existing branch[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should show commit history[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should limit commit count[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should show oneline format[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should show no diff for clean repo[39m[33m 2179[2mms[22m[39m
+       [33m[2m✓[22m[39m should show unstaged changes [33m 1018[2mms[22m[39m
+       [33m[2m✓[22m[39m should show staged changes [33m 1067[2mms[22m[39m
+       [33m[2m✓[22m[39m should unstage files [33m 735[2mms[22m[39m
+       [33m[2m✓[22m[39m should stash changes [33m 1116[2mms[22m[39m
+       [33m[2m✓[22m[39m should list stashes [33m 2287[2mms[22m[39m
+       [33m[2m✓[22m[39m should return current branch [33m 863[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 23 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/agent/Agent.test.ts[2m > [22mAgent[2m > [22mrun — token usage tracking[2m > [22maccumulates token usage from usage events
+[31m[1mTypeError[22m: agent.getTokenUsage is not a function[39m
+[36m [2m❯[22m src/agent/Agent.test.ts:[2m280:20[22m[39m
+    [90m278|[39m       mockStream.mockReturnValue(makeStream(textDelta('Hello'), usageE…
+    [90m279|[39m       [35mawait[39m agent[33m.[39m[34mrun[39m([32m'prompt 1'[39m)[33m;[39m
+    [90m280|[39m       expect(agent.getTokenUsage()).toEqual({ inputTokens: 10, outputT…
+    [90m   |[39m                    [31m^[39m
+    [90m281|[39m
+    [90m282|[39m       mockStream.mockReturnValue(makeStream(textDelta('World'), usageE…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/32]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/agent/Agent.test.ts[2m > [22mAgent[2m > [22mrun — token usage tracking[2m > [22mresets token usage on agent reset
+[31m[1mTypeError[22m: agent.getTokenUsage is not a function[39m
+[36m [2m❯[22m src/agent/Agent.test.ts:[2m290:20[22m[39m
+    [90m288|[39m       mockStream.mockReturnValue(makeStream(textDelta('Hello'), usageE…
+    [90m289|[39m       [35mawait[39m agent[33m.[39m[34mrun[39m([32m'prompt'[39m)[33m;[39m
+    [90m290|[39m       [34mexpect[39m(agent[33m.[39m[34mgetTokenUsage[39m()[33m.[39minputTokens)[33m.[39m[34mtoBe[39m([34m10[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m291|[39m
+    [90m292|[39m       agent[33m.[39m[34mreset[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/32]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould create commit with staged files
+[31m[1mAssertionError[22m: expected '07a636f merge: resolve conflicts, kee…' to contain 'Test commit'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mTest commi[27mt[39m
+[31m+ 07a636f merge: resolve conflicts, keep v0.6.0 improvements[39m
+[31m+ 02eed47 v0.6.0: 文档修复 + 版本统一 + 性能优化 + 全量子项目同步[39m
+[31m+ 982aaa1 perf: SearchTool name search uses glob pattern matching test: add dotenv.test.ts (9 tests) + registry.test.ts (16 tests) docs: update CHANGELOG with v0.3.0-v0.6.0 history fix: .env.local now correctly overrides .env[39m
+[31m+ 29285aa chore: remove accidental .reasonix file[39m
+[31m+ d1aa23e docs: full README rewrite + .env.example + update CLAUDE.md + fix codeyangx version[39m
+[31m+ 311801d feat: session search + build config cleanup[39m
+[31m+ b771b0c test: add CliUI.test.ts — 23 tests for UI rendering, spinner, question/error display[39m
+[31m+ b6847e0 test: add TaskTool.test.ts — 7 tests covering subtask execution, tool calls, error handling, max turns[39m
+[31m+ 5244422 feat: agent parameters now configurable via env vars[39m
+[31m+ a1bd9d1 feat: .env support + refactored Agent tests with StreamEvent helpers[39m
+[31m+ 6c80808 feat: better unknown command handling + /stats token usage[39m
+[31m+ 6aa284b refactor: math tools now on-demand registration, not included by default[39m
+[31m+ 85e3d24 chore: unify version number — single source of truth in src/version.ts[39m
+[31m+ c600020 feat: smart startup — skip API key prompt when env var or saved key exists[39m
+[31m+ 1691b5e fix: TaskTool now supports all providers (DeepSeek/OpenAI/Anthropic)[39m
+[31m+ af6dee7 refactor: redesign CLI UI with OpenCode-inspired modern terminal style[39m
+[31m+ 00c3789 feat: add API base URL configuration to VS Code extension[39m
+[31m+ d057484 feat: add network tools - HTTP requests, download/upload, API calls[39m
+[31m+ 4872df0 fix: critical VS Code extension bugs - message handler and error handling[39m
+[31m+ 3be5306 feat: add comprehensive code analysis tools[39m
+[31m+ 7787be7 feat: add comprehensive Git version control tools[39m
+[31m+ ae4b019 feat: add comprehensive data processing tools (JSON/YAML/CSV/XML)[39m
+[31m+ 494a8b2 feat: add file system operation tools (Copy/Move/Delete/Mkdir/List/Exists)[39m
+[31m+ 4e016eb feat: streaming output, session index, parallel tasks, grep context, bug fixes[39m
+[31m+ c850719 feat: CodeYangX desktop app with streaming, sub-agents, and MCP[39m
+[31m+ 276dee2 feat: math solver, SVG plots, and graphics/charts tools[39m
+[31m+ 0eefe2f feat: Qt domain specialization — migration, UI, QML, and testing tools[39m
+[31m+ 5c7eb06 feat: improve stability and share tools between CLI and extension[39m
+[31m+ 8d85e7f ui: replace box-drawing chars with simple text labels (用户/CodeYang)[39m
+[31m+ 9193e22 fix: remove double-render of agent text, add anti-repetition loop detection[39m
+[31m+ b16b173 perf: parallel tools, rg grep, tool cache, atomic edit, hardened system prompt[39m
+[31m+ 710c8cd docs: add CLAUDE.md project documentation[39m
+[31m+ eef7351 feat: MCP protocol support - connect external tool servers[39m
+[31m+ f2602bf feat: beautiful CLI UI with box-drawing, markdown rendering, improved spinner[39m
+[31m+ 2d6f417 fix: prevent repetition (temperature=0.5), session ID collision, stderr on success, duplicate imports, source maps[39m
+[31m+ b0d404f feat: add Task/WebFetch/TodoWrite tools, tests, CI, linting, and docs[39m
+[31m+ [7mfac3477 feat: initial commit - CodeYang v0.2.0 AI coding agen[27mt[39m
+
+[36m [2m❯[22m src/tools/GitTool.test.ts:[2m114:26[22m[39m
+    [90m112|[39m
+    [90m113|[39m       const log = await execa('git', ['log', '--oneline'], { cwd: TEST…
+    [90m114|[39m       [34mexpect[39m(log[33m.[39mstdout)[33m.[39m[34mtoContain[39m([32m'Test commit'[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m115|[39m     })[33m;[39m
+    [90m116|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/32]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould create commit with staged files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould stage all and commit with addAll=true
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould stage all and commit with addAll=true
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould fail with no staged changes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould fail with no staged changes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitBranch[2m > [22mshould list branches
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitBranch[2m > [22mshould list branches
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitBranch[2m > [22mshould show multiple branches
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitBranch[2m > [22mshould show multiple branches
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCheckout[2m > [22mshould create and switch to new branch
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCheckout[2m > [22mshould create and switch to new branch
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCheckout[2m > [22mshould switch to existing branch
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCheckout[2m > [22mshould switch to existing branch
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould show commit history
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould show commit history
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould limit commit count
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould limit commit count
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould show oneline format
+[31m[1mError[22m: EBUSY: resource busy or locked, rmdir 'E:\Qt\ai-code-agent\.test-git-tools'[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/32]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitDiff[2m > [22mshould show no diff for clean repo
+[31m[1mAssertionError[22m: expected 'diff --git a/.github/workflows/ci.yml…' to contain 'No differences'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- No differences[39m
+[31m+ diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml[39m
+[31m+ index a1db3e9..04ac93d 100644[39m
+[31m+ --- a/.github/workflows/ci.yml[39m
+[31m+ +++ b/.github/workflows/ci.yml[39m
+[31m+ @@ -50,5 +50,8 @@ jobs:[39m
+[31m+        - name: Install dependencies[39m
+[31m+          run: npm ci[39m
+[31m+  [39m
+[31m+ +      - name: Check formatting[39m
+[31m+ +        run: npm run format:check[39m
+[31m+ +[39m
+[31m+        - name: Lint[39m
+[31m+          run: npm run lint[39m
+[31m+ diff --git a/Understand-Anything b/Understand-Anything[39m
+[31m+ --- a/Understand-Anything[39m
+[31m+ +++ b/Understand-Anything[39m
+[31m+ @@ -1 +1 @@[39m
+[31m+ -Subproject commit 7a3b7511b26a1816be3b6cc5683b34779e0abce9[39m
+[31m+ +Subproject commit 7a3b7511b26a1816be3b6cc5683b34779e0abce9-dirty[39m
+[31m+ diff --git a/eslint.config.js b/eslint.config.js[39m
+[31m+ index 1b18e24..baf208c 100644[39m
+[31m+ --- a/eslint.config.js[39m
+[31m+ +++ b/eslint.config.js[39m
+[31m+ @@ -6,8 +6,15 @@ export default tseslint.config([39m
+[31m+    },[39m
+[31m+    ...tseslint.configs.recommended,[39m
+[31m+    {[39m
+[31m+ +    languageOptions: {[39m
+[31m+ +      parserOptions: {[39m
+[31m+ +        project: './tsconfig.eslint.json',[39m
+[31m+ +      },[39m
+[31m+ +    },[39m
+[31m+      rules: {[39m
+[31m+        '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],[39m
+[31m+ +      '@typescript-eslint/no-floating-promises': 'error',[39m
+[31m+ +      '@typescript-eslint/require-await': 'warn',[39m
+[31m+        'no-console': 'off',[39m
+[31m+        'prefer-const': 'error',[39m
+[31m+        'no-var': 'error',[39m
+[31m+ diff --git a/src/agent/Agent.test.ts b/src/agent/Agent.test.ts[39m
+[31m+ index d5786e2..324c4f1 100644[39m
+[31m+ --- a/src/agent/Agent.test.ts[39m
+[31m+ +++ b/src/agent/Agent.test.ts[39m
+[31m+ @@ -268,9 +268,7 @@ describe('Agent', () => {[39m
+[31m+        agent.setCallbacks({ onToolResult });[39m
+[31m+        await expect(agent.run('use unknown')).resolves.toBeUndefined();[39m
+[31m+  [39m
+[31m+ -      const errorCalls = onToolResult.mock.calls.filter([39m
+[31m+ -        ([, , isError]: [string, string, boolean]) => isError === true,[39m
+[31m+ -      );[39m
+[31m+ +      const errorCalls = onToolResult.mock.calls.filter(([, , isError]: [string, string, boolean]) => isError === true);[39m
+[31m+        expect(errorCalls.length).toBeGreaterThanOrEqual(1);[39m
+[31m+      });[39m
+[31m+    });[39m
+[31m+ diff --git a/src/agent/Agent.ts b/src/agent/Agent.ts[39m
+[31m+ index 7662cdb..7af012d 100644[39m
+[31m+ --- a/src/agent/Agent.ts[39m
+[31m+ +++ b/src/agent/Agent.ts[39m
+[31m+ @@ -5,6 +5,19 @@ import type { QtContext } from '../qt/index.js';[39m
+[31m+  import { createLLMClient, type LLMClient, type LLMMessage, type ToolSchema } from './LLMClient.js';[39m
+[31m+  import { getMemorySummary } from '../utils/memoryStore.js';[39m
+[31m+  [39m
+[31m+ +/** A content block emitted by the assistant (text or tool_use). */[39m
+[31m+ +type AssistantContentBlock =[39m
+[31m+ +  | { type: 'text'; text: string }[39m
+[31m+ +  | { type: 'tool_use'; id: string; name: string; input: unknown };[39m
+[31m+ +[39m
+[31m+ +/** A tool_result block returned from tool execution. */[39m
+[31m+ +type ToolResultBlock = {[39m
+[31m+ +  type: 'tool_result';[39m
+[31m+ +  tool_use_id: string;[39m
+[31m+ +  content: string;[39m
+[31m+ +  is_error: boolean;[39m
+[31m+ +};[39m
+[31m+ +[39m
+[31m+  export interface AgentCallbacks {[39m
+[31m+    onUserMessage?: (text: string) => void;[39m
+[31m+    onAgentText?: (text: string) => void;[39m
+[31m+ @@ -210,9 +223,7 @@ export class Agent {[39m
+[31m+  [39m
+[31m+        const { toolCalls, assistantText } = streamResult;[39m
+[31m+  [39m
+[31m+ -      const assistantContent: Array<[39m
+[31m+ -        { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown }[39m
+[31m+ -      > = [];[39m
+[31m+ +      const assistantContent: AssistantContentBlock[] = [];[39m
+[31m+  [39m
+[31m+        if (assistantText) {[39m
+[31m+          assistantContent.push({ type: 'text', text: assistantText });[39m
+[31m+ @@ -321,13 +332,12 @@ export class Agent {[39m
+[31m+        await Promise.all(parallelTasks);[39m
+[31m+  [39m
+[31m+        // Map results to tool_use_ids by position (handles duplicate tool names correctly)[39m
+[31m+ -      const toolResultContent: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error: boolean }> =[39m
+[31m+ -        toolResults.map((tr, i) => ({[39m
+[31m+ -          type: 'tool_result',[39m
+[31m+ -          tool_use_id: toolResultIds[i] ?? 'unknown',[39m
+[31m+ -          content: tr.output,[39m
+[31m+ -          is_error: tr.isError,[39m
+[31m+ -        }));[39m
+[31m+ +      const toolResultContent: ToolResultBlock[] = toolResults.map((tr, i) => ({[39m
+[31m+ +        type: 'tool_result',[39m
+[31m+ +        tool_use_id: toolResultIds[i] ?? 'unknown',[39m
+[31m+ +        content: tr.output,[39m
+[31m+ +        is_error: tr.isError,[39m
+[31m+ +      }));[39m
+[31m+  [39m
+[31m+        messages.push({ role: 'user', content: toolResultContent });[39m
+[31m+        this.history = this.jsonClone(messages);[39m
+[31m+ @@ -358,9 +368,7 @@ export class Agent {[39m
+[31m+            this.history.push({ role: 'user', content: m.content });[39m
+[31m+          }[39m
+[31m+        } else if (m.role === 'assistant') {[39m
+[31m+ -        const blocks: Array<[39m
+[31m+ -          { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown }[39m
+[31m+ -        > = [];[39m
+[31m+ +        const blocks: AssistantContentBlock[] = [];[39m
+[31m+          if (m.content) blocks.push({ type: 'text', text: m.content });[39m
+[31m+          if (m.toolCalls) {[39m
+[31m+            for (const tc of m.toolCalls) {[39m
+[31m+ @@ -379,33 +387,32 @@ export class Agent {[39m
+[31m+          return { role: m.role as 'user' | 'assistant', content: m.content };[39m
+[31m+        }[39m
+[31m+  [39m
+[31m+ +      const blocks = m.content as (AssistantContentBlock | ToolResultBlock)[];[39m
+[31m+ +[39m
+[31m+        // Extract text parts[39m
+[31m+ -      const textParts = m.content[39m
+[31m+ -        .filter((b) => b.type === 'text')[39m
+[31m+ -        .map((b) => (b as { type: 'text'; text: string }).text)[39m
+[31m+ +      const textParts = blocks[39m
+[31m+ +        .filter((b): b is AssistantContentBlock & { type: 'text' } => b.type === 'text')[39m
+[31m+ +        .map((b) => b.text)[39m
+[31m+          .join('');[39m
+[31m+  [39m
+[31m+        // Extract tool_use parts[39m
+[31m+ -      const toolUseParts = m.content[39m
+[31m+ -        .filter((b) => b.type === 'tool_use')[39m
+[31m+ +      const toolUseParts = blocks[39m
+[31m+ +        .filter((b): b is AssistantContentBlock & { type: 'tool_use' } => b.type === 'tool_use')[39m
+[31m+          .map((b) => ({[39m
+[31m+ -          id: (b as { id: string }).id,[39m
+[31m+ -          name: (b as { name: string }).name,[39m
+[31m+ -          args: (b as { input: Record<string, unknown> }).input,[39m
+[31m+ +          id: b.id,[39m
+[31m+ +          name: b.name,[39m
+[31m+ +          args: b.input as Record<string, unknown>,[39m
+[31m+          }));[39m
+[31m+  [39m
+[31m+        // Extract tool_result parts — critical for session resumption[39m
+[31m+ -      const toolResultParts = m.content[39m
+[31m+ -        .filter((b) => b.type === 'tool_result')[39m
+[31m+ -        .map((b) => {[39m
+[31m+ -          const tr = b as { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };[39m
+[31m+ -          return {[39m
+[31m+ -            tool: tr.tool_use_id,[39m
+[31m+ -            input: {} as Record<string, unknown>,[39m
+[31m+ -            output: tr.content,[39m
+[31m+ -            isError: tr.is_error === true,[39m
+[31m+ -          };[39m
+[31m+ -        });[39m
+[31m+ +      const toolResultParts = blocks[39m
+[31m+ +        .filter((b): b is ToolResultBlock => b.type === 'tool_result')[39m
+[31m+ +        .map((b) => ({[39m
+[31m+ +          tool: b.tool_use_id,[39m
+[31m+ +          input: {} as Record<string, unknown>,[39m
+[31m+ +          output: b.content,[39m
+[31m+ +          isError: b.is_error === true,[39m
+[31m+ +        }));[39m
+[31m+  [39m
+[31m+        return {[39m
+[31m+          role: m.role as 'user' | 'assistant',[39m
+[31m+ diff --git a/src/mcp/McpClient.ts b/src/mcp/McpClient.ts[39m
+[31m+ index ce7cfce..08457a3 100644[39m
+[31m+ --- a/src/mcp/McpClient.ts[39m
+[31m+ +++ b/src/mcp/McpClient.ts[39m
+[31m+ @@ -1,6 +1,6 @@[39m
+[31m+  import { Client } from '@modelcontextprotocol/sdk/client/index.js';[39m
+[31m+  import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';[39m
+[31m+ -import type { McpServerConfig } from './types.js';[39m
+[31m+ +import { MCP_QUALIFIED_PREFIX, MCP_TOOL_SEPARATOR, type McpServerConfig } from './types.js';[39m
+[31m+  [39m
+[31m+  export interface McpToolDef {[39m
+[31m+    serverName: string;[39m
+[31m+ @@ -72,7 +72,7 @@ export class McpClient {[39m
+[31m+      const result = await this.client.listTools();[39m
+[31m+      return result.tools.map((t) => ({[39m
+[31m+        serverName: this.serverName,[39m
+[31m+ -      qualifiedName: `mcp__${this.serverName}__${t.name}`,[39m
+[31m+ +      qualifiedName: `${MCP_QUALIFIED_PREFIX}${this.serverName}${MCP_TOOL_SEPARATOR}${t.name}`,[39m
+[31m+        name: t.name,[39m
+[31m+        description: t.description ?? `MCP tool: ${t.name}`,[39m
+[31m+        inputSchema: t.inputSchema as Record<string, unknown>,[39m
+[31m+ diff --git a/src/mcp/McpManager.ts b/src/mcp/McpManager.ts[39m
+[31m+ index 229f04f..c17ab20 100644[39m
+[31m+ --- a/src/mcp/McpManager.ts[39m
+[31m+ +++ b/src/mcp/McpManager.ts[39m
+[31m+ @@ -1,4 +1,4 @@[39m
+[31m+ -import type { McpServerConfig } from './types.js';[39m
+[31m+ +import { MCP_TOOL_SEPARATOR, MCP_QUALIFIED_PREFIX, validateMcpConfig, type McpServerConfig } from './types.js';[39m
+[31m+  import { McpClient, type McpToolDef } from './McpClient.js';[39m
+[31m+  [39m
+[31m+  /**[39m
+[31m+ @@ -12,14 +12,23 @@ export class McpManager {[39m
+[31m+    private serverConfigs: Map<string, McpServerConfig> = new Map();[39m
+[31m+    private _allTools: McpToolDef[] = [];[39m
+[31m+    private initialized = false;[39m
+[31m+ +  /** Tracks connection errors per server (populated during initialize) */[39m
+[31m+ +  private _connectionErrors: Map<string, string> = new Map();[39m
+[31m+  [39m
+[31m+    /** Configure MCP servers from config (does not connect yet). */[39m
+[31m+    configure(servers: Record<string, McpServerConfig>): void {[39m
+[31m+      // Add new servers, skip already-configured ones[39m
+[31m+      for (const [name, cfg] of Object.entries(servers)) {[39m
+[31m+ -      if (!this.serverConfigs.has(name)) {[39m
+[31m+ -        this.serverConfigs.set(name, cfg);[39m
+[31m+ +      if (this.serverConfigs.has(name)) {[39m
+[31m+ +        continue;[39m
+[31m+        }[39m
+[31m+ +      // Validate config at runtime — skip invalid configs with a warning[39m
+[31m+ +      const errors = validateMcpConfig(cfg);[39m
+[31m+ +      if (errors.length > 0) {[39m
+[31m+ +        console.warn(`[McpManager] Skipping server "${name}" — invalid config: ${errors.join('; ')}`);[39m
+[31m+ +        continue;[39m
+[31m+ +      }[39m
+[31m+ +      this.serverConfigs.set(name, cfg);[39m
+[31m+      }[39m
+[31m+    }[39m
+[31m+  [39m
+[31m+ @@ -43,6 +52,7 @@ export class McpManager {[39m
+[31m+          onStatus?.(name, 'connected', `${tools.length} tools discovered`);[39m
+[31m+        } catch (err) {[39m
+[31m+          const msg = err instanceof Error ? err.message : String(err);[39m
+[31m+ +        this._connectionErrors.set(name, msg);[39m
+[31m+          onStatus?.(name, 'error', msg);[39m
+[31m+        }[39m
+[31m+      }[39m
+[31m+ @@ -60,6 +70,11 @@ export class McpManager {[39m
+[31m+      return Array.from(this.serverConfigs.keys());[39m
+[31m+    }[39m
+[31m+  [39m
+[31m+ +  /** Get list of connection errors (server name → error message) */[39m
+[31m+ +  getConnectionErrors(): string[] {[39m
+[31m+ +    return Array.from(this._connectionErrors.entries()).map(([name, msg]) => `${name}: ${msg}`);[39m
+[31m+ +  }[39m
+[31m+ +[39m
+[31m+    /** Get status of a specific server */[39m
+[31m+    getServerStatus(name: string): 'connected' | 'error' | 'not_found' | 'not_configured' {[39m
+[31m+      const client = this.clients.get(name);[39m
+[31m+ @@ -85,12 +100,35 @@ export class McpManager {[39m
+[31m+    /** Call a tool by its qualified name */[39m
+[31m+    async callTool(qualifiedName: string, args: Record<string, unknown>): Promise<{ output: string; isError: boolean }> {[39m
+[31m+      // Parse qualified name: mcp__serverName__toolName[39m
+[31m+ -    const match = qualifiedName.match(/^mcp__(.+?)__(.+)$/);[39m
+[31m+ -    if (!match) {[39m
+[31m+ -      return { output: `Invalid MCP tool name: ${qualifiedName}`, isError: true };[39m
+[31m+ +    if (!qualifiedName.startsWith(MCP_QUALIFIED_PREFIX)) {[39m
+[31m+ +      return {[39m
+[31m+ +        output: `Invalid MCP tool name: "${qualifiedName}" — must start with "${MCP_QUALIFIED_PREFIX}"`,[39m
+[31
+
+[… truncated 44320 chars …]

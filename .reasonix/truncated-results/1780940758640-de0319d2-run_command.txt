@@ -1,0 +1,452 @@
+$ npx vitest run src/qt/tools/QtMigrationTool.test.ts src/qt/tools/QtQmlTool.test.ts src/qt/tools/QtProFileTool.test.ts src/qt/tools/QtBuildTool.test.ts 2>&1
+[exit 1]
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.7 [39m[90mE:/Qt/ai-code-agent[39m
+
+ [31m❯[39m src/qt/tools/QtProFileTool.test.ts [2m([22m[2m22 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 97[2mms[22m[39m
+       [32m✓[39m parses QT modules from .pro[32m 13[2mms[22m[39m
+       [32m✓[39m parses TEMPLATE variable[32m 5[2mms[22m[39m
+       [32m✓[39m parses TARGET variable[32m 5[2mms[22m[39m
+       [32m✓[39m parses CONFIG values[32m 3[2mms[22m[39m
+       [32m✓[39m parses SOURCES list[32m 3[2mms[22m[39m
+       [32m✓[39m parses HEADERS list[32m 4[2mms[22m[39m
+       [32m✓[39m parses FORMS list[32m 3[2mms[22m[39m
+       [32m✓[39m parses RESOURCES list[32m 3[2mms[22m[39m
+       [32m✓[39m parses LIBS entries[32m 3[2mms[22m[39m
+[31m       [31m×[31m handles backslash line continuations[39m[32m 14[2mms[22m[39m
+[31m       [31m×[31m handles multiline QT modules[39m[32m 4[2mms[22m[39m
+       [32m✓[39m auto-discovers .pro file in directory[32m 4[2mms[22m[39m
+       [32m✓[39m auto-discovers first .pro alphabetically[32m 3[2mms[22m[39m
+       [32m✓[39m reports missing .pro gracefully[32m 1[2mms[22m[39m
+       [32m✓[39m reports unreadable .pro file gracefully[32m 3[2mms[22m[39m
+       [32m✓[39m handles minimal .pro with just QT[32m 3[2mms[22m[39m
+       [32m✓[39m warns when no core/widgets/quick module found[32m 3[2mms[22m[39m
+       [32m✓[39m handles comments in .pro file[32m 3[2mms[22m[39m
+       [32m✓[39m handles empty .pro file[32m 3[2mms[22m[39m
+[31m       [31m×[31m truncates long source lists (more than 20)[39m[32m 4[2mms[22m[39m
+       [32m✓[39m includes file path in output[32m 3[2mms[22m[39m
+       [32m✓[39m shows module count in header[32m 3[2mms[22m[39m
+ [31m❯[39m src/qt/tools/QtQmlTool.test.ts [2m([22m[2m22 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 112[2mms[22m[39m
+[31m       [31m×[31m detects versioned QtQuick import as warning[39m[32m 28[2mms[22m[39m
+       [32m✓[39m detects QtQuick.Controls 1.x as warning (removed in Qt6)[32m 4[2mms[22m[39m
+       [32m✓[39m detects deprecated QtGraphicalEffects import[32m 4[2mms[22m[39m
+       [32m✓[39m reports imports section in output[32m 3[2mms[22m[39m
+       [32m✓[39m lists component types used in QML[32m 4[2mms[22m[39m
+       [32m✓[39m reports count for each component type[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects anchors + x property conflict[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m detects anchors + y property conflict[39m[32m 5[2mms[22m[39m
+       [32m✓[39m warns about missing id on top-level component[32m 4[2mms[22m[39m
+       [32m✓[39m does not warn when id is present[32m 4[2mms[22m[39m
+[31m       [31m×[31m detects deeply nested components (>16 spaces indent)[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m detects qmlRegisterType calls[39m[32m 4[2mms[22m[39m
+       [32m✓[39m detects QML_ELEMENT usage[32m 3[2mms[22m[39m
+       [32m✓[39m reports multiple files in directory[32m 4[2mms[22m[39m
+       [32m✓[39m reports total line count[32m 3[2mms[22m[39m
+       [32m✓[39m handles empty QML directory gracefully[32m 1[2mms[22m[39m
+       [32m✓[39m handles non-existent directory gracefully[32m 1[2mms[22m[39m
+       [32m✓[39m skips non-QML files[32m 4[2mms[22m[39m
+       [32m✓[39m processes .qml files in subdirectories[32m 5[2mms[22m[39m
+       [32m✓[39m reports file path relative to cwd[32m 3[2mms[22m[39m
+       [32m✓[39m includes summary with warning/info counts[32m 5[2mms[22m[39m
+       [32m✓[39m marks versioned imports with ⚠ icon[32m 6[2mms[22m[39m
+ [31m❯[39m src/qt/tools/QtMigrationTool.test.ts [2m([22m[2m39 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[32m 161[2mms[22m[39m
+       [32m✓[39m detects QTextCodec as error[32m 15[2mms[22m[39m
+       [32m✓[39m detects QRegExp as error[32m 5[2mms[22m[39m
+       [32m✓[39m detects qrand/qsrand as error[32m 3[2mms[22m[39m
+       [32m✓[39m detects QLinkedList as warning[32m 4[2mms[22m[39m
+       [32m✓[39m detects QStringRef as error[32m 3[2mms[22m[39m
+       [32m✓[39m detects QDesktopWidget as error[32m 3[2mms[22m[39m
+       [32m✓[39m detects QMatrix as error[32m 3[2mms[22m[39m
+       [32m✓[39m detects QString::SkipEmptyParts as error[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QHeaderView::setMovable as error[39m[32m 14[2mms[22m[39m
+[31m       [31m×[31m detects QHeaderView::setResizeMode as error[39m[32m 8[2mms[22m[39m
+       [32m✓[39m detects QTextStream::setCodec as error[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QStyleOption::init as error[39m[32m 4[2mms[22m[39m
+       [32m✓[39m detects QNetworkConfigurationManager as error[32m 3[2mms[22m[39m
+       [32m✓[39m detects QJsonDocument::fromBinaryData as error[32m 3[2mms[22m[39m
+       [32m✓[39m detects QPainter::HighQualityAntialiasing as warning[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QWidget::setBackgroundColor as warning[39m[32m 4[2mms[22m[39m
+       [32m✓[39m detects QMediaPlayer as warning[32m 3[2mms[22m[39m
+       [32m✓[39m detects QMediaPlaylist as warning[32m 9[2mms[22m[39m
+       [32m✓[39m detects QFont::ForceIntegerMetrics as info[32m 3[2mms[22m[39m
+       [32m✓[39m detects QDir::addResourceSearchPath as warning[32m 3[2mms[22m[39m
+       [32m✓[39m detects QThread::idealThreadCount as warning[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QFuture::waitForFinished as warning[39m[32m 5[2mms[22m[39m
+       [32m✓[39m detects QSslSocket::sslLibraryBuildVersionString as warning[32m 3[2mms[22m[39m
+       [32m✓[39m detects QStateMachine enums as warning[32m 3[2mms[22m[39m
+       [32m✓[39m detects QSet::fromList as warning[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QMultiMap::insertMulti as warning[39m[32m 4[2mms[22m[39m
+       [32m✓[39m detects versioned QtQuick imports[32m 4[2mms[22m[39m
+       [32m✓[39m detects versioned Quick.Controls imports[32m 3[2mms[22m[39m
+       [32m✓[39m detects QtGraphicalEffects import[32m 3[2mms[22m[39m
+       [32m✓[39m detects versioned Quick.Window imports[32m 3[2mms[22m[39m
+       [32m✓[39m skips generated moc_ files[32m 3[2mms[22m[39m
+       [32m✓[39m skips generated ui_ files[32m 3[2mms[22m[39m
+       [32m✓[39m skips generated qrc_ files[32m 3[2mms[22m[39m
+       [32m✓[39m reports clean codebase with no issues[32m 3[2mms[22m[39m
+       [32m✓[39m reports empty directory cleanly[32m 1[2mms[22m[39m
+       [32m✓[39m handles non-existent directory gracefully[32m 1[2mms[22m[39m
+       [32m✓[39m deduplicates findings on same file+line[32m 3[2mms[22m[39m
+       [32m✓[39m categorizes errors first in output[32m 3[2mms[22m[39m
+       [32m✓[39m includes summary by category[32m 3[2mms[22m[39m
+ [32m✓[39m src/qt/tools/QtBuildTool.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 4701[2mms[22m[39m
+       [33m[2m✓[22m[39m handles qmake not being installed gracefully [33m 1136[2mms[22m[39m
+       [33m[2m✓[22m[39m reports qmake build header [33m 1123[2mms[22m[39m
+       [33m[2m✓[22m[39m handles cmake not being installed gracefully [33m 327[2mms[22m[39m
+       [33m[2m✓[22m[39m reports cmake build header [33m 325[2mms[22m[39m
+       [33m[2m✓[22m[39m auto mode defaults to cmake [33m 352[2mms[22m[39m
+       [33m[2m✓[22m[39m accepts target parameter for cmake [33m 319[2mms[22m[39m
+       [33m[2m✓[22m[39m accepts empty target for qmake [33m 1116[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 14 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QHeaderView::setMovable as error
+[31m[1mAssertionError[22m: expected 'No Qt5 → Qt6 migration issues found. …' to contain 'setMovable'[39m
+
+Expected: [32m"setMovable"[39m
+Received: [31m"No Qt5 → Qt6 migration issues found. The codebase appears to be Qt6-compatible or already migrated."[39m
+
+[36m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m94:17[22m[39m
+    [90m 92|[39m       [35mawait[39m [34mcreateFile[39m([32m'header.cpp'[39m[33m,[39m [32m'header->setMovable(true);'[39m)[33m;[39m
+    [90m 93|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtMigration[39m(tempDir)[33m;[39m
+    [90m 94|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'setMovable'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m 95|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'setSectionsMovable'[39m)[33m;[39m
+    [90m 96|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QHeaderView::setResizeMode as error
+[31m[1mAssertionError[22m: expected '## Qt5 → Qt6 Migration Check (1 findi…' to contain 'setResizeMode'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- setResizeMode[39m
+[31m+ ## Qt5 → Qt6 Migration Check (1 findings)[39m
+[31m+[39m
+[31m+ ### Warnings (1) — API changes, may need attention:[39m
+[31m+   - **header2.cpp:1** — `QHeaderView::ResizeMode enum values`[39m
+[31m+     → use `These were renamed in Qt6 Qt namespace: Qt::ScrollBarPolicy, Qt::FocusPolicy enums`[39m
+[31m+[39m
+[31m+ ### By Category[39m
+[31m+   - Model/View: 1[39m
+
+[36m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m101:17[22m[39m
+    [90m 99|[39m       await createFile('header2.cpp', 'header->setResizeMode(QHeaderVi…
+    [90m100|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtMigration[39m(tempDir)[33m;[39m
+    [90m101|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'setResizeMode'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m102|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'setSectionResizeMode'[39m)[33m;[39m
+    [90m103|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QStyleOption::init as error
+[31m[1mAssertionError[22m: expected 'No Qt5 → Qt6 migration issues found. …' to contain 'StyleOption'[39m
+
+Expected: [32m"StyleOption"[39m
+Received: [31m"No Qt5 → Qt6 migration issues found. The codebase appears to be Qt6-compatible or already migrated."[39m
+
+[36m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m115:17[22m[39m
+    [90m113|[39m       [35mawait[39m [34mcreateFile[39m([32m'styleopt.cpp'[39m[33m,[39m [32m'opt.init(widget);'[39m)[33m;[39m
+    [90m114|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtMigration[39m(tempDir)[33m;[39m
+    [90m115|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'StyleOption'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m116|[39m     })[33m;[39m
+    [90m117|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QWidget::setBackgroundColor as warning
+[31m[1mAssertionError[22m: expected 'No Qt5 → Qt6 migration issues found. …' to contain 'setBackgroundColor'[39m
+
+Expected: [32m"setBackgroundColor"[39m
+Received: [31m"No Qt5 → Qt6 migration issues found. The codebase appears to be Qt6-compatible or already migrated."[39m
+
+[36m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m142:17[22m[39m
+    [90m140|[39m       await createFile('widget.cpp', 'widget->setBackgroundColor(QColo…
+    [90m141|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtMigration[39m(tempDir)[33m;[39m
+    [90m142|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'setBackgroundColor'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m143|[39m     })[33m;[39m
+    [90m144|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QFuture::waitForFinished as warning
+[31m[1mAssertionError[22m: expected 'No Qt5 → Qt6 migration issues found. …' to contain 'waitForFinished'[39m
+
+Expected: [32m"waitForFinished"[39m
+Received: [31m"No Qt5 → Qt6 migration issues found. The codebase appears to be Qt6-compatible or already migrated."[39m
+
+[36m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m181:17[22m[39m
+    [90m179|[39m       [35mawait[39m [34mcreateFile[39m([32m'future.cpp'[39m[33m,[39m [32m'future.waitForFinished();'[39m)[33m;[39m
+    [90m180|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtMigration[39m(tempDir)[33m;[39m
+    [90m181|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'waitForFinished'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m182|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'QFutureWatcher'[39m)[33m;[39m
+    [90m183|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QMultiMap::insertMulti as warning
+[31m[1mAssertionError[22m: expected 'No Qt5 → Qt6 migration issues found. …' to contain 'insertMulti'[39m
+
+Expected: [32m"insertMulti"[39m
+Received: [31m"No Qt5 → Qt6 migration issues found. The codebase appears to be Qt6-compatible or already migrated."[39m
+
+[36m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m207:17[22m[39m
+    [90m205|[39m       await createFile('multimap.cpp', 'map.insertMulti("key", value);…
+    [90m206|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtMigration[39m(tempDir)[33m;[39m
+    [90m207|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'insertMulti'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m208|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'QMultiMap'[39m)[33m;[39m
+    [90m209|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtProFileTool.test.ts[2m > [22mQtProFileTool[2m > [22mMulti-line continuation[2m > [22mhandles backslash line continuations
+[31m[1mAssertionError[22m: expected '## .pro File Analysis: multiline.pro\…' to contain 'SOURCES (3)'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- SOURCES (3)[39m
+[31m+ ## .pro File Analysis: multiline.pro[39m
+[31m+[39m
+[31m+ **Template**: app[39m
+[31m+[39m
+[31m+ ### Qt Modules (3)[39m
+[31m+   - core[39m
+[31m+   - gui[39m
+[31m+   - widgets[39m
+[31m+[39m
+[31m+ ### SOURCES (2)[39m
+[31m+   - main.cpp[39m
+[31m+   - \[39m
+[31m+[39m
+[31m+ ### HEADERS (2)[39m
+[31m+   - widget.h[39m
+[31m+   - \[39m
+
+[36m [2m❯[22m src/qt/tools/QtProFileTool.test.ts:[2m139:17[22m[39m
+    [90m137|[39m       )[33m;[39m
+    [90m138|[39m       const r = await executeQtProFile(join(tempDir, 'multiline.pro'),…
+    [90m139|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'SOURCES (3)'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m140|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'main.cpp'[39m)[33m;[39m
+    [90m141|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'widget.cpp'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtProFileTool.test.ts[2m > [22mQtProFileTool[2m > [22mMulti-line continuation[2m > [22mhandles multiline QT modules
+[31m[1mAssertionError[22m: expected '## .pro File Analysis: qtmultiline.pr…' to contain 'Qt Modules (4)'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- Qt Modules (4)[39m
+[31m+ ## .pro File Analysis: qtmultiline.pro[39m
+[31m+[39m
+[31m+ **Template**: app[39m
+[31m+[39m
+[31m+ ### Qt Modules (2)[39m
+[31m+   - core[39m
+[31m+   - \[39m
+
+[36m [2m❯[22m src/qt/tools/QtProFileTool.test.ts:[2m152:17[22m[39m
+    [90m150|[39m       )[33m;[39m
+    [90m151|[39m       const r = await executeQtProFile(join(tempDir, 'qtmultiline.pro'…
+    [90m152|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'Qt Modules (4)'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m153|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'widgets'[39m)[33m;[39m
+    [90m154|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'sql'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtProFileTool.test.ts[2m > [22mQtProFileTool[2m > [22mEdge cases[2m > [22mtruncates long source lists (more than 20)
+[31m[1mAssertionError[22m: expected '## .pro File Analysis: long.pro\n\n**…' to contain '20 more'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 20 more[39m
+[31m+ ## .pro File Analysis: long.pro[39m
+[31m+[39m
+[31m+ **Template**: app[39m
+[31m+[39m
+[31m+ ### Qt Modules (1)[39m
+[31m+   - core[39m
+[31m+[39m
+[31m+ ### SOURCES (2)[39m
+[31m+   - file0.cpp[39m
+[31m+   - \[39m
+
+[36m [2m❯[22m src/qt/tools/QtProFileTool.test.ts:[2m222:17[22m[39m
+    [90m220|[39m       )[33m;[39m
+    [90m221|[39m       const r = await executeQtProFile(join(tempDir, 'long.pro'), temp…
+    [90m222|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'20 more'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m223|[39m     })[33m;[39m
+    [90m224|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtQmlTool.test.ts[2m > [22mQtQmlTool[2m > [22mImport detection[2m > [22mdetects versioned QtQuick import as warning
+[31m[1mAssertionError[22m: expected '## QML Analysis (1 file(s), 4 lines, …' to contain 'versioned'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- versioned[39m
+[31m+ ## QML Analysis (1 file(s), 4 lines, 2 issue(s))[39m
+[31m+[39m
+[31m+ ### app.qml (4 lines)[39m
+[31m+   **Imports:**[39m
+[31m+   - `QtQuick 2.15`[39m
+[31m+   - `QtQuick.Controls 2.5`[39m
+[31m+   **Components:** Rectangle(1)[39m
+[31m+   **Issues:**[39m
+[31m+   - ⚠ L1: Versioned import: prefer versionless `import QtQuick` in Qt6[39m
+[31m+   - ℹ L4: Top-level component lacks an id — consider adding one for easier referencing[39m
+[31m+[39m
+[31m+ ### Summary[39m
+[31m+ - 1 warnings, 1 info items[39m
+
+[36m [2m❯[22m src/qt/tools/QtQmlTool.test.ts:[2m41:17[22m[39m
+    [90m 39|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtQml[39m(tempDir)[33m;[39m
+    [90m 40|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'QML Analysis'[39m)[33m;[39m
+    [90m 41|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'versioned'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m 42|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'QtQuick 2.15'[39m)[33m;[39m
+    [90m 43|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtQmlTool.test.ts[2m > [22mQtQmlTool[2m > [22mAnti-pattern detection[2m > [22mdetects anchors + x property conflict
+[31m[1mAssertionError[22m: expected '## QML Analysis (1 file(s), 5 lines, …' to contain 'anchors'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7manchor[27ms[39m
+[31m+ ## QML Analysis (1 file(s), 5 lines, 2 issue(s))[39m
+[31m+[39m
+[31m+ ### anchorx.qml (5 lines)[39m
+[31m+   **Imports:**[39m
+[31m+   - `QtQuick 2.15`[39m
+[31m+   **Components:** Rectangle(1)[39m
+[31m+   **Issues:**[39m
+[31m+   - ⚠ L1: Versioned import: prefer versionless `import QtQuick` in Qt6[39m
+[31m+   - ℹ L2: Top-level component lacks an id — consider adding one for easier referencing[39m
+[31m+[39m
+[31m+ ### Summary[39m
+[31m+ [7m- 1 warnings, 1 info item[27ms[39m
+
+[36m [2m❯[22m src/qt/tools/QtQmlTool.test.ts:[2m96:17[22m[39m
+    [90m 94|[39m       )[33m;[39m
+    [90m 95|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtQml[39m(tempDir)[33m;[39m
+    [90m 96|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'anchors'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m 97|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'override'[39m)[33m;[39m
+    [90m 98|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtQmlTool.test.ts[2m > [22mQtQmlTool[2m > [22mAnti-pattern detection[2m > [22mdetects anchors + y property conflict
+[31m[1mAssertionError[22m: expected '## QML Analysis (1 file(s), 5 lines, …' to contain 'anchors'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7manchor[27ms[39m
+[31m+ ## QML Analysis (1 file(s), 5 lines, 2 issue(s))[39m
+[31m+[39m
+[31m+ ### anchory.qml (5 lines)[39m
+[31m+   **Imports:**[39m
+[31m+   - `QtQuick 2.15`[39m
+[31m+   **Components:** Rectangle(1)[39m
+[31m+   **Issues:**[39m
+[31m+   - ⚠ L1: Versioned import: prefer versionless `import QtQuick` in Qt6[39m
+[31m+   - ℹ L2: Top-level component lacks an id — consider adding one for easier referencing[39m
+[31m+[39m
+[31m+ ### Summary[39m
+[31m+ [7m- 1 warnings, 1 info item[27ms[39m
+
+[36m [2m❯[22m src/qt/tools/QtQmlTool.test.ts:[2m106:17[22m[39m
+    [90m104|[39m       )[33m;[39m
+    [90m105|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtQml[39m(tempDir)[33m;[39m
+    [90m106|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'anchors'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m107|[39m     })[33m;[39m
+    [90m108|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtQmlTool.test.ts[2m > [22mQtQmlTool[2m > [22mAnti-pattern detection[2m > [22mdetects deeply nested components (>16 spaces indent)
+[31m[1mAssertionError[22m: expected '## QML Analysis (1 file(s), 12 lines,…' to contain 'Deeply nested'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- Deeply nested[39m
+[31m+ ## QML Analysis (1 file(s), 12 lines, 7 issue(s))[39m
+[31m+[39m
+[31m+ ### deep.qml (12 lines)[39m
+[31m+   **Imports:**[39m
+[31m+   - `QtQuick 2.15`[39m
+[31m+   **Components:** Item(5), Rectangle(1)[39m
+[31m+   **Issues:**[39m
+[31m+   - ⚠ L1: Versioned import: prefer versionless `import QtQuick` in Qt6[39m
+[31m+   - ℹ L2: Top-level component lacks an id — consider adding one for easier referencing[39m
+[31m+   - ℹ L3: Top-level component lacks an id — consider adding one for easier referencing[39m
+[31m+   - ℹ L4: Top-level component lacks an id — consider adding one for easier referencing[39m
+[31m+   - ℹ L5: Top-level component lacks an id — consider adding one for easier referencing[39m
+[31m+   - ℹ L6: Top-level component lacks an id — consider adding one for easier referencing[39m
+[31m+   - ℹ L7: Top-level component lacks an id — consider adding one for easier referencing[39m
+[31m+[39m
+[31m+ ### Summary[39m
+[31m+ - 1 warnings, 6 info items[39m
+
+[36m [2m❯[22m src/qt/tools/QtQmlTool.test.ts:[2m133:17[22m[39m
+    [90m131|[39m       )[33m;[39m
+    [90m132|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtQml[39m(tempDir)[33m;[39m
+    [90m133|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'Deeply nested'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m134|[39m     })[33m;[39m
+    [90m135|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/14]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtQmlTool.test.ts[2m > [22mQtQmlTool[2m > [22mC++ integration detection[2m > [22mdetects qmlRegisterType calls
+[31m[1mAssertionError[22m: expected '## QML Analysis (1 file(s), 2 lines, …' to contain 'No QML files'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mNo[27m QML [7mfiles[27m[39m
+[31m+ [7m##[27m QML [7mAnalysis (1 file(s), 2 lines, 0 issue(s))[27m[39m
+[31m+[39m
+[31m+ ### register.qml (2 lines)[39m
+[31m+[39m
+[31m+[39m
+[31m+ ### C++ Integration Points[39m
+[31m+   - `// qmlRegisterType<MyClass>("MyModule", 1, 0, "MyClass");`[39m
+
+[36m [2m❯[22m src/qt/tools/QtQmlTool.test.ts:[2m144:17[22m[39m
+    [90m142|[39m       // Let me test the file analysis differently — put the pattern i…
+    [90m143|[39m       [35mconst[39m r [33m=[39m [35mawait[39m [34mexecuteQtQml[39m(tempDir)[33m;[39m
+    [90m144|[39m       [34mexpect[39m(r)[33m.[39m[34mtoContain[39m([32m'No QML files'[39m)[33m;[39m
+    [90m   |[39m                 [31m^[39m
+    [90m145|[39m     })[33m;[39m
+    [90m146|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/14]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[31m14 failed[39m[22m[2m | [22m[1m[32m76 passed[39m[22m[90m (90)[39m
+[2m   Start at [22m 01:45:53
+[2m   Duration [22m 5.42s[2m (transform 454ms, setup 0ms, import 841ms, tests 5.07s, environment 1ms)[22m
+

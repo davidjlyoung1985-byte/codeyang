@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { createWriteStream } from 'node:fs';
 import axios, { AxiosRequestConfig, Method } from 'axios';
 import FormData from 'form-data';
+import { resolveSafePath } from './shared.js';
 
 /**
  * Send HTTP request with configurable method, headers, and body
@@ -60,7 +61,7 @@ export async function executeHttpRequest(
  */
 export async function executeDownloadFile(url: string, destPath: string, timeout = 60000): Promise<string> {
   try {
-    const absPath = path.resolve(destPath);
+    const absPath = resolveSafePath(destPath);
     const dir = path.dirname(absPath);
 
     await fs.mkdir(dir, { recursive: true });
@@ -102,7 +103,7 @@ export async function executeUploadFile(
   timeout = 60000,
 ): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolveSafePath(filePath);
 
     const form = new FormData();
     form.append(fieldName, await fs.readFile(absPath), path.basename(absPath));

@@ -1,3 +1,38 @@
+import { resolve, sep } from 'node:path';
+import { realpathSync } from 'node:fs';
+
+/**
+ * Resolve a user-supplied path to an absolute path.
+ * When CODEX_SANDBOX is set, enforces the path stays inside that directory.
+ */
+export function resolveSafePath(inputPath: string, cwd?: string): string {
+  const base = cwd || process.cwd();
+  const resolved = resolve(base, inputPath);
+  const sandbox = process.env['CODEX_SANDBOX'];
+
+  if (!sandbox) return resolved; // no sandbox — just resolve
+
+  const absSandbox = resolve(sandbox);
+
+  if (resolved === absSandbox) return resolved;
+
+  // realpath resolves symlinks — use when the path exists
+  let real = resolved;
+  try {
+    real = realpathSync(resolved);
+  } catch {
+    // path doesn't exist yet (write) — use the resolved form
+  }
+
+  const sandboxSep = absSandbox.endsWith(sep) ? absSandbox : absSandbox + sep;
+  if (!real.startsWith(sandboxSep) && real !== absSandbox) {
+    throw new Error(
+      `Path traversal blocked: "${inputPath}" resolves outside sandbox (${absSandbox})`,
+    );
+  }
+  return resolved;
+}
+
 /**
  * Shared tool barrel — used by VS Code extension (CommonJS).
  * Exports all tool execute functions that don't require ESM-only deps.

@@ -26,6 +26,10 @@ export async function loadLocalConfig(): Promise<void> {
   }
 }
 
+export function getLocalConfigApiKey(): string {
+  return localConfig.apiKey || '';
+}
+
 export async function saveApiSettings(settings: {
   apiKey: string;
   apiBaseURL?: string;
@@ -74,6 +78,7 @@ export const config = {
     return localConfig.apiProvider || 'deepseek';
   },
   maxTokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
+  maxTurns: Number(process.env['CODEYANG_MAX_TURNS'] || '20'),
   getSystemPrompt(qtContext?: QtContext): string {
     let prompt = BASE_SYSTEM_PROMPT;
     if (qtContext?.isQtProject) {

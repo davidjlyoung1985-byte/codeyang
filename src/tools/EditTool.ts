@@ -1,5 +1,5 @@
 import { readFile, writeFile, stat } from 'node:fs/promises';
-import { join, isAbsolute } from 'node:path';
+import { resolveSafePath } from './shared.js';
 
 export async function executeEdit(
   filePath: string,
@@ -7,7 +7,7 @@ export async function executeEdit(
   newString: string,
   replaceAll?: boolean,
 ): Promise<string> {
-  const resolved = isAbsolute(filePath) ? filePath : join(process.cwd(), filePath);
+  const resolved = resolveSafePath(filePath);
 
   try {
     await stat(resolved);

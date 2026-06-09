@@ -1,0 +1,410 @@
+$ npx vitest run 2>&1
+[exit 1]
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.7 [39m[90mE:/Qt/ai-code-agent[39m
+
+ [31m❯[39m src/qt/tools/QtProFileTool.test.ts [2m([22m[2m22 tests[22m[2m | [22m[31m21 failed[39m[2m)[22m[32m 81[2mms[22m[39m
+[31m       [31m×[31m parses QT modules from .pro[39m[32m 25[2mms[22m[39m
+[31m       [31m×[31m parses TEMPLATE variable[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m parses TARGET variable[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m parses CONFIG values[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m parses SOURCES list[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m parses HEADERS list[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m parses FORMS list[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m parses RESOURCES list[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m parses LIBS entries[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m handles backslash line continuations[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m handles multiline QT modules[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m auto-discovers .pro file in directory[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m auto-discovers first .pro alphabetically[39m[32m 2[2mms[22m[39m
+       [32m✓[39m reports missing .pro gracefully[32m 4[2mms[22m[39m
+[31m       [31m×[31m reports unreadable .pro file gracefully[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m handles minimal .pro with just QT[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m warns when no core/widgets/quick module found[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m handles comments in .pro file[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m handles empty .pro file[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m truncates long source lists (more than 20)[39m[32m 1[2mms[22m[39m
+[31m       [31m×[31m includes file path in output[39m[32m 1[2mms[22m[39m
+[31m       [31m×[31m shows module count in header[39m[32m 1[2mms[22m[39m
+ [31m❯[39m src/qt/tools/QtQmlTool.test.ts [2m([22m[2m22 tests[22m[2m | [22m[31m20 failed[39m[2m)[22m[32m 84[2mms[22m[39m
+[31m       [31m×[31m detects versioned QtQuick import as warning[39m[32m 25[2mms[22m[39m
+[31m       [31m×[31m detects QtQuick.Controls 1.x as warning (removed in Qt6)[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects deprecated QtGraphicalEffects import[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m reports imports section in output[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m lists component types used in QML[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m reports count for each component type[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects anchors + x property conflict[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects anchors + y property conflict[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m warns about missing id on top-level component[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m does not warn when id is present[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m detects deeply nested components (>16 spaces indent)[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects qmlRegisterType calls[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QML_ELEMENT usage[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m reports multiple files in directory[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m reports total line count[39m[32m 4[2mms[22m[39m
+       [32m✓[39m handles empty QML directory gracefully[32m 5[2mms[22m[39m
+       [32m✓[39m handles non-existent directory gracefully[32m 2[2mms[22m[39m
+[31m       [31m×[31m skips non-QML files[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m processes .qml files in subdirectories[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m reports file path relative to cwd[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m includes summary with warning/info counts[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m marks versioned imports with ⚠ icon[39m[32m 2[2mms[22m[39m
+ [32m✓[39m src/utils/dotenv.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m src/tools/ImageTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m src/utils/sessionStore.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+ [31m❯[39m src/qt/tools/QtMigrationTool.test.ts [2m([22m[2m39 tests[22m[2m | [22m[31m37 failed[39m[2m)[22m[32m 142[2mms[22m[39m
+[31m       [31m×[31m detects QTextCodec as error[39m[32m 25[2mms[22m[39m
+[31m       [31m×[31m detects QRegExp as error[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects qrand/qsrand as error[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QLinkedList as warning[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects QStringRef as error[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QDesktopWidget as error[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects QMatrix as error[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QString::SkipEmptyParts as error[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects QHeaderView::setMovable as error[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QHeaderView::setResizeMode as error[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QTextStream::setCodec as error[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects QStyleOption::init as error[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QNetworkConfigurationManager as error[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QJsonDocument::fromBinaryData as error[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QPainter::HighQualityAntialiasing as warning[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m detects QWidget::setBackgroundColor as warning[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QMediaPlayer as warning[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects QMediaPlaylist as warning[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects QFont::ForceIntegerMetrics as info[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects QDir::addResourceSearchPath as warning[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects QThread::idealThreadCount as warning[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects QFuture::waitForFinished as warning[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m detects QSslSocket::sslLibraryBuildVersionString as warning[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m detects QStateMachine enums as warning[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m detects QSet::fromList as warning[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QMultiMap::insertMulti as warning[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects versioned QtQuick imports[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects versioned Quick.Controls imports[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m detects QtGraphicalEffects import[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m detects versioned Quick.Window imports[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m skips generated moc_ files[39m[32m 1[2mms[22m[39m
+[31m       [31m×[31m skips generated ui_ files[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m skips generated qrc_ files[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m reports clean codebase with no issues[39m[32m 2[2mms[22m[39m
+       [32m✓[39m reports empty directory cleanly[32m 5[2mms[22m[39m
+       [32m✓[39m handles non-existent directory gracefully[32m 2[2mms[22m[39m
+[31m       [31m×[31m deduplicates findings on same file+line[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m categorizes errors first in output[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m includes summary by category[39m[32m 2[2mms[22m[39m
+ [32m✓[39m src/tools/FileSystemTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 161[2mms[22m[39m
+ [32m✓[39m src/ui/CliUI.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+ [32m✓[39m src/tools/index.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 99[2mms[22m[39m
+ [32m✓[39m src/tools/GlobTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 361[2mms[22m[39m
+ [32m✓[39m src/tools/NetworkTool.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 208[2mms[22m[39m
+ [32m✓[39m src/qt/tools.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 331[2mms[22m[39m
+ [32m✓[39m src/tools/DataTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 396[2mms[22m[39m
+ [32m✓[39m src/tools/MemoryTool.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m src/math/index.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m src/tools/TaskTool.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/agent/Agent.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m✓[39m src/tools/registry.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m src/qt/index.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 159[2mms[22m[39m
+ [32m✓[39m src/tools/SearchTool.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1262[2mms[22m[39m
+     [33m[2m✓[22m[39m finds files by content [33m 737[2mms[22m[39m
+ [32m✓[39m src/agent/config.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/tools/CodeAnalysisTool.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 237[2mms[22m[39m
+ [32m✓[39m src/tools/tools.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 2380[2mms[22m[39m
+     [33m[2m✓[22m[39m executes a simple echo command [33m 635[2mms[22m[39m
+     [33m[2m✓[22m[39m returns exit code for failing commands [33m 433[2mms[22m[39m
+     [33m[2m✓[22m[39m handles command with cwd parameter [33m 545[2mms[22m[39m
+ [32m✓[39m src/tools/mcp.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/qt/tools/QtBuildTool.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 6173[2mms[22m[39m
+       [33m[2m✓[22m[39m handles qmake not being installed gracefully [33m 2080[2mms[22m[39m
+       [33m[2m✓[22m[39m reports qmake build header [33m 1460[2mms[22m[39m
+       [33m[2m✓[22m[39m handles cmake not being installed gracefully [33m 433[2mms[22m[39m
+       [33m[2m✓[22m[39m reports cmake build header [33m 344[2mms[22m[39m
+       [33m[2m✓[22m[39m auto mode defaults to cmake [33m 325[2mms[22m[39m
+       [33m[2m✓[22m[39m accepts target parameter for cmake [33m 372[2mms[22m[39m
+       [33m[2m✓[22m[39m accepts empty target for qmake [33m 1155[2mms[22m[39m
+ [32m✓[39m src/tools/GitTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 20838[2mms[22m[39m
+       [33m[2m✓[22m[39m should show clean status for new repo [33m 1209[2mms[22m[39m
+       [33m[2m✓[22m[39m should show untracked files [33m 668[2mms[22m[39m
+       [33m[2m✓[22m[39m should show modified files [33m 1146[2mms[22m[39m
+       [33m[2m✓[22m[39m should show short format [33m 553[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage files [33m 718[2mms[22m[39m
+       [33m[2m✓[22m[39m should fail with no files [33m 375[2mms[22m[39m
+       [33m[2m✓[22m[39m should create commit with staged files [33m 850[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage all and commit with addAll=true [33m 729[2mms[22m[39m
+       [33m[2m✓[22m[39m should fail with no staged changes [33m 501[2mms[22m[39m
+       [33m[2m✓[22m[39m should list branches [33m 844[2mms[22m[39m
+       [33m[2m✓[22m[39m should show multiple branches [33m 978[2mms[22m[39m
+       [33m[2m✓[22m[39m should create and switch to new branch [33m 948[2mms[22m[39m
+       [33m[2m✓[22m[39m should switch to existing branch [33m 1096[2mms[22m[39m
+       [33m[2m✓[22m[39m should show commit history [33m 885[2mms[22m[39m
+       [33m[2m✓[22m[39m should limit commit count [33m 2237[2mms[22m[39m
+       [33m[2m✓[22m[39m should show oneline format [33m 833[2mms[22m[39m
+       [33m[2m✓[22m[39m should show no diff for clean repo [33m 478[2mms[22m[39m
+       [33m[2m✓[22m[39m should show unstaged changes [33m 995[2mms[22m[39m
+       [33m[2m✓[22m[39m should show staged changes [33m 923[2mms[22m[39m
+       [33m[2m✓[22m[39m should unstage files [33m 716[2mms[22m[39m
+       [33m[2m✓[22m[39m should stash changes [33m 992[2mms[22m[39m
+       [33m[2m✓[22m[39m should list stashes [33m 1143[2mms[22m[39m
+       [33m[2m✓[22m[39m should return current branch [33m 1014[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 78 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QTextCodec as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m33:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QRegExp as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m41:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects qrand/qsrand as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m48:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QLinkedList as warning
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m55:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QStringRef as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m62:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QDesktopWidget as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m69:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QMatrix as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m76:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QString::SkipEmptyParts as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m83:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QHeaderView::setMovable as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m90:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QHeaderView::setResizeMode as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m97:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QTextStream::setCodec as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m104:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QStyleOption::init as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m111:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QNetworkConfigurationManager as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m117:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QJsonDocument::fromBinaryData as error
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m124:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QPainter::HighQualityAntialiasing as warning
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m131:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QWidget::setBackgroundColor as warning
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m138:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QMediaPlayer as warning
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m144:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QMediaPlaylist as warning
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m150:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QFont::ForceIntegerMetrics as info
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.test.ts:[2m156:7[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/qt/tools/QtMigrationTool.test.ts[2m > [22mQtMigrationTool[2m > [22mSingle-file detection (all 30+ rules)[2m > [22mdetects QDir::addResourceSearchPath as warning
+[31m[1mError[22m: ENOENT: no such file or directory, mkdir ''[39m
+[36m [2m❯[22m createFile src/qt/tools/QtMigrationTool.test.ts:[2m21:3[22m[39m
+    [90m 19|[39m async function createFile(name: string, content: string): Promise<stri…
+    [90m 20|[39m   [35mconst[39m p [33m=[39m [34mjoin[39m(tempDir[33m,[39m name)[33m;[39m
+    [90m 21|[39m   await mkdir(join(tempDir, name).split('/').slice(0, -1).join('/'), {…
+    [90m   |[39m   [31m^[39m
+    [90m 22|[39m   [35mawait[39m [34mwriteFile[39m(p[33m,[39m content[33m,[39m [32m'utf-8'[39m)[33m;[39m
+    [90m 23|[39m   [35mreturn[39m p[33m;[39m
+[90m [2m❯[22m src/qt/tools/QtMigrationTool.te
+
+[… truncated 54043 chars …]

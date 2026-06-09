@@ -1,0 +1,330 @@
+$ npx vitest run 2>&1
+[exit 1]
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.7 [39m[90mE:/Qt/ai-code-agent[39m
+
+ [31m❯[39m src/tools/TaskTool.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[32m 31[2mms[22m[39m
+[31m     [31m×[31m executes a single subtask and returns text response[39m[32m 17[2mms[22m[39m
+[31m     [31m×[31m executes tool calls and sends results back[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m blocks Question and Task tools in sub-agents, continues on next turn[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m handles unknown tools gracefully — marks error and continues[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m handles consumeStream errors gracefully[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m handles multiple parallel subtasks[39m[32m 2[2mms[22m[39m
+     [32m✓[39m stops after max 10 turns[32m 1[2mms[22m[39m
+ [32m✓[39m src/utils/dotenv.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m src/math/index.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m src/tools/ImageTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+ [32m✓[39m src/utils/sessionStore.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 82[2mms[22m[39m
+ [32m✓[39m src/tools/MemoryTool.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m src/tools/NetworkTool.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 160[2mms[22m[39m
+ [32m✓[39m src/tools/GlobTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 173[2mms[22m[39m
+ [32m✓[39m src/tools/FileSystemTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 214[2mms[22m[39m
+ [31m❯[39m src/tools/registry.test.ts [2m([22m[2m16 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 60[2mms[22m[39m
+       [32m✓[39m finds built-in tools by name[32m 7[2mms[22m[39m
+       [32m✓[39m returns undefined for unknown tools[32m 1[2mms[22m[39m
+       [32m✓[39m is case-sensitive[32m 1[2mms[22m[39m
+       [32m✓[39m finds Read tool[32m 1[2mms[22m[39m
+       [32m✓[39m finds Write tool[32m 1[2mms[22m[39m
+       [32m✓[39m finds GitStatus tool[32m 0[2mms[22m[39m
+       [32m✓[39m finds Question tool[32m 0[2mms[22m[39m
+       [32m✓[39m returns an array of schemas[32m 1[2mms[22m[39m
+       [32m✓[39m includes built-in tools[32m 4[2mms[22m[39m
+       [32m✓[39m every schema has name, description, and input_schema[32m 16[2mms[22m[39m
+       [32m✓[39m adds Qt tools to the registry which getTool can find[32m 1[2mms[22m[39m
+       [32m✓[39m replaces previously registered Qt tools[32m 1[2mms[22m[39m
+       [32m✓[39m included Qt tools in toolSchemas[32m 1[2mms[22m[39m
+[31m       [31m×[31m adds math tools to the registry which getTool can find[39m[32m 16[2mms[22m[39m
+[31m       [31m×[31m replaces previously registered math tools[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m included math tools in toolSchemas[39m[32m 1[2mms[22m[39m
+ [32m✓[39m src/ui/CliUI.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32m✓[39m src/tools/index.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+ [32m✓[39m src/tools/DataTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 190[2mms[22m[39m
+ [32m✓[39m src/qt/tools.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 165[2mms[22m[39m
+ [32m✓[39m src/qt/index.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 138[2mms[22m[39m
+ [32m✓[39m src/agent/config.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m src/agent/Agent.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m src/tools/SearchTool.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1112[2mms[22m[39m
+     [33m[2m✓[22m[39m finds files by content [33m 588[2mms[22m[39m
+ [32m✓[39m src/tools/CodeAnalysisTool.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 244[2mms[22m[39m
+ [32m✓[39m src/tools/tools.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 2189[2mms[22m[39m
+     [33m[2m✓[22m[39m executes a simple echo command [33m 591[2mms[22m[39m
+     [33m[2m✓[22m[39m returns exit code for failing commands [33m 373[2mms[22m[39m
+     [33m[2m✓[22m[39m handles command with cwd parameter [33m 499[2mms[22m[39m
+ [32m✓[39m src/tools/mcp.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/tools/GitTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 19506[2mms[22m[39m
+       [33m[2m✓[22m[39m should show clean status for new repo [33m 894[2mms[22m[39m
+       [33m[2m✓[22m[39m should show untracked files [33m 664[2mms[22m[39m
+       [33m[2m✓[22m[39m should show modified files [33m 972[2mms[22m[39m
+       [33m[2m✓[22m[39m should show short format [33m 553[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage files [33m 657[2mms[22m[39m
+       [33m[2m✓[22m[39m should fail with no files [33m 365[2mms[22m[39m
+       [33m[2m✓[22m[39m should create commit with staged files [33m 806[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage all and commit with addAll=true [33m 686[2mms[22m[39m
+       [33m[2m✓[22m[39m should fail with no staged changes [33m 515[2mms[22m[39m
+       [33m[2m✓[22m[39m should list branches [33m 796[2mms[22m[39m
+       [33m[2m✓[22m[39m should show multiple branches [33m 904[2mms[22m[39m
+       [33m[2m✓[22m[39m should create and switch to new branch [33m 943[2mms[22m[39m
+       [33m[2m✓[22m[39m should switch to existing branch [33m 961[2mms[22m[39m
+       [33m[2m✓[22m[39m should show commit history [33m 812[2mms[22m[39m
+       [33m[2m✓[22m[39m should limit commit count [33m 2217[2mms[22m[39m
+       [33m[2m✓[22m[39m should show oneline format [33m 828[2mms[22m[39m
+       [33m[2m✓[22m[39m should show no diff for clean repo [33m 467[2mms[22m[39m
+       [33m[2m✓[22m[39m should show unstaged changes [33m 797[2mms[22m[39m
+       [33m[2m✓[22m[39m should show staged changes [33m 916[2mms[22m[39m
+       [33m[2m✓[22m[39m should unstage files [33m 709[2mms[22m[39m
+       [33m[2m✓[22m[39m should stash changes [33m 1093[2mms[22m[39m
+       [33m[2m✓[22m[39m should list stashes [33m 1166[2mms[22m[39m
+       [33m[2m✓[22m[39m should return current branch [33m 780[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 9 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/tools/registry.test.ts[2m > [22mregistry[2m > [22mregisterMathTools[2m > [22madds math tools to the registry which getTool can find
+[31m[1mAssertionError[22m: expected { name: 'MathSolve', …(3) } to be undefined[39m
+
+[32m- Expected:[39m
+undefined
+
+[31m+ Received:[39m
+{
+  "description": "Solve middle school math problems step by step with Chinese explanations. Covers: linear equations (一元一次方程), quadratic equations (一元二次方程), systems of equations (二元一次方程组), Pythagorean theorem (勾股定理), circle geometry (圆), statistics (统计), and percentages (百分比).",
+  "execute": [Function execute],
+  "name": "MathSolve",
+  "parameters": {
+    "properties": {
+      "problem": {
+        "description": "The math problem to solve",
+        "type": "string",
+      },
+      "type": {
+        "description": "Problem type (auto-detected if not specified)",
+        "enum": [
+          "linear",
+          "quadratic",
+          "system",
+          "pythagorean",
+          "circle",
+          "stats",
+          "percent",
+        ],
+        "type": "string",
+      },
+    },
+    "required": [
+      "problem",
+    ],
+    "type": "object",
+  },
+}
+
+[36m [2m❯[22m src/tools/registry.test.ts:[2m205:36[22m[39m
+    [90m203|[39m
+    [90m204|[39m       [90m// Math tools are not in default registry[39m
+    [90m205|[39m       [34mexpect[39m([34mgetTool[39m([32m'MathSolve'[39m))[33m.[39m[34mtoBeUndefined[39m()[33m;[39m
+    [90m   |[39m                                    [31m^[39m
+    [90m206|[39m
+    [90m207|[39m       [34mregisterMathTools[39m([mathDef])[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/registry.test.ts[2m > [22mregistry[2m > [22mregisterMathTools[2m > [22mreplaces previously registered math tools
+[31m[1mTypeError[22m: registerMathTools is not a function[39m
+[36m [2m❯[22m src/tools/registry.test.ts:[2m218:7[22m[39m
+    [90m216|[39m         execute[33m:[39m [35masync[39m () [33m=>[39m [32m'old'[39m[33m,[39m
+    [90m217|[39m       }[33m;[39m
+    [90m218|[39m       [34mregisterMathTools[39m([oldTool])[33m;[39m
+    [90m   |[39m       [31m^[39m
+    [90m219|[39m       [34mexpect[39m([34mgetTool[39m([32m'MathOld'[39m))[33m.[39m[34mtoBeDefined[39m()[33m;[39m
+    [90m220|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/registry.test.ts[2m > [22mregistry[2m > [22mregisterMathTools[2m > [22mincluded math tools in toolSchemas
+[31m[1mTypeError[22m: registerMathTools is not a function[39m
+[36m [2m❯[22m src/tools/registry.test.ts:[2m232:7[22m[39m
+    [90m230|[39m         execute[33m:[39m [35masync[39m () [33m=>[39m [32m'svg'[39m[33m,[39m
+    [90m231|[39m       }[33m;[39m
+    [90m232|[39m       [34mregisterMathTools[39m([mathDef])[33m;[39m
+    [90m   |[39m       [31m^[39m
+    [90m233|[39m
+    [90m234|[39m       [35mconst[39m schemas [33m=[39m [34mtoolSchemas[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mexecutes a single subtask and returns text response
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: test task\nWorking…' to contain 'Here is the result.'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mHere is the resul[27mt.[39m
+[31m+ ## Task Sub-Agent: test task[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 1 subtask(s) in parallel:[39m
+[31m+   1. do something[39m
+[31m+[39m
+[31m+ ### Subtask 1/1: do something[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ [7mAll subtasks completed. Returning control to main agen[27mt.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m48:20[22m[39m
+    [90m 46|[39m     const result = await executeTask(mockClient as any, model, maxToke…
+    [90m 47|[39m
+    [90m 48|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Here is the result.'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 49|[39m     [34mexpect[39m(mockConsumeStream)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m1[39m)[33m;[39m
+    [90m 50|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mexecutes tool calls and sends results back
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: run bash\nWorking …' to contain 'Done.'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mDone[27m.[39m
+[31m+ ## Task Sub-Agent: run bash[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 1 subtask(s) in parallel:[39m
+[31m+   1. run a command[39m
+[31m+[39m
+[31m+ ### Subtask 1/1: run a command[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ [7mAll subtasks completed. Returning control to main agent[27m.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m62:20[22m[39m
+    [90m 60|[39m     const result = await executeTask(mockClient as any, model, maxToke…
+    [90m 61|[39m
+    [90m 62|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Done.'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 63|[39m     [34mexpect[39m(mockConsumeStream)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m2[39m)[33m;[39m
+    [90m 64|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mblocks Question and Task tools in sub-agents, continues on next turn
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: ask question\nWork…' to contain 'Finished.'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mFinished[27m.[39m
+[31m+ ## Task Sub-Agent: ask question[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 1 subtask(s) in parallel:[39m
+[31m+   1. ask me[39m
+[31m+[39m
+[31m+ ### Subtask 1/1: ask me[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ [7mAll subtasks completed. Returning control to main agent[27m.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m77:20[22m[39m
+    [90m 75|[39m
+    [90m 76|[39m     // Question is blocked internally as tool_result; agent gets "Fini…
+    [90m 77|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Finished.'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 78|[39m     [90m// Two turns: one with Question tool, one with final text[39m
+    [90m 79|[39m     [34mexpect[39m(mockConsumeStream)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m2[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mhandles unknown tools gracefully — marks error and continues
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: unknown tool\nWork…' to contain 'Done with error handling.'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mDone with error handling[27m.[39m
+[31m+ ## Task Sub-Agent: unknown tool[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 1 subtask(s) in parallel:[39m
+[31m+   1. use it[39m
+[31m+[39m
+[31m+ ### Subtask 1/1: use it[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ [7mAll subtasks completed. Returning control to main agent[27m.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m93:20[22m[39m
+    [90m 91|[39m
+    [90m 92|[39m     [90m// Unknown tool is handled as error tool_result; agent continues[39m
+    [90m 93|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Done with error handling.'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 94|[39m     [34mexpect[39m(mockConsumeStream)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m2[39m)[33m;[39m
+    [90m 95|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mhandles consumeStream errors gracefully
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: error case\nWorkin…' to contain 'API error'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- API error[39m
+[31m+ ## Task Sub-Agent: error case[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 1 subtask(s) in parallel:[39m
+[31m+   1. do it[39m
+[31m+[39m
+[31m+ ### Subtask 1/1: do it[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ All subtasks completed. Returning control to main agent.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m102:20[22m[39m
+    [90m100|[39m     const result = await executeTask(mockClient as any, model, maxToke…
+    [90m101|[39m
+    [90m102|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'API error'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m103|[39m   })[33m;[39m
+    [90m104|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mhandles multiple parallel subtasks
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: multi task\nWorkin…' to contain 'Subtask result.'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mSubtask resul[27mt.[39m
+[31m+ ## Task Sub-Agent: multi task[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 2 subtask(s) in parallel:[39m
+[31m+   1. sub1[39m
+[31m+   2. sub2[39m
+[31m+[39m
+[31m+ ### Subtask 1/2: sub1[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ### Subtask 2/2: sub2[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ [7mAll subtasks completed. Returning control to main agen[27mt.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m112:20[22m[39m
+    [90m110|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'sub1'[39m)[33m;[39m
+    [90m111|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'sub2'[39m)[33m;[39m
+    [90m112|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Subtask result.'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m113|[39m     [34mexpect[39m(mockConsumeStream)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m2[39m)[33m;[39m
+    [90m114|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m20 passed[39m[22m[90m (22)[39m
+[2m      Tests [22m [1m[31m9 failed[39m[22m[2m | [22m[1m[32m368 passed[39m[22m[90m (377)[39m
+[2m   Start at [22m 01:38:14
+[2m   Duration [22m 20.88s[2m (transform 8.27s, setup 0ms, import 16.04s, tests 24.65s, environment 10ms)[22m
+

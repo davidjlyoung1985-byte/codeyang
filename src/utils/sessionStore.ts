@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, unlink, readdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, unlink, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import crypto from 'node:crypto';
@@ -96,12 +96,21 @@ export async function listSessions(): Promise<SessionMeta[]> {
 
   // If index is empty, fall back to scanning files (backward compat)
   if (entries.length === 0) {
-    const files = (await readdir(SESSIONS_DIR))
-      .filter((f) => f.endsWith('.json'))
-      .sort()
-      .reverse();
+    const files = (await readdir(SESSIONS_DIR)).filter((f) => f.endsWith('.json'));
+    const withMtime = await Promise.all(
+      files.map(async (f) => {
+        try {
+          const fileStat = await stat(join(SESSIONS_DIR, f));
+          return { name: f, mtime: fileStat.mtimeMs };
+        } catch {
+          return { name: f, mtime: 0 };
+        }
+      }),
+    );
+    withMtime.sort((a, b) => b.mtime - a.mtime); // most recent first
+
     const sessions: SessionMeta[] = [];
-    for (const f of files) {
+    for (const { name: f } of withMtime) {
       try {
         const { id, title, createdAt, updatedAt } = JSON.parse(await readFile(join(SESSIONS_DIR, f), 'utf-8'));
         sessions.push({ id, title, createdAt, updatedAt });
@@ -111,6 +120,52 @@ export async function listSessions(): Promise<SessionMeta[]> {
   }
 
   return entries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export interface SessionSearchResult extends SessionMeta {
+  matchCount: number;
+}
+
+/**
+ * Search sessions by keyword. Checks title first (fast), then loads
+ * full sessions to search message content. Returns up to 20 results.
+ */
+export async function searchSessions(keyword: string): Promise<SessionSearchResult[]> {
+  await ensureDir();
+  const index = await readIndex();
+  const kw = keyword.toLowerCase();
+  const results: SessionSearchResult[] = [];
+
+  const entries = Object.values(index).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  for (const meta of entries) {
+    if (results.length >= 20) break;
+
+    // Quick match on title
+    if (meta.title.toLowerCase().includes(kw)) {
+      results.push({ ...meta, matchCount: 1 });
+      continue;
+    }
+
+    // Load session and search content
+    try {
+      const session = await loadSession(meta.id);
+      if (!session) continue;
+      let matchCount = 0;
+      for (const msg of session.messages) {
+        if (msg.content && msg.content.toLowerCase().includes(kw)) {
+          matchCount++;
+        }
+      }
+      if (matchCount > 0) {
+        results.push({ ...meta, matchCount });
+      }
+    } catch {
+      // Skip unreadable sessions
+    }
+  }
+
+  return results;
 }
 
 export async function deleteSession(id: string): Promise<boolean> {

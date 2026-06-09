@@ -1,9 +1,8 @@
 import * as readline from 'node:readline';
 import picocolors from 'picocolors';
+import { VERSION } from '../version.js';
 
 const c = picocolors;
-
-const VERSION = '0.6.0';
 
 function termW(): number {
   return Math.min(process.stdout.columns || 80, 120);
@@ -189,7 +188,7 @@ export class CliUI {
   }
 
   promptUser() {
-    process.stdout.write(`\n  ${c.cyan('❯')} `);
+    process.stdout.write(`\n  ${c.cyan('->')} `);
   }
 
   setToolProgressTotal(_total: number) {
@@ -203,7 +202,7 @@ export class CliUI {
     this.turnCount++;
     process.stdout.write('\n');
     hr();
-    console.log(`${c.bold(c.yellow('  User'))}${c.dim(':')}`);
+    console.log(`${c.bold(c.yellow('  👤 User'))}${c.dim(':')}`);
     for (const line of text.split('\n')) {
       console.log(`  ${line}`);
     }
@@ -218,7 +217,7 @@ export class CliUI {
   showAgentStart() {
     this.isFirstResponse = true;
     process.stdout.write('\n');
-    console.log(`${c.bold(c.green('  CodeYang'))}${c.dim(':')}`);
+    console.log(`${c.bold(c.green('  🤖 CodeYang'))}${c.dim(':')}`);
     process.stdout.write('\n');
   }
 
@@ -230,9 +229,9 @@ export class CliUI {
 
   showAgentText(text: string) {
     if (this.streamBuf) {
+      // Streaming was in progress — flush the buffer, then show text
       process.stdout.write('\n');
       this.streamBuf = '';
-      return;
     }
     this.spinner.stop();
     const rendered = renderMarkdown(text);

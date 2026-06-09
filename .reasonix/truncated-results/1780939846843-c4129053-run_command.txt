@@ -1,0 +1,488 @@
+$ npm test
+[exit 1]
+
+> codeyang@0.6.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.7 [39m[90mE:/Qt/ai-code-agent[39m
+
+ [31m❯[39m src/tools/TaskTool.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[32m 64[2mms[22m[39m
+[31m     [31m×[31m executes a single subtask and returns text response[39m[32m 31[2mms[22m[39m
+[31m     [31m×[31m executes tool calls and sends results back[39m[32m 4[2mms[22m[39m
+[31m     [31m×[31m blocks Question and Task tools in sub-agents, continues on next turn[39m[32m 3[2mms[22m[39m
+[31m     [31m×[31m handles unknown tools gracefully — marks error and continues[39m[32m 4[2mms[22m[39m
+[31m     [31m×[31m handles consumeStream errors gracefully[39m[32m 8[2mms[22m[39m
+[31m     [31m×[31m handles multiple parallel subtasks[39m[32m 6[2mms[22m[39m
+     [32m✓[39m stops after max 10 turns[32m 4[2mms[22m[39m
+ [31m❯[39m src/tools/MemoryTool.test.ts [2m([22m[2m20 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 66[2mms[22m[39m
+       [32m✓[39m saves a memory with key, value, and default type (fact)[32m 13[2mms[22m[39m
+       [32m✓[39m saves a memory with a custom type[32m 2[2mms[22m[39m
+       [32m✓[39m falls back to "fact" for invalid type[32m 2[2mms[22m[39m
+       [32m✓[39m returns error when key is missing[32m 1[2mms[22m[39m
+       [32m✓[39m returns error when value is missing[32m 1[2mms[22m[39m
+       [32m✓[39m trims whitespace from key and value[32m 1[2mms[22m[39m
+       [32m✓[39m retrieves a memory by id[32m 1[2mms[22m[39m
+       [32m✓[39m returns error when memory by id is not found[32m 1[2mms[22m[39m
+       [32m✓[39m searches memories by query[32m 1[2mms[22m[39m
+       [32m✓[39m falls back to getMemoryByKey when search returns empty[32m 1[2mms[22m[39m
+       [32m✓[39m lists all memories when no id or query given[32m 1[2mms[22m[39m
+       [32m✓[39m deletes a memory by id[32m 1[2mms[22m[39m
+       [32m✓[39m deletes a memory by key when id delete fails[32m 1[2mms[22m[39m
+       [32m✓[39m returns deleted:false when neither id nor key matches[32m 1[2mms[22m[39m
+       [32m✓[39m returns error when no key or id provided[32m 1[2mms[22m[39m
+       [32m✓[39m favors "key" over "id" when both provided (key used as id first)[32m 1[2mms[22m[39m
+       [32m✓[39m lists all memories when no type filter[32m 1[2mms[22m[39m
+       [32m✓[39m filters memories by type[32m 2[2mms[22m[39m
+       [32m✓[39m returns empty array when no memories exist[32m 1[2mms[22m[39m
+[31m       [31m×[31m handles store throwing an error[39m[32m 25[2mms[22m[39m
+ [31m❯[39m src/tools/registry.test.ts [2m([22m[2m16 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 78[2mms[22m[39m
+       [32m✓[39m finds built-in tools by name[32m 6[2mms[22m[39m
+       [32m✓[39m returns undefined for unknown tools[32m 1[2mms[22m[39m
+       [32m✓[39m is case-sensitive[32m 0[2mms[22m[39m
+       [32m✓[39m finds Read tool[32m 1[2mms[22m[39m
+       [32m✓[39m finds Write tool[32m 0[2mms[22m[39m
+       [32m✓[39m finds GitStatus tool[32m 0[2mms[22m[39m
+       [32m✓[39m finds Question tool[32m 0[2mms[22m[39m
+       [32m✓[39m returns an array of schemas[32m 1[2mms[22m[39m
+       [32m✓[39m includes built-in tools[32m 4[2mms[22m[39m
+       [32m✓[39m every schema has name, description, and input_schema[32m 21[2mms[22m[39m
+       [32m✓[39m adds Qt tools to the registry which getTool can find[32m 2[2mms[22m[39m
+       [32m✓[39m replaces previously registered Qt tools[32m 1[2mms[22m[39m
+       [32m✓[39m included Qt tools in toolSchemas[32m 1[2mms[22m[39m
+[31m       [31m×[31m adds math tools to the registry which getTool can find[39m[32m 27[2mms[22m[39m
+[31m       [31m×[31m replaces previously registered math tools[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m included math tools in toolSchemas[39m[32m 2[2mms[22m[39m
+ [32m✓[39m src/utils/dotenv.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+ [32m✓[39m src/ui/CliUI.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 59[2mms[22m[39m
+ [32m✓[39m src/utils/sessionStore.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 398[2mms[22m[39m
+ [32m✓[39m src/tools/NetworkTool.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 515[2mms[22m[39m
+ [32m✓[39m src/math/index.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m src/tools/ImageTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 619[2mms[22m[39m
+ [32m✓[39m src/tools/index.test.ts [2m([22m[2m26 tests[22m[2m)[22m[33m 431[2mms[22m[39m
+ [31m❯[39m src/tools/GitTool.test.ts [2m([22m[2m23 tests[22m[2m | [22m[31m23 failed[39m[2m)[22m[33m 713[2mms[22m[39m
+[31m       [31m×[31m should show clean status for new repo[39m[32m 13[2mms[22m[39m
+[31m       [31m×[31m should show untracked files[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should show modified files[39m[32m 12[2mms[22m[39m
+[31m       [31m×[31m should show short format[39m[32m 17[2mms[22m[39m
+[31m       [31m×[31m should stage files[39m[32m 12[2mms[22m[39m
+[31m       [31m×[31m should fail with no files[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should create commit with staged files[39m[32m 60[2mms[22m[39m
+[31m       [31m×[31m should stage all and commit with addAll=true[39m[32m 74[2mms[22m[39m
+[31m       [31m×[31m should fail with no staged changes[39m[32m 73[2mms[22m[39m
+[31m       [31m×[31m should list branches[39m[32m 60[2mms[22m[39m
+[31m       [31m×[31m should show multiple branches[39m[32m 45[2mms[22m[39m
+[31m       [31m×[31m should create and switch to new branch[39m[32m 35[2mms[22m[39m
+[31m       [31m×[31m should switch to existing branch[39m[32m 37[2mms[22m[39m
+[31m       [31m×[31m should show commit history[39m[32m 120[2mms[22m[39m
+[31m       [31m×[31m should limit commit count[39m[32m 12[2mms[22m[39m
+[31m       [31m×[31m should show oneline format[39m[32m 13[2mms[22m[39m
+[31m       [31m×[31m should show no diff for clean repo[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m should show unstaged changes[39m[32m 37[2mms[22m[39m
+[31m       [31m×[31m should show staged changes[39m[32m 9[2mms[22m[39m
+[31m       [31m×[31m should unstage files[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should stash changes[39m[32m 15[2mms[22m[39m
+[31m       [31m×[31m should list stashes[39m[32m 15[2mms[22m[39m
+[31m       [31m×[31m should return current branch[39m[32m 15[2mms[22m[39m
+ [32m✓[39m src/tools/GlobTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 804[2mms[22m[39m
+ [31m❯[39m src/agent/Agent.test.ts [2m([22m[2m17 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 83[2mms[22m[39m
+       [32m✓[39m creates an Agent with apiKey set[32m 8[2mms[22m[39m
+       [32m✓[39m clears conversation state[32m 4[2mms[22m[39m
+       [32m✓[39m is not waiting for answer initially[32m 1[2mms[22m[39m
+       [32m✓[39m can cancel a question without error[32m 1[2mms[22m[39m
+       [32m✓[39m accepts and stores callbacks[32m 1[2mms[22m[39m
+       [32m✓[39m returns empty array for fresh agent[32m 2[2mms[22m[39m
+       [32m✓[39m restores user and assistant messages[32m 4[2mms[22m[39m
+       [32m✓[39m restores messages with tool calls[32m 3[2mms[22m[39m
+       [32m✓[39m handles messages without tool calls/result[32m 2[2mms[22m[39m
+       [32m✓[39m streams text response from LLM[32m 24[2mms[22m[39m
+       [32m✓[39m sends user message to LLM API[32m 2[2mms[22m[39m
+       [32m✓[39m calls onUserMessage callback[32m 2[2mms[22m[39m
+       [32m✓[39m calls onAgentDelta for streaming text[32m 2[2mms[22m[39m
+       [32m✓[39m executes tool calls from LLM and sends results back[32m 4[2mms[22m[39m
+       [32m✓[39m handles unknown tools gracefully[32m 5[2mms[22m[39m
+[31m       [31m×[31m accumulates token usage from usage events[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m resets token usage on agent reset[39m[32m 2[2mms[22m[39m
+ [32m✓[39m src/tools/FileSystemTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 930[2mms[22m[39m
+ [32m✓[39m src/tools/DataTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 1023[2mms[22m[39m
+ [32m✓[39m src/qt/tools.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 702[2mms[22m[39m
+ [32m✓[39m src/qt/index.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 198[2mms[22m[39m
+ [31m❯[39m src/tools/SearchTool.test.ts [2m([22m[2m8 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1551[2mms[22m[39m
+     [32m✓[39m finds files by name[32m 40[2mms[22m[39m
+[31m     [31m×[31m finds files by content[39m[33m 921[2mms[22m[39m
+     [32m✓[39m combined search returns name matches first[32m 212[2mms[22m[39m
+     [32m✓[39m respects includeGlob filter[32m 180[2mms[22m[39m
+     [32m✓[39m respects maxResults[32m 7[2mms[22m[39m
+     [32m✓[39m returns no results message when nothing found[32m 171[2mms[22m[39m
+     [32m✓[39m returns error for empty query[32m 7[2mms[22m[39m
+     [32m✓[39m returns error for missing directory[32m 7[2mms[22m[39m
+ [32m✓[39m src/agent/config.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/tools/CodeAnalysisTool.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 263[2mms[22m[39m
+ [32m✓[39m src/tools/tools.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 2348[2mms[22m[39m
+     [33m[2m✓[22m[39m executes a simple echo command [33m 495[2mms[22m[39m
+     [33m[2m✓[22m[39m returns exit code for failing commands [33m 459[2mms[22m[39m
+     [33m[2m✓[22m[39m handles command with cwd parameter [33m 491[2mms[22m[39m
+ [32m✓[39m src/tools/mcp.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 36 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/agent/Agent.test.ts[2m > [22mAgent[2m > [22mrun — token usage tracking[2m > [22maccumulates token usage from usage events
+[31m[1mTypeError[22m: agent.getTokenUsage is not a function[39m
+[36m [2m❯[22m src/agent/Agent.test.ts:[2m280:20[22m[39m
+    [90m278|[39m       mockStream.mockReturnValue(makeStream(textDelta('Hello'), usageE…
+    [90m279|[39m       [35mawait[39m agent[33m.[39m[34mrun[39m([32m'prompt 1'[39m)[33m;[39m
+    [90m280|[39m       expect(agent.getTokenUsage()).toEqual({ inputTokens: 10, outputT…
+    [90m   |[39m                    [31m^[39m
+    [90m281|[39m
+    [90m282|[39m       mockStream.mockReturnValue(makeStream(textDelta('World'), usageE…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/agent/Agent.test.ts[2m > [22mAgent[2m > [22mrun — token usage tracking[2m > [22mresets token usage on agent reset
+[31m[1mTypeError[22m: agent.getTokenUsage is not a function[39m
+[36m [2m❯[22m src/agent/Agent.test.ts:[2m290:20[22m[39m
+    [90m288|[39m       mockStream.mockReturnValue(makeStream(textDelta('Hello'), usageE…
+    [90m289|[39m       [35mawait[39m agent[33m.[39m[34mrun[39m([32m'prompt'[39m)[33m;[39m
+    [90m290|[39m       [34mexpect[39m(agent[33m.[39m[34mgetTokenUsage[39m()[33m.[39minputTokens)[33m.[39m[34mtoBe[39m([34m10[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m291|[39m
+    [90m292|[39m       agent[33m.[39m[34mreset[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStatus[2m > [22mshould show clean status for new repo
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStatus[2m > [22mshould show clean status for new repo
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStatus[2m > [22mshould show untracked files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStatus[2m > [22mshould show untracked files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStatus[2m > [22mshould show modified files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStatus[2m > [22mshould show modified files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStatus[2m > [22mshould show short format
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStatus[2m > [22mshould show short format
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitAdd[2m > [22mshould stage files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitAdd[2m > [22mshould stage files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitAdd[2m > [22mshould fail with no files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitAdd[2m > [22mshould fail with no files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould create commit with staged files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould create commit with staged files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould stage all and commit with addAll=true
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould stage all and commit with addAll=true
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould fail with no staged changes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCommit[2m > [22mshould fail with no staged changes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitBranch[2m > [22mshould list branches
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitBranch[2m > [22mshould list branches
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitBranch[2m > [22mshould show multiple branches
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitBranch[2m > [22mshould show multiple branches
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCheckout[2m > [22mshould create and switch to new branch
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCheckout[2m > [22mshould create and switch to new branch
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCheckout[2m > [22mshould switch to existing branch
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCheckout[2m > [22mshould switch to existing branch
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould show commit history
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould show commit history
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould limit commit count
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould limit commit count
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould show oneline format
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitLog[2m > [22mshould show oneline format
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitDiff[2m > [22mshould show no diff for clean repo
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitDiff[2m > [22mshould show no diff for clean repo
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitDiff[2m > [22mshould show unstaged changes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitDiff[2m > [22mshould show unstaged changes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitDiff[2m > [22mshould show staged changes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitDiff[2m > [22mshould show staged changes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitReset[2m > [22mshould unstage files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitReset[2m > [22mshould unstage files
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStash[2m > [22mshould stash changes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStash[2m > [22mshould stash changes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStash[2m > [22mshould list stashes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitStash[2m > [22mshould list stashes
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCurrentBranch[2m > [22mshould return current branch
+[41m[1m FAIL [22m[49m src/tools/GitTool.test.ts[2m > [22mGitTool[2m > [22mexecuteGitCurrentBranch[2m > [22mshould return current branch
+[31m[1mError[22m: EBUSY: resource busy or locked, rmdir 'E:\Qt\ai-code-agent\.test-git-tools'[39m
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/MemoryTool.test.ts[2m > [22mMemoryTool[2m > [22mexecuteListMemories[2m > [22mhandles store throwing an error
+[31m[1mAssertionError[22m: promise resolved "'Error: store error'" instead of rejecting[39m
+
+[32m- Expected:[39m
+Error {
+  "message": "rejected promise",
+}
+
+[31m+ Received:[39m
+"Error: store error"
+
+[36m [2m❯[22m src/tools/MemoryTool.test.ts:[2m247:43[22m[39m
+    [90m245|[39m       mockListMemories[33m.[39m[34mmockRejectedValue[39m([35mnew[39m [33mError[39m([32m'store error'[39m))[33m;[39m
+    [90m246|[39m
+    [90m247|[39m       await expect(executeListMemories({})).rejects.toThrow('store err…
+    [90m   |[39m                                           [31m^[39m
+    [90m248|[39m     })[33m;[39m
+    [90m249|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/registry.test.ts[2m > [22mregistry[2m > [22mregisterMathTools[2m > [22madds math tools to the registry which getTool can find
+[31m[1mAssertionError[22m: expected { name: 'MathSolve', …(3) } to be undefined[39m
+
+[32m- Expected:[39m
+undefined
+
+[31m+ Received:[39m
+{
+  "description": "Solve middle school math problems step by step with Chinese explanations. Covers: linear equations (一元一次方程), quadratic equations (一元二次方程), systems of equations (二元一次方程组), Pythagorean theorem (勾股定理), circle geometry (圆), statistics (统计), and percentages (百分比).",
+  "execute": [Function execute],
+  "name": "MathSolve",
+  "parameters": {
+    "properties": {
+      "problem": {
+        "description": "The math problem to solve",
+        "type": "string",
+      },
+      "type": {
+        "description": "Problem type (auto-detected if not specified)",
+        "enum": [
+          "linear",
+          "quadratic",
+          "system",
+          "pythagorean",
+          "circle",
+          "stats",
+          "percent",
+        ],
+        "type": "string",
+      },
+    },
+    "required": [
+      "problem",
+    ],
+    "type": "object",
+  },
+}
+
+[36m [2m❯[22m src/tools/registry.test.ts:[2m205:36[22m[39m
+    [90m203|[39m
+    [90m204|[39m       [90m// Math tools are not in default registry[39m
+    [90m205|[39m       [34mexpect[39m([34mgetTool[39m([32m'MathSolve'[39m))[33m.[39m[34mtoBeUndefined[39m()[33m;[39m
+    [90m   |[39m                                    [31m^[39m
+    [90m206|[39m
+    [90m207|[39m       [34mregisterMathTools[39m([mathDef])[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/registry.test.ts[2m > [22mregistry[2m > [22mregisterMathTools[2m > [22mreplaces previously registered math tools
+[31m[1mTypeError[22m: registerMathTools is not a function[39m
+[36m [2m❯[22m src/tools/registry.test.ts:[2m218:7[22m[39m
+    [90m216|[39m         execute[33m:[39m [35masync[39m () [33m=>[39m [32m'old'[39m[33m,[39m
+    [90m217|[39m       }[33m;[39m
+    [90m218|[39m       [34mregisterMathTools[39m([oldTool])[33m;[39m
+    [90m   |[39m       [31m^[39m
+    [90m219|[39m       [34mexpect[39m([34mgetTool[39m([32m'MathOld'[39m))[33m.[39m[34mtoBeDefined[39m()[33m;[39m
+    [90m220|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/registry.test.ts[2m > [22mregistry[2m > [22mregisterMathTools[2m > [22mincluded math tools in toolSchemas
+[31m[1mTypeError[22m: registerMathTools is not a function[39m
+[36m [2m❯[22m src/tools/registry.test.ts:[2m232:7[22m[39m
+    [90m230|[39m         execute[33m:[39m [35masync[39m () [33m=>[39m [32m'svg'[39m[33m,[39m
+    [90m231|[39m       }[33m;[39m
+    [90m232|[39m       [34mregisterMathTools[39m([mathDef])[33m;[39m
+    [90m   |[39m       [31m^[39m
+    [90m233|[39m
+    [90m234|[39m       [35mconst[39m schemas [33m=[39m [34mtoolSchemas[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/SearchTool.test.ts[2m > [22mSearchTool[2m > [22mfinds files by content
+[31m[1mAssertionError[22m: expected 'No results found for: fooHelper' to contain 'Content matches'[39m
+
+Expected: [32m"Content matches"[39m
+Received: [31m"No results found for: fooHelper"[39m
+
+[36m [2m❯[22m src/tools/SearchTool.test.ts:[2m31:20[22m[39m
+    [90m 29|[39m   [34mit[39m([32m'finds files by content'[39m[33m,[39m [35masync[39m () [33m=>[39m {
+    [90m 30|[39m     const result = await executeSearch('fooHelper', TEST_DIR, { search…
+    [90m 31|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Content matches'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 32|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'fooHelper'[39m)[33m;[39m
+    [90m 33|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mexecutes a single subtask and returns text response
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: test task\nWorking…' to contain 'Here is the result.'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mHere is the resul[27mt.[39m
+[31m+ ## Task Sub-Agent: test task[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 1 subtask(s) in parallel:[39m
+[31m+   1. do something[39m
+[31m+[39m
+[31m+ ### Subtask 1/1: do something[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ [7mAll subtasks completed. Returning control to main agen[27mt.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m48:20[22m[39m
+    [90m 46|[39m     const result = await executeTask(mockClient as any, model, maxToke…
+    [90m 47|[39m
+    [90m 48|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Here is the result.'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 49|[39m     [34mexpect[39m(mockConsumeStream)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m1[39m)[33m;[39m
+    [90m 50|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mexecutes tool calls and sends results back
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: run bash\nWorking …' to contain 'Done.'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mDone[27m.[39m
+[31m+ ## Task Sub-Agent: run bash[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 1 subtask(s) in parallel:[39m
+[31m+   1. run a command[39m
+[31m+[39m
+[31m+ ### Subtask 1/1: run a command[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ [7mAll subtasks completed. Returning control to main agent[27m.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m62:20[22m[39m
+    [90m 60|[39m     const result = await executeTask(mockClient as any, model, maxToke…
+    [90m 61|[39m
+    [90m 62|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Done.'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 63|[39m     [34mexpect[39m(mockConsumeStream)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m2[39m)[33m;[39m
+    [90m 64|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mblocks Question and Task tools in sub-agents, continues on next turn
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: ask question\nWork…' to contain 'Finished.'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mFinished[27m.[39m
+[31m+ ## Task Sub-Agent: ask question[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 1 subtask(s) in parallel:[39m
+[31m+   1. ask me[39m
+[31m+[39m
+[31m+ ### Subtask 1/1: ask me[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ [7mAll subtasks completed. Returning control to main agent[27m.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m77:20[22m[39m
+    [90m 75|[39m
+    [90m 76|[39m     // Question is blocked internally as tool_result; agent gets "Fini…
+    [90m 77|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Finished.'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 78|[39m     [90m// Two turns: one with Question tool, one with final text[39m
+    [90m 79|[39m     [34mexpect[39m(mockConsumeStream)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m2[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mhandles unknown tools gracefully — marks error and continues
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: unknown tool\nWork…' to contain 'Done with error handling.'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mDone with error handling[27m.[39m
+[31m+ ## Task Sub-Agent: unknown tool[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 1 subtask(s) in parallel:[39m
+[31m+   1. use it[39m
+[31m+[39m
+[31m+ ### Subtask 1/1: use it[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ [7mAll subtasks completed. Returning control to main agent[27m.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m93:20[22m[39m
+    [90m 91|[39m
+    [90m 92|[39m     [90m// Unknown tool is handled as error tool_result; agent continues[39m
+    [90m 93|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Done with error handling.'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m 94|[39m     [34mexpect[39m(mockConsumeStream)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m2[39m)[33m;[39m
+    [90m 95|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mhandles consumeStream errors gracefully
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: error case\nWorkin…' to contain 'API error'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- API error[39m
+[31m+ ## Task Sub-Agent: error case[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 1 subtask(s) in parallel:[39m
+[31m+   1. do it[39m
+[31m+[39m
+[31m+ ### Subtask 1/1: do it[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ All subtasks completed. Returning control to main agent.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m102:20[22m[39m
+    [90m100|[39m     const result = await executeTask(mockClient as any, model, maxToke…
+    [90m101|[39m
+    [90m102|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'API error'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m103|[39m   })[33m;[39m
+    [90m104|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/59]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/TaskTool.test.ts[2m > [22mTaskTool[2m > [22mhandles multiple parallel subtasks
+[31m[1mAssertionError[22m: expected '## Task Sub-Agent: multi task\nWorkin…' to contain 'Subtask result.'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [7mSubtask resul[27mt.[39m
+[31m+ ## Task Sub-Agent: multi task[39m
+[31m+ Working directory: /tmp[39m
+[31m+ Executing 2 subtask(s) in parallel:[39m
+[31m+   1. sub1[39m
+[31m+   2. sub2[39m
+[31m+[39m
+[31m+ ### Subtask 1/2: sub1[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ### Subtask 2/2: sub2[39m
+[31m+ **Error**: Cannot read properties of undefined (reading 'create')[39m
+[31m+[39m
+[31m+ ---[39m
+[31m+ [7mAll subtasks completed. Returning control to main agen[27mt.[39m
+
+[36m [2m❯[22m src/tools/TaskTool.test.ts:[2m112:20[22m[39m
+    [90m110|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'sub1'[39m)[33m;[39m
+    [90m111|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'sub2'[39m)[33m;[39m
+    [90m112|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Subtask result.'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m113|[39m     [34mexpect[39m(mockConsumeStream)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m2[39m)[33m;[39m
+    [90m114|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/59]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m6 failed[39m[22m[2m | [22m[1m[32m16 passed[39m[22m[90m (22)[39m
+[2m      Tests [22m [1m[31m36 failed[39m[22m[2m | [22m[1m[32m341 passed[39m[22m[90m (377)[39m
+[2m   Start at [22m 01:30:40
+[2m   Duration [22m 6.08s[2m (transform 15.31s, setup 0ms, import 28.04s, tests 11.01s, environment 9ms)[22m
+
