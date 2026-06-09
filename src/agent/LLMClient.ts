@@ -253,22 +253,36 @@ class OpenAICompatClient implements LLMClient {
       }
     }
 
-    const stream = await this.client.chat.completions.create({
-      model: params.model,
-      max_tokens: params.maxTokens,
-      temperature: params.temperature,
-      messages: openaiMessages,
-      tools: params.tools.map((t) => ({
-        type: 'function' as const,
-        function: {
-          name: t.name,
-          description: t.description,
-          parameters: t.input_schema,
-        },
-      })),
-      stream: true,
-      stream_options: { include_usage: true },
-    });
+    const stream = await this.client.chat.completions
+      .create({
+        model: params.model,
+        max_tokens: params.maxTokens,
+        temperature: params.temperature,
+        messages: openaiMessages,
+        tools: params.tools.map((t) => ({
+          type: 'function' as const,
+          function: {
+            name: t.name,
+            description: t.description,
+            parameters: t.input_schema,
+          },
+        })),
+        stream: true,
+        stream_options: { include_usage: true },
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('ENOTFOUND') || msg.includes('ECONNREFUSED') || msg.includes('ETIMEDOUT')) {
+          throw new Error(`Cannot reach API at ${baseURL} — check your network and BASE_URL setting. (${msg})`);
+        }
+        if (msg.includes('401') || msg.includes('403')) {
+          throw new Error(`API authentication failed — check your API key. (${msg})`);
+        }
+        if (msg.includes('429')) {
+          throw new Error(`API rate limit exceeded — wait and retry. (${msg})`);
+        }
+        throw err;
+      });
 
     const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
 

@@ -232,12 +232,15 @@ export class CliUI {
   }
 
   showAgentText(text: string) {
+    this.spinner.stop();
     if (this.streamBuf) {
-      // Streaming was in progress — flush the buffer, then show text
+      // Stream deltas already displayed the content character-by-character.
+      // Just flush the buffer with a newline — don't re-render as markdown.
       process.stdout.write('\n');
       this.streamBuf = '';
+      return;
     }
-    this.spinner.stop();
+    // No streaming happened — render as markdown (non-streaming response)
     const rendered = renderMarkdown(text);
     console.log(rendered);
   }

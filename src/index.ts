@@ -11,7 +11,15 @@ import {
   saveApiSettings,
   validateConfig,
 } from './agent/config.js';
-import { saveSession, listSessions, loadSession, deleteSession } from './utils/sessionStore.js';
+import {
+  saveSession,
+  listSessions,
+  loadSession,
+  deleteSession,
+  exportSessionAsMarkdown,
+  exportSessionAsJson,
+  importSessionFromFile,
+} from './utils/sessionStore.js';
 import { logger } from './utils/logger.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
@@ -108,6 +116,10 @@ Options:
   --resume <id>       Resume a saved session
   --delete <id>       Delete a saved session
   --api-key <key>     Set API key directly (overrides env/config)
+  --export <id>       Export a session as Markdown to stdout
+  --export-md <id>    Export a session as Markdown to a file (session-<id>.md)
+  --export-json <id>  Export a session as JSON to a file (session-<id>.json)
+  --import <file>     Import a session from a JSON file
 
 Environment Variables:
   CODEYANG_API_KEY          API key for the LLM provider
@@ -123,6 +135,7 @@ Interactive Commands:
   /model           Show current model
   /model <name>    Switch model
   /mcp             Show MCP server status
+  /config          Show current configuration
   /exit, /quit     Exit CodeYang
 
 API Key priority: --api-key arg > CODEYANG_API_KEY > saved config > prompt
@@ -138,6 +151,60 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       logger.info(`Session ${sessionId} deleted.`);
     } else {
       logger.info(`Session ${sessionId} not found.`);
+    }
+    process.exit(0);
+  }
+
+  // ── Export / Import ────────────────────────────────────────
+
+  const exportIdx = args.indexOf('--export');
+  if (exportIdx !== -1 && args[exportIdx + 1]) {
+    const sessionId = args[exportIdx + 1];
+    try {
+      const md = await exportSessionAsMarkdown(sessionId);
+      console.log(md);
+    } catch (err) {
+      logger.error(err instanceof Error ? err.message : String(err));
+    }
+    process.exit(0);
+  }
+
+  const exportMdIdx = args.indexOf('--export-md');
+  if (exportMdIdx !== -1 && args[exportMdIdx + 1]) {
+    const sessionId = args[exportMdIdx + 1];
+    try {
+      const md = await exportSessionAsMarkdown(sessionId);
+      const outPath = `session-${sessionId}.md`;
+      await import('node:fs/promises').then((fs) => fs.writeFile(outPath, md, 'utf-8'));
+      console.log(`Session exported to ${outPath}`);
+    } catch (err) {
+      logger.error(err instanceof Error ? err.message : String(err));
+    }
+    process.exit(0);
+  }
+
+  const exportJsonIdx = args.indexOf('--export-json');
+  if (exportJsonIdx !== -1 && args[exportJsonIdx + 1]) {
+    const sessionId = args[exportJsonIdx + 1];
+    try {
+      const session = await exportSessionAsJson(sessionId);
+      const outPath = `session-${sessionId}.json`;
+      await import('node:fs/promises').then((fs) => fs.writeFile(outPath, JSON.stringify(session, null, 2), 'utf-8'));
+      console.log(`Session exported to ${outPath}`);
+    } catch (err) {
+      logger.error(err instanceof Error ? err.message : String(err));
+    }
+    process.exit(0);
+  }
+
+  const importIdx = args.indexOf('--import');
+  if (importIdx !== -1 && args[importIdx + 1]) {
+    const filePath = args[importIdx + 1];
+    try {
+      const id = await importSessionFromFile(filePath);
+      console.log(`Session imported: ${id}`);
+    } catch (err) {
+      logger.error(err instanceof Error ? err.message : String(err));
     }
     process.exit(0);
   }
@@ -309,6 +376,23 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       return;
     }
 
+    if (lower === '/config') {
+      console.log(`\n  Provider:     ${config.provider}`);
+      console.log(`  Model:        ${config.model}`);
+      console.log(`  Base URL:     ${config.baseURL}`);
+      console.log(`  Max Tokens:   ${config.maxTokens}`);
+      console.log(`  Max Turns:    ${config.maxTurns}`);
+      console.log(`  API Key:      ${config.apiKey ? '********' : '(not set)'}`);
+      console.log(`  CWD:          ${process.cwd()}`);
+      const mcpServers = getMcpServers();
+      if (Object.keys(mcpServers).length > 0) {
+        console.log(`  MCP Servers:  ${Object.keys(mcpServers).join(', ')}`);
+      }
+      console.log('');
+      ui.promptUser();
+      return;
+    }
+
     if (lower === '/mcp') {
       if (!mcpMgr.hasServers) {
         console.log('No MCP servers configured.');
@@ -331,7 +415,7 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
 
     // Command suggestion for unknown /commands
     if (lower.startsWith('/')) {
-      const validCommands = ['/clear', '/sessions', '/tools', '/model', '/mcp', '/exit', '/quit'];
+      const validCommands = ['/clear', '/sessions', '/tools', '/model', '/mcp', '/config', '/exit', '/quit'];
       if (!validCommands.includes(lower)) {
         const suggestions = validCommands.filter((v) => v.startsWith(lower) || v.includes(lower.slice(1)));
         if (suggestions.length > 0) {

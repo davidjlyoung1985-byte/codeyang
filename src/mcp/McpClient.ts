@@ -22,6 +22,8 @@ export class McpClient {
   readonly serverName: string;
   private isConnected = false;
   private _tools: McpToolDef[] = [];
+  /** Callback invoked when the transport disconnects unexpectedly */
+  onDisconnect?: (serverName: string) => void;
 
   constructor(serverName: string, config: McpServerConfig) {
     this.serverName = serverName;
@@ -53,6 +55,18 @@ export class McpClient {
 
     await this.client.connect(this.transport);
     this.isConnected = true;
+
+    // Listen for transport close/error to detect disconnection
+    this.transport.onclose = () => {
+      if (this.isConnected) {
+        this.isConnected = false;
+        this._tools = [];
+        this.onDisconnect?.(this.serverName);
+      }
+    };
+    this.transport.onerror = () => {
+      // onclose will fire after onerror, triggering the disconnect once
+    };
 
     this._tools = await this.discoverTools();
     return this._tools;

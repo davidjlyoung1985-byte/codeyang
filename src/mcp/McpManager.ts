@@ -14,6 +14,10 @@ export class McpManager {
   private initialized = false;
   /** Tracks connection errors per server (populated during initialize) */
   private _connectionErrors: Map<string, string> = new Map();
+  /** Tracks reconnection attempts per server */
+  private reconnectAttempts = new Map<string, { count: number; timeout: ReturnType<typeof setTimeout> | null }>();
+  private readonly MAX_RECONNECT_ATTEMPTS = 3;
+  private readonly RECONNECT_DELAY_MS = 2_000;
 
   /** Configure MCP servers from config (does not connect yet). */
   configure(servers: Record<string, McpServerConfig>): void {
@@ -45,6 +49,7 @@ export class McpManager {
     for (const [name, cfg] of entries) {
       onStatus?.(name, 'connecting', `Starting ${cfg.command} ${(cfg.args ?? []).join(' ')}`);
       const client = new McpClient(name, cfg);
+      client.onDisconnect = (serverName) => this.scheduleReconnect(serverName);
       this.clients.set(name, client);
 
       try {
@@ -76,10 +81,56 @@ export class McpManager {
   }
 
   /** Get status of a specific server */
-  getServerStatus(name: string): 'connected' | 'error' | 'not_found' | 'not_configured' {
+  getServerStatus(name: string): 'connected' | 'disconnected' | 'error' | 'not_found' | 'not_configured' {
     const client = this.clients.get(name);
     if (!client) return 'not_configured';
+    if (!client.connected && this.reconnectAttempts.has(name)) return 'disconnected';
     return client.connected ? 'connected' : 'error';
+  }
+
+  /**
+   * Schedule a reconnect attempt for a disconnected server with exponential backoff.
+   */
+  private scheduleReconnect(serverName: string): void {
+    const existing = this.reconnectAttempts.get(serverName);
+    const count = (existing?.count ?? 0) + 1;
+
+    if (count > this.MAX_RECONNECT_ATTEMPTS) {
+      console.warn(
+        `[McpManager] Server "${serverName}" max reconnection attempts reached (${this.MAX_RECONNECT_ATTEMPTS}). Giving up.`,
+      );
+      this.reconnectAttempts.delete(serverName);
+      return;
+    }
+
+    const delay = this.RECONNECT_DELAY_MS * Math.pow(2, count - 1); // Exponential backoff
+    console.log(
+      `[McpManager] Scheduling reconnect for "${serverName}" in ${delay}ms (attempt ${count}/${this.MAX_RECONNECT_ATTEMPTS})`,
+    );
+
+    const timeout = setTimeout(async () => {
+      try {
+        const config = this.serverConfigs.get(serverName);
+        if (!config) return;
+
+        const client = new McpClient(serverName, config);
+        client.onDisconnect = (name) => this.scheduleReconnect(name);
+
+        const tools = await client.connect();
+        this.clients.set(serverName, client);
+        this._allTools = this.collectTools();
+        console.log(`[McpManager] Server "${serverName}" reconnected successfully (${tools.length} tools)`);
+        this.reconnectAttempts.delete(serverName);
+      } catch (err) {
+        console.warn(
+          `[McpManager] Reconnect attempt ${count} for "${serverName}" failed:`,
+          err instanceof Error ? err.message : String(err),
+        );
+        this.scheduleReconnect(serverName); // Retry with backoff
+      }
+    }, delay);
+
+    this.reconnectAttempts.set(serverName, { count, timeout });
   }
 
   /** Re-discover tools from all connected MCP servers.
@@ -140,6 +191,12 @@ export class McpManager {
 
   /** Shutdown all servers */
   async shutdown(): Promise<void> {
+    // Cancel any pending reconnect attempts
+    for (const [, entry] of this.reconnectAttempts) {
+      if (entry.timeout) clearTimeout(entry.timeout);
+    }
+    this.reconnectAttempts.clear();
+
     const disconnects = Array.from(this.clients.values()).map((c) => c.disconnect());
     await Promise.allSettled(disconnects);
     this.clients.clear();

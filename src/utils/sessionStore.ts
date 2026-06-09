@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir, unlink, readdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import crypto from 'node:crypto';
 import type { Session, Message } from '../types.js';
@@ -178,4 +178,102 @@ export async function deleteSession(id: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// ── Session Export / Import ─────────────────────────────────────
+
+/**
+ * Convert a session object to a human‑readable Markdown string.
+ * Useful for sharing conversations, reviewing in editors, or archiving.
+ */
+export function sessionToMarkdown(session: Session): string {
+  const lines: string[] = [];
+  lines.push(`# CodeYang Session: ${session.title}`);
+  lines.push('');
+  lines.push(`- **ID:** \`${session.id}\``);
+  lines.push(`- **Created:** ${session.createdAt}`);
+  lines.push(`- **Updated:** ${session.updatedAt}`);
+  lines.push(`- **Messages:** ${session.messages.length}`);
+  lines.push('');
+
+  for (const msg of session.messages) {
+    if (msg.role === 'system') {
+      lines.push('### System\n');
+      lines.push(msg.content);
+      lines.push('');
+    } else if (msg.role === 'user') {
+      lines.push('## User\n');
+      lines.push(msg.content);
+      lines.push('');
+    } else if (msg.role === 'assistant') {
+      const text = msg.content || '';
+      lines.push(`## CodeYang\n`);
+      if (text) {
+        lines.push(text);
+        lines.push('');
+      }
+
+      if (msg.toolCalls && msg.toolCalls.length > 0) {
+        for (const tc of msg.toolCalls) {
+          lines.push(`> **Tool call:** \`${tc.name}\``);
+          lines.push(`> \`\`\`json`);
+          const formatted = JSON.stringify(tc.args, null, 2);
+          for (const argLine of formatted.split('\n')) {
+            lines.push(`> ${argLine}`);
+          }
+          lines.push(`> \`\`\`\n`);
+        }
+      }
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Export a session as Markdown (returns the string).
+ * Throws if the session doesn't exist.
+ */
+export async function exportSessionAsMarkdown(id: string): Promise<string> {
+  const session = await loadSession(id);
+  if (!session) throw new Error(`Session not found: ${id}`);
+  return sessionToMarkdown(session);
+}
+
+/**
+ * Export a session's raw JSON (returns the parsed object).
+ * Throws if the session doesn't exist.
+ */
+export async function exportSessionAsJson(id: string): Promise<Session> {
+  const session = await loadSession(id);
+  if (!session) throw new Error(`Session not found: ${id}`);
+  return session;
+}
+
+/**
+ * Import a previously exported session JSON file and save it as a new
+ * session (or update an existing one if the ID matches an existing session).
+ *
+ * Returns the session ID.
+ */
+export async function importSession(session: Session): Promise<string> {
+  // Preserve the original ID so re‑importing the same export is idempotent.
+  return saveSession(session.messages, session.id);
+}
+
+/**
+ * Load a session from a JSON file on disk (any path) and save it into the
+ * sessions store. Returns the session ID.
+ */
+export async function importSessionFromFile(filePath: string): Promise<string> {
+  const absPath = resolve(filePath);
+  const raw = await readFile(absPath, 'utf-8');
+  const session: Session = JSON.parse(raw);
+
+  // Validate minimal required fields
+  if (!session.id || !session.messages || !Array.isArray(session.messages)) {
+    throw new Error(`Invalid session file: must contain "id" (string) and "messages" (array).`);
+  }
+
+  return importSession(session);
 }

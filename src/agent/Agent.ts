@@ -44,8 +44,9 @@ export class Agent {
   // Pending reads — deduplicate concurrent Read/Glob calls for the same key
   private pendingReads = new Map<string, Promise<string>>();
 
-  // Anti-repetition: track previous assistant text
+  // Anti-repetition: track previous assistant texts (fuzzy dedup)
   private lastAssistantText = '';
+  private recentAssistantTexts: string[] = [];
   private repeatCount = 0;
 
   // Token usage tracking across turns
@@ -131,6 +132,7 @@ export class Agent {
     this.history = [];
     this.invalidateCache();
     this.lastAssistantText = '';
+    this.recentAssistantTexts = [];
     this.repeatCount = 0;
     this.tokenUsage = { inputTokens: 0, outputTokens: 0 };
   }
@@ -159,6 +161,39 @@ export class Agent {
     return JSON.parse(JSON.stringify(obj));
   }
 
+  /** Compute word-level Jaccard similarity between text and any recent response */
+  private computeSimilarity(text: string): number {
+    if (this.recentAssistantTexts.length === 0) return 0;
+
+    const words = new Set(
+      text
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 1),
+    );
+    if (words.size === 0) return 0;
+
+    let maxSim = 0;
+    for (const prev of this.recentAssistantTexts) {
+      const prevWords = new Set(
+        prev
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((w) => w.length > 1),
+      );
+      if (prevWords.size === 0) continue;
+
+      let intersection = 0;
+      for (const w of words) {
+        if (prevWords.has(w)) intersection++;
+      }
+      const union = words.size + prevWords.size - intersection;
+      const sim = union > 0 ? intersection / union : 0;
+      if (sim > maxSim) maxSim = sim;
+    }
+    return maxSim;
+  }
+
   async run(prompt: string): Promise<void> {
     const messages = this.jsonClone(this.history);
 
@@ -179,7 +214,38 @@ export class Agent {
       cwd: process.cwd(),
     });
 
-    const maxTurns = 20;
+    const maxTurns = config.maxTurns;
+
+    // Context window management: if history is large, insert a summary
+    // to prevent token overflow in long sessions
+    const CONTEXT_SOFT_LIMIT = 40; // messages beyond this trigger summarization
+    if (messages.length > CONTEXT_SOFT_LIMIT) {
+      const keepRecent = 16; // keep this many most recent messages intact
+      const toSummarize = messages.slice(0, messages.length - keepRecent);
+
+      // Build a compact summary of the summarized messages
+      let summary = '[Prior context summary:\n';
+      for (const m of toSummarize) {
+        const content = typeof m.content === 'string' ? m.content : '';
+        if (content.length > 0) {
+          summary += `  ${m.role}: ${content.slice(0, 200)}${content.length > 200 ? '...' : ''}\n`;
+        } else if (Array.isArray(m.content)) {
+          const tools = m.content
+            .filter((b: { type: string }) => b.type === 'tool_use')
+            .map((b: { name?: string }) => b.name);
+          const results = m.content.filter((b: { type: string }) => b.type === 'tool_result').length;
+          if (tools.length > 0) summary += `  ${m.role}: used tools [${tools.join(', ')}]\n`;
+          if (results > 0) summary += `  ${m.role}: ${results} tool results\n`;
+        }
+      }
+      summary += ']';
+
+      // Replace old messages with summary + keep recent ones
+      const recent = messages.slice(-keepRecent);
+      messages.length = 0;
+      messages.push({ role: 'user' as const, content: summary });
+      messages.push(...recent);
+    }
 
     for (let turn = 0; turn < maxTurns; turn++) {
       logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
@@ -251,19 +317,32 @@ export class Agent {
       messages.push({ role: 'assistant', content: assistantContent });
 
       if (assistantText) {
-        // Anti-repetition: check BEFORE displaying to user.
-        // Break if the same text appears 3+ times in a row (2 repeats).
+        // Anti-repetition with fuzzy matching:
+        // 1. Exact match on consecutive turns → immediate stop
+        // 2. High word overlap (>85%) with any of last 4 responses → stop
         if (assistantText === this.lastAssistantText) {
           this.repeatCount++;
-          if (this.repeatCount >= 2) {
-            this.cbs.onError?.('Agent loop detected — stopping to avoid repetition');
+          if (this.repeatCount >= 1) {
+            this.cbs.onError?.('Agent loop detected (exact repeat) — stopping');
             this.history = this.jsonClone(messages);
             break;
           }
         } else {
+          // Fuzzy check: compare with recent responses
+          const similarity = this.computeSimilarity(assistantText);
+          if (similarity > 0.85 && this.recentAssistantTexts.length >= 2) {
+            this.cbs.onError?.('Agent loop detected (similar repeat) — stopping');
+            this.history = this.jsonClone(messages);
+            break;
+          }
           this.repeatCount = 0;
         }
+
         this.lastAssistantText = assistantText;
+        this.recentAssistantTexts.push(assistantText);
+        if (this.recentAssistantTexts.length > 4) {
+          this.recentAssistantTexts.shift();
+        }
 
         // Display only after passing the repetition check
         this.cbs.onAgentText?.(assistantText);
@@ -392,6 +471,7 @@ export class Agent {
   loadMessages(msgs: Message[]) {
     // Reset anti-repetition state when loading a new session
     this.lastAssistantText = '';
+    this.recentAssistantTexts = [];
     this.repeatCount = 0;
 
     for (const m of msgs) {
