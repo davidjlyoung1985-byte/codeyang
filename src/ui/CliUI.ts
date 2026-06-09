@@ -187,7 +187,7 @@ export class CliUI {
   }
 
   promptUser() {
-    process.stdout.write(`\n  ${c.cyan('❯')} `);
+    process.stdout.write(`\n  ${c.cyan('->')} `);
   }
 
   setToolProgressTotal(_total: number) {

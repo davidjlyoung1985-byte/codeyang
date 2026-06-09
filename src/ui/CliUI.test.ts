@@ -79,7 +79,7 @@ describe('CliUI', () => {
     it('outputs prompt character', () => {
       ui.promptUser();
       const calls = mockWrite.mock.calls.map((c: any) => c[0]).join('');
-      expect(calls).toContain('❯');
+      expect(calls).toContain('->');
     });
   });
 
@@ -98,7 +98,7 @@ describe('CliUI', () => {
       const output = capturedOutput();
       expect(output).toContain('test message');
       // Should re-prompt after
-      expect(output).toContain('❯');
+      expect(output).toContain('->');
     });
   });
 

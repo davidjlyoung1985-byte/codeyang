@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, unlink, readdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, unlink, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import crypto from 'node:crypto';
@@ -68,8 +68,8 @@ export async function listSessions(): Promise<SessionMeta[]> {
     const withMtime = await Promise.all(
       files.map(async (f) => {
         try {
-          const stat = await fs.stat(join(SESSIONS_DIR, f));
-          return { name: f, mtime: stat.mtimeMs };
+          const fileStat = await stat(join(SESSIONS_DIR, f));
+          return { name: f, mtime: fileStat.mtimeMs };
         } catch {
           return { name: f, mtime: 0 };
         }

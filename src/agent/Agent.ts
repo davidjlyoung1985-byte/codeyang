@@ -161,6 +161,8 @@ export class Agent {
   /**
    * Context compaction: if history exceeds ~70% of the context window,
    * summarize early messages and keep only the last 2 turns verbatim.
+   * Walks backwards to find a safe cut point that doesn't split
+   * tool_call / tool_result pairs (the API rejects orphaned tool results).
    */
   private async compactIfNeeded(messages: LLMMessage[]): Promise<void> {
     if (messages.length < 4) return; // not enough context to compact
@@ -171,10 +173,39 @@ export class Agent {
 
     this.cbs.onError?.('Context window nearly full — compacting conversation history...');
 
-    // Find where to cut: keep last 2 user-assistant pairs (4 messages), summarize rest
-    const keepCount = Math.min(4, messages.length);
-    const keep = messages.slice(-keepCount);
-    const toSummarize = messages.slice(0, -keepCount);
+    // Walk backwards to find a safe cut point.
+    // Only assistant text-only messages mark a complete turn end.
+    // We must include tool_use/tool_result chains so API doesn't reject
+    // orphaned tool results.
+    let keepFrom = messages.length;
+    let completeTurns = 0;
+    const minTurns = 2;
+
+    for (let i = messages.length - 1; i >= 0 && completeTurns < minTurns; i--) {
+      const msg = messages[i];
+      keepFrom = i;
+
+      if (msg.role === 'assistant') {
+        const content = msg.content;
+        if (Array.isArray(content) && content.some((b: any) => b.type === 'tool_use')) {
+          // Assistant with tool_use — not a turn boundary;
+          // the following user(tool_result) → assistant(text) chain belongs together
+          continue;
+        }
+        // Assistant with text only — end of a complete turn
+        completeTurns++;
+      }
+      // user messages: always walk past them (tool results or original prompts
+      // are part of the turn; we count turns by assistant-text-only endings)
+    }
+
+    // Ensure we don't keep more than we have
+    keepFrom = Math.max(0, keepFrom);
+
+    const keep = messages.slice(keepFrom);
+    const toSummarize = messages.slice(0, keepFrom);
+
+    if (toSummarize.length === 0) return; // nothing to compact
 
     // Build a summary from the early messages using the same LLM
     const summaryText = toSummarize
@@ -215,7 +246,7 @@ export class Agent {
       ...keep,
     ];
 
-    this.cbs.onError?.(`Compacted ${toSummarize.length} early messages into summary. Keeping last ${keepCount / 2} exchanges.`);
+    this.cbs.onError?.(`Compacted ${toSummarize.length} early messages into summary. Keeping last ${keep.length} messages.`);
   }
 
   async run(prompt: string): Promise<void> {

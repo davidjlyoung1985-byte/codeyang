@@ -143,6 +143,17 @@ class AnthropicClient implements LLMClient {
     const blocks: Array<{ type: string; id?: string; name?: string; input_json?: string }> = [];
 
     for await (const event of stream) {
+      // Handle 'message' event (not in SDK type union, but emitted at stream end)
+      const msgEvent = event as { type: string; message?: { usage?: { input_tokens: number; output_tokens: number } } };
+      if (msgEvent.type === 'message' && msgEvent.message?.usage) {
+        yield {
+          type: 'usage',
+          inputTokens: msgEvent.message.usage.input_tokens,
+          outputTokens: msgEvent.message.usage.output_tokens,
+        };
+        continue;
+      }
+
       switch (event.type) {
         case 'content_block_start':
           blockIdx = event.index;
@@ -177,16 +188,6 @@ class AnthropicClient implements LLMClient {
               toolCallIndex: blockIdx,
               toolCallId: blocks[blockIdx].id,
               toolCallArgs: blocks[blockIdx].input_json || '{}',
-            };
-          }
-          break;
-
-        case 'message':
-          if (event.message?.usage) {
-            yield {
-              type: 'usage',
-              inputTokens: event.message.usage.input_tokens,
-              outputTokens: event.message.usage.output_tokens,
             };
           }
           break;
