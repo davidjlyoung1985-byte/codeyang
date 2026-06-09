@@ -259,7 +259,6 @@ class OpenAICompatClient implements LLMClient {
         },
       })),
       stream: true,
-      stream_options: { include_usage: true },
     });
 
     const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
