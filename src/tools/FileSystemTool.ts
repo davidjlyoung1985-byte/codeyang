@@ -1,14 +1,15 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
+import { resolveSafePath } from './shared.js';
 
 /**
  * Copy a file or directory recursively
  */
 export async function executeCopy(sourcePath: string, destPath: string, overwrite = false): Promise<string> {
   try {
-    const absSource = path.resolve(sourcePath);
-    const absDest = path.resolve(destPath);
+    const absSource = resolveSafePath(sourcePath);
+    const absDest = resolveSafePath(destPath);
 
     if (!existsSync(absSource)) {
       return `Error: Source path does not exist: ${sourcePath}`;
@@ -77,8 +78,8 @@ async function copyDirectory(source: string, dest: string, overwrite: boolean): 
  */
 export async function executeMove(sourcePath: string, destPath: string, overwrite = false): Promise<string> {
   try {
-    const absSource = path.resolve(sourcePath);
-    const absDest = path.resolve(destPath);
+    const absSource = resolveSafePath(sourcePath);
+    const absDest = resolveSafePath(destPath);
 
     if (!existsSync(absSource)) {
       return `Error: Source path does not exist: ${sourcePath}`;
@@ -121,7 +122,7 @@ export async function executeMove(sourcePath: string, destPath: string, overwrit
  */
 export async function executeDelete(targetPath: string, recursive = false, force = false): Promise<string> {
   try {
-    const absPath = path.resolve(targetPath);
+    const absPath = resolveSafePath(targetPath);
 
     if (!existsSync(absPath)) {
       if (force) {
@@ -157,7 +158,7 @@ export async function executeDelete(targetPath: string, recursive = false, force
  */
 export async function executeMkdir(dirPath: string, recursive = true): Promise<string> {
   try {
-    const absPath = path.resolve(dirPath);
+    const absPath = resolveSafePath(dirPath);
 
     if (existsSync(absPath)) {
       const stats = await fs.stat(absPath);
@@ -181,7 +182,7 @@ export async function executeMkdir(dirPath: string, recursive = true): Promise<s
  */
 export async function executeList(dirPath: string, showHidden = false, details = false): Promise<string> {
   try {
-    const absPath = path.resolve(dirPath);
+    const absPath = resolveSafePath(dirPath);
 
     if (!existsSync(absPath)) {
       return `Error: Path does not exist: ${dirPath}`;
@@ -241,7 +242,7 @@ export async function executeList(dirPath: string, showHidden = false, details =
  */
 export async function executeExists(targetPath: string): Promise<string> {
   try {
-    const absPath = path.resolve(targetPath);
+    const absPath = resolveSafePath(targetPath);
 
     if (!existsSync(absPath)) {
       return `Path does not exist: ${targetPath}`;

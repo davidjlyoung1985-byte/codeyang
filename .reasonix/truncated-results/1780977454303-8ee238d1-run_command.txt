@@ -1,0 +1,425 @@
+$ npm test 2>&1
+[exit 1]
+
+> codeyang@0.6.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.7 [39m[90mC:/Users/Ehua/codeyang[39m
+
+ [31m❯[39m src/tools/ImageTool.test.ts [2m([22m[2m10 tests[22m[2m | [22m[31m7 failed[39m[2m)[22m[32m 138[2mms[22m[39m
+[31m       [31m×[31m detects PNG format and dimensions[39m[32m 31[2mms[22m[39m
+[31m       [31m×[31m detects GIF format[39m[32m 23[2mms[22m[39m
+[31m       [31m×[31m handles unknown format gracefully[39m[32m 13[2mms[22m[39m
+       [32m✓[39m returns error for missing file[32m 6[2mms[22m[39m
+[31m       [31m×[31m encodes PNG to base64 data URI[39m[32m 12[2mms[22m[39m
+[31m       [31m×[31m rejects files exceeding maxBytes[39m[32m 11[2mms[22m[39m
+       [32m✓[39m returns error for missing file[32m 6[2mms[22m[39m
+[31m       [31m×[31m lists image files in directory[39m[32m 21[2mms[22m[39m
+[31m       [31m×[31m returns message when no images found[39m[32m 6[2mms[22m[39m
+       [32m✓[39m returns error for missing directory[32m 4[2mms[22m[39m
+ [31m❯[39m src/tools/index.test.ts [2m([22m[2m26 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 105[2mms[22m[39m
+       [32m✓[39m matches simple filename[32m 3[2mms[22m[39m
+       [32m✓[39m does not match different filename[32m 1[2mms[22m[39m
+       [32m✓[39m does not match substring unsless pattern says so[32m 0[2mms[22m[39m
+       [32m✓[39m matches any characters in the same directory level[32m 1[2mms[22m[39m
+       [32m✓[39m does not match across directory boundaries[32m 0[2mms[22m[39m
+       [32m✓[39m matches prefix with star[32m 1[2mms[22m[39m
+       [32m✓[39m matches across directories[32m 1[2mms[22m[39m
+       [32m✓[39m matches empty directory path[32m 0[2mms[22m[39m
+       [32m✓[39m respects prefix directory[32m 0[2mms[22m[39m
+       [32m✓[39m matches exactly one non-slash character[32m 1[2mms[22m[39m
+       [32m✓[39m does not match slash[32m 0[2mms[22m[39m
+       [32m✓[39m matches any char in the class[32m 1[2mms[22m[39m
+       [32m✓[39m respects negation [!...][32m 0[2mms[22m[39m
+       [32m✓[39m handles dots as literal[32m 0[2mms[22m[39m
+       [32m✓[39m handles plus signs as literal[32m 0[2mms[22m[39m
+     [32m✓[39m rejects empty array[32m 1[2mms[22m[39m
+     [32m✓[39m rejects non-array[32m 0[2mms[22m[39m
+     [32m✓[39m creates and tracks todos[32m 1[2mms[22m[39m
+     [32m✓[39m normalizes invalid status/priority[32m 0[2mms[22m[39m
+     [32m✓[39m merges updates by content[32m 0[2mms[22m[39m
+     [32m✓[39m preserves in_progress items not in update[32m 1[2mms[22m[39m
+[31m     [31m×[31m replaces a single occurrence[39m[32m 33[2mms[22m[39m
+[31m     [31m×[31m throws on multiple matches without replaceAll[39m[32m 21[2mms[22m[39m
+[31m     [31m×[31m replaces all with replaceAll=true[39m[32m 13[2mms[22m[39m
+[31m     [31m×[31m throws when oldString not found[39m[32m 15[2mms[22m[39m
+[31m     [31m×[31m throws on nonexistent file[39m[32m 6[2mms[22m[39m
+ [31m❯[39m src/tools/NetworkTool.test.ts [2m([22m[2m21 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 154[2mms[22m[39m
+       [32m✓[39m should make GET request[32m 12[2mms[22m[39m
+       [32m✓[39m should make POST request with body[32m 5[2mms[22m[39m
+       [32m✓[39m should handle request timeout[32m 5[2mms[22m[39m
+       [32m✓[39m should handle 404 errors[32m 4[2mms[22m[39m
+[31m       [31m×[31m should download file and write to disk[39m[32m 21[2mms[22m[39m
+[31m       [31m×[31m should create parent directories[39m[32m 6[2mms[22m[39m
+       [32m✓[39m should handle download errors[32m 3[2mms[22m[39m
+[31m       [31m×[31m should upload file[39m[32m 12[2mms[22m[39m
+[31m       [31m×[31m should upload with additional fields[39m[32m 17[2mms[22m[39m
+       [32m✓[39m should handle upload errors (file not found)[32m 3[2mms[22m[39m
+       [32m✓[39m should make successful API call[32m 4[2mms[22m[39m
+       [32m✓[39m should POST JSON data[32m 3[2mms[22m[39m
+       [32m✓[39m should handle API errors[32m 7[2mms[22m[39m
+       [32m✓[39m should include custom headers[32m 3[2mms[22m[39m
+       [32m✓[39m should check accessible URL[32m 4[2mms[22m[39m
+       [32m✓[39m should check inaccessible URL (404)[32m 8[2mms[22m[39m
+       [32m✓[39m should handle connection errors[32m 9[2mms[22m[39m
+       [32m✓[39m should parse simple URL[32m 5[2mms[22m[39m
+       [32m✓[39m should parse URL with query parameters[32m 9[2mms[22m[39m
+       [32m✓[39m should parse URL with port and hash[32m 3[2mms[22m[39m
+       [32m✓[39m should handle invalid URL[32m 3[2mms[22m[39m
+ [31m❯[39m src/tools/DataTool.test.ts [2m([22m[2m23 tests[22m[2m | [22m[31m16 failed[39m[2m)[22m[32m 281[2mms[22m[39m
+[31m       [31m×[31m should parse JSON from file[39m[32m 70[2mms[22m[39m
+       [32m✓[39m should parse JSON from string[32m 3[2mms[22m[39m
+[31m       [31m×[31m should write JSON to file[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should query JSON with dot notation[39m[32m 14[2mms[22m[39m
+       [32m✓[39m should handle invalid JSON[32m 3[2mms[22m[39m
+[31m       [31m×[31m should parse YAML from file[39m[32m 11[2mms[22m[39m
+       [32m✓[39m should parse YAML from string[32m 35[2mms[22m[39m
+[31m       [31m×[31m should write YAML to file[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should convert JSON to YAML[39m[32m 21[2mms[22m[39m
+[31m       [31m×[31m should convert YAML to JSON[39m[32m 4[2mms[22m[39m
+       [32m✓[39m should convert from string input[32m 12[2mms[22m[39m
+       [32m✓[39m should fail when formats are the same[32m 12[2mms[22m[39m
+[31m       [31m×[31m should parse CSV with header[39m[32m 8[2mms[22m[39m
+[31m       [31m×[31m should parse CSV without header[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should parse CSV with custom delimiter[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m should write CSV from JSON array[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should write CSV without header[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should fail on non-array input[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should parse XML from file[39m[32m 8[2mms[22m[39m
+       [32m✓[39m should parse XML from string[32m 7[2mms[22m[39m
+       [32m✓[39m should parse XML with attributes[32m 4[2mms[22m[39m
+[31m       [31m×[31m should write XML to file[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should write XML with attributes[39m[32m 24[2mms[22m[39m
+ [32m✓[39m src/qt/tools.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 449[2mms[22m[39m
+ [31m❯[39m src/tools/FileSystemTool.test.ts [2m([22m[2m23 tests[22m[2m | [22m[31m23 failed[39m[2m)[22m[33m 571[2mms[22m[39m
+[31m       [31m×[31m should copy a file[39m[32m 28[2mms[22m[39m
+[31m       [31m×[31m should copy a directory recursively[39m[32m 32[2mms[22m[39m
+[31m       [31m×[31m should fail if destination exists without overwrite[39m[32m 14[2mms[22m[39m
+[31m       [31m×[31m should overwrite if overwrite=true[39m[32m 13[2mms[22m[39m
+[31m       [31m×[31m should prevent copying directory into itself[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m should move a file[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m should rename a file[39m[32m 8[2mms[22m[39m
+[31m       [31m×[31m should move a directory[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m should delete a file[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should delete an empty directory[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should fail on non-empty directory without recursive[39m[32m 24[2mms[22m[39m
+[31m       [31m×[31m should delete non-empty directory with recursive=true[39m[32m 13[2mms[22m[39m
+[31m       [31m×[31m should ignore missing path with force=true[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m should create a directory[39m[32m 24[2mms[22m[39m
+[31m       [31m×[31m should create parent directories by default[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m should return success if directory already exists[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should list directory contents[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should hide hidden files by default[39m[32m 20[2mms[22m[39m
+[31m       [31m×[31m should show hidden files with showHidden=true[39m[32m 161[2mms[22m[39m
+[31m       [31m×[31m should show detailed information with details=true[39m[32m 56[2mms[22m[39m
+[31m       [31m×[31m should confirm file exists[39m[32m 37[2mms[22m[39m
+[31m       [31m×[31m should confirm directory exists[39m[32m 35[2mms[22m[39m
+[31m       [31m×[31m should report non-existent path[39m[32m 30[2mms[22m[39m
+ [32m✓[39m src/utils/sessionStore.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+ [32m✓[39m src/utils/dotenv.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m src/tools/SearchTool.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1142[2mms[22m[39m
+     [33m[2m✓[22m[39m finds files by content [33m 606[2mms[22m[39m
+ [32m✓[39m src/qt/index.test.ts [2m([22m[2m30 tests[22m[2m)[22m[33m 529[2mms[22m[39m
+ [32m✓[39m src/math/index.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/ui/CliUI.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m src/tools/CodeAnalysisTool.test.ts [2m([22m[2m19 tests[22m[2m)[22m[33m 594[2mms[22m[39m
+ [31m❯[39m src/tools/registry.test.ts [2m([22m[2m16 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 37[2mms[22m[39m
+       [32m✓[39m finds built-in tools by name[32m 4[2mms[22m[39m
+       [32m✓[39m returns undefined for unknown tools[32m 1[2mms[22m[39m
+       [32m✓[39m is case-sensitive[32m 0[2mms[22m[39m
+       [32m✓[39m finds Read tool[32m 0[2mms[22m[39m
+       [32m✓[39m finds Write tool[32m 0[2mms[22m[39m
+       [32m✓[39m finds GitStatus tool[32m 0[2mms[22m[39m
+       [32m✓[39m finds Question tool[32m 0[2mms[22m[39m
+       [32m✓[39m returns an array of schemas[32m 0[2mms[22m[39m
+       [32m✓[39m includes built-in tools[32m 2[2mms[22m[39m
+       [32m✓[39m every schema has name, description, and input_schema[32m 6[2mms[22m[39m
+       [32m✓[39m adds Qt tools to the registry which getTool can find[32m 1[2mms[22m[39m
+       [32m✓[39m replaces previously registered Qt tools[32m 0[2mms[22m[39m
+       [32m✓[39m included Qt tools in toolSchemas[32m 0[2mms[22m[39m
+[31m       [31m×[31m adds math tools to the registry which getTool can find[39m[32m 15[2mms[22m[39m
+[31m       [31m×[31m replaces previously registered math tools[39m[32m 2[2mms[22m[39m
+[31m       [31m×[31m included math tools in toolSchemas[39m[32m 1[2mms[22m[39m
+ [31m❯[39m src/agent/Agent.test.ts [2m([22m[2m17 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 49[2mms[22m[39m
+       [32m✓[39m creates an Agent with apiKey set[32m 4[2mms[22m[39m
+       [32m✓[39m clears conversation state[32m 2[2mms[22m[39m
+       [32m✓[39m is not waiting for answer initially[32m 1[2mms[22m[39m
+       [32m✓[39m can cancel a question without error[32m 1[2mms[22m[39m
+       [32m✓[39m accepts and stores callbacks[32m 1[2mms[22m[39m
+       [32m✓[39m returns empty array for fresh agent[32m 1[2mms[22m[39m
+       [32m✓[39m restores user and assistant messages[32m 2[2mms[22m[39m
+       [32m✓[39m restores messages with tool calls[32m 2[2mms[22m[39m
+       [32m✓[39m handles messages without tool calls/result[32m 2[2mms[22m[39m
+       [32m✓[39m streams text response from LLM[32m 5[2mms[22m[39m
+       [32m✓[39m sends user message to LLM API[32m 2[2mms[22m[39m
+       [32m✓[39m calls onUserMessage callback[32m 2[2mms[22m[39m
+       [32m✓[39m calls onAgentDelta for streaming text[32m 3[2mms[22m[39m
+       [32m✓[39m executes tool calls from LLM and sends results back[32m 3[2mms[22m[39m
+       [32m✓[39m handles unknown tools gracefully[32m 3[2mms[22m[39m
+[31m       [31m×[31m accumulates token usage from usage events[39m[32m 9[2mms[22m[39m
+[31m       [31m×[31m resets token usage on agent reset[39m[32m 2[2mms[22m[39m
+ [31m❯[39m src/tools/TaskTool.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[32m 32[2mms[22m[39m
+[31m     [31m×[31m executes a single subtask and returns text response[39m[32m 17[2mms[22m[39m
+[31m     [31m×[31m executes tool calls and sends results back[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m blocks Question and Task tools in sub-agents, continues on next turn[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m handles unknown tools gracefully — marks error and continues[39m[32m 3[2mms[22m[39m
+[31m     [31m×[31m handles consumeStream errors gracefully[39m[32m 3[2mms[22m[39m
+[31m     [31m×[31m handles multiple parallel subtasks[39m[32m 2[2mms[22m[39m
+     [32m✓[39m stops after max 10 turns[32m 1[2mms[22m[39m
+ [32m✓[39m src/agent/config.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [31m❯[39m src/tools/tools.test.ts [2m([22m[2m24 tests[22m[2m | [22m[31m12 failed[39m[2m)[22m[33m 1650[2mms[22m[39m
+[31m     [31m×[31m reads a file and returns its content[39m[32m 42[2mms[22m[39m
+[31m     [31m×[31m throws on nonexistent file[39m[32m 24[2mms[22m[39m
+[31m     [31m×[31m lists directory contents with trailing / for dirs[39m[32m 15[2mms[22m[39m
+[31m     [31m×[31m reports empty directory[39m[32m 3[2mms[22m[39m
+[31m     [31m×[31m reports directory counts correctly[39m[32m 7[2mms[22m[39m
+[31m     [31m×[31m handles offset and limit for file reading[39m[32m 27[2mms[22m[39m
+[31m     [31m×[31m handles offset without limit (read to end)[39m[32m 14[2mms[22m[39m
+[31m     [31m×[31m handles relative paths (resolves from cwd)[39m[32m 28[2mms[22m[39m
+[31m     [31m×[31m writes content to a file[39m[32m 15[2mms[22m[39m
+[31m     [31m×[31m creates parent directories automatically[39m[32m 20[2mms[22m[39m
+[31m     [31m×[31m overwrites existing file[39m[32m 65[2mms[22m[39m
+[31m     [31m×[31m handles empty content[39m[32m 16[2mms[22m[39m
+     [32m✓[39m finds matching lines in files (fallback grep)[32m 218[2mms[22m[39m
+     [32m✓[39m returns (no matches) for nonexistent pattern[32m 188[2mms[22m[39m
+     [32m✓[39m respects include filter[32m 155[2mms[22m[39m
+     [32m✓[39m handles empty directory[32m 107[2mms[22m[39m
+     [32m✓[39m throws on empty URL[32m 2[2mms[22m[39m
+     [32m✓[39m throws on non-http/https protocol[32m 2[2mms[22m[39m
+     [32m✓[39m throws on invalid URL[32m 2[2mms[22m[39m
+     [32m✓[39m accepts valid http and https URLs[32m 3[2mms[22m[39m
+     [32m✓[39m supports format parameter for html output[32m 2[2mms[22m[39m
+     [33m[2m✓[22m[39m executes a simple echo command [33m 307[2mms[22m[39m
+     [32m✓[39m returns exit code for failing commands[32m 186[2mms[22m[39m
+     [32m✓[39m handles command with cwd parameter[32m 195[2mms[22m[39m
+ [32m✓[39m src/tools/mcp.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/tools/GitTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 9399[2mms[22m[39m
+       [33m[2m✓[22m[39m should show clean status for new repo [33m 842[2mms[22m[39m
+       [33m[2m✓[22m[39m should show untracked files [33m 594[2mms[22m[39m
+       [33m[2m✓[22m[39m should show modified files [33m 477[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage files [33m 324[2mms[22m[39m
+       [33m[2m✓[22m[39m should create commit with staged files [33m 351[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage all and commit with addAll=true [33m 308[2mms[22m[39m
+       [33m[2m✓[22m[39m should list branches [33m 362[2mms[22m[39m
+       [33m[2m✓[22m[39m should show multiple branches [33m 411[2mms[22m[39m
+       [33m[2m✓[22m[39m should create and switch to new branch [33m 408[2mms[22m[39m
+       [33m[2m✓[22m[39m should switch to existing branch [33m 412[2mms[22m[39m
+       [33m[2m✓[22m[39m should show commit history [33m 354[2mms[22m[39m
+       [33m[2m✓[22m[39m should limit commit count [33m 893[2mms[22m[39m
+       [33m[2m✓[22m[39m should show oneline format [33m 364[2mms[22m[39m
+       [33m[2m✓[22m[39m should show unstaged changes [33m 358[2mms[22m[39m
+       [33m[2m✓[22m[39m should show staged changes [33m 426[2mms[22m[39m
+       [33m[2m✓[22m[39m should unstage files [33m 344[2mms[22m[39m
+       [33m[2m✓[22m[39m should stash changes [33m 439[2mms[22m[39m
+       [33m[2m✓[22m[39m should list stashes [33m 487[2mms[22m[39m
+       [33m[2m✓[22m[39m should return current branch [33m 371[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 78 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/agent/Agent.test.ts[2m > [22mAgent[2m > [22mrun — token usage tracking[2m > [22maccumulates token usage from usage events
+[31m[1mTypeError[22m: agent.getTokenUsage is not a function[39m
+[36m [2m❯[22m src/agent/Agent.test.ts:[2m282:20[22m[39m
+    [90m280|[39m       mockStream.mockReturnValue(makeStream(textDelta('Hello'), usageE…
+    [90m281|[39m       [35mawait[39m agent[33m.[39m[34mrun[39m([32m'prompt 1'[39m)[33m;[39m
+    [90m282|[39m       expect(agent.getTokenUsage()).toEqual({ inputTokens: 10, outputT…
+    [90m   |[39m                    [31m^[39m
+    [90m283|[39m
+    [90m284|[39m       mockStream.mockReturnValue(makeStream(textDelta('World'), usageE…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/agent/Agent.test.ts[2m > [22mAgent[2m > [22mrun — token usage tracking[2m > [22mresets token usage on agent reset
+[31m[1mTypeError[22m: agent.getTokenUsage is not a function[39m
+[36m [2m❯[22m src/agent/Agent.test.ts:[2m292:20[22m[39m
+    [90m290|[39m       mockStream.mockReturnValue(makeStream(textDelta('Hello'), usageE…
+    [90m291|[39m       [35mawait[39m agent[33m.[39m[34mrun[39m([32m'prompt'[39m)[33m;[39m
+    [90m292|[39m       [34mexpect[39m(agent[33m.[39m[34mgetTokenUsage[39m()[33m.[39minputTokens)[33m.[39m[34mtoBe[39m([34m10[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m293|[39m
+    [90m294|[39m       agent[33m.[39m[34mreset[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mJSON operations[2m > [22mshould parse JSON from file
+[31m[1mAssertionError[22m: expected 'Error parsing JSON: Path traversal bl…' to contain '"name"'[39m
+
+Expected: [32m""name""[39m
+Received: [31m"Error parsing JSON: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\test.json" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m42:22[22m[39m
+    [90m 40|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteJsonParse[39m(file[33m,[39m [35mtrue[39m)[33m;[39m
+    [90m 41|[39m
+    [90m 42|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"name"'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m 43|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"test"'[39m)[33m;[39m
+    [90m 44|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'123'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mJSON operations[2m > [22mshould write JSON to file
+[31m[1mAssertionError[22m: expected 'Error writing JSON to C:\Users\Ehua\c…' to contain 'JSON written'[39m
+
+Expected: [32m"JSON written"[39m
+Received: [31m"Error writing JSON to C:\Users\Ehua\codeyang\.test-data-tools\output.json: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\output.json" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m62:22[22m[39m
+    [90m 60|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteJsonWrite[39m(file[33m,[39m data[33m,[39m [35mtrue[39m)[33m;[39m
+    [90m 61|[39m
+    [90m 62|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'JSON written'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m 63|[39m       [34mexpect[39m([34mexistsSync[39m(file))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m 64|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mJSON operations[2m > [22mshould query JSON with dot notation
+[31m[1mAssertionError[22m: expected 'Error querying JSON: Path traversal b…' to be 'Alice' // Object.is equality[39m
+
+Expected: [32m"Alice"[39m
+Received: [31m"Error querying JSON: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\data.json" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m83:23[22m[39m
+    [90m 81|[39m
+    [90m 82|[39m       const result1 = await executeJsonQuery(file, 'users[0].name', tr…
+    [90m 83|[39m       [34mexpect[39m(result1)[33m.[39m[34mtoBe[39m([32m'Alice'[39m)[33m;[39m
+    [90m   |[39m                       [31m^[39m
+    [90m 84|[39m
+    [90m 85|[39m       const result2 = await executeJsonQuery(file, 'config.port', true…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mYAML operations[2m > [22mshould parse YAML from file
+[31m[1mAssertionError[22m: expected 'Error parsing YAML: Path traversal bl…' to contain '"name"'[39m
+
+Expected: [32m""name""[39m
+Received: [31m"Error parsing YAML: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\test.yaml" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m108:22[22m[39m
+    [90m106|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteYamlParse[39m(file[33m,[39m [35mtrue[39m)[33m;[39m
+    [90m107|[39m
+    [90m108|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"name"'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m109|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"test"'[39m)[33m;[39m
+    [90m110|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"items"'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mYAML operations[2m > [22mshould write YAML to file
+[31m[1mAssertionError[22m: expected 'Error writing YAML to C:\Users\Ehua\c…' to contain 'YAML written'[39m
+
+Expected: [32m"YAML written"[39m
+Received: [31m"Error writing YAML to C:\Users\Ehua\codeyang\.test-data-tools\output.yaml: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\output.yaml" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m129:22[22m[39m
+    [90m127|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteYamlWrite[39m(file[33m,[39m data)[33m;[39m
+    [90m128|[39m
+    [90m129|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'YAML written'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m130|[39m       [34mexpect[39m([34mexistsSync[39m(file))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m131|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mFormat conversion[2m > [22mshould convert JSON to YAML
+[31m[1mAssertionError[22m: expected 'Error converting json to yaml: Path t…' to contain 'name: test'[39m
+
+Expected: [32m"name: test"[39m
+Received: [31m"Error converting json to yaml: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\data.json" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m146:22[22m[39m
+    [90m144|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteConvert[39m(file[33m,[39m [32m'json'[39m[33m,[39m [32m'yaml'[39m[33m,[39m [35mtrue[39m)[33m;[39m
+    [90m145|[39m
+    [90m146|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'name: test'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m147|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'value: 123'[39m)[33m;[39m
+    [90m148|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mFormat conversion[2m > [22mshould convert YAML to JSON
+[31m[1mAssertionError[22m: expected 'Error converting yaml to json: Path t…' to contain '"name"'[39m
+
+Expected: [32m""name""[39m
+Received: [31m"Error converting yaml to json: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\data.yaml" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m157:22[22m[39m
+    [90m155|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteConvert[39m(file[33m,[39m [32m'yaml'[39m[33m,[39m [32m'json'[39m[33m,[39m [35mtrue[39m)[33m;[39m
+    [90m156|[39m
+    [90m157|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"name"'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m158|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"test"'[39m)[33m;[39m
+    [90m159|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'123'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mCSV operations[2m > [22mshould parse CSV with header
+[31m[1mAssertionError[22m: expected 'Error parsing CSV: Path traversal blo…' to contain '"name"'[39m
+
+Expected: [32m""name""[39m
+Received: [31m"Error parsing CSV: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\data.csv" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m186:22[22m[39m
+    [90m184|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteCsvParse[39m(file[33m,[39m [35mtrue[39m[33m,[39m [35mtrue[39m[33m,[39m [32m','[39m)[33m;[39m
+    [90m185|[39m
+    [90m186|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"name"'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m187|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"Alice"'[39m)[33m;[39m
+    [90m188|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"age"'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mCSV operations[2m > [22mshould parse CSV without header
+[31m[1mAssertionError[22m: expected 'Error parsing CSV: Path traversal blo…' to contain 'Alice'[39m
+
+Expected: [32m"Alice"[39m
+Received: [31m"Error parsing CSV: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\data.csv" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m199:22[22m[39m
+    [90m197|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteCsvParse[39m(file[33m,[39m [35mtrue[39m[33m,[39m [35mfalse[39m[33m,[39m [32m','[39m)[33m;[39m
+    [90m198|[39m
+    [90m199|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Alice'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m200|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'30'[39m)[33m;[39m
+    [90m201|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Bob'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mCSV operations[2m > [22mshould parse CSV with custom delimiter
+[31m[1mAssertionError[22m: expected 'Error parsing CSV: Path traversal blo…' to contain '"name"'[39m
+
+Expected: [32m""name""[39m
+Received: [31m"Error parsing CSV: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\data.csv" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m211:22[22m[39m
+    [90m209|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteCsvParse[39m(file[33m,[39m [35mtrue[39m[33m,[39m [35mtrue[39m[33m,[39m [32m';'[39m)[33m;[39m
+    [90m210|[39m
+    [90m211|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"name"'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m212|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'"Alice"'[39m)[33m;[39m
+    [90m213|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mCSV operations[2m > [22mshould write CSV from JSON array
+[31m[1mAssertionError[22m: expected 'Error writing CSV to C:\Users\Ehua\co…' to contain 'CSV written'[39m
+
+Expected: [32m"CSV written"[39m
+Received: [31m"Error writing CSV to C:\Users\Ehua\codeyang\.test-data-tools\output.csv: Path traversal blocked: "C:\Users\Ehua\codeyang\.test-data-tools\output.csv" resolves outside the project directory (C:\Users\Ehua\codeyang)"[39m
+
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m224:22[22m[39m
+    [90m222|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteCsvWrite[39m(file[33m,[39m data[33m,[39m [35mtrue[39m[33m,[39m [32m','[39m)[33m;[39m
+    [90m223|[39m
+    [90m224|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'CSV written'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m225|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'2 rows'[39m)[33m;[39m
+    [90m226|[39m       [34mexpect[39m([34mexistsSync[39m(file))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/78]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/DataTool.test.ts[2m > [22mDataTool[2m > [22mCSV operations[2m > [22mshould write CSV without header
+[31m[1mError[22m: ENOENT: no such file or directory, open 'C:\Users\Ehua\codeyang\.test-data-tools\output.csv'[39m
+[36m [2m❯[22m src/tools/DataTool.test.ts:[2m243:23[22m[39m
+    [90m241|[39m       [35mawait[39m [34mexecuteCsvWrite[39m(file[33m,[39m data[33m,[39m 
+
+[… truncated 74712 chars …]

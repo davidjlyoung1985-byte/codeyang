@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
 import YAML from 'yaml';
+import { resolveSafePath } from './shared.js';
 import { parse as csvParse } from 'csv-parse/sync';
 import { stringify as csvStringify } from 'csv-stringify/sync';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
@@ -14,7 +15,7 @@ export async function executeJsonParse(input: string, isFile = true): Promise<st
     let jsonText: string;
 
     if (isFile) {
-      const filePath = path.resolve(input);
+      const filePath = resolveSafePath(input);
       if (!existsSync(filePath)) {
         return `Error: File does not exist: ${input}`;
       }
@@ -36,7 +37,7 @@ export async function executeJsonParse(input: string, isFile = true): Promise<st
  */
 export async function executeJsonWrite(filePath: string, data: string, pretty = true): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolveSafePath(filePath);
     let parsed: unknown;
 
     // Try to parse data as JSON
@@ -67,7 +68,7 @@ export async function executeJsonQuery(input: string, query: string, isFile = tr
     let jsonText: string;
 
     if (isFile) {
-      const filePath = path.resolve(input);
+      const filePath = resolveSafePath(input);
       if (!existsSync(filePath)) {
         return `Error: File does not exist: ${input}`;
       }
@@ -121,7 +122,7 @@ export async function executeYamlParse(input: string, isFile = true): Promise<st
     let yamlText: string;
 
     if (isFile) {
-      const filePath = path.resolve(input);
+      const filePath = resolveSafePath(input);
       if (!existsSync(filePath)) {
         return `Error: File does not exist: ${input}`;
       }
@@ -143,7 +144,7 @@ export async function executeYamlParse(input: string, isFile = true): Promise<st
  */
 export async function executeYamlWrite(filePath: string, data: string): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolveSafePath(filePath);
     let parsed: unknown;
 
     // Try to parse data as JSON
@@ -182,7 +183,7 @@ export async function executeConvert(
     let inputText: string;
 
     if (isFile) {
-      const filePath = path.resolve(input);
+      const filePath = resolveSafePath(input);
       if (!existsSync(filePath)) {
         return `Error: File does not exist: ${input}`;
       }
@@ -227,7 +228,7 @@ export async function executeCsvParse(
     let csvText: string;
 
     if (isFile) {
-      const filePath = path.resolve(input);
+      const filePath = resolveSafePath(input);
       if (!existsSync(filePath)) {
         return `Error: File does not exist: ${input}`;
       }
@@ -259,7 +260,7 @@ export async function executeCsvWrite(
   delimiter = ',',
 ): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolveSafePath(filePath);
     let parsed: unknown[];
 
     // Parse input as JSON array
@@ -300,7 +301,7 @@ export async function executeXmlParse(input: string, isFile = true): Promise<str
     let xmlText: string;
 
     if (isFile) {
-      const filePath = path.resolve(input);
+      const filePath = resolveSafePath(input);
       if (!existsSync(filePath)) {
         return `Error: File does not exist: ${input}`;
       }
@@ -327,7 +328,7 @@ export async function executeXmlParse(input: string, isFile = true): Promise<str
  */
 export async function executeXmlWrite(filePath: string, data: string): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolveSafePath(filePath);
     let parsed: unknown;
 
     // Parse input as JSON

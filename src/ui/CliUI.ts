@@ -228,9 +228,9 @@ export class CliUI {
 
   showAgentText(text: string) {
     if (this.streamBuf) {
+      // Streaming was in progress — flush the buffer, then show text
       process.stdout.write('\n');
       this.streamBuf = '';
-      return;
     }
     this.spinner.stop();
     const rendered = renderMarkdown(text);

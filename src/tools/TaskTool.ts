@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type { LLMClient, LLMMessage } from '../agent/LLMClient.js';
+import { consumeStream } from '../agent/LLMClient.js';
 import { toolSchemas, getTool } from './registry.js';
 
 export interface TaskResult {
@@ -12,29 +13,30 @@ const TASK_SYSTEM_PROMPT = `You are a sub-agent of CodeYang, an AI coding agent.
 - Once you have completed your task, provide a clear, structured summary of your findings.
 - Be efficient. You have a maximum of 10 turns.`;
 
+export async function executeTaskPrompt(
+  client: LLMClient,
+  model: string,
+  maxTokens: number,
+  prompt: string,
+  cwd: string,
+): Promise<string> {
+  return executeTask(client, model, maxTokens, prompt, [prompt], cwd);
+}
+
 export async function executeTask(
-  client: Anthropic,
+  client: LLMClient,
   model: string,
   maxTokens: number,
   description: string,
   subtasks: string[],
   cwd: string,
 ): Promise<string> {
-  const results: string[] = [];
-  results.push(`## Task Sub-Agent: ${description}`);
-  results.push(`Working directory: ${cwd}`);
-  results.push(`\nExecuting ${subtasks.length} subtask(s):`);
-  for (let i = 0; i < subtasks.length; i++) {
-    results.push(`  ${i + 1}. ${subtasks[i]}`);
-  }
-  results.push('');
-
   const subtaskOutputs = await Promise.all(
-    subtasks.map(async (subtask, si) => {
+    subtasks.map(async (subtask) => {
       const lines: string[] = [];
-      lines.push(`### Subtask ${si + 1}/${subtasks.length}: ${subtask}`);
+      lines.push(`### Subtask ${subtask}`);
 
-      const messages: Anthropic.Messages.MessageParam[] = [
+      const messages: LLMMessage[] = [
         {
           role: 'user',
           content: `Execute the following task: ${subtask}\n\nWorking directory: ${cwd}\n\nUse the available tools to complete this task. When done, provide your findings clearly.`,
@@ -43,45 +45,37 @@ export async function executeTask(
 
       try {
         for (let turn = 0; turn < 10; turn++) {
-          const response = await client.messages.create({
+          const { text: textOutput, toolCalls } = await consumeStream(client, {
             model,
-            max_tokens: maxTokens,
+            maxTokens,
+            temperature: 0.5,
             system: TASK_SYSTEM_PROMPT,
             messages,
             tools: toolSchemas(),
           });
 
-          const msg = response as Anthropic.Messages.Message;
-          const blocks = msg.content;
-          let textOutput = '';
-          const toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
-
-          for (const block of blocks) {
-            if (block.type === 'text') textOutput += block.text;
-            else if (block.type === 'tool_use')
-              toolCalls.push({ id: block.id, name: block.name, input: block.input as Record<string, unknown> });
-          }
-
           messages.push({
             role: 'assistant',
-            content: blocks
-              .filter((b) => b.type === 'text' || b.type === 'tool_use')
-              .map((b) => {
-                if (b.type === 'text') return { type: 'text' as const, text: b.text };
-                return {
-                  type: 'tool_use' as const,
-                  id: b.id,
-                  name: b.name,
-                  input: JSON.parse(JSON.stringify(b.input)),
-                };
-              }),
+            content: [
+              ...(textOutput ? [{ type: 'text' as const, text: textOutput }] : []),
+              ...toolCalls.map((tc) => ({
+                type: 'tool_use' as const,
+                id: tc.id,
+                name: tc.name,
+                input: tc.input,
+              })),
+            ],
           });
 
           if (textOutput) lines.push(textOutput);
           if (toolCalls.length === 0) break;
 
-          const toolResults: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error: boolean }> =
-            [];
+          const toolResults: Array<{
+            type: 'tool_result';
+            tool_use_id: string;
+            content: string;
+            is_error: boolean;
+          }> = [];
           for (const tc of toolCalls) {
             if (tc.name === 'Question' || tc.name === 'Task') {
               toolResults.push({

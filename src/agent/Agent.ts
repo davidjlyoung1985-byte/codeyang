@@ -31,6 +31,10 @@ export class Agent {
   private lastAssistantText = '';
   private repeatCount = 0;
 
+  // Token usage tracking
+  private totalInputTokens = 0;
+  private totalOutputTokens = 0;
+
   // Persistent memory cache
   private memorySummary: string | null = null;
   private memoryLoadFailure = false;
@@ -107,6 +111,13 @@ export class Agent {
     this.invalidateCache();
     this.lastAssistantText = '';
     this.repeatCount = 0;
+    this.totalInputTokens = 0;
+    this.totalOutputTokens = 0;
+  }
+
+  /** Get accumulated token usage for the current session */
+  getTokenUsage(): { inputTokens: number; outputTokens: number } {
+    return { inputTokens: this.totalInputTokens, outputTokens: this.totalOutputTokens };
   }
 
   answerQuestion(answer: string) {
@@ -146,13 +157,14 @@ export class Agent {
     this.cbs.onUserMessage?.(prompt);
 
     setToolContext({
-      anthropicClient: null,
+      llmClient: this.client,
       model: config.model,
       maxTokens: config.maxTokens,
       cwd: process.cwd(),
     });
 
-    const maxTurns = 20;
+    try {
+      const maxTurns = config.maxTurns;
 
     for (let turn = 0; turn < maxTurns; turn++) {
       if (process.env['CODEX_DEBUG']) {
@@ -202,6 +214,9 @@ export class Agent {
                 toolCalls.push({ id: accum.id!, name: accum.name!, input: {} });
               }
             }
+          } else if (event.type === 'usage') {
+            if (event.inputTokens) this.totalInputTokens += event.inputTokens;
+            if (event.outputTokens) this.totalOutputTokens += event.outputTokens;
           }
         }
 
@@ -332,8 +347,9 @@ export class Agent {
       messages.push({ role: 'user', content: toolResultContent });
       this.history = this.jsonClone(messages);
     }
-
+  } finally {
     setToolContext(null);
+  }
   }
 
   /** Restore history from saved messages including tool_result blocks */

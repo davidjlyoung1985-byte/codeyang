@@ -1,8 +1,9 @@
 import { writeFile, mkdir } from 'node:fs/promises';
-import { join, isAbsolute, dirname } from 'node:path';
+import { dirname } from 'node:path';
+import { resolveSafePath } from './shared.js';
 
 export async function executeWrite(filePath: string, content: string): Promise<string> {
-  const resolved = isAbsolute(filePath) ? filePath : join(process.cwd(), filePath);
+  const resolved = resolveSafePath(filePath);
 
   await mkdir(dirname(resolved), { recursive: true });
   await writeFile(resolved, content, 'utf-8');

@@ -1,5 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { resolveSafePath } from './shared.js';
 
 /** Supported image formats and their magic bytes */
 const IMAGE_SIGNATURES: Array<{ ext: string; mime: string; magic: Buffer }> = [
@@ -64,26 +65,28 @@ function readDimensions(buf: Buffer, fmt: string): { width: number; height: numb
  */
 export async function executeImageInfo(filePath: string): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolveSafePath(filePath);
     const stats = await fs.stat(absPath);
-    // Read only first 64 bytes for format/dimension detection
+    // Read only first 64 bytes for format/dimension detection (guard FD leak with try/finally)
     const fd = await fs.open(absPath, 'r');
-    const header = Buffer.alloc(64);
-    await fd.read(header, 0, 64, 0);
-    await fd.close();
+    try {
+      const header = Buffer.alloc(64);
+      await fd.read(header, 0, 64, 0);
+      const fmt = detectFormat(header);
+      const dims = fmt ? readDimensions(header, fmt.ext) : null;
 
-    const fmt = detectFormat(header);
-    const dims = fmt ? readDimensions(header, fmt.ext) : null;
+      const lines = [
+        `File: ${absPath}`,
+        `Size: ${stats.size} bytes (${(stats.size / 1024).toFixed(1)} KB)`,
+        `Format: ${fmt ? `${fmt.ext.toUpperCase()} (${fmt.mime})` : 'unknown'}`,
+      ];
+      if (dims) lines.push(`Dimensions: ${dims.width} × ${dims.height} px`);
+      lines.push(`Modified: ${stats.mtime.toISOString()}`);
 
-    const lines = [
-      `File: ${absPath}`,
-      `Size: ${stats.size} bytes (${(stats.size / 1024).toFixed(1)} KB)`,
-      `Format: ${fmt ? `${fmt.ext.toUpperCase()} (${fmt.mime})` : 'unknown'}`,
-    ];
-    if (dims) lines.push(`Dimensions: ${dims.width} × ${dims.height} px`);
-    lines.push(`Modified: ${stats.mtime.toISOString()}`);
-
-    return lines.join('\n');
+      return lines.join('\n');
+    } finally {
+      await fd.close();
+    }
   } catch (err) {
     return `Error: ${err instanceof Error ? err.message : String(err)}`;
   }
@@ -95,7 +98,7 @@ export async function executeImageInfo(filePath: string): Promise<string> {
  */
 export async function executeImageToBase64(filePath: string, maxBytes = 5_242_880): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = resolveSafePath(filePath);
     const stats = await fs.stat(absPath);
 
     if (stats.size > maxBytes) {
@@ -118,7 +121,7 @@ export async function executeImageToBase64(filePath: string, maxBytes = 5_242_88
  */
 export async function executeListImages(dirPath: string): Promise<string> {
   try {
-    const absDir = path.resolve(dirPath);
+    const absDir = resolveSafePath(dirPath);
     const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico', '.svg', '.tiff', '.tif']);
 
     const entries = await fs.readdir(absDir, { withFileTypes: true });
