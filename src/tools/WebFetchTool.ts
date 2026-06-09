@@ -34,11 +34,16 @@
     }
 
     const contentType = response.headers.get('content-type') || '';
-    const isHtml = contentType.includes('text/html');
+    const html = await response.text();
+
+    // Detect HTML even when Content-Type is wrong (e.g. text/plain for HTML pages)
+    const isHtml =
+      contentType.includes('text/html') ||
+      /<html[\s>]/i.test(html) ||
+      /<!doctype\s+html/i.test(html);
 
     if (isHtml && outputFormat === 'text') {
       // Simple HTML-to-text conversion: strip tags, decode entities
-      const html = await response.text();
       let text = html
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -62,11 +67,10 @@
       return text;
     }
 
-    const content = await response.text();
-    if (content.length > 100_000) {
-      return content.slice(0, 100_000) + '\n\n[Content truncated at 100000 characters]';
+    if (html.length > 100_000) {
+      return html.slice(0, 100_000) + '\n\n[Content truncated at 100000 characters]';
     }
-    return content;
+    return html;
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error(`Request timed out after 15s: ${url}`);

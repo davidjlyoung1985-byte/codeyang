@@ -201,7 +201,7 @@ export class CliUI {
     this.turnCount++;
     process.stdout.write('\n');
     hr();
-    console.log(`${c.bold(c.yellow('  User'))}${c.dim(':')}`);
+    console.log(`${c.bold(c.yellow('  👤 User'))}${c.dim(':')}`);
     for (const line of text.split('\n')) {
       console.log(`  ${line}`);
     }
@@ -216,7 +216,7 @@ export class CliUI {
   showAgentStart() {
     this.isFirstResponse = true;
     process.stdout.write('\n');
-    console.log(`${c.bold(c.green('  CodeYang'))}${c.dim(':')}`);
+    console.log(`${c.bold(c.green('  🤖 CodeYang'))}${c.dim(':')}`);
     process.stdout.write('\n');
   }
 

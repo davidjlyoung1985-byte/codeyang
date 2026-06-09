@@ -64,12 +64,21 @@ export async function listSessions(): Promise<SessionMeta[]> {
 
   // If index is empty, fall back to scanning files (backward compat)
   if (entries.length === 0) {
-    const files = (await readdir(SESSIONS_DIR))
-      .filter((f) => f.endsWith('.json'))
-      .sort()
-      .reverse();
+    const files = (await readdir(SESSIONS_DIR)).filter((f) => f.endsWith('.json'));
+    const withMtime = await Promise.all(
+      files.map(async (f) => {
+        try {
+          const stat = await fs.stat(join(SESSIONS_DIR, f));
+          return { name: f, mtime: stat.mtimeMs };
+        } catch {
+          return { name: f, mtime: 0 };
+        }
+      }),
+    );
+    withMtime.sort((a, b) => b.mtime - a.mtime); // most recent first
+
     const sessions: SessionMeta[] = [];
-    for (const f of files) {
+    for (const { name: f } of withMtime) {
       try {
         const { id, title, createdAt, updatedAt } = JSON.parse(await readFile(join(SESSIONS_DIR, f), 'utf-8'));
         sessions.push({ id, title, createdAt, updatedAt });

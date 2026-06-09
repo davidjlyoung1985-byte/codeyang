@@ -245,67 +245,89 @@ class OpenAICompatClient implements LLMClient {
       }
     }
 
-    const stream = await this.client.chat.completions.create({
-      model: params.model,
-      max_tokens: params.maxTokens,
-      temperature: params.temperature,
-      messages: openaiMessages,
-      tools: params.tools.map((t) => ({
-        type: 'function' as const,
-        function: {
-          name: t.name,
-          description: t.description,
-          parameters: t.input_schema,
-        },
-      })),
-      stream: true,
-    });
+    let stream;
+    try {
+      stream = await this.client.chat.completions.create({
+        model: params.model,
+        max_tokens: params.maxTokens,
+        temperature: params.temperature,
+        messages: openaiMessages,
+        tools: params.tools.map((t) => ({
+          type: 'function' as const,
+          function: {
+            name: t.name,
+            description: t.description,
+            parameters: t.input_schema,
+          },
+        })),
+        stream: true,
+      });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      throw new Error(`API request failed: ${errorMsg}. Check your API key, model name, and base URL.`);
+    }
 
     const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
 
-    for await (const chunk of stream) {
-      // Check for usage info (sent in the final chunk when stream_options.include_usage is true)
-      if (chunk.usage) {
-        yield {
-          type: 'usage',
-          inputTokens: chunk.usage.prompt_tokens,
-          outputTokens: chunk.usage.completion_tokens,
-        };
-      }
+    try {
+      let hasReceivedData = false;
 
-      const delta = chunk.choices[0]?.delta;
-      if (!delta) continue;
+      for await (const chunk of stream) {
+        hasReceivedData = true;
 
-      if (delta.content) {
-        yield { type: 'text_delta', text: delta.content };
-      }
+        // Check for usage info (sent in the final chunk when stream_options.include_usage is true)
+        if (chunk.usage) {
+          yield {
+            type: 'usage',
+            inputTokens: chunk.usage.prompt_tokens,
+            outputTokens: chunk.usage.completion_tokens,
+          };
+        }
 
-      if (delta.tool_calls) {
-        for (const tc of delta.tool_calls) {
-          const idx = tc.index;
-          if (!toolCallsAccum.has(idx)) {
-            toolCallsAccum.set(idx, { id: tc.id, name: tc.function?.name, args: '' });
-            yield {
-              type: 'tool_call_start',
-              toolCallIndex: idx,
-              toolCallId: tc.id,
-              toolCallName: tc.function?.name,
-            };
+        const delta = chunk.choices[0]?.delta;
+        if (!delta) continue;
+
+        if (delta.content) {
+          yield { type: 'text_delta', text: delta.content };
+        }
+
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index;
+            if (!toolCallsAccum.has(idx)) {
+              toolCallsAccum.set(idx, { id: tc.id, name: tc.function?.name, args: '' });
+              yield {
+                type: 'tool_call_start',
+                toolCallIndex: idx,
+                toolCallId: tc.id,
+                toolCallName: tc.function?.name,
+              };
+            }
+
+            const accum = toolCallsAccum.get(idx)!;
+            if (tc.function?.arguments) {
+              accum.args += tc.function.arguments;
+              yield { type: 'tool_call_delta', toolCallIndex: idx, toolCallArgs: tc.function.arguments };
+            }
           }
+        }
 
-          const accum = toolCallsAccum.get(idx)!;
-          if (tc.function?.arguments) {
-            accum.args += tc.function.arguments;
-            yield { type: 'tool_call_delta', toolCallIndex: idx, toolCallArgs: tc.function.arguments };
+        if (chunk.choices[0]?.finish_reason === 'tool_calls') {
+          for (const [idx, accum] of toolCallsAccum.entries()) {
+            yield { type: 'tool_call_end', toolCallIndex: idx, toolCallId: accum.id, toolCallArgs: accum.args };
           }
         }
       }
 
-      if (chunk.choices[0]?.finish_reason === 'tool_calls') {
-        for (const [idx, accum] of toolCallsAccum.entries()) {
-          yield { type: 'tool_call_end', toolCallIndex: idx, toolCallId: accum.id, toolCallArgs: accum.args };
-        }
+      if (!hasReceivedData) {
+        throw new Error('Stream completed but no data was received from API. Check model availability and API status.');
       }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('no data was received')) {
+        throw err;
+      }
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Stream processing failed: ${errorMsg}`);
     }
   }
 }

@@ -39,9 +39,21 @@ async function resolveApiKey(): Promise<string> {
     return args[argIdx + 1];
   }
 
-  const fromEnv = config.apiKey;
+  // Check environment variables
+  const fromEnv = process.env['CODEYANG_API_KEY'] || process.env['DEEPSEEK_API_KEY'];
   if (fromEnv) return fromEnv;
 
+  // Check saved config (loaded by loadLocalConfig)
+  const { getLocalConfigApiKey } = await import('./agent/config.js');
+  const fromConfig = getLocalConfigApiKey();
+  if (fromConfig) {
+    if (process.env['DEBUG']) {
+      console.error('[DEBUG] Using API key from ~/.codeyang/config.json');
+    }
+    return fromConfig;
+  }
+
+  // Prompt user for key
   const key = await promptForApiKey();
   if (!key) {
     console.log('No API key provided. Exiting.');
@@ -210,7 +222,8 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       await agent.run(line);
       currentSessionId = await saveSession(agent.exportMessages(), currentSessionId);
     } catch (err) {
-      ui.showError(err instanceof Error ? err.message : String(err));
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      ui.showError(errorMessage);
     }
 
     ui.stopSpinner();

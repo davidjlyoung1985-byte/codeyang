@@ -193,7 +193,7 @@ export async function executeComplexity(filePath: string): Promise<string> {
       locations: true,
     });
 
-    let complexity = 0;
+    let complexity = 1; // McCabe: M = 1 + number of decision points
     let maxDepth = 0;
     let functions = 0;
     let branches = 0;
@@ -298,7 +298,6 @@ export async function executeLint(filePath: string, fix = false): Promise<string
     // ESLint 9+ flat config format
     const eslint = new ESLint({
       fix,
-      overrideConfigFile: true,
       overrideConfig: [
         {
           languageOptions: {

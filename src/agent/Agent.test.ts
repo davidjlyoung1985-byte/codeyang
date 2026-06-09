@@ -195,19 +195,19 @@ describe('Agent', () => {
 
   describe('run — streaming text', () => {
     it('streams text response from LLM', async () => {
-      mockStream.mockReturnValue(makeStream());
+      mockStream.mockReturnValue(makeStream(textDelta('')));
       await agent.run('test prompt');
       expect(mockStream).toHaveBeenCalledTimes(1);
     });
 
     it('sends user message to LLM API', async () => {
-      mockStream.mockReturnValue(makeStream());
+      mockStream.mockReturnValue(makeStream(textDelta('')));
       await agent.run('hello');
       expect(mockStream).toHaveBeenCalled();
     });
 
     it('calls onUserMessage callback', async () => {
-      mockStream.mockReturnValue(makeStream());
+      mockStream.mockReturnValue(makeStream(textDelta('')));
       const onUserMessage = vi.fn();
       agent.setCallbacks({ onUserMessage });
       await agent.run('test prompt');

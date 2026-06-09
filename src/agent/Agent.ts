@@ -167,11 +167,15 @@ export class Agent {
       const maxTurns = config.maxTurns;
 
     for (let turn = 0; turn < maxTurns; turn++) {
-      if (process.env['CODEX_DEBUG']) {
+      if (process.env['CODEX_DEBUG'] || process.env['DEBUG']) {
         process.stderr.write(`\n[DEBUG turn ${turn}] messages count: ${messages.length}\n`);
       }
 
       const streamResult = await this.withRetry(async () => {
+        if (process.env['DEBUG']) {
+          console.error('[DEBUG Agent.run] Starting stream request...');
+        }
+
         const textParts: string[] = [];
         const toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
         const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
@@ -181,43 +185,80 @@ export class Agent {
           ? config.getSystemPrompt(this.qtContext) + '\n\n## Your Memory\n' + memoryContext
           : config.getSystemPrompt(this.qtContext);
 
-        for await (const event of this.client.stream({
-          model: config.model,
-          maxTokens: config.maxTokens,
-          temperature: 0.5,
-          system: systemPrompt,
-          messages,
-          tools: toolSchemas() as ToolSchema[],
-        })) {
-          if (event.type === 'text_delta' && event.text) {
-            this.cbs.onAgentDelta?.(event.text);
-            textParts.push(event.text);
-          } else if (event.type === 'tool_call_start') {
-            toolCallsAccum.set(event.toolCallIndex!, {
-              id: event.toolCallId,
-              name: event.toolCallName,
-              args: '',
+        const schemas = toolSchemas() as ToolSchema[];
+
+        if (process.env['DEBUG']) {
+          console.error('[DEBUG Agent.run] System prompt length:', systemPrompt.length);
+          console.error('[DEBUG Agent.run] Tools count:', schemas.length);
+          console.error('[DEBUG Agent.run] Starting client.stream...');
+        }
+
+        let streamStarted = false;
+        let eventCount = 0;
+        try {
+          if (process.env['DEBUG']) {
+            console.error('[DEBUG Agent.run] Calling this.client.stream with', {
+              model: config.model,
+              maxTokens: config.maxTokens,
+              messagesLength: messages.length,
+              toolsLength: schemas.length
             });
-          } else if (event.type === 'tool_call_delta') {
-            const accum = toolCallsAccum.get(event.toolCallIndex!);
-            if (accum) accum.args += event.toolCallArgs || '';
-          } else if (event.type === 'tool_call_end') {
-            const accum = toolCallsAccum.get(event.toolCallIndex!);
-            if (accum) {
-              try {
-                toolCalls.push({
-                  id: accum.id!,
-                  name: accum.name!,
-                  input: JSON.parse(accum.args || '{}'),
-                });
-              } catch {
-                toolCalls.push({ id: accum.id!, name: accum.name!, input: {} });
-              }
-            }
-          } else if (event.type === 'usage') {
-            if (event.inputTokens) this.totalInputTokens += event.inputTokens;
-            if (event.outputTokens) this.totalOutputTokens += event.outputTokens;
           }
+
+          for await (const event of this.client.stream({
+            model: config.model,
+            maxTokens: config.maxTokens,
+            temperature: 0.5,
+            system: systemPrompt,
+            messages,
+            tools: schemas,
+          })) {
+            streamStarted = true;
+            eventCount++;
+
+            if (process.env['DEBUG'] && eventCount <= 5) {
+              console.error(`[DEBUG Agent.run] Event ${eventCount}:`, event.type);
+            }
+
+            if (event.type === 'text_delta' && event.text) {
+              this.cbs.onAgentDelta?.(event.text);
+              textParts.push(event.text);
+            } else if (event.type === 'tool_call_start') {
+              toolCallsAccum.set(event.toolCallIndex!, {
+                id: event.toolCallId,
+                name: event.toolCallName,
+                args: '',
+              });
+            } else if (event.type === 'tool_call_delta') {
+              const accum = toolCallsAccum.get(event.toolCallIndex!);
+              if (accum) accum.args += event.toolCallArgs || '';
+            } else if (event.type === 'tool_call_end') {
+              const accum = toolCallsAccum.get(event.toolCallIndex!);
+              if (accum) {
+                try {
+                  toolCalls.push({
+                    id: accum.id!,
+                    name: accum.name!,
+                    input: JSON.parse(accum.args || '{}'),
+                  });
+                } catch {
+                  toolCalls.push({ id: accum.id!, name: accum.name!, input: {} });
+                }
+              }
+            } else if (event.type === 'usage') {
+              if (event.inputTokens) this.totalInputTokens += event.inputTokens;
+              if (event.outputTokens) this.totalOutputTokens += event.outputTokens;
+            }
+          }
+        } catch (err) {
+          if (!streamStarted) {
+            throw new Error(`Failed to establish connection with API: ${err instanceof Error ? err.message : String(err)}`);
+          }
+          throw err;
+        }
+
+        if (!streamStarted) {
+          throw new Error('Stream did not start - no response from API. Verify model name and API configuration.');
         }
 
         return { toolCalls, assistantText: textParts.join('') };
@@ -254,8 +295,8 @@ export class Agent {
         }
         this.lastAssistantText = assistantText;
 
-        // Display only after passing the repetition check
-        this.cbs.onAgentText?.(assistantText);
+        // Text was already streamed via onAgentDelta, no need to call onAgentText
+        // unless there was no streaming (e.g., text was returned all at once)
       }
 
       if (toolCalls.length === 0) {
