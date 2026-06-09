@@ -6,8 +6,15 @@ export default tseslint.config(
   },
   ...tseslint.configs.recommended,
   {
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.eslint.json',
+      },
+    },
     rules: {
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/require-await': 'warn',
       'no-console': 'off',
       'prefer-const': 'error',
       'no-var': 'error',

@@ -4,6 +4,7 @@ import { CliUI } from './ui/CliUI.js';
 import { Agent } from './agent/Agent.js';
 import { config, loadLocalConfig, setSessionApiKey, getMcpServers, saveApiSettings } from './agent/config.js';
 import { saveSession, listSessions, loadSession, deleteSession } from './utils/sessionStore.js';
+import { logger } from './utils/logger.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
@@ -44,14 +45,14 @@ async function resolveApiKey(): Promise<string> {
 
   const key = await promptForApiKey();
   if (!key) {
-    console.log('No API key provided. Exiting.');
+    logger.error('No API key provided. Exiting.');
     process.exit(1);
   }
 
   const shouldSave = await confirmSave();
   if (shouldSave) {
     await saveApiSettings({ apiKey: key });
-    console.log('API key saved to ~/.codeyang/config.json');
+    logger.info('API key saved to ~/.codeyang/config.json');
   }
 
   return key;
@@ -115,9 +116,9 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     const sessionId = args[deleteIdx + 1];
     const deleted = await deleteSession(sessionId);
     if (deleted) {
-      console.log(`Session ${sessionId} deleted.`);
+      logger.info(`Session ${sessionId} deleted.`);
     } else {
-      console.log(`Session ${sessionId} not found.`);
+      logger.info(`Session ${sessionId} not found.`);
     }
     process.exit(0);
   }
@@ -132,7 +133,7 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
   const mcpServers = getMcpServers();
   if (Object.keys(mcpServers).length > 0) {
     const entries = Object.entries(mcpServers);
-    console.log(`Starting ${entries.length} MCP server(s)...`);
+    logger.info(`Starting ${entries.length} MCP server(s)...`);
     mcpMgr.configure(mcpServers);
     await mcpMgr.initialize((name, status, detail) => {
       const icon = status === 'connected' ? '+' : status === 'error' ? '!' : '>';
@@ -142,7 +143,7 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     await refreshMcpTools();
     const totalTools = mcpMgr.allTools.length;
     if (totalTools > 0) {
-      console.log(`  MCP tools available: ${totalTools}\n`);
+      logger.info(`  MCP tools available: ${totalTools}\n`);
     }
   } else {
     setMcpManager(null);
@@ -167,7 +168,7 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     if (session) {
       agent.loadMessages(session.messages);
       currentSessionId = session.id;
-      console.log(`\nResumed session: ${session.title}\n`);
+      logger.info(`\nResumed session: ${session.title}\n`);
     } else {
       console.log(`\nSession not found: ${sessionId}\n`);
     }
@@ -201,22 +202,25 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     if (running) return;
     running = true;
 
-    ui.showUserMessage(line);
-    ui.showAgentStart();
-    // Show progress bar during thinking
-    ui.startSpinner('thinking');
-
     try {
-      await agent.run(line);
-      currentSessionId = await saveSession(agent.exportMessages(), currentSessionId);
-    } catch (err) {
-      ui.showError(err instanceof Error ? err.message : String(err));
-    }
+      ui.showUserMessage(line);
+      ui.showAgentStart();
+      // Show progress bar during thinking
+      ui.startSpinner('thinking');
 
-    ui.stopSpinner();
-    running = false;
-    ui.showAgentDone();
-    ui.promptUser();
+      try {
+        await agent.run(line);
+        currentSessionId = await saveSession(agent.exportMessages(), currentSessionId);
+      } catch (err) {
+        ui.showError(err instanceof Error ? err.message : String(err));
+      }
+
+      ui.stopSpinner();
+      ui.showAgentDone();
+      ui.promptUser();
+    } finally {
+      running = false;
+    }
   }
 
   ui.setInputHandler(async (line) => {
@@ -291,6 +295,21 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       return;
     }
 
+    // Command suggestion for unknown /commands
+    if (lower.startsWith('/')) {
+      const validCommands = ['/clear', '/sessions', '/tools', '/model', '/mcp', '/exit', '/quit'];
+      if (!validCommands.includes(lower)) {
+        const suggestions = validCommands.filter(v => v.startsWith(lower) || v.includes(lower.slice(1)));
+        if (suggestions.length > 0) {
+          console.log(`  Did you mean: ${suggestions.join(', ')}?`);
+        } else {
+          console.log(`  Available: ${validCommands.join(', ')}`);
+        }
+        ui.promptUser();
+        return;
+      }
+    }
+
     if (agent.waitingForAnswer) {
       agent.answerQuestion(line);
       return;
@@ -329,6 +348,6 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
 }
 
 main().catch((err) => {
-  console.error('Fatal error:', err);
+  logger.error(err);
   process.exit(1);
 });

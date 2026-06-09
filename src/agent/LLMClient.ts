@@ -2,12 +2,15 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 
 export interface StreamEvent {
-  type: 'text_delta' | 'tool_call_start' | 'tool_call_delta' | 'tool_call_end';
+  type: 'text_delta' | 'tool_call_start' | 'tool_call_delta' | 'tool_call_end' | 'usage';
   text?: string;
   toolCallIndex?: number;
   toolCallId?: string;
   toolCallName?: string;
   toolCallArgs?: string;
+  /** Token usage (emitted at end of stream) */
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 export interface LLMMessage {
@@ -37,6 +40,11 @@ export interface ToolSchema {
   };
 }
 
+export interface StreamResult {
+  text: string;
+  toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>;
+}
+
 export interface LLMClient {
   stream(params: {
     model: string;
@@ -46,6 +54,56 @@ export interface LLMClient {
     messages: LLMMessage[];
     tools: ToolSchema[];
   }): AsyncIterable<StreamEvent>;
+}
+
+/**
+ * Consume a stream into a complete result (non-streaming convenience).
+ * Collects all text deltas and tool calls from the stream.
+ */
+export async function consumeStream(
+  client: LLMClient,
+  params: {
+    model: string;
+    maxTokens: number;
+    temperature: number;
+    system: string;
+    messages: LLMMessage[];
+    tools: ToolSchema[];
+  },
+): Promise<StreamResult> {
+  const textParts: string[] = [];
+  const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
+  const toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
+
+  for await (const event of client.stream(params)) {
+    if (event.type === 'text_delta' && event.text) {
+      textParts.push(event.text);
+    } else if (event.type === 'tool_call_start') {
+      toolCallsAccum.set(event.toolCallIndex!, {
+        id: event.toolCallId,
+        name: event.toolCallName,
+        args: '',
+      });
+    } else if (event.type === 'tool_call_delta') {
+      const accum = toolCallsAccum.get(event.toolCallIndex!);
+      if (accum) accum.args += event.toolCallArgs || '';
+    } else if (event.type === 'tool_call_end') {
+      const accum = toolCallsAccum.get(event.toolCallIndex!);
+      if (accum) {
+        try {
+          toolCalls.push({
+            id: accum.id!,
+            name: accum.name!,
+            input: JSON.parse(accum.args || '{}'),
+          });
+        } catch {
+          toolCalls.push({ id: accum.id!, name: accum.name!, input: {} });
+        }
+      }
+    }
+  }
+
+  return { text: textParts.join(''), toolCalls };
 }
 
 export function createLLMClient(provider: string, apiKey: string, baseURL?: string): LLMClient {
@@ -122,6 +180,24 @@ class AnthropicClient implements LLMClient {
             };
           }
           break;
+
+        case 'message_start':
+          yield {
+            type: 'usage',
+            inputTokens: event.message.usage.input_tokens,
+            outputTokens: event.message.usage.output_tokens,
+          };
+          break;
+
+        case 'message_delta':
+          if (event.usage) {
+            yield {
+              type: 'usage',
+              inputTokens: 0,
+              outputTokens: event.usage.output_tokens,
+            };
+          }
+          break;
       }
     }
   }
@@ -191,11 +267,21 @@ class OpenAICompatClient implements LLMClient {
         },
       })),
       stream: true,
+      stream_options: { include_usage: true },
     });
 
     const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
 
     for await (const chunk of stream) {
+      // Check for usage info (sent in the final chunk when stream_options.include_usage is true)
+      if (chunk.usage) {
+        yield {
+          type: 'usage',
+          inputTokens: chunk.usage.prompt_tokens,
+          outputTokens: chunk.usage.completion_tokens,
+        };
+      }
+
       const delta = chunk.choices[0]?.delta;
       if (!delta) continue;
 

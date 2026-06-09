@@ -10,41 +10,45 @@ export function matchGlob(pattern: string, path: string): boolean {
 }
 
 export async function executeGlob(pattern: string, root?: string): Promise<string> {
-  const base = root ? (isAbsolute(root) ? root : join(process.cwd(), root)) : process.cwd();
-  const results: string[] = [];
-  const regex = globToRegex(pattern);
+  try {
+    const base = root ? (isAbsolute(root) ? root : join(process.cwd(), root)) : process.cwd();
+    const results: string[] = [];
+    const regex = globToRegex(pattern);
 
-  async function walk(dir: string): Promise<void> {
-    let entries: Dirent[];
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-
-    for (const entry of entries) {
-      const full = join(dir, entry.name);
-      const rel = relative(base, full).replace(/\\/g, '/');
-
-      if (regex.test(rel)) {
-        results.push(rel);
+    async function walk(dir: string): Promise<void> {
+      let entries: Dirent[];
+      try {
+        entries = await readdir(dir, { withFileTypes: true });
+      } catch {
+        return;
       }
 
-      if (entry.isDirectory() && !entry.name.startsWith('.') && !SKIP_DIRS.has(entry.name)) {
-        // Only recurse if the pattern could match deeper
-        if (pattern.includes('**')) {
-          await walk(full);
-        } else if (pattern.includes('/')) {
-          const depth = rel.split('/').length;
-          const patternDepth = pattern.split('/').length;
-          if (depth < patternDepth) {
+      for (const entry of entries) {
+        const full = join(dir, entry.name);
+        const rel = relative(base, full).replace(/\\/g, '/');
+
+        if (regex.test(rel)) {
+          results.push(rel);
+        }
+
+        if (entry.isDirectory() && !entry.name.startsWith('.') && !SKIP_DIRS.has(entry.name)) {
+          // Only recurse if the pattern could match deeper
+          if (pattern.includes('**')) {
             await walk(full);
+          } else if (pattern.includes('/')) {
+            const depth = rel.split('/').length;
+            const patternDepth = pattern.split('/').length;
+            if (depth < patternDepth) {
+              await walk(full);
+            }
           }
         }
       }
     }
-  }
 
-  await walk(base);
-  return results.length > 0 ? results.join('\n') : '(no matches)';
+    await walk(base);
+    return results.length > 0 ? results.join('\n') : '(no matches)';
+  } catch (err) {
+    return `Error: ${err instanceof Error ? err.message : String(err)}`;
+  }
 }

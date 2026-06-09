@@ -1,4 +1,4 @@
-import type { McpServerConfig } from './types.js';
+import { MCP_TOOL_SEPARATOR, MCP_QUALIFIED_PREFIX, validateMcpConfig, type McpServerConfig } from './types.js';
 import { McpClient, type McpToolDef } from './McpClient.js';
 
 /**
@@ -12,14 +12,23 @@ export class McpManager {
   private serverConfigs: Map<string, McpServerConfig> = new Map();
   private _allTools: McpToolDef[] = [];
   private initialized = false;
+  /** Tracks connection errors per server (populated during initialize) */
+  private _connectionErrors: Map<string, string> = new Map();
 
   /** Configure MCP servers from config (does not connect yet). */
   configure(servers: Record<string, McpServerConfig>): void {
     // Add new servers, skip already-configured ones
     for (const [name, cfg] of Object.entries(servers)) {
-      if (!this.serverConfigs.has(name)) {
-        this.serverConfigs.set(name, cfg);
+      if (this.serverConfigs.has(name)) {
+        continue;
       }
+      // Validate config at runtime — skip invalid configs with a warning
+      const errors = validateMcpConfig(cfg);
+      if (errors.length > 0) {
+        console.warn(`[McpManager] Skipping server "${name}" — invalid config: ${errors.join('; ')}`);
+        continue;
+      }
+      this.serverConfigs.set(name, cfg);
     }
   }
 
@@ -43,6 +52,7 @@ export class McpManager {
         onStatus?.(name, 'connected', `${tools.length} tools discovered`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        this._connectionErrors.set(name, msg);
         onStatus?.(name, 'error', msg);
       }
     }
@@ -58,6 +68,11 @@ export class McpManager {
   /** Get list of server names */
   get serverNames(): string[] {
     return Array.from(this.serverConfigs.keys());
+  }
+
+  /** Get list of connection errors (server name → error message) */
+  getConnectionErrors(): string[] {
+    return Array.from(this._connectionErrors.entries()).map(([name, msg]) => `${name}: ${msg}`);
   }
 
   /** Get status of a specific server */
@@ -85,12 +100,35 @@ export class McpManager {
   /** Call a tool by its qualified name */
   async callTool(qualifiedName: string, args: Record<string, unknown>): Promise<{ output: string; isError: boolean }> {
     // Parse qualified name: mcp__serverName__toolName
-    const match = qualifiedName.match(/^mcp__(.+?)__(.+)$/);
-    if (!match) {
-      return { output: `Invalid MCP tool name: ${qualifiedName}`, isError: true };
+    if (!qualifiedName.startsWith(MCP_QUALIFIED_PREFIX)) {
+      return {
+        output: `Invalid MCP tool name: "${qualifiedName}" — must start with "${MCP_QUALIFIED_PREFIX}"`,
+        isError: true,
+      };
     }
 
-    const [, serverName, toolName] = match;
+    const rest = qualifiedName.slice(MCP_QUALIFIED_PREFIX.length);
+    const parts = rest.split(MCP_TOOL_SEPARATOR);
+
+    if (parts.length < 2) {
+      return {
+        output: `Invalid MCP tool name: "${qualifiedName}" — expected format "${MCP_QUALIFIED_PREFIX}serverName${MCP_TOOL_SEPARATOR}toolName"`,
+        isError: true,
+      };
+    }
+
+    // First part is the server name; the rest (rejoined) is the tool name
+    // This handles tool names that may contain the separator
+    const serverName = parts[0];
+    const toolName = parts.slice(1).join(MCP_TOOL_SEPARATOR);
+
+    if (!serverName || !toolName) {
+      return {
+        output: `Invalid MCP tool name: "${qualifiedName}" — server name and tool name must not be empty`,
+        isError: true,
+      };
+    }
+
     const client = this.clients.get(serverName);
 
     if (!client) {
@@ -106,6 +144,7 @@ export class McpManager {
     await Promise.allSettled(disconnects);
     this.clients.clear();
     this._allTools = [];
+    this._connectionErrors.clear();
     this.initialized = false;
   }
 

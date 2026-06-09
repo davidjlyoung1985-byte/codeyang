@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import type { McpServerConfig } from './types.js';
+import { MCP_QUALIFIED_PREFIX, MCP_TOOL_SEPARATOR, type McpServerConfig } from './types.js';
 
 export interface McpToolDef {
   serverName: string;
@@ -72,7 +72,7 @@ export class McpClient {
     const result = await this.client.listTools();
     return result.tools.map((t) => ({
       serverName: this.serverName,
-      qualifiedName: `mcp__${this.serverName}__${t.name}`,
+      qualifiedName: `${MCP_QUALIFIED_PREFIX}${this.serverName}${MCP_TOOL_SEPARATOR}${t.name}`,
       name: t.name,
       description: t.description ?? `MCP tool: ${t.name}`,
       inputSchema: t.inputSchema as Record<string, unknown>,

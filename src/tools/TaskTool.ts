@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { toolSchemas, getTool } from './registry.js';
+import { consumeStream, type LLMClient, type LLMMessage, type ToolSchema } from '../agent/LLMClient.js';
 
 export interface TaskResult {
   description: string;
@@ -13,7 +13,7 @@ const TASK_SYSTEM_PROMPT = `You are a sub-agent of CodeYang, an AI coding agent.
 - Be efficient. You have a maximum of 10 turns.`;
 
 export async function executeTask(
-  client: Anthropic,
+  client: LLMClient,
   model: string,
   maxTokens: number,
   description: string,
@@ -34,7 +34,7 @@ export async function executeTask(
       const lines: string[] = [];
       lines.push(`### Subtask ${si + 1}/${subtasks.length}: ${subtask}`);
 
-      const messages: Anthropic.Messages.MessageParam[] = [
+      const messages: LLMMessage[] = [
         {
           role: 'user',
           content: `Execute the following task: ${subtask}\n\nWorking directory: ${cwd}\n\nUse the available tools to complete this task. When done, provide your findings clearly.`,
@@ -43,45 +43,28 @@ export async function executeTask(
 
       try {
         for (let turn = 0; turn < 10; turn++) {
-          const response = await client.messages.create({
+          const { text: textOutput, toolCalls } = await consumeStream(client, {
             model,
-            max_tokens: maxTokens,
+            maxTokens,
+            temperature: 0.5,
             system: TASK_SYSTEM_PROMPT,
             messages,
-            tools: toolSchemas(),
+            tools: toolSchemas() as ToolSchema[],
           });
 
-          const msg = response as Anthropic.Messages.Message;
-          const blocks = msg.content;
-          let textOutput = '';
-          const toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
-
-          for (const block of blocks) {
-            if (block.type === 'text') textOutput += block.text;
-            else if (block.type === 'tool_use')
-              toolCalls.push({ id: block.id, name: block.name, input: block.input as Record<string, unknown> });
+          const assistantContent: Array<{ type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown }> = [];
+          if (textOutput) {
+            assistantContent.push({ type: 'text', text: textOutput });
           }
-
-          messages.push({
-            role: 'assistant',
-            content: blocks
-              .filter((b) => b.type === 'text' || b.type === 'tool_use')
-              .map((b) => {
-                if (b.type === 'text') return { type: 'text' as const, text: b.text };
-                return {
-                  type: 'tool_use' as const,
-                  id: b.id,
-                  name: b.name,
-                  input: JSON.parse(JSON.stringify(b.input)),
-                };
-              }),
-          });
+          for (const tc of toolCalls) {
+            assistantContent.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input });
+          }
+          messages.push({ role: 'assistant', content: assistantContent });
 
           if (textOutput) lines.push(textOutput);
           if (toolCalls.length === 0) break;
 
-          const toolResults: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error: boolean }> =
-            [];
+          const toolResults: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error: boolean }> = [];
           for (const tc of toolCalls) {
             if (tc.name === 'Question' || tc.name === 'Task') {
               toolResults.push({

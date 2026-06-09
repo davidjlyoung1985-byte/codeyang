@@ -159,6 +159,7 @@ export class CliUI {
       output: process.stdout,
       terminal: true,
       prompt: '',
+      historySize: 50,
     });
 
     this.rl.on('line', (line) => {
@@ -262,6 +263,7 @@ export class CliUI {
 
   showToolCall(name: string, args: Record<string, unknown>) {
     this.spinner.stop();
+    this.spinner.start(`executing ${name}`);
     const argStr = Object.entries(args)
       .map(([k, v]) => {
         const s = typeof v === 'string' ? v : JSON.stringify(v);
@@ -274,12 +276,16 @@ export class CliUI {
   }
 
   showToolResult(output: string, isError: boolean) {
-    const firstLine = output.split('\n')[0] || '(empty)';
-    const display = firstLine.slice(0, 150);
     if (isError) {
-      console.log(`  ${c.red('  ✗')} ${c.dim(display)}`);
+      const firstLine = output.split('\n')[0] || '(empty)';
+      const display = firstLine.slice(0, 120);
+      const lines = output.split('\n').length;
+      const suffix = lines > 1 ? `  (${lines} lines \u2014 see full error above)` : '';
+      console.log(`  ${c.red('\u2717')} ${c.dim(display)}${suffix}`);
     } else {
-      console.log(`  ${c.dim('  ·')} ${c.dim(display)}`);
+      const firstLine = output.split('\n')[0] || '(empty)';
+      const display = firstLine.slice(0, 150);
+      console.log(`  ${c.dim('\u00b7')} ${c.dim(display)}`);
     }
   }
 

@@ -4,6 +4,20 @@ import { toolSchemas, getTool, setToolContext } from '../tools/registry.js';
 import type { QtContext } from '../qt/index.js';
 import { createLLMClient, type LLMClient, type LLMMessage, type ToolSchema } from './LLMClient.js';
 import { getMemorySummary } from '../utils/memoryStore.js';
+import { logger } from '../utils/logger.js';
+
+/** A content block emitted by the assistant (text or tool_use). */
+type AssistantContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; id: string; name: string; input: unknown };
+
+/** A tool_result block returned from tool execution. */
+type ToolResultBlock = {
+  type: 'tool_result';
+  tool_use_id: string;
+  content: string;
+  is_error: boolean;
+};
 
 export interface AgentCallbacks {
   onUserMessage?: (text: string) => void;
@@ -27,9 +41,15 @@ export class Agent {
   private toolCache = new Map<string, { result: string; timestamp: number }>();
   private static CACHE_TTL_MS = 5_000;
 
+  // Pending reads — deduplicate concurrent Read/Glob calls for the same key
+  private pendingReads = new Map<string, Promise<string>>();
+
   // Anti-repetition: track previous assistant text
   private lastAssistantText = '';
   private repeatCount = 0;
+
+  // Token usage tracking across turns
+  private tokenUsage = { inputTokens: 0, outputTokens: 0 };
 
   // Persistent memory cache
   private memorySummary: string | null = null;
@@ -101,12 +121,18 @@ export class Agent {
     return config.apiKey.length > 0;
   }
 
+  /** Get accumulated token usage across all turns */
+  getTokenUsage(): { inputTokens: number; outputTokens: number } {
+    return { ...this.tokenUsage };
+  }
+
   /** Clear conversation history and start fresh */
   reset() {
     this.history = [];
     this.invalidateCache();
     this.lastAssistantText = '';
     this.repeatCount = 0;
+    this.tokenUsage = { inputTokens: 0, outputTokens: 0 };
   }
 
   answerQuestion(answer: string) {
@@ -147,6 +173,7 @@ export class Agent {
 
     setToolContext({
       anthropicClient: null,
+      llmClient: this.client,
       model: config.model,
       maxTokens: config.maxTokens,
       cwd: process.cwd(),
@@ -155,9 +182,7 @@ export class Agent {
     const maxTurns = 20;
 
     for (let turn = 0; turn < maxTurns; turn++) {
-      if (process.env['CODEX_DEBUG']) {
-        process.stderr.write(`\n[DEBUG turn ${turn}] messages count: ${messages.length}\n`);
-      }
+      logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
 
       const streamResult = await this.withRetry(async () => {
         const textParts: string[] = [];
@@ -202,6 +227,9 @@ export class Agent {
                 toolCalls.push({ id: accum.id!, name: accum.name!, input: {} });
               }
             }
+          } else if (event.type === 'usage') {
+            if (event.inputTokens !== undefined) this.tokenUsage.inputTokens += event.inputTokens;
+            if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
           }
         }
 
@@ -210,9 +238,7 @@ export class Agent {
 
       const { toolCalls, assistantText } = streamResult;
 
-      const assistantContent: Array<
-        { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown }
-      > = [];
+      const assistantContent: AssistantContentBlock[] = [];
 
       if (assistantText) {
         assistantContent.push({ type: 'text', text: assistantText });
@@ -288,23 +314,45 @@ export class Agent {
 
         // Check cache for read-only tools (Read, Glob)
         const cacheable = tc.name === 'Read' || tc.name === 'Glob';
-        if (cacheable) {
-          const key = this.cacheKey(tc.name, tc.input);
-          const cached = this.toolCache.get(key);
+        const cacheKey = cacheable ? this.cacheKey(tc.name, tc.input) : undefined;
+        if (cacheKey) {
+          const cached = this.toolCache.get(cacheKey);
           if (cached && Date.now() - cached.timestamp < Agent.CACHE_TTL_MS) {
             toolResults[i] = { tool: tc.name, input: tc.input, output: cached.result, isError: false };
             return;
           }
+
+          // Deduplicate concurrent reads: if another call is already fetching
+          // the same key, await that in-flight promise instead of re-executing.
+          const pending = this.pendingReads.get(cacheKey);
+          if (pending) {
+            try {
+              const output = await pending;
+              toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
+              this.cbs.onToolResult?.(tc.name, output, false);
+              return;
+            } catch {
+              // Pending read failed; fall through to retry
+            }
+          }
         }
 
         try {
-          const output = await tool.execute(tc.input);
+          const executePromise = tool.execute(tc.input);
+
+          // Register in-flight promise so concurrent calls for the same key can share it
+          if (cacheKey) {
+            this.pendingReads.set(cacheKey, executePromise);
+          }
+
+          const output = await executePromise;
           toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
           this.cbs.onToolResult?.(tc.name, output, false);
 
-          // Cache successful reads
-          if (cacheable) {
-            this.toolCache.set(this.cacheKey(tc.name, tc.input), { result: output, timestamp: Date.now() });
+          // Cache successful read-only tool results
+          if (cacheKey) {
+            this.toolCache.set(cacheKey, { result: output, timestamp: Date.now() });
+            this.pendingReads.delete(cacheKey);
           }
 
           // Invalidate cache on writes
@@ -315,19 +363,23 @@ export class Agent {
           const errorMsg = err instanceof Error ? err.message : String(err);
           toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
           this.cbs.onToolResult?.(tc.name, errorMsg, true);
+
+          // Clean up pending read on failure so subsequent calls retry
+          if (cacheKey) {
+            this.pendingReads.delete(cacheKey);
+          }
         }
       });
 
       await Promise.all(parallelTasks);
 
       // Map results to tool_use_ids by position (handles duplicate tool names correctly)
-      const toolResultContent: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error: boolean }> =
-        toolResults.map((tr, i) => ({
-          type: 'tool_result',
-          tool_use_id: toolResultIds[i] ?? 'unknown',
-          content: tr.output,
-          is_error: tr.isError,
-        }));
+      const toolResultContent: ToolResultBlock[] = toolResults.map((tr, i) => ({
+        type: 'tool_result',
+        tool_use_id: toolResultIds[i] ?? 'unknown',
+        content: tr.output,
+        is_error: tr.isError,
+      }));
 
       messages.push({ role: 'user', content: toolResultContent });
       this.history = this.jsonClone(messages);
@@ -346,21 +398,18 @@ export class Agent {
       if (m.role === 'user') {
         if (m.toolResults && m.toolResults.length > 0) {
           // Reconstruct tool_result blocks for session resumption
-          const blocks: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }> =
-            m.toolResults.map((tr) => ({
-              type: 'tool_result',
-              tool_use_id: tr.tool || 'unknown',
-              content: tr.output,
-              is_error: tr.isError,
-            }));
+          const blocks: ToolResultBlock[] = m.toolResults.map((tr) => ({
+            type: 'tool_result',
+            tool_use_id: tr.tool || 'unknown',
+            content: tr.output,
+            is_error: tr.isError,
+          }));
           this.history.push({ role: 'user', content: blocks });
         } else {
           this.history.push({ role: 'user', content: m.content });
         }
       } else if (m.role === 'assistant') {
-        const blocks: Array<
-          { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown }
-        > = [];
+        const blocks: AssistantContentBlock[] = [];
         if (m.content) blocks.push({ type: 'text', text: m.content });
         if (m.toolCalls) {
           for (const tc of m.toolCalls) {
@@ -379,36 +428,35 @@ export class Agent {
         return { role: m.role as 'user' | 'assistant', content: m.content };
       }
 
+      const blocks = m.content as (AssistantContentBlock | ToolResultBlock)[];
+
       // Extract text parts
-      const textParts = m.content
-        .filter((b) => b.type === 'text')
-        .map((b) => (b as { type: 'text'; text: string }).text)
+      const textParts = blocks
+        .filter((b): b is AssistantContentBlock & { type: 'text' } => b.type === 'text')
+        .map((b) => b.text)
         .join('');
 
       // Extract tool_use parts
-      const toolUseParts = m.content
-        .filter((b) => b.type === 'tool_use')
+      const toolUseParts = blocks
+        .filter((b): b is AssistantContentBlock & { type: 'tool_use' } => b.type === 'tool_use')
         .map((b) => ({
-          id: (b as { id: string }).id,
-          name: (b as { name: string }).name,
-          args: (b as { input: Record<string, unknown> }).input,
+          id: b.id,
+          name: b.name,
+          args: b.input as Record<string, unknown>,
         }));
 
       // Extract tool_result parts — critical for session resumption
-      const toolResultParts = m.content
-        .filter((b) => b.type === 'tool_result')
-        .map((b) => {
-          const tr = b as { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean };
-          return {
-            tool: tr.tool_use_id,
-            input: {} as Record<string, unknown>,
-            output: tr.content,
-            isError: tr.is_error === true,
-          };
-        });
+      const toolResultParts = blocks
+        .filter((b): b is ToolResultBlock => b.type === 'tool_result')
+        .map((b) => ({
+          tool: b.tool_use_id,
+          input: {} as Record<string, unknown>,
+          output: b.content,
+          isError: b.is_error === true,
+        }));
 
       return {
-        role: m.role as 'user' | 'assistant',
+        role: m.role,
         content: textParts,
         toolCalls: toolUseParts.length > 0 ? (toolUseParts as ToolCall[]) : undefined,
         toolResults: toolResultParts.length > 0 ? (toolResultParts as ToolResult[]) : undefined,

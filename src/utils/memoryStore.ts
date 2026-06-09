@@ -5,6 +5,13 @@ import crypto from 'node:crypto';
 
 const MEMORY_DIR = join(homedir(), '.codeyang', 'memory');
 
+// ── In-memory cache layer ────────────────────────────────────────────────
+// Avoids re-reading & re-parsing every .json file on every access.
+// Invalidated on write (save/delete) and periodically refreshed via TTL.
+let memoryCache: Memory[] | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 30_000; // 30-second cache TTL
+
 export interface Memory {
   id: string;
   key: string;
@@ -23,6 +30,36 @@ function sanitizeKey(key: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9_-]/g, '_')
     .slice(0, 100);
+}
+
+/** Invalidate the in-memory cache (called on every write). */
+function invalidateCache() {
+  memoryCache = null;
+  cacheTimestamp = 0;
+}
+
+/**
+ * Return cached memories if fresh; otherwise reload from disk.
+ * This replaces repeated readdir + N×readFile calls with a single bulk load.
+ */
+async function getCachedMemories(): Promise<Memory[]> {
+  if (memoryCache && Date.now() - cacheTimestamp < CACHE_TTL_MS) {
+    return memoryCache;
+  }
+  // Cache miss or expired — reload everything
+  await ensureDir();
+  const files = (await readdir(MEMORY_DIR)).filter((f) => f.endsWith('.json'));
+  const memories: Memory[] = [];
+  for (const f of files) {
+    try {
+      memories.push(JSON.parse(await readFile(join(MEMORY_DIR, f), 'utf-8')));
+    } catch {
+      // Skip corrupt files
+    }
+  }
+  memoryCache = memories.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  cacheTimestamp = Date.now();
+  return memoryCache;
 }
 
 export async function saveMemory(
@@ -53,6 +90,10 @@ export async function saveMemory(
 
   const memory: Memory = { id, key: skey, value, type, createdAt, updatedAt: now };
   await writeFile(join(MEMORY_DIR, `${id}.json`), JSON.stringify(memory, null, 2));
+
+  // Invalidate cache so next read picks up the change
+  invalidateCache();
+
   return memory;
 }
 
@@ -66,24 +107,16 @@ export async function getMemory(id: string): Promise<Memory | null> {
 
 export async function getMemoryByKey(key: string): Promise<Memory | null> {
   const skey = sanitizeKey(key);
-  const all = await listMemories();
+  const all = await getCachedMemories();
   return all.find((m) => m.key === skey) ?? null;
 }
 
 export async function listMemories(): Promise<Memory[]> {
-  await ensureDir();
-  const files = (await readdir(MEMORY_DIR)).filter((f) => f.endsWith('.json'));
-  const memories: Memory[] = [];
-  for (const f of files) {
-    try {
-      memories.push(JSON.parse(await readFile(join(MEMORY_DIR, f), 'utf-8')));
-    } catch {}
-  }
-  return memories.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return getCachedMemories();
 }
 
 export async function searchMemories(query: string): Promise<Memory[]> {
-  const all = await listMemories();
+  const all = await getCachedMemories();
   const q = query.toLowerCase();
   return all.filter((m) => m.key.includes(q) || m.value.toLowerCase().includes(q) || m.type.includes(q));
 }
@@ -91,6 +124,7 @@ export async function searchMemories(query: string): Promise<Memory[]> {
 export async function deleteMemory(id: string): Promise<boolean> {
   try {
     await unlink(join(MEMORY_DIR, `${id}.json`));
+    invalidateCache();
     return true;
   } catch {
     return false;
@@ -104,7 +138,7 @@ export async function deleteMemoryByKey(key: string): Promise<boolean> {
 }
 
 export async function getMemorySummary(): Promise<string> {
-  const all = await listMemories();
+  const all = await getCachedMemories();
   if (all.length === 0) return '';
 
   const facts = all.filter((m) => m.type === 'fact');
