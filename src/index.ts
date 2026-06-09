@@ -1,8 +1,16 @@
 #!/usr/bin/env node
+import 'dotenv/config';
 import * as readline from 'node:readline';
 import { CliUI } from './ui/CliUI.js';
 import { Agent } from './agent/Agent.js';
-import { config, loadLocalConfig, setSessionApiKey, getMcpServers, saveApiSettings } from './agent/config.js';
+import {
+  config,
+  loadLocalConfig,
+  setSessionApiKey,
+  getMcpServers,
+  saveApiSettings,
+  validateConfig,
+} from './agent/config.js';
 import { saveSession, listSessions, loadSession, deleteSession } from './utils/sessionStore.js';
 import { logger } from './utils/logger.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
@@ -59,6 +67,17 @@ async function resolveApiKey(): Promise<string> {
 }
 
 async function main() {
+  // ── Global error handlers ────────────────────────────────────
+  process.on('unhandledRejection', (reason) => {
+    console.error('\n⚠️ Unhandled rejection:', reason instanceof Error ? reason.message : String(reason));
+  });
+
+  process.on('uncaughtException', (err) => {
+    console.error('\n❌ Uncaught exception:', err.message);
+    console.error(err.stack);
+    process.exit(1);
+  });
+
   const args = process.argv.slice(2);
 
   if (args.includes('--version') || args.includes('-V')) {
@@ -125,6 +144,14 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
 
   await loadLocalConfig();
 
+  const configErrors = validateConfig();
+  if (configErrors.length > 0) {
+    console.log(`  Configuration warnings:`);
+    for (const e of configErrors) {
+      console.log(`    ! ${e.field}: ${e.message}`);
+    }
+  }
+
   const key = await resolveApiKey();
   setSessionApiKey(key);
 
@@ -149,6 +176,14 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     setMcpManager(null);
   }
 
+  async function cleanup() {
+    try {
+      await mcpMgr.shutdown();
+    } catch {
+      // Ignore shutdown errors
+    }
+  }
+
   // Detect Qt project and inject Qt-specific knowledge/tools
   const qtContext = await detectQtProject(process.cwd());
   if (qtContext.isQtProject) {
@@ -158,7 +193,6 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
   const ui = new CliUI();
   const agent = new Agent(qtContext);
   let running = false;
-  let sigintCount = 0;
   let currentSessionId: string | undefined;
 
   const resumeIdx = args.indexOf('--resume');
@@ -299,7 +333,7 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     if (lower.startsWith('/')) {
       const validCommands = ['/clear', '/sessions', '/tools', '/model', '/mcp', '/exit', '/quit'];
       if (!validCommands.includes(lower)) {
-        const suggestions = validCommands.filter(v => v.startsWith(lower) || v.includes(lower.slice(1)));
+        const suggestions = validCommands.filter((v) => v.startsWith(lower) || v.includes(lower.slice(1)));
         if (suggestions.length > 0) {
           console.log(`  Did you mean: ${suggestions.join(', ')}?`);
         } else {
@@ -318,11 +352,14 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     await handleInput(line);
   });
 
+  let shuttingDown = false;
+
   const sigintHandler = async () => {
-    sigintCount++;
-    if (sigintCount > 1) {
+    if (shuttingDown) {
+      console.log('\nForce quitting...');
       process.exit(1);
     }
+    shuttingDown = true;
 
     console.log('\n\nSaving session before exit... (Ctrl+C again to force quit)');
 
@@ -334,11 +371,11 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
         await saveSession(agent.exportMessages(), currentSessionId);
         console.log('Session saved.');
       }
-      await mcpMgr.shutdown();
-      process.exit(0);
+      await cleanup();
     } catch {
-      process.exit(1);
+      // Best-effort shutdown
     }
+    process.exit(0);
   };
   process.on('SIGINT', sigintHandler);
   process.on('SIGTERM', sigintHandler);

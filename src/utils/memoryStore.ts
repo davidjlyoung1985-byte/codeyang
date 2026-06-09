@@ -12,6 +12,64 @@ let memoryCache: Memory[] | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL_MS = 30_000; // 30-second cache TTL
 
+// ── Full-text search index ───────────────────────────────────────────────
+// Token-based inverted index built from cached memories. Rebuilt on cache
+// refresh; marked dirty on invalidation so it is rebuilt lazily on next search.
+interface SearchIndex {
+  /** token → set of memory IDs */
+  tokenMap: Map<string, Set<string>>;
+  dirty: boolean;
+}
+
+let searchIndex: SearchIndex = { tokenMap: new Map(), dirty: false };
+
+/** Lowercase tokeniser — splits on non-[a-z0-9\u4e00-\u9fff-] characters. */
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fff\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/** Rebuild the inverted index from all cached memories. */
+function rebuildIndex(memories: Memory[]): void {
+  const tokenMap = new Map<string, Set<string>>();
+  for (const m of memories) {
+    const tokens = new Set([...tokenize(m.key), ...tokenize(m.value), m.type]);
+    for (const token of tokens) {
+      if (!tokenMap.has(token)) {
+        tokenMap.set(token, new Set());
+      }
+      tokenMap.get(token)!.add(m.id);
+    }
+  }
+  searchIndex = { tokenMap, dirty: false };
+}
+
+/** Search using the inverted index (AND query — all tokens must match). */
+function searchIndexed(query: string, allMemories: Map<string, Memory>): Memory[] {
+  const tokens = tokenize(query);
+  if (tokens.length === 0) return [];
+
+  // Intersect result sets for each token (AND query)
+  const allTokenSets: Set<string>[] = [];
+  for (const token of tokens) {
+    const matching = searchIndex.tokenMap.get(token);
+    if (!matching) return []; // Any token missing → no results
+    allTokenSets.push(matching);
+  }
+
+  // Start with the first token's set, intersect with the rest
+  let resultSet = allTokenSets[0];
+  for (let i = 1; i < allTokenSets.length; i++) {
+    const next = allTokenSets[i];
+    resultSet = new Set([...resultSet].filter((id) => next.has(id)));
+  }
+
+  return [...resultSet].map((id) => allMemories.get(id)).filter((m): m is Memory => m !== undefined);
+}
+
 export interface Memory {
   id: string;
   key: string;
@@ -36,6 +94,7 @@ function sanitizeKey(key: string): string {
 function invalidateCache() {
   memoryCache = null;
   cacheTimestamp = 0;
+  searchIndex.dirty = true;
 }
 
 /**
@@ -59,6 +118,12 @@ async function getCachedMemories(): Promise<Memory[]> {
   }
   memoryCache = memories.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   cacheTimestamp = Date.now();
+
+  // Rebuild search index alongside the cache
+  if (searchIndex.dirty || searchIndex.tokenMap.size === 0) {
+    rebuildIndex(memoryCache);
+  }
+
   return memoryCache;
 }
 
@@ -117,6 +182,18 @@ export async function listMemories(): Promise<Memory[]> {
 
 export async function searchMemories(query: string): Promise<Memory[]> {
   const all = await getCachedMemories();
+
+  // Full-text search via inverted index (AND over tokens)
+  if (!searchIndex.dirty && searchIndex.tokenMap.size > 0) {
+    const allMap = new Map<string, Memory>();
+    for (const m of all) allMap.set(m.id, m);
+    const indexed = searchIndexed(query, allMap);
+    if (indexed.length > 0) return indexed;
+    // Fall through to substring search if index returned nothing
+    // (the query might be a sub-string that tokenization doesn't cover)
+  }
+
+  // Fallback: substring matching
   const q = query.toLowerCase();
   return all.filter((m) => m.key.includes(q) || m.value.toLowerCase().includes(q) || m.type.includes(q));
 }

@@ -151,6 +151,9 @@ export class CliUI {
   private streamBuf = '';
   private turnCount = 0;
   private isFirstResponse = true;
+  private toolStartTimes = new Map<string, number>();
+  private toolBatchTotal = 0;
+  private toolResultsCount = 0;
 
   constructor() {
     this.rl = readline.createInterface({
@@ -191,8 +194,9 @@ export class CliUI {
     process.stdout.write(`\n  ${c.cyan('->')} `);
   }
 
-  setToolProgressTotal(_total: number) {
-    // handled by individual tool calls
+  setToolProgressTotal(total: number) {
+    this.toolBatchTotal = total;
+    this.toolResultsCount = 0;
   }
 
   // ─── Messages ─────────────────────────────────────────────────────
@@ -262,7 +266,7 @@ export class CliUI {
 
   showToolCall(name: string, args: Record<string, unknown>) {
     this.spinner.stop();
-    this.spinner.start(`executing ${name}`);
+    this.toolStartTimes.set(name, Date.now());
     const argStr = Object.entries(args)
       .map(([k, v]) => {
         const s = typeof v === 'string' ? v : JSON.stringify(v);
@@ -271,20 +275,25 @@ export class CliUI {
       .join(' ')
       .slice(0, 100);
     const icon = name === 'Question' ? '?' : '>';
-    process.stdout.write(`\n  ${c.dim(`${c.cyan(icon)} ${c.white(name)}`)} ${c.dim(argStr)}\n`);
+    const progress = this.toolBatchTotal > 0 ? ` (${this.toolResultsCount + 1}/${this.toolBatchTotal})` : '';
+    process.stdout.write(`\n  ${c.dim(`${c.cyan(icon)} ${c.white(name)}${progress}`)} ${c.dim(argStr)}\n`);
   }
 
   showToolResult(output: string, isError: boolean) {
+    const name = Array.from(this.toolStartTimes.keys()).pop() || '';
+    const elapsed = this.toolStartTimes.get(name);
+    const duration = elapsed ? ` ${c.dim('[' + (Date.now() - elapsed) + 'ms]')}` : '';
+    this.toolResultsCount++;
     if (isError) {
       const firstLine = output.split('\n')[0] || '(empty)';
       const display = firstLine.slice(0, 120);
       const lines = output.split('\n').length;
       const suffix = lines > 1 ? `  (${lines} lines \u2014 see full error above)` : '';
-      console.log(`  ${c.red('\u2717')} ${c.dim(display)}${suffix}`);
+      console.log(`  ${c.red('\u2717')}${duration} ${c.dim(display)}${suffix}`);
     } else {
       const firstLine = output.split('\n')[0] || '(empty)';
       const display = firstLine.slice(0, 150);
-      console.log(`  ${c.dim('\u00b7')} ${c.dim(display)}`);
+      console.log(`  ${c.dim('\u00b7')}${duration} ${c.dim(display)}`);
     }
   }
 

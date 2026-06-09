@@ -17,6 +17,7 @@ import {
   executeGitCurrentBranch,
   executeGitBlame,
 } from '../GitTool.js';
+import { requiredString, optionalString, optionalNumber, optionalBoolean } from '../validate.js';
 
 export const definitions: ToolDefinition[] = [
   {
@@ -31,8 +32,8 @@ export const definitions: ToolDefinition[] = [
       required: [],
     },
     execute: async (args) => {
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const short = args['short'] === true;
+      const cwd = optionalString(args, 'cwd');
+      const short = optionalBoolean(args, 'short', false) ?? false;
       return executeGitStatus(cwd, short);
     },
   },
@@ -49,9 +50,9 @@ export const definitions: ToolDefinition[] = [
       required: [],
     },
     execute: async (args) => {
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const staged = args['staged'] === true;
-      const filePath = args['filePath'] ? String(args['filePath']) : undefined;
+      const cwd = optionalString(args, 'cwd');
+      const staged = optionalBoolean(args, 'staged', false) ?? false;
+      const filePath = optionalString(args, 'filePath');
       return executeGitDiff(cwd, staged, filePath);
     },
   },
@@ -68,9 +69,9 @@ export const definitions: ToolDefinition[] = [
       required: ['message'],
     },
     execute: async (args) => {
-      const message = String(args['message'] ?? '');
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const addAll = args['addAll'] === true;
+      const message = requiredString(args, 'message');
+      const cwd = optionalString(args, 'cwd');
+      const addAll = optionalBoolean(args, 'addAll', false) ?? false;
       return executeGitCommit(message, cwd, addAll);
     },
   },
@@ -86,8 +87,8 @@ export const definitions: ToolDefinition[] = [
       required: [],
     },
     execute: async (args) => {
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const remotes = args['remotes'] === true;
+      const cwd = optionalString(args, 'cwd');
+      const remotes = optionalBoolean(args, 'remotes', false) ?? false;
       return executeGitBranch(cwd, remotes);
     },
   },
@@ -104,9 +105,9 @@ export const definitions: ToolDefinition[] = [
       required: ['branch'],
     },
     execute: async (args) => {
-      const branch = String(args['branch'] ?? '');
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const create = args['create'] === true;
+      const branch = requiredString(args, 'branch');
+      const cwd = optionalString(args, 'cwd');
+      const create = optionalBoolean(args, 'create', false) ?? false;
       return executeGitCheckout(branch, cwd, create);
     },
   },
@@ -123,9 +124,9 @@ export const definitions: ToolDefinition[] = [
       required: [],
     },
     execute: async (args) => {
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const maxCount = args['maxCount'] !== undefined ? Number(args['maxCount']) : 10;
-      const oneline = args['oneline'] === true;
+      const cwd = optionalString(args, 'cwd');
+      const maxCount = optionalNumber(args, 'maxCount', 10) ?? 10;
+      const oneline = optionalBoolean(args, 'oneline', false) ?? false;
       return executeGitLog(cwd, maxCount, oneline);
     },
   },
@@ -143,10 +144,10 @@ export const definitions: ToolDefinition[] = [
       required: [],
     },
     execute: async (args) => {
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const remote = args['remote'] ? String(args['remote']) : 'origin';
-      const branch = args['branch'] ? String(args['branch']) : undefined;
-      const force = args['force'] === true;
+      const cwd = optionalString(args, 'cwd');
+      const remote = optionalString(args, 'remote', 'origin') ?? 'origin';
+      const branch = optionalString(args, 'branch');
+      const force = optionalBoolean(args, 'force', false) ?? false;
       return executeGitPush(cwd, remote, branch, force);
     },
   },
@@ -163,9 +164,9 @@ export const definitions: ToolDefinition[] = [
       required: [],
     },
     execute: async (args) => {
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const remote = args['remote'] ? String(args['remote']) : 'origin';
-      const branch = args['branch'] ? String(args['branch']) : undefined;
+      const cwd = optionalString(args, 'cwd');
+      const remote = optionalString(args, 'remote', 'origin') ?? 'origin';
+      const branch = optionalString(args, 'branch');
       return executeGitPull(cwd, remote, branch);
     },
   },
@@ -182,9 +183,9 @@ export const definitions: ToolDefinition[] = [
       required: ['url'],
     },
     execute: async (args) => {
-      const url = String(args['url'] ?? '');
-      const destination = args['destination'] ? String(args['destination']) : undefined;
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+      const url = requiredString(args, 'url');
+      const destination = optionalString(args, 'destination');
+      const cwd = optionalString(args, 'cwd');
       return executeGitClone(url, destination, cwd);
     },
   },
@@ -201,7 +202,10 @@ export const definitions: ToolDefinition[] = [
     },
     execute: async (args) => {
       const files = (args['files'] as string[]) ?? [];
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+      if (!Array.isArray(files) || files.length === 0) {
+        throw new Error('Missing required parameter: files');
+      }
+      const cwd = optionalString(args, 'cwd');
       return executeGitAdd(files, cwd);
     },
   },
@@ -219,8 +223,8 @@ export const definitions: ToolDefinition[] = [
     },
     execute: async (args) => {
       const files = args['files'] ? (args['files'] as string[]) : undefined;
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const hard = args['hard'] === true;
+      const cwd = optionalString(args, 'cwd');
+      const hard = optionalBoolean(args, 'hard', false) ?? false;
       return executeGitReset(files, cwd, hard);
     },
   },
@@ -238,8 +242,8 @@ export const definitions: ToolDefinition[] = [
     },
     execute: async (args) => {
       const action = (args['action'] as 'save' | 'pop' | 'list' | 'apply') || 'save';
-      const message = args['message'] ? String(args['message']) : undefined;
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+      const message = optionalString(args, 'message');
+      const cwd = optionalString(args, 'cwd');
       return executeGitStash(action, message, cwd);
     },
   },
@@ -256,9 +260,9 @@ export const definitions: ToolDefinition[] = [
       required: ['branch'],
     },
     execute: async (args) => {
-      const branch = String(args['branch'] ?? '');
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const noFf = args['noFf'] === true;
+      const branch = requiredString(args, 'branch');
+      const cwd = optionalString(args, 'cwd');
+      const noFf = optionalBoolean(args, 'noFf', false) ?? false;
       return executeGitMerge(branch, cwd, noFf);
     },
   },
@@ -274,8 +278,8 @@ export const definitions: ToolDefinition[] = [
       required: [],
     },
     execute: async (args) => {
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
-      const verbose = args['verbose'] === true;
+      const cwd = optionalString(args, 'cwd');
+      const verbose = optionalBoolean(args, 'verbose', false) ?? false;
       return executeGitRemote(cwd, verbose);
     },
   },
@@ -290,7 +294,7 @@ export const definitions: ToolDefinition[] = [
       required: [],
     },
     execute: async (args) => {
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+      const cwd = optionalString(args, 'cwd');
       return executeGitCurrentBranch(cwd);
     },
   },
@@ -306,8 +310,8 @@ export const definitions: ToolDefinition[] = [
       required: ['filePath'],
     },
     execute: async (args) => {
-      const filePath = String(args['filePath'] ?? '');
-      const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+      const filePath = requiredString(args, 'filePath');
+      const cwd = optionalString(args, 'cwd');
       return executeGitBlame(filePath, cwd);
     },
   },

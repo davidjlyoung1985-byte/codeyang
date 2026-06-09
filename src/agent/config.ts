@@ -17,6 +17,41 @@ interface LocalConfig {
 
 let localConfig: LocalConfig = {};
 
+export interface ValidationError {
+  field: string;
+  message: string;
+}
+
+export function validateConfig(): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  if (localConfig.apiKey !== undefined && typeof localConfig.apiKey !== 'string') {
+    errors.push({ field: 'apiKey', message: 'must be a string' });
+  }
+
+  if (localConfig.apiBaseURL !== undefined && typeof localConfig.apiBaseURL !== 'string') {
+    errors.push({ field: 'apiBaseURL', message: 'must be a string' });
+  }
+
+  if (localConfig.apiProvider !== undefined && !['deepseek', 'anthropic', 'custom'].includes(localConfig.apiProvider)) {
+    errors.push({ field: 'apiProvider', message: 'must be "deepseek", "anthropic", or "custom"' });
+  }
+
+  if (localConfig.mcpServers !== undefined) {
+    if (typeof localConfig.mcpServers !== 'object' || Array.isArray(localConfig.mcpServers)) {
+      errors.push({ field: 'mcpServers', message: 'must be an object mapping server names to configs' });
+    } else {
+      for (const [name, cfg] of Object.entries(localConfig.mcpServers)) {
+        if (typeof cfg !== 'object' || cfg === null) {
+          errors.push({ field: `mcpServers.${name}`, message: 'must be an object with "command" and "args"' });
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
 export async function loadLocalConfig(): Promise<void> {
   try {
     const data = await readFile(CONFIG_FILE, 'utf-8');

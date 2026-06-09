@@ -10,7 +10,11 @@ vi.mock('../agent/LLMClient.js', () => ({
 
 vi.mock('./registry.js', () => ({
   toolSchemas: vi.fn(() => [
-    { name: 'Bash', description: 'Run a command', input_schema: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'] } },
+    {
+      name: 'Bash',
+      description: 'Run a command',
+      input_schema: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'] },
+    },
   ]),
   getTool: vi.fn((name: string) => {
     if (name === 'Bash') {
@@ -24,6 +28,7 @@ vi.mock('./registry.js', () => ({
   }),
 }));
 
+import type { LLMClient } from '../agent/LLMClient.js';
 import { executeTask } from './TaskTool.js';
 
 // ── Tests ────────────────────────────────────
@@ -39,7 +44,7 @@ describe('TaskTool', () => {
   it('executes a single subtask and returns text response', async () => {
     mockConsumeStream.mockResolvedValueOnce({ text: 'Here is the result.', toolCalls: [] });
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'test task', ['do something'], '/tmp');
+    const result = await executeTask(mockClient as LLMClient, model, maxTokens, 'test task', ['do something'], '/tmp');
 
     expect(result).toContain('Here is the result.');
     expect(mockConsumeStream).toHaveBeenCalledTimes(1);
@@ -53,7 +58,7 @@ describe('TaskTool', () => {
       })
       .mockResolvedValueOnce({ text: 'Done.', toolCalls: [] });
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'run bash', ['run a command'], '/tmp');
+    const result = await executeTask(mockClient as LLMClient, model, maxTokens, 'run bash', ['run a command'], '/tmp');
 
     expect(result).toContain('Done.');
     expect(mockConsumeStream).toHaveBeenCalledTimes(2);
@@ -67,7 +72,7 @@ describe('TaskTool', () => {
       })
       .mockResolvedValueOnce({ text: 'Finished.', toolCalls: [] });
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'ask question', ['ask me'], '/tmp');
+    const result = await executeTask(mockClient as LLMClient, model, maxTokens, 'ask question', ['ask me'], '/tmp');
 
     // Question is blocked internally as tool_result; agent gets "Finished" on next turn
     expect(result).toContain('Finished.');
@@ -83,7 +88,7 @@ describe('TaskTool', () => {
       })
       .mockResolvedValueOnce({ text: 'Done with error handling.', toolCalls: [] });
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'unknown tool', ['use it'], '/tmp');
+    const result = await executeTask(mockClient as LLMClient, model, maxTokens, 'unknown tool', ['use it'], '/tmp');
 
     // Unknown tool is handled as error tool_result; agent continues
     expect(result).toContain('Done with error handling.');
@@ -93,7 +98,7 @@ describe('TaskTool', () => {
   it('handles consumeStream errors gracefully', async () => {
     mockConsumeStream.mockRejectedValueOnce(new Error('API error'));
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'error case', ['do it'], '/tmp');
+    const result = await executeTask(mockClient as LLMClient, model, maxTokens, 'error case', ['do it'], '/tmp');
 
     expect(result).toContain('API error');
   });
@@ -101,7 +106,7 @@ describe('TaskTool', () => {
   it('handles multiple parallel subtasks', async () => {
     mockConsumeStream.mockResolvedValue({ text: 'Subtask result.', toolCalls: [] });
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'multi task', ['sub1', 'sub2'], '/tmp');
+    const result = await executeTask(mockClient as LLMClient, model, maxTokens, 'multi task', ['sub1', 'sub2'], '/tmp');
 
     expect(result).toContain('sub1');
     expect(result).toContain('sub2');
@@ -117,7 +122,14 @@ describe('TaskTool', () => {
       });
     }
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'infinite loop', ['keep going'], '/tmp');
+    const result = await executeTask(
+      mockClient as LLMClient,
+      model,
+      maxTokens,
+      'infinite loop',
+      ['keep going'],
+      '/tmp',
+    );
 
     expect(result).toBeTruthy();
     expect(mockConsumeStream.mock.calls.length).toBeLessThanOrEqual(10);

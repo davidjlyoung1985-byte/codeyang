@@ -1,5 +1,6 @@
 import type { ToolDefinition } from '../../types.js';
 import { executeImageInfo, executeImageToBase64, executeListImages } from '../ImageTool.js';
+import { requiredString, optionalNumber } from '../validate.js';
 
 export const definitions: ToolDefinition[] = [
   {
@@ -12,7 +13,10 @@ export const definitions: ToolDefinition[] = [
       },
       required: ['filePath'],
     },
-    execute: async (args) => executeImageInfo(String(args['filePath'] ?? '')),
+    execute: async (args) => {
+      const filePath = requiredString(args, 'filePath');
+      return executeImageInfo(filePath);
+    },
   },
   {
     name: 'ImageToBase64',
@@ -25,11 +29,11 @@ export const definitions: ToolDefinition[] = [
       },
       required: ['filePath'],
     },
-    execute: async (args) =>
-      executeImageToBase64(
-        String(args['filePath'] ?? ''),
-        args['maxBytes'] !== undefined ? Number(args['maxBytes']) : undefined,
-      ),
+    execute: async (args) => {
+      const filePath = requiredString(args, 'filePath');
+      const maxBytes = optionalNumber(args, 'maxBytes');
+      return executeImageToBase64(filePath, maxBytes);
+    },
   },
   {
     name: 'ListImages',
@@ -41,6 +45,9 @@ export const definitions: ToolDefinition[] = [
       },
       required: ['path'],
     },
-    execute: async (args) => executeListImages(String(args['path'] ?? '')),
+    execute: async (args) => {
+      const dirPath = requiredString(args, 'path');
+      return executeListImages(dirPath);
+    },
   },
 ];

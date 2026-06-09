@@ -2,6 +2,7 @@ import type { ToolDefinition } from '../../types.js';
 import { executeMathSolve } from '../../math/MathSolve.js';
 import { executeMathPlot } from '../../math/MathPlot.js';
 import { executeMathExplain } from '../../math/MathExplain.js';
+import { requiredString, optionalString } from '../validate.js';
 
 export const definitions: ToolDefinition[] = [
   {
@@ -24,8 +25,8 @@ export const definitions: ToolDefinition[] = [
       required: ['problem'],
     },
     execute: async (args) => {
-      const problem = String(args['problem'] ?? '');
-      const type = args['type'] ? String(args['type']) : undefined;
+      const problem = requiredString(args, 'problem');
+      const type = optionalString(args, 'type');
       return executeMathSolve(problem, type);
     },
   },
@@ -44,8 +45,8 @@ export const definitions: ToolDefinition[] = [
       required: ['kind'],
     },
     execute: async (args) => {
-      const kind = String(args['kind'] ?? '');
-      const output = args['output'] ? String(args['output']) : undefined;
+      const kind = requiredString(args, 'kind');
+      const output = optionalString(args, 'output');
       return executeMathPlot(kind, output);
     },
   },
@@ -64,7 +65,7 @@ export const definitions: ToolDefinition[] = [
       required: [],
     },
     execute: async (args) => {
-      const topic = args['topic'] ? String(args['topic']) : undefined;
+      const topic = optionalString(args, 'topic');
       return executeMathExplain(topic);
     },
   },

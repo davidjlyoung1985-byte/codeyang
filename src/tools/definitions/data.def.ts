@@ -11,6 +11,7 @@ import {
   executeXmlParse,
   executeXmlWrite,
 } from '../DataTool.js';
+import { requiredString, optionalString, optionalBoolean } from '../validate.js';
 
 export const definitions: ToolDefinition[] = [
   {
@@ -25,8 +26,8 @@ export const definitions: ToolDefinition[] = [
       required: ['input'],
     },
     execute: async (args) => {
-      const input = String(args['input'] ?? '');
-      const isFile = args['isFile'] !== false;
+      const input = requiredString(args, 'input');
+      const isFile = optionalBoolean(args, 'isFile', true) ?? true;
       return executeJsonParse(input, isFile);
     },
   },
@@ -43,9 +44,9 @@ export const definitions: ToolDefinition[] = [
       required: ['filePath', 'data'],
     },
     execute: async (args) => {
-      const filePath = String(args['filePath'] ?? '');
-      const data = String(args['data'] ?? '');
-      const pretty = args['pretty'] !== false;
+      const filePath = requiredString(args, 'filePath');
+      const data = requiredString(args, 'data');
+      const pretty = optionalBoolean(args, 'pretty', true) ?? true;
       return executeJsonWrite(filePath, data, pretty);
     },
   },
@@ -62,9 +63,9 @@ export const definitions: ToolDefinition[] = [
       required: ['input', 'query'],
     },
     execute: async (args) => {
-      const input = String(args['input'] ?? '');
-      const query = String(args['query'] ?? '');
-      const isFile = args['isFile'] !== false;
+      const input = requiredString(args, 'input');
+      const query = requiredString(args, 'query');
+      const isFile = optionalBoolean(args, 'isFile', true) ?? true;
       return executeJsonQuery(input, query, isFile);
     },
   },
@@ -80,8 +81,8 @@ export const definitions: ToolDefinition[] = [
       required: ['input'],
     },
     execute: async (args) => {
-      const input = String(args['input'] ?? '');
-      const isFile = args['isFile'] !== false;
+      const input = requiredString(args, 'input');
+      const isFile = optionalBoolean(args, 'isFile', true) ?? true;
       return executeYamlParse(input, isFile);
     },
   },
@@ -97,8 +98,8 @@ export const definitions: ToolDefinition[] = [
       required: ['filePath', 'data'],
     },
     execute: async (args) => {
-      const filePath = String(args['filePath'] ?? '');
-      const data = String(args['data'] ?? '');
+      const filePath = requiredString(args, 'filePath');
+      const data = requiredString(args, 'data');
       return executeYamlWrite(filePath, data);
     },
   },
@@ -116,11 +117,11 @@ export const definitions: ToolDefinition[] = [
       required: ['input', 'fromFormat', 'toFormat'],
     },
     execute: async (args) => {
-      const input = String(args['input'] ?? '');
-      const fromFormat = String(args['fromFormat'] ?? '') as 'json' | 'yaml';
-      const toFormat = String(args['toFormat'] ?? '') as 'json' | 'yaml';
-      const isFile = args['isFile'] !== false;
-      return executeConvert(input, fromFormat, toFormat, isFile);
+      const input = requiredString(args, 'input');
+      const fromFormat = requiredString(args, 'fromFormat');
+      const toFormat = requiredString(args, 'toFormat');
+      const isFile = optionalBoolean(args, 'isFile', true) ?? true;
+      return executeConvert(input, fromFormat as 'json' | 'yaml', toFormat as 'json' | 'yaml', isFile);
     },
   },
   {
@@ -137,10 +138,10 @@ export const definitions: ToolDefinition[] = [
       required: ['input'],
     },
     execute: async (args) => {
-      const input = String(args['input'] ?? '');
-      const isFile = args['isFile'] !== false;
-      const hasHeader = args['hasHeader'] !== false;
-      const delimiter = args['delimiter'] ? String(args['delimiter']) : ',';
+      const input = requiredString(args, 'input');
+      const isFile = optionalBoolean(args, 'isFile', true) ?? true;
+      const hasHeader = optionalBoolean(args, 'hasHeader', true) ?? true;
+      const delimiter = optionalString(args, 'delimiter', ',') ?? ',';
       return executeCsvParse(input, isFile, hasHeader, delimiter);
     },
   },
@@ -158,10 +159,10 @@ export const definitions: ToolDefinition[] = [
       required: ['filePath', 'data'],
     },
     execute: async (args) => {
-      const filePath = String(args['filePath'] ?? '');
-      const data = String(args['data'] ?? '');
-      const hasHeader = args['hasHeader'] !== false;
-      const delimiter = args['delimiter'] ? String(args['delimiter']) : ',';
+      const filePath = requiredString(args, 'filePath');
+      const data = requiredString(args, 'data');
+      const hasHeader = optionalBoolean(args, 'hasHeader', true) ?? true;
+      const delimiter = optionalString(args, 'delimiter', ',') ?? ',';
       return executeCsvWrite(filePath, data, hasHeader, delimiter);
     },
   },
@@ -177,8 +178,8 @@ export const definitions: ToolDefinition[] = [
       required: ['input'],
     },
     execute: async (args) => {
-      const input = String(args['input'] ?? '');
-      const isFile = args['isFile'] !== false;
+      const input = requiredString(args, 'input');
+      const isFile = optionalBoolean(args, 'isFile', true) ?? true;
       return executeXmlParse(input, isFile);
     },
   },
@@ -194,8 +195,8 @@ export const definitions: ToolDefinition[] = [
       required: ['filePath', 'data'],
     },
     execute: async (args) => {
-      const filePath = String(args['filePath'] ?? '');
-      const data = String(args['data'] ?? '');
+      const filePath = requiredString(args, 'filePath');
+      const data = requiredString(args, 'data');
       return executeXmlWrite(filePath, data);
     },
   },

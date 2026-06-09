@@ -7,6 +7,7 @@ import {
   executeFindDeps,
   executeCountLines,
 } from '../CodeAnalysisTool.js';
+import { requiredString, optionalString, optionalBoolean } from '../validate.js';
 
 export const definitions: ToolDefinition[] = [
   {
@@ -21,8 +22,8 @@ export const definitions: ToolDefinition[] = [
       required: ['filePath'],
     },
     execute: async (args) => {
-      const filePath = String(args['filePath'] ?? '');
-      const language = (args['language'] as 'javascript' | 'typescript') || 'javascript';
+      const filePath = requiredString(args, 'filePath');
+      const language = (optionalString(args, 'language', 'javascript') ?? 'javascript') as 'javascript' | 'typescript';
       return executeParseAst(filePath, language);
     },
   },
@@ -38,8 +39,8 @@ export const definitions: ToolDefinition[] = [
       required: ['filePath'],
     },
     execute: async (args) => {
-      const filePath = String(args['filePath'] ?? '');
-      const language = (args['language'] as 'javascript' | 'typescript') || 'javascript';
+      const filePath = requiredString(args, 'filePath');
+      const language = (optionalString(args, 'language', 'javascript') ?? 'javascript') as 'javascript' | 'typescript';
       return executeAnalyzeCode(filePath, language);
     },
   },
@@ -54,7 +55,7 @@ export const definitions: ToolDefinition[] = [
       required: ['filePath'],
     },
     execute: async (args) => {
-      const filePath = String(args['filePath'] ?? '');
+      const filePath = requiredString(args, 'filePath');
       return executeComplexity(filePath);
     },
   },
@@ -70,8 +71,8 @@ export const definitions: ToolDefinition[] = [
       required: ['filePath'],
     },
     execute: async (args) => {
-      const filePath = String(args['filePath'] ?? '');
-      const fix = args['fix'] === true;
+      const filePath = requiredString(args, 'filePath');
+      const fix = optionalBoolean(args, 'fix', false) ?? false;
       return executeLint(filePath, fix);
     },
   },
@@ -86,7 +87,7 @@ export const definitions: ToolDefinition[] = [
       required: ['projectDir'],
     },
     execute: async (args) => {
-      const projectDir = String(args['projectDir'] ?? '');
+      const projectDir = requiredString(args, 'projectDir');
       return executeFindDeps(projectDir);
     },
   },
@@ -101,7 +102,7 @@ export const definitions: ToolDefinition[] = [
       required: ['filePath'],
     },
     execute: async (args) => {
-      const filePath = String(args['filePath'] ?? '');
+      const filePath = requiredString(args, 'filePath');
       return executeCountLines(filePath);
     },
   },

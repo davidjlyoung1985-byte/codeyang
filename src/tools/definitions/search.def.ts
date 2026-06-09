@@ -1,5 +1,6 @@
 import type { ToolDefinition } from '../../types.js';
 import { executeSearch } from '../SearchTool.js';
+import { requiredString, optionalString, optionalNumber, optionalBoolean } from '../validate.js';
 
 export const definitions: ToolDefinition[] = [
   {
@@ -20,14 +21,19 @@ export const definitions: ToolDefinition[] = [
       required: ['query'],
     },
     execute: async (args) => {
-      const query = String(args['query'] ?? '');
-      const rootDir = args['rootDir'] ? String(args['rootDir']) : undefined;
+      const query = requiredString(args, 'query');
+      const rootDir = optionalString(args, 'rootDir');
+      const maxResults = optionalNumber(args, 'maxResults');
+      const includeGlob = optionalString(args, 'includeGlob');
+      const searchContent = optionalBoolean(args, 'searchContent', true) ?? true;
+      const searchNames = optionalBoolean(args, 'searchNames', true) ?? true;
+      const caseSensitive = optionalBoolean(args, 'caseSensitive', false) ?? false;
       return executeSearch(query, rootDir, {
-        maxResults: args['maxResults'] !== undefined ? Number(args['maxResults']) : undefined,
-        includeGlob: args['includeGlob'] ? String(args['includeGlob']) : undefined,
-        searchContent: args['searchContent'] !== false,
-        searchNames: args['searchNames'] !== false,
-        caseSensitive: args['caseSensitive'] === true,
+        maxResults,
+        includeGlob,
+        searchContent,
+        searchNames,
+        caseSensitive,
       });
     },
   },

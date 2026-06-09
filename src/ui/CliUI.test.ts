@@ -39,7 +39,7 @@ beforeEach(() => {
   mockLog.mockClear();
   origWrite = process.stdout.write;
   origLog = console.log;
-  process.stdout.write = mockWrite as any;
+  process.stdout.write = mockWrite as unknown as typeof process.stdout.write;
   console.log = mockLog;
 });
 afterAll(() => {
@@ -49,8 +49,8 @@ afterAll(() => {
 
 /** Combine all captured output (stdout + console.log) */
 function capturedOutput(): string {
-  const stdoutCalls = mockWrite.mock.calls.map((c: any[]) => String(c[0]));
-  const logCalls = mockLog.mock.calls.map((c: any[]) => c.join(' '));
+  const stdoutCalls = mockWrite.mock.calls.map((c: unknown[]) => String(c[0]));
+  const logCalls = mockLog.mock.calls.map((c: unknown[]) => c.join(' '));
   return [...stdoutCalls, ...logCalls].join('');
 }
 
@@ -78,7 +78,7 @@ describe('CliUI', () => {
   describe('promptUser', () => {
     it('outputs prompt character', () => {
       ui.promptUser();
-      const calls = mockWrite.mock.calls.map((c: any) => c[0]).join('');
+      const calls = mockWrite.mock.calls.map((c: unknown[]) => String(c[0])).join('');
       expect(calls).toContain('->');
     });
   });
@@ -86,7 +86,7 @@ describe('CliUI', () => {
   describe('showUserMessage', () => {
     it('shows user message with User label', () => {
       ui.showUserMessage('hello world');
-      const output = mockWrite.mock.calls.map((c: any) => c[0]).join('');
+      const output = mockWrite.mock.calls.map((c: unknown[]) => String(c[0])).join('');
       // should contain the message text somewhere (via console.log)
       expect(output).toBeTruthy();
     });
@@ -176,7 +176,7 @@ describe('CliUI', () => {
   describe('showToolCall', () => {
     it('shows tool name and args', () => {
       ui.showToolCall('Bash', { command: 'echo hi' });
-      const output = mockWrite.mock.calls.map((c: any) => c[0]).join('');
+      const output = mockWrite.mock.calls.map((c: unknown[]) => String(c[0])).join('');
       expect(output).toContain('Bash');
     });
   });
