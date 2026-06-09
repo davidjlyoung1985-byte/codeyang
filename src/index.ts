@@ -115,6 +115,7 @@ Interactive Commands:
   /model           Show current model
   /model <name>    Switch model
   /mcp             Show MCP server status
+  /stats           Show token usage for this session
   /exit, /quit     Exit CodeYang
 
 API Key priority: --api-key arg > CODEYANG_API_KEY > saved config > prompt
@@ -280,6 +281,20 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       } else {
         console.log(`  Model: ${config.model}`);
       }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/stats') {
+      const usage = agent.getTokenUsage();
+      const total = usage.inputTokens + usage.outputTokens;
+      const isDeepSeek = config.provider === 'deepseek';
+      console.log(`  Token usage this session:`);
+      console.log(`    Input:  ${usage.inputTokens.toLocaleString()}${isDeepSeek ? ' (estimated)' : ''}`);
+      console.log(`    Output: ${usage.outputTokens.toLocaleString()}${isDeepSeek ? ' (estimated)' : ''}`);
+      console.log(`    Total:  ${total.toLocaleString()}`);
+      console.log(`    Model:  ${config.model}`);
+      console.log(`    Provider: ${config.provider}`);
       ui.promptUser();
       return;
     }

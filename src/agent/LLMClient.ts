@@ -269,14 +269,23 @@ class OpenAICompatClient implements LLMClient {
 
     const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
 
+    // Calculate approximate input text length for token estimation fallback
+    const inputTextLen = openaiMessages.reduce((sum, m) => {
+      if (typeof m.content === 'string') return sum + m.content.length;
+      return sum;
+    }, 0);
+
     try {
       let hasReceivedData = false;
+      let usageYielded = false;
+      let outputTextLen = 0;
 
       for await (const chunk of stream) {
         hasReceivedData = true;
 
-        // Check for usage info (sent in the final chunk when stream_options.include_usage is true)
+        // Check for usage info
         if (chunk.usage) {
+          usageYielded = true;
           yield {
             type: 'usage',
             inputTokens: chunk.usage.prompt_tokens,
@@ -288,6 +297,7 @@ class OpenAICompatClient implements LLMClient {
         if (!delta) continue;
 
         if (delta.content) {
+          outputTextLen += delta.content.length;
           yield { type: 'text_delta', text: delta.content };
         }
 
@@ -317,6 +327,15 @@ class OpenAICompatClient implements LLMClient {
             yield { type: 'tool_call_end', toolCallIndex: idx, toolCallId: accum.id, toolCallArgs: accum.args };
           }
         }
+      }
+
+      // Fallback: estimate tokens if provider didn't send usage info
+      if (!usageYielded && (inputTextLen > 0 || outputTextLen > 0)) {
+        yield {
+          type: 'usage',
+          inputTokens: Math.max(1, Math.ceil(inputTextLen / 4)),
+          outputTokens: Math.max(1, Math.ceil(outputTextLen / 4)),
+        };
       }
 
       if (!hasReceivedData) {

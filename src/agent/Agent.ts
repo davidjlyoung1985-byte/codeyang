@@ -144,7 +144,84 @@ export class Agent {
     return JSON.parse(JSON.stringify(obj));
   }
 
+  /**
+   * Rough estimate of token count for a message (charCount / 3.5 ≈ tokens for Chinese/English mix).
+   */
+  private estimateTokens(msg: LLMMessage): number {
+    if (typeof msg.content === 'string') return Math.ceil(msg.content.length / 3.5) + 4;
+    let count = 0;
+    for (const block of msg.content) {
+      if ('text' in block && block.text) count += block.text.length;
+      if ('content' in block && typeof block.content === 'string') count += block.content.length;
+      if ('input' in block && block.input) count += JSON.stringify(block.input).length;
+    }
+    return Math.ceil(count / 3.5) + 10;
+  }
+
+  /**
+   * Context compaction: if history exceeds ~70% of the context window,
+   * summarize early messages and keep only the last 2 turns verbatim.
+   */
+  private async compactIfNeeded(messages: LLMMessage[]): Promise<void> {
+    if (messages.length < 4) return; // not enough context to compact
+
+    const threshold = config.maxTokens * 0.7;
+    const totalTokens = messages.reduce((sum, m) => sum + this.estimateTokens(m), 0);
+    if (totalTokens <= threshold) return;
+
+    this.cbs.onError?.('Context window nearly full — compacting conversation history...');
+
+    // Find where to cut: keep last 2 user-assistant pairs (4 messages), summarize rest
+    const keepCount = Math.min(4, messages.length);
+    const keep = messages.slice(-keepCount);
+    const toSummarize = messages.slice(0, -keepCount);
+
+    // Build a summary from the early messages using the same LLM
+    const summaryText = toSummarize
+      .map((m) => {
+        const role = m.role === 'user' ? 'User' : 'Assistant';
+        const text = typeof m.content === 'string' ? m.content : m.content.map((b: any) => b.text || '').filter(Boolean).join(' ');
+        return `${role}: ${text.slice(0, 500)}`;
+      })
+      .join('\n')
+      .slice(0, 3000);
+
+    // Try to summarize via LLM; fall back to simple truncation
+    let compactedNote = '';
+    try {
+      const summaryResult = await this.withRetry(async () => {
+        const summaryParts: string[] = [];
+        for await (const event of this.client.stream({
+          model: config.model,
+          maxTokens: 512,
+          temperature: 0.3,
+          system: 'Summarize the following conversation concisely (2-3 sentences). Focus on decisions made, files modified, and goals discussed.',
+          messages: [{ role: 'user', content: summaryText }],
+          tools: [],
+        })) {
+          if (event.type === 'text_delta' && event.text) summaryParts.push(event.text);
+        }
+        return summaryParts.join('');
+      }, 'Context compaction summary');
+      compactedNote = `[Earlier conversation summary: ${summaryResult}]`;
+    } catch {
+      // LLM summary failed — use simple truncation
+      compactedNote = `[Earlier conversation compressed — ${toSummarize.length} messages removed to stay within context window]`;
+    }
+
+    // Rebuild history: system note + kept messages
+    this.history = [
+      { role: 'user' as const, content: compactedNote },
+      ...keep,
+    ];
+
+    this.cbs.onError?.(`Compacted ${toSummarize.length} early messages into summary. Keeping last ${keepCount / 2} exchanges.`);
+  }
+
   async run(prompt: string): Promise<void> {
+    // Compact history if approaching context limit
+    await this.compactIfNeeded(this.history);
+
     const messages = this.jsonClone(this.history);
 
     // Pre-analysis: inject planning guidance for complex prompts
