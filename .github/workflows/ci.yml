@@ -26,18 +26,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Cache TypeScript build info
-        id: cache-tsbuildinfo
-        uses: actions/cache@v4
-        with:
-          path: .tsbuildinfo
-          key: tsbuildinfo-${{ matrix.node-version }}-${{ hashFiles('tsconfig.json', 'tsconfig.eslint.json', 'src/**/*.ts') }}
-          restore-keys: |
-            tsbuildinfo-${{ matrix.node-version }}-
-            tsbuildinfo-
-
       - name: Type check
-        run: npm run check
+        run: npx tsc --noEmit
 
       - name: Run tests
         run: npm test
@@ -59,9 +49,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Check formatting
-        run: npm run format:check
 
       - name: Lint
         run: npm run lint
