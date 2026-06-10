@@ -253,10 +253,10 @@ export class CliUI {
     this.clearBatch();
     this.spinner.stop();
     if (this.streamBuf) {
-      // Stream deltas already displayed the content character-by-character.
-      // Just flush the buffer with a newline — don't re-render as markdown.
+      // Streaming was in progress — text already shown via showAgentDelta
       process.stdout.write('\n');
       this.streamBuf = '';
+      this.spinner.stop();
       return;
     }
     // No streaming happened — render as markdown (non-streaming response)

@@ -3,3 +3,9 @@ dist/
 *.tsbuildinfo
 .env
 .env.local
+claude-code-src/
+.reasonix/
+*.log
+coverage/
+.DS_Store
+Thumbs.db

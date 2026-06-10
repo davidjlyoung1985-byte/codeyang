@@ -7,10 +7,13 @@ import { definitions as codeDefs } from './code.def.js';
 import { definitions as networkDefs } from './network.def.js';
 import { definitions as memoryDefs } from './memory.def.js';
 import { definitions as imageDefs } from './image.def.js';
-import { definitions as mathDefs } from './math.def.js';
 import { definitions as searchDefs } from './search.def.js';
-import { definitions as githubDefs } from './github.def.js';
-import { refactorToolDefinitions } from './refactor.def.js';
+import { definitions as shellDefs } from './shell.def.js';
+import { definitions as searchWebDefs } from './search-web.def.js';
+import { definitions as planDefs } from './plan.def.js';
+import { definitions as agentDefs } from './agent.def.js';
+import { definitions as queryDefs } from './query.def.js';
+import { definitions as taskDefs } from './task.def.js';
 
 /** All built-in tool definitions organized by category. */
 export const builtinDefinitions: ToolDefinition[] = [
@@ -23,8 +26,12 @@ export const builtinDefinitions: ToolDefinition[] = [
   ...memoryDefs,
   ...imageDefs,
   ...searchDefs,
-  ...githubDefs,
-  ...refactorToolDefinitions,
+  ...shellDefs,
+  ...searchWebDefs,
+  ...planDefs,
+  ...agentDefs,
+  ...queryDefs,
+  ...taskDefs,
 ];
 
 /** Math tool definitions (registered dynamically via registerMathTools). */

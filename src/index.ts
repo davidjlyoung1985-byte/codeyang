@@ -27,8 +27,8 @@ import { editHistory } from './utils/editHistory.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
-import { checkNodeVersion } from './utils/nodeVersionCheck.js';
 import { VERSION } from './version.js';
+
 
 async function promptForApiKey(): Promise<string> {
   return new Promise((resolve) => {
@@ -143,6 +143,8 @@ Environment Variables:
 Interactive Commands:
   /clear           Reset the conversation
   /sessions        List saved sessions
+  /tasks           List tasks
+  /tasks --search <keyword>  Search tasks
   /tools           List all available tools
   /stats           Show tool usage statistics for this session
   /model           Show current model
@@ -357,6 +359,97 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       return;
     }
 
+    if (lower === '/tasks') {
+      const { listTasks } = await import('./utils/taskStore.js');
+      const tasks = await listTasks();
+      if (tasks.length === 0) {
+        console.log('No tasks. Create one with TaskCreate tool.');
+      } else {
+        console.log(`  ${tasks.length} task(s):`);
+        for (const t of tasks) {
+          const icon = t.status === 'completed' ? '✓' : t.status === 'in_progress' ? '►' : '○';
+          console.log(`  ${icon} ${t.id.slice(0, 16)}  ${t.title.slice(0, 60)}  [${t.status}]`);
+        }
+      }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/rewind') {
+      const ok = agent.restoreCheckpoint();
+      if (ok) {
+        console.log('  Rewound to previous checkpoint.');
+      } else {
+        console.log('  No checkpoints available.');
+      }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/diff') {
+      const { executeGitDiff } = await import('./tools/GitTool.js');
+      const result = await executeGitDiff(process.cwd(), line.includes('--staged'), undefined);
+      console.log(`\n${result}`);
+      ui.promptUser();
+      return;
+    }
+
+    if (lower.startsWith('/commit')) {
+      const msg = line.slice(8).trim();
+      if (!msg) {
+        console.log('  Usage: /commit <message>');
+      } else {
+        const { executeGitCommit } = await import('./tools/GitTool.js');
+        const result = await executeGitCommit(msg, process.cwd(), true);
+        console.log(`\n${result}`);
+      }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/branch') {
+      const { executeGitBranch } = await import('./tools/GitTool.js');
+      const result = await executeGitBranch(process.cwd(), false);
+      console.log(`\n${result}`);
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/tag') {
+      const idx = agent.saveCheckpoint();
+      console.log(`  Checkpoint ${idx} saved. Use /rewind to return here.`);
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/ctx_viz' || lower === '/context') {
+      const usage = agent.getTokenUsage();
+      const totalTokens = usage.inputTokens + usage.outputTokens;
+      const maxTokens = config.maxTokens;
+      const pct = Math.round((totalTokens / maxTokens) * 100);
+      const barLen = 30;
+      const filled = Math.round((pct / 100) * barLen);
+      const bar = '█'.repeat(filled) + '░'.repeat(Math.max(0, barLen - filled));
+      console.log(`  Context: ${bar} ${pct}%`);
+      console.log(`  Used: ${totalTokens.toLocaleString()} / ${maxTokens.toLocaleString()} tokens`);
+      console.log(`  Messages in history: ${agent.exportMessages().length}`);
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/plan') {
+      const { isPlanMode, setPlanMode } = await import('./tools/registry.js');
+      if (isPlanMode()) {
+        setPlanMode(false);
+        console.log('  Planning mode deactivated.');
+      } else {
+        console.log('  Enter planning mode: the agent will plan before executing.');
+        console.log('  Use EnterPlanMode tool in conversation, or /plan again to exit.');
+      }
+      ui.promptUser();
+      return;
+    }
+
     if (lower === '/sessions') {
       const sessions = await searchSessions();
       if (sessions.length === 0) {
@@ -493,20 +586,7 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
 
     // Command suggestion for unknown /commands
     if (lower.startsWith('/')) {
-      const validCommands = [
-        '/clear',
-        '/sessions',
-        '/tools',
-        '/stats',
-        '/model',
-        '/mcp',
-        '/config',
-        '/reload',
-        '/undo',
-        '/redo',
-        '/exit',
-        '/quit',
-      ];
+      const validCommands = ['/clear', '/sessions', '/tasks', '/tools', '/model', '/mcp', '/stats', '/exit', '/quit'];
       if (!validCommands.includes(lower)) {
         const suggestions = validCommands.filter((v) => v.startsWith(lower) || v.includes(lower.slice(1)));
         if (suggestions.length > 0) {
