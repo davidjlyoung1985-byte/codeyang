@@ -265,8 +265,9 @@ export class Agent {
         }
         this.lastAssistantText = assistantText;
 
-        // Display only after passing the repetition check
-        this.cbs.onAgentText?.(assistantText);
+        // Text was already streamed via onAgentDelta deltas — skip onAgentText
+        // to avoid duplicate output. Only fire for non-streamed responses.
+        // this.cbs.onAgentText?.(assistantText); // removed: causes double output
       }
 
       if (toolCalls.length === 0) {
