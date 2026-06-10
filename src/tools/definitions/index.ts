@@ -13,6 +13,7 @@ import { definitions as shellDefs } from './shell.def.js';
 import { definitions as searchWebDefs } from './search-web.def.js';
 import { definitions as planDefs } from './plan.def.js';
 import { definitions as agentDefs } from './agent.def.js';
+import { definitions as queryDefs } from './query.def.js';
 import { definitions as taskDefs } from './task.def.js';
 
 /** All built-in tool definitions organized by category. */
@@ -30,6 +31,7 @@ export const builtinDefinitions: ToolDefinition[] = [
   ...searchWebDefs,
   ...planDefs,
   ...agentDefs,
+  ...queryDefs,
   ...taskDefs,
 ];
 
