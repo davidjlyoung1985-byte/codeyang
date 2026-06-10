@@ -7,8 +7,8 @@ export async function executeTaskList(args: {
   search?: string;
 }): Promise<string> {
   const tasks = await listTasks({
-    status: args.status as any,
-    priority: args.priority as any,
+    status: args.status as 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled' | undefined,
+    priority: args.priority as 'low' | 'medium' | 'high' | 'critical' | undefined,
     tags: args.tags ? args.tags.split(',').map((s) => s.trim()) : undefined,
     search: args.search,
   });

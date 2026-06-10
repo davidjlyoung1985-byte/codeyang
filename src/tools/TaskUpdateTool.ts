@@ -9,7 +9,7 @@ export async function executeTaskUpdate(args: {
   progress?: number;
   output?: string;
 }): Promise<string> {
-  const updates: Record<string, any> = {};
+  const updates: Record<string, string | number | undefined> = {};
   if (args.title !== undefined) updates.title = args.title;
   if (args.description !== undefined) updates.description = args.description;
   if (args.status !== undefined) updates.status = args.status;
@@ -17,7 +17,7 @@ export async function executeTaskUpdate(args: {
   if (args.progress !== undefined) updates.progress = args.progress;
   if (args.output !== undefined) updates.output = args.output;
 
-  const task = await updateTask(args.id, updates as any);
+  const task = await updateTask(args.id, updates);
   if (!task) return `Task not found: ${args.id}`;
 
   return `Updated task: ${args.id}\nStatus: ${task.status}  |  Progress: ${task.progress}%`;

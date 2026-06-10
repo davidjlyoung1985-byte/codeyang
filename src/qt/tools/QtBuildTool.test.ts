@@ -13,7 +13,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(tempDir, { recursive: true, force: true });
+  try { await rm(tempDir, { recursive: true, force: true }); } catch {}
+  // Retry once on Windows (EBUSY from anti-virus indexing temp dirs)
+  try { await rm(tempDir, { recursive: true, force: true }); } catch {}
 });
 
 async function createFile(name: string, content: string): Promise<string> {

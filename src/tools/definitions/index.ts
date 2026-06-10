@@ -7,7 +7,6 @@ import { definitions as codeDefs } from './code.def.js';
 import { definitions as networkDefs } from './network.def.js';
 import { definitions as memoryDefs } from './memory.def.js';
 import { definitions as imageDefs } from './image.def.js';
-import { definitions as mathDefs } from './math.def.js';
 import { definitions as searchDefs } from './search.def.js';
 import { definitions as shellDefs } from './shell.def.js';
 import { definitions as searchWebDefs } from './search-web.def.js';

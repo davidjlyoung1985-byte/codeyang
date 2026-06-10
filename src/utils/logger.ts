@@ -1,12 +1,5 @@
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-const PREFIXES: Record<LogLevel, string> = {
-  debug: '🔍',
-  info: 'ℹ️',
-  warn: '⚠️',
-  error: '❌',
-};
-
 let currentLevel: LogLevel = process.env['CODEX_DEBUG'] ? 'debug' : 'info';
 
 export const logger = {

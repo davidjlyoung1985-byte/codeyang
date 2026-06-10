@@ -13,13 +13,6 @@ import { join, relative, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { execa } from 'execa';
 
-interface IndexEntry {
-  path: string;
-  type: 'file' | 'dir';
-  size: number;
-  mtimeMs: number;
-}
-
 interface SymbolEntry {
   name: string;
   kind: 'function' | 'class' | 'interface' | 'type' | 'method' | 'variable';
@@ -38,11 +31,10 @@ function cacheKey(root: string, suffix: string): string {
   return join(CACHE_DIR, `${safe}_${suffix}.json`);
 }
 
-function isCacheValid(cachePath: string, root: string): boolean {
+function isCacheValid(cachePath: string): boolean {
   try {
     const cacheStat = statSync(cachePath);
-    const rootStat = statSync(root);
-    // Cache valid for 60 seconds after last project modification
+    // Cache valid for 60 seconds after last access
     return Date.now() - cacheStat.mtimeMs < 60_000;
   } catch {
     return false;
@@ -56,7 +48,7 @@ export async function listFiles(root: string, pattern?: string): Promise<string[
   await ensureCache();
   const cachePath = cacheKey(root, 'files');
 
-  if (isCacheValid(cachePath, root)) {
+  if (isCacheValid(cachePath)) {
     const cached = JSON.parse(await readFile(cachePath, 'utf-8')) as string[];
     if (pattern) return cached.filter((f) => f.includes(pattern));
     return cached;
@@ -98,7 +90,7 @@ async function walkDir(dir: string): Promise<string[]> {
       if (entry.isDirectory()) {
         await walk(full);
       } else {
-        results.push(relative(root, full));
+        results.push(relative(dir, full));
       }
     }
   }
@@ -153,8 +145,6 @@ export async function extractSymbols(root: string, filePath: string): Promise<Sy
   const ifaceRe = /(?:export\s+)?interface\s+(\w+)/g;
   // Type declarations
   const typeRe = /(?:export\s+)?type\s+(\w+)\s*=/g;
-  // Method declarations (inside classes)
-  const methodRe = /(?:async\s+)?(\w+)\s*\([^)]*\)\s*\{/g;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];

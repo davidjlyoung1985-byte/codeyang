@@ -27,7 +27,14 @@ export const definitions: ToolDefinition[] = [
       },
       required: ['title'],
     },
-    execute: async (args) => executeTaskCreate(args as any),
+    execute: async (args) => {
+      const title = String(args['title'] ?? '');
+      const description = args['description'] as string | undefined;
+      const priority = args['priority'] as 'low' | 'medium' | 'high' | 'critical' | undefined;
+      const tags = typeof args['tags'] === 'string' ? (args['tags'] as string).split(',').map((s: string) => s.trim()).filter(Boolean) : undefined;
+      const dependencies = typeof args['dependencies'] === 'string' ? (args['dependencies'] as string).split(',').map((s: string) => s.trim()).filter(Boolean) : undefined;
+      return executeTaskCreate({ title, description, priority, tags, dependencies });
+    },
   },
   {
     name: 'TaskGet',
@@ -67,7 +74,16 @@ export const definitions: ToolDefinition[] = [
       },
       required: ['id'],
     },
-    execute: async (args) => executeTaskUpdate(args as any),
+    execute: async (args) => {
+      const id = String(args['id'] ?? '');
+      const status = args['status'] as 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled' | undefined;
+      const priority = args['priority'] as 'low' | 'medium' | 'high' | 'critical' | undefined;
+      const title = args['title'] as string | undefined;
+      const description = args['description'] as string | undefined;
+      const progress = typeof args['progress'] === 'number' ? args['progress'] : undefined;
+      const output = args['output'] as string | undefined;
+      return executeTaskUpdate({ id, status, priority, title, description, progress, output });
+    },
   },
   {
     name: 'TaskList',
@@ -92,7 +108,13 @@ export const definitions: ToolDefinition[] = [
       },
       required: [],
     },
-    execute: async (args) => executeTaskList(args as any),
+    execute: async (args) => {
+      const status = args['status'] as 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled' | undefined;
+      const priority = args['priority'] as 'low' | 'medium' | 'high' | 'critical' | undefined;
+      const tags = args['tags'] as string | undefined;
+      const search = args['search'] as string | undefined;
+      return executeTaskList({ status, priority, tags, search });
+    },
   },
   {
     name: 'TaskStop',

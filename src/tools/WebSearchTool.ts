@@ -34,7 +34,7 @@ async function searchSearXNG(query: string, topK: number): Promise<SearchResult[
     params: { q: query, format: 'json', language: 'zh-CN', number_of_results: topK },
     timeout: 10000,
   });
-  return (resp.data.results || []).slice(0, topK).map((r: any) => ({
+  return (resp.data.results || []).slice(0, topK).map((r: { title?: string; url?: string; content?: string; snippet?: string }) => ({
     title: r.title || '',
     url: r.url || '',
     snippet: r.content || r.snippet || '',
@@ -47,7 +47,7 @@ async function searchSerpAPI(query: string, topK: number): Promise<SearchResult[
     params: { q: query, api_key: cfg.apiKey, engine: 'google', num: topK },
     timeout: 10000,
   });
-  return (resp.data.organic_results || []).slice(0, topK).map((r: any) => ({
+  return (resp.data.organic_results || []).slice(0, topK).map((r: { title?: string; link?: string; snippet?: string }) => ({
     title: r.title || '',
     url: r.link || '',
     snippet: r.snippet || '',
@@ -61,7 +61,7 @@ async function searchBing(query: string, topK: number): Promise<SearchResult[]> 
     params: { q: query, count: topK, mkt: 'zh-CN' },
     timeout: 10000,
   });
-  return (resp.data.webPages?.value || []).slice(0, topK).map((r: any) => ({
+  return (resp.data.webPages?.value || []).slice(0, topK).map((r: { name?: string; url?: string; snippet?: string }) => ({
     title: r.name || '',
     url: r.url || '',
     snippet: r.snippet || '',

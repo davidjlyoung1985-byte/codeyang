@@ -1,4 +1,6 @@
-﻿export async function executeWebFetch(url: string, format?: string): Promise<string> {
+﻿import { VERSION } from '../version.js';
+
+export async function executeWebFetch(url: string, format?: string): Promise<string> {
   if (!url || typeof url !== 'string') {
     throw new Error('URL is required');
   }
@@ -23,7 +25,7 @@
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'CodeYang/0.4.0 (AI Coding Agent)',
+        'User-Agent': `CodeYang/${VERSION} (AI Coding Agent)`,
         Accept: outputFormat === 'html' ? 'text/html' : 'text/plain, text/html',
       },
     });

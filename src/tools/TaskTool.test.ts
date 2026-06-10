@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { LLMClient } from '../agent/LLMClient.js';
 
 // ── Mocks ────────────────────────────────────
 // vi.mock is hoisted to top, so mock values must use vi.hoisted()
@@ -29,6 +30,7 @@ import { executeTask } from './TaskTool.js';
 // ── Tests ────────────────────────────────────
 describe('TaskTool', () => {
   const mockClient = { stream: vi.fn() };
+  const mockClientTyped = mockClient as unknown as LLMClient;
   const model = 'test-model';
   const maxTokens = 4096;
 
@@ -39,7 +41,7 @@ describe('TaskTool', () => {
   it('executes a single subtask and returns text response', async () => {
     mockConsumeStream.mockResolvedValueOnce({ text: 'Here is the result.', toolCalls: [] });
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'test task', ['do something'], '/tmp');
+    const result = await executeTask(mockClientTyped, model, maxTokens, 'test task', ['do something'], '/tmp');
 
     expect(result).toContain('Here is the result.');
     expect(mockConsumeStream).toHaveBeenCalledTimes(1);
@@ -53,7 +55,7 @@ describe('TaskTool', () => {
       })
       .mockResolvedValueOnce({ text: 'Done.', toolCalls: [] });
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'run bash', ['run a command'], '/tmp');
+    const result = await executeTask(mockClientTyped, model, maxTokens, 'run bash', ['run a command'], '/tmp');
 
     expect(result).toContain('Done.');
     expect(mockConsumeStream).toHaveBeenCalledTimes(2);
@@ -67,7 +69,7 @@ describe('TaskTool', () => {
       })
       .mockResolvedValueOnce({ text: 'Finished.', toolCalls: [] });
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'ask question', ['ask me'], '/tmp');
+    const result = await executeTask(mockClientTyped, model, maxTokens, 'ask question', ['ask me'], '/tmp');
 
     // Question is blocked internally as tool_result; agent gets "Finished" on next turn
     expect(result).toContain('Finished.');
@@ -83,7 +85,7 @@ describe('TaskTool', () => {
       })
       .mockResolvedValueOnce({ text: 'Done with error handling.', toolCalls: [] });
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'unknown tool', ['use it'], '/tmp');
+    const result = await executeTask(mockClientTyped, model, maxTokens, 'unknown tool', ['use it'], '/tmp');
 
     // Unknown tool is handled as error tool_result; agent continues
     expect(result).toContain('Done with error handling.');
@@ -93,7 +95,7 @@ describe('TaskTool', () => {
   it('handles consumeStream errors gracefully', async () => {
     mockConsumeStream.mockRejectedValueOnce(new Error('API error'));
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'error case', ['do it'], '/tmp');
+    const result = await executeTask(mockClientTyped, model, maxTokens, 'error case', ['do it'], '/tmp');
 
     expect(result).toContain('API error');
   });
@@ -101,7 +103,7 @@ describe('TaskTool', () => {
   it('handles multiple parallel subtasks', async () => {
     mockConsumeStream.mockResolvedValue({ text: 'Subtask result.', toolCalls: [] });
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'multi task', ['sub1', 'sub2'], '/tmp');
+    const result = await executeTask(mockClientTyped, model, maxTokens, 'multi task', ['sub1', 'sub2'], '/tmp');
 
     expect(result).toContain('sub1');
     expect(result).toContain('sub2');
@@ -117,7 +119,7 @@ describe('TaskTool', () => {
       });
     }
 
-    const result = await executeTask(mockClient as any, model, maxTokens, 'infinite loop', ['keep going'], '/tmp');
+    const result = await executeTask(mockClientTyped, model, maxTokens, 'infinite loop', ['keep going'], '/tmp');
 
     expect(result).toBeTruthy();
     expect(mockConsumeStream.mock.calls.length).toBeLessThanOrEqual(10);

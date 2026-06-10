@@ -13,7 +13,7 @@ export async function executeTaskCreate(args: {
   const task = await createTask({
     title: args.title,
     description: args.description,
-    priority: (args.priority as any) || 'medium',
+    priority: args.priority as 'low' | 'medium' | 'high' | 'critical' | undefined,
     tags,
     dependencies: deps,
   });

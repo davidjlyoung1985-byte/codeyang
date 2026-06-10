@@ -2,7 +2,7 @@
  * Task V2 — persistent task store with CRUD operations.
  * Tasks stored as individual JSON files in ~/.codeyang/tasks/.
  */
-import { readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import crypto from 'node:crypto';

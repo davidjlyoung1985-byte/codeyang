@@ -21,7 +21,7 @@ export const definitions: ToolDefinition[] = [
         url: { type: 'string', description: 'Target URL' },
         method: {
           type: 'string',
-          enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+          enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'],
           description: 'HTTP method (default: GET)',
         },
         headers: { type: 'object', description: 'Request headers (optional)' },
@@ -90,7 +90,7 @@ export const definitions: ToolDefinition[] = [
         url: { type: 'string', description: 'API endpoint URL' },
         method: {
           type: 'string',
-          enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+          enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'],
           description: 'HTTP method (default: GET)',
         },
         body: { type: 'object', description: 'JSON request body (optional)' },
