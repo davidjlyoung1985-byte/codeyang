@@ -10,6 +10,7 @@ import { executeWebFetch } from '../WebFetchTool.js';
 import { executeTask } from '../TaskTool.js';
 import { getCurrentContext } from '../registry.js';
 import { requiredString, optionalString, optionalNumber } from '../validate.js';
+import { invalidParam } from '../errors.js';
 
 export const definitions: ToolDefinition[] = [
   {
@@ -161,7 +162,7 @@ export const definitions: ToolDefinition[] = [
     execute: async (args) => {
       const todos = (args['todos'] as Array<Record<string, unknown>>) ?? [];
       if (todos.length === 0) {
-        throw new Error('Missing required parameter: todos');
+        throw new Error(invalidParam('todos', 'a non-empty array'));
       }
       return executeTodoWrite(
         todos.map((t) => ({

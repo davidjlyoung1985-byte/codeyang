@@ -192,17 +192,17 @@ describe('executeGrep', () => {
 
 describe('executeWebFetch', () => {
   it('throws on empty URL', async () => {
-    await expect(executeWebFetch('')).rejects.toThrow('URL is required');
+    await expect(executeWebFetch('')).rejects.toThrow('[Validation] "url" expected a non-empty URL string');
   });
 
   it('throws on non-http/https protocol', async () => {
-    await expect(executeWebFetch('ftp://example.com/file')).rejects.toThrow(/Unsupported protocol|Invalid URL/);
-    await expect(executeWebFetch('file:///etc/passwd')).rejects.toThrow(/Unsupported protocol|Invalid URL/);
+    await expect(executeWebFetch('ftp://example.com/file')).rejects.toThrow('[Network]');
+    await expect(executeWebFetch('file:///etc/passwd')).rejects.toThrow('[Network]');
   });
 
   it('throws on invalid URL', async () => {
-    await expect(executeWebFetch('not-a-url')).rejects.toThrow('Invalid URL');
-    await expect(executeWebFetch('http:')).rejects.toThrow('Invalid URL');
+    await expect(executeWebFetch('not-a-url')).rejects.toThrow('[Network]');
+    await expect(executeWebFetch('http:')).rejects.toThrow('[Network]');
   });
 
   it('accepts valid http and https URLs', async () => {

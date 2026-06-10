@@ -54,7 +54,7 @@ function renderInlineMarkdown(text: string): string {
   out = out.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_m: string, t: string) => c.italic(t));
   out = out.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_m: string, text: string, url: string) => `${text} ${c.dim(`(${url})`)}`
+    (_m: string, text: string, url: string) => `${text} ${c.dim(`(${url})`)}`,
   );
   return out;
 }
@@ -114,14 +114,9 @@ export class CliUI {
         c.bold(c.cyan('  CodeYang')) +
         c.dim(' v' + VERSION) +
         ' '.repeat(w - 20 - VERSION.length) +
-        c.cyan('│')
+        c.cyan('│'),
     );
-    console.log(
-      c.cyan('  │') +
-        c.dim('  AI Coding Agent with 64+ Tools') +
-        ' '.repeat(w - 38) +
-        c.cyan('│')
-    );
+    console.log(c.cyan('  │') + c.dim('  AI Coding Agent with 64+ Tools') + ' '.repeat(w - 38) + c.cyan('│'));
     console.log(c.cyan('  ╰' + '─'.repeat(w - 4) + '╯'));
     console.log('');
     console.log(c.dim('  💡 Type your request or /help for commands'));
@@ -130,9 +125,7 @@ export class CliUI {
 
   showSessionInfo(sessionId: string, model: string) {
     console.log('');
-    console.log(
-      `  ${c.dim('Session:')} ${c.cyan(sessionId.slice(0, 8))}  ${c.dim('Model:')} ${c.green(model)}`
-    );
+    console.log(`  ${c.dim('Session:')} ${c.cyan(sessionId.slice(0, 8))}  ${c.dim('Model:')} ${c.green(model)}`);
     hr();
   }
 

@@ -149,6 +149,9 @@ export class CliUI {
   private onInput?: (line: string) => void;
   private spinner = new Spinner();
   private streamBuf = '';
+  private streamBatch: string[] = [];
+  private batchTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly BATCH_DELAY_MS = 50;
   private turnCount = 0;
   private isFirstResponse = true;
   private toolStartTimes = new Map<string, number>();
@@ -189,19 +192,15 @@ export class CliUI {
         c.dim(' v' + VERSION) +
         c.dim(' — AI Coding Agent') +
         ' '.repeat(w - 36 - VERSION.length) +
-        c.cyan('│')
+        c.cyan('│'),
     );
     console.log(
-      c.cyan('  │') +
-        '  ' +
-        c.dim('💡 64+ Tools | Qt Support | Code Refactoring') +
-        ' '.repeat(w - 52) +
-        c.cyan('│')
+      c.cyan('  │') + '  ' + c.dim('💡 64+ Tools | Qt Support | Code Refactoring') + ' '.repeat(w - 52) + c.cyan('│'),
     );
     console.log(c.cyan('  ╰' + '─'.repeat(w - 4) + '╯'));
     console.log('');
     console.log(
-      `  ${c.dim('Commands:')} ${c.cyan('/clear')} ${c.cyan('/sessions')} ${c.cyan('/model')} ${c.cyan('/mcp')} ${c.cyan('/help')}  ${c.dim('·')}  ${c.dim('Ctrl+C to exit')}`
+      `  ${c.dim('Commands:')} ${c.cyan('/clear')} ${c.cyan('/sessions')} ${c.cyan('/stats')} ${c.cyan('/model')} ${c.cyan('/mcp')}  ${c.dim('·')}  ${c.dim('Ctrl+C to exit')}`,
     );
     console.log('');
     hr('ready');
@@ -244,12 +243,14 @@ export class CliUI {
   }
 
   showAgentDone() {
+    this.clearBatch();
     this.streamBuf = '';
     process.stdout.write('\n');
     this.isFirstResponse = true;
   }
 
   showAgentText(text: string) {
+    this.clearBatch();
     this.spinner.stop();
     if (this.streamBuf) {
       // Stream deltas already displayed the content character-by-character.
@@ -271,8 +272,30 @@ export class CliUI {
       }
       this.isFirstResponse = false;
     }
-    process.stdout.write(text.replace(/\n/g, '\n  '));
-    this.streamBuf += text;
+
+    // Batch tokens for smoother display
+    this.streamBatch.push(text);
+    if (!this.batchTimer) {
+      this.batchTimer = setTimeout(() => this.flushBatch(), this.BATCH_DELAY_MS);
+    }
+  }
+
+  private flushBatch() {
+    this.batchTimer = null;
+    const batch = this.streamBatch.join('');
+    this.streamBatch = [];
+    process.stdout.write(batch.replace(/\n/g, '\n  '));
+    this.streamBuf += batch;
+  }
+
+  private clearBatch() {
+    if (this.batchTimer) {
+      clearTimeout(this.batchTimer);
+      this.batchTimer = null;
+    }
+    if (this.streamBatch.length > 0) {
+      this.flushBatch();
+    }
   }
 
   startSpinner(label = 'thinking') {
@@ -286,6 +309,7 @@ export class CliUI {
   // ─── Tools ────────────────────────────────────────────────────────
 
   showToolCall(name: string, args: Record<string, unknown>) {
+    this.clearBatch();
     this.spinner.stop();
     this.toolStartTimes.set(name, Date.now());
     const argStr = Object.entries(args)
@@ -343,6 +367,7 @@ export class CliUI {
   // ─── Error ────────────────────────────────────────────────────────
 
   showError(err: string) {
+    this.clearBatch();
     this.spinner.stop();
     console.log(`\n  ${c.red('✗')} ${c.red(err)}`);
   }

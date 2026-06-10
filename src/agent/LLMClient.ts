@@ -205,9 +205,11 @@ class AnthropicClient implements LLMClient {
 
 class OpenAICompatClient implements LLMClient {
   private client: OpenAI;
+  private baseURL: string;
 
   constructor(apiKey: string, baseURL: string) {
     this.client = new OpenAI({ apiKey, baseURL });
+    this.baseURL = baseURL;
   }
 
   async *stream(params: {
@@ -273,7 +275,7 @@ class OpenAICompatClient implements LLMClient {
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes('ENOTFOUND') || msg.includes('ECONNREFUSED') || msg.includes('ETIMEDOUT')) {
-          throw new Error(`Cannot reach API at ${baseURL} — check your network and BASE_URL setting. (${msg})`);
+          throw new Error(`Cannot reach API at ${this.baseURL} — check your network and BASE_URL setting. (${msg})`);
         }
         if (msg.includes('401') || msg.includes('403')) {
           throw new Error(`API authentication failed — check your API key. (${msg})`);

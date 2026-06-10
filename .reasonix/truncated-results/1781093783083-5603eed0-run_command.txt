@@ -1,0 +1,201 @@
+$ npm test 2>&1
+[exit 1]
+
+> codeyang@0.7.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.7 [39m[90mE:/Qt/ai-code-agent[39m
+
+ [32m✓[39m src/qt/tools/QtProFileTool.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 239[2mms[22m[39m
+ [32m✓[39m src/tools/GlobTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 396[2mms[22m[39m
+ [31m❯[39m src/tools/index.test.ts [2m([22m[2m26 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[33m 338[2mms[22m[39m
+       [32m✓[39m matches simple filename[32m 7[2mms[22m[39m
+       [32m✓[39m does not match different filename[32m 1[2mms[22m[39m
+       [32m✓[39m does not match substring unsless pattern says so[32m 1[2mms[22m[39m
+       [32m✓[39m matches any characters in the same directory level[32m 1[2mms[22m[39m
+       [32m✓[39m does not match across directory boundaries[32m 1[2mms[22m[39m
+       [32m✓[39m matches prefix with star[32m 1[2mms[22m[39m
+       [32m✓[39m matches across directories[32m 1[2mms[22m[39m
+       [32m✓[39m matches empty directory path[32m 1[2mms[22m[39m
+       [32m✓[39m respects prefix directory[32m 1[2mms[22m[39m
+       [32m✓[39m matches exactly one non-slash character[32m 1[2mms[22m[39m
+       [32m✓[39m does not match slash[32m 1[2mms[22m[39m
+       [32m✓[39m matches any char in the class[32m 1[2mms[22m[39m
+       [32m✓[39m respects negation [!...][32m 1[2mms[22m[39m
+       [32m✓[39m handles dots as literal[32m 1[2mms[22m[39m
+       [32m✓[39m handles plus signs as literal[32m 1[2mms[22m[39m
+     [32m✓[39m rejects empty array[32m 20[2mms[22m[39m
+     [32m✓[39m rejects non-array[32m 1[2mms[22m[39m
+[31m     [31m×[31m creates and tracks todos[39m[32m 33[2mms[22m[39m
+[31m     [31m×[31m normalizes invalid status/priority[39m[32m 15[2mms[22m[39m
+[31m     [31m×[31m merges updates by content[39m[32m 13[2mms[22m[39m
+[31m     [31m×[31m preserves in_progress items not in update[39m[32m 20[2mms[22m[39m
+     [32m✓[39m replaces a single occurrence[32m 53[2mms[22m[39m
+     [32m✓[39m throws on multiple matches without replaceAll[32m 91[2mms[22m[39m
+     [32m✓[39m replaces all with replaceAll=true[32m 47[2mms[22m[39m
+     [32m✓[39m throws when oldString not found[32m 13[2mms[22m[39m
+     [32m✓[39m throws on nonexistent file[32m 4[2mms[22m[39m
+ [32m✓[39m src/qt/tools/QtMigrationTool.test.ts [2m([22m[2m39 tests[22m[2m)[22m[33m 648[2mms[22m[39m
+ [32m✓[39m src/tools/NetworkTool.test.ts [2m([22m[2m21 tests[22m[2m)[22m[33m 371[2mms[22m[39m
+ [32m✓[39m src/tools/ImageTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 405[2mms[22m[39m
+ [32m✓[39m src/qt/tools/QtQmlTool.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 683[2mms[22m[39m
+ [32m✓[39m src/agent/Agent.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 196[2mms[22m[39m
+ [32m✓[39m src/utils/dotenv.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 71[2mms[22m[39m
+ [32m✓[39m src/tools/FileSystemTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 911[2mms[22m[39m
+ [32m✓[39m src/qt/tools.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 1129[2mms[22m[39m
+ [32m✓[39m src/tools/DataTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 895[2mms[22m[39m
+ [32m✓[39m src/qt/index.test.ts [2m([22m[2m30 tests[22m[2m)[22m[33m 477[2mms[22m[39m
+ [32m✓[39m src/ui/CliUI.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+ [32m✓[39m src/tools/GlobTool.bench.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m src/tools/MemoryTool.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m src/math/index.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m src/utils/sessionStore.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 121[2mms[22m[39m
+ [32m✓[39m src/tools/SearchTool.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1990[2mms[22m[39m
+     [33m[2m✓[22m[39m finds files by content [33m 943[2mms[22m[39m
+     [33m[2m✓[22m[39m combined search returns name matches first [33m 409[2mms[22m[39m
+     [33m[2m✓[22m[39m respects includeGlob filter [33m 302[2mms[22m[39m
+ [32m✓[39m src/tools/CodeAnalysisTool.test.ts [2m([22m[2m19 tests[22m[2m)[22m[33m 650[2mms[22m[39m
+ [32m✓[39m src/tools/TaskTool.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [31m❯[39m src/utils/memoryStore.bench.ts [2m([22m[2m3 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 2970[2mms[22m[39m
+[31m     [31m×[31m listMemories under 100ms (50 memories)[39m[32m 149[2mms[22m[39m
+     [32m✓[39m searchMemories under 30ms[32m 3[2mms[22m[39m
+     [32m✓[39m searchMemories (partial substring) under 30ms[32m 1[2mms[22m[39m
+ [32m✓[39m src/utils/nodeVersionCheck.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+[90mstderr[2m | src/utils/nodeVersionCheck.test.ts[2m > [22m[2mcheckNodeVersion[2m > [22m[2mexits on Node < 18
+[22m[39m
+  ❌ Node.js v12.0.0 is not supported.
+  📋 CodeYang requires Node.js >= 18.0.0
+  🔄 Upgrade: https://nodejs.org/en/download/
+
+
+ [32m✓[39m src/agent/config.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/tools/registry.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m src/tools/tools.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 3265[2mms[22m[39m
+     [33m[2m✓[22m[39m finds matching lines in files (fallback grep) [33m 335[2mms[22m[39m
+     [33m[2m✓[22m[39m executes a simple echo command [33m 1065[2mms[22m[39m
+     [33m[2m✓[22m[39m returns exit code for failing commands [33m 545[2mms[22m[39m
+ [32m✓[39m src/tools/mcp.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/tools/RefactorTool.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 6771[2mms[22m[39m
+     [33m[2m✓[22m[39m should rename a variable [33m 2726[2mms[22m[39m
+     [33m[2m✓[22m[39m should rename a function [33m 1322[2mms[22m[39m
+     [33m[2m✓[22m[39m should inline a variable [33m 1162[2mms[22m[39m
+ [32m✓[39m src/qt/tools/QtBuildTool.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 8697[2mms[22m[39m
+       [33m[2m✓[22m[39m handles qmake not being installed gracefully [33m 3434[2mms[22m[39m
+       [33m[2m✓[22m[39m reports qmake build header [33m 1813[2mms[22m[39m
+       [33m[2m✓[22m[39m handles cmake not being installed gracefully [33m 584[2mms[22m[39m
+       [33m[2m✓[22m[39m reports cmake build header [33m 524[2mms[22m[39m
+       [33m[2m✓[22m[39m auto mode defaults to cmake [33m 488[2mms[22m[39m
+       [33m[2m✓[22m[39m accepts target parameter for cmake [33m 504[2mms[22m[39m
+       [33m[2m✓[22m[39m accepts empty target for qmake [33m 1342[2mms[22m[39m
+ [32m✓[39m src/tools/GitTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 22960[2mms[22m[39m
+       [33m[2m✓[22m[39m should show clean status for new repo [33m 1682[2mms[22m[39m
+       [33m[2m✓[22m[39m should show untracked files [33m 1489[2mms[22m[39m
+       [33m[2m✓[22m[39m should show modified files [33m 1257[2mms[22m[39m
+       [33m[2m✓[22m[39m should show short format [33m 622[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage files [33m 761[2mms[22m[39m
+       [33m[2m✓[22m[39m should fail with no files [33m 479[2mms[22m[39m
+       [33m[2m✓[22m[39m should create commit with staged files [33m 955[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage all and commit with addAll=true [33m 746[2mms[22m[39m
+       [33m[2m✓[22m[39m should fail with no staged changes [33m 578[2mms[22m[39m
+       [33m[2m✓[22m[39m should list branches [33m 874[2mms[22m[39m
+       [33m[2m✓[22m[39m should show multiple branches [33m 977[2mms[22m[39m
+       [33m[2m✓[22m[39m should create and switch to new branch [33m 966[2mms[22m[39m
+       [33m[2m✓[22m[39m should switch to existing branch [33m 989[2mms[22m[39m
+       [33m[2m✓[22m[39m should show commit history [33m 857[2mms[22m[39m
+       [33m[2m✓[22m[39m should limit commit count [33m 2195[2mms[22m[39m
+       [33m[2m✓[22m[39m should show oneline format [33m 859[2mms[22m[39m
+       [33m[2m✓[22m[39m should show no diff for clean repo [33m 506[2mms[22m[39m
+       [33m[2m✓[22m[39m should show unstaged changes [33m 849[2mms[22m[39m
+       [33m[2m✓[22m[39m should show staged changes [33m 1004[2mms[22m[39m
+       [33m[2m✓[22m[39m should unstage files [33m 786[2mms[22m[39m
+       [33m[2m✓[22m[39m should stash changes [33m 1132[2mms[22m[39m
+       [33m[2m✓[22m[39m should list stashes [33m 1389[2mms[22m[39m
+       [33m[2m✓[22m[39m should return current branch [33m 998[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 5 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/tools/index.test.ts[2m > [22mexecuteTodoWrite[2m > [22mcreates and tracks todos
+[31m[1mAssertionError[22m: expected 'Todos saved (3: 2 active, 1 done, 0 c…' to contain 'Task C'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- T[7mask C[27m[39m
+[31m+ T[7modos saved (3: 2 active, 1 done, 0 cancelled)[27m[39m
+[31m+[39m
+[31m+ Active:[39m
+[31m+   · Task A (high)[39m
+[31m+   → Task B (medium)[39m
+
+[36m [2m❯[22m src/tools/index.test.ts:[2m133:20[22m[39m
+    [90m131|[39m     ])[33m;[39m
+    [90m132|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Task A'[39m)[33m;[39m
+    [90m133|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Task B'[39m)[33m;[39m
+    [90m   |[39m                    [31m^[39m
+    [90m134|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Task C'[39m)[33m;[39m
+    [90m135|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'3: 2 active, 1 done, 0 cancelled'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/index.test.ts[2m > [22mexecuteTodoWrite[2m > [22mnormalizes invalid status/priority
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'status')[39m
+[36m [2m❯[22m src/tools/index.test.ts:[2m146:21[22m[39m
+    [90m144|[39m       { content: 'X', status: 'invalid' as TodoItem['status'], priorit…
+    [90m145|[39m     ])[33m;[39m
+    [90m146|[39m     [35mconst[39m todos [33m=[39m [35mawait[39m [34mgetTodos[39m()[33m;[39m
+    [90m   |[39m                     [31m^[39m
+    [90m147|[39m     [34mexpect[39m(todos[[34m0[39m][33m.[39mstatus)[33m.[39m[34mtoBe[39m([32m'pending'[39m)[33m;[39m
+    [90m148|[39m     [34mexpect[39m(todos[[34m0[39m][33m.[39mpriority)[33m.[39m[34mtoBe[39m([32m'medium'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/index.test.ts[2m > [22mexecuteTodoWrite[2m > [22mmerges updates by content
+[31m[1mAssertionError[22m: expected undefined to be +0 // Object.is equality[39m
+
+[32m- Expected:[39m
+0
+
+[31m+ Received:[39m
+undefined
+
+[36m [2m❯[22m src/tools/index.test.ts:[2m154:26[22m[39m
+    [90m152|[39m     await executeTodoWrite([{ content: 'Task', status: 'pending', prio…
+    [90m153|[39m     await executeTodoWrite([{ content: 'Task', status: 'completed', pr…
+    [90m154|[39m     [35mconst[39m todos [33m=[39m [35mawait[39m [34mgetTodos[39m()[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m155|[39m     [34mexpect[39m(todos[33m.[39mlength)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m156|[39m     [34mexpect[39m(todos[[34m0[39m][33m.[39mstatus)[33m.[39m[34mtoBe[39m([32m'completed'[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/index.test.ts[2m > [22mexecuteTodoWrite[2m > [22mpreserves in_progress items not in update
+[31m[1mTypeError[22m: todos.find is not a function[39m
+[36m [2m❯[22m src/tools/index.test.ts:[2m161:18[22m[39m
+    [90m159|[39m   [34mit[39m([32m'replaces items not in update'[39m[33m,[39m [35masync[39m () [33m=>[39m {
+    [90m160|[39m     await executeTodoWrite([{ content: 'Task 1', status: 'in_progress'…
+    [90m161|[39m     await executeTodoWrite([{ content: 'Task 2', status: 'pending', pr…
+    [90m   |[39m                  [31m^[39m
+    [90m162|[39m     [35mconst[39m todos [33m=[39m [35mawait[39m [34mgetTodos[39m()[33m;[39m
+    [90m163|[39m     [90m// Each write replaces the file — only Task 2 remains[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/utils/memoryStore.bench.ts[2m > [22mMemoryStore benchmarks[2m > [22mlistMemories under 100ms (50 memories)
+[31m[1mAssertionError[22m: expected 126 to be less than 100[39m
+[36m [2m❯[22m src/utils/memoryStore.bench.ts:[2m29:21[22m[39m
+    [90m 27|[39m     [35mconst[39m elapsed [33m=[39m [33mDate[39m[33m.[39m[34mnow[39m() [33m-[39m start[33m;[39m
+    [90m 28|[39m
+    [90m 29|[39m     [34mexpect[39m(elapsed)[33m.[39m[34mtoBeLessThan[39m([34m100[39m)[33m;[39m
+    [90m   |[39m                     [31m^[39m
+    [90m 30|[39m     [34mexpect[39m(result[33m.[39mlength)[33m.[39m[34mtoBeGreaterThanOrEqual[39m([33mTEST_COUNT[39m)[33m;[39m
+    [90m 31|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m28 passed[39m[22m[90m (30)[39m
+[2m      Tests [22m [1m[31m5 failed[39m[22m[2m | [22m[1m[32m487 passed[39m[22m[90m (492)[39m
+[2m   Start at [22m 20:15:57
+[2m   Duration [22m 25.03s[2m (transform 14.72s, setup 0ms, import 31.12s, tests 54.52s, environment 16ms)[22m
+

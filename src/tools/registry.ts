@@ -3,6 +3,8 @@ import type Anthropic from '@anthropic-ai/sdk';
 import type { McpManager } from '../mcp/McpManager.js';
 import type { LLMClient } from '../agent/LLMClient.js';
 import { builtinDefinitions } from './definitions/index.js';
+import { resolveAlias, fuzzyFindTools } from './aliases.js';
+import { validateParams } from './schema-validate.js';
 
 export interface ToolContext {
   anthropicClient: Anthropic | null;
@@ -18,8 +20,34 @@ const mcpTools: ToolDefinition[] = [];
 const qtTools: ToolDefinition[] = [];
 const mathTools: ToolDefinition[] = [];
 
+/**
+ * Wrap a tool's execute function with JSON Schema parameter validation.
+ * Validation errors are returned as a user-facing string so the LLM
+ * receives immediate feedback and can correct the call.
+ */
+function validatedExecute(
+  execute: (args: Record<string, unknown>) => Promise<string>,
+  schema: Record<string, unknown>,
+): (args: Record<string, unknown>) => Promise<string> {
+  return async (args) => {
+    const schemaErrors = validateParams(args, schema);
+    if (schemaErrors.length > 0) {
+      return schemaErrors.join('\n');
+    }
+    return execute(args);
+  };
+}
+
 /** Default built-in tools (all categories except math, which is dynamic). */
-export const tools: ToolDefinition[] = [...builtinDefinitions];
+export const tools: ToolDefinition[] = [...builtinDefinitions.map(wrapToolValidation)];
+
+/** Apply schema-validation wrapper to a single tool definition. */
+function wrapToolValidation(t: ToolDefinition): ToolDefinition {
+  return {
+    ...t,
+    execute: validatedExecute(t.execute, t.parameters),
+  };
+}
 
 /** Retrieve the current tool context (used by Task tool definition). */
 export function getCurrentContext(): ToolContext | null {
@@ -42,17 +70,19 @@ export async function refreshMcpTools(): Promise<void> {
 
   const discovered = await mcpManager.refreshTools();
   for (const t of discovered) {
+    const params = t.inputSchema as Record<string, unknown>;
+    const rawExecute = async (args: Record<string, unknown>) => {
+      if (!mcpManager) {
+        return 'MCP manager not available';
+      }
+      const result = await mcpManager.callTool(t.qualifiedName, args);
+      return result.isError ? `[MCP Error] ${result.output}` : result.output;
+    };
     mcpTools.push({
       name: t.qualifiedName,
       description: `[MCP:${t.serverName}] ${t.description}`,
-      parameters: t.inputSchema as Record<string, unknown>,
-      execute: async (args: Record<string, unknown>) => {
-        if (!mcpManager) {
-          return 'MCP manager not available';
-        }
-        const result = await mcpManager.callTool(t.qualifiedName, args);
-        return result.isError ? `[MCP Error] ${result.output}` : result.output;
-      },
+      parameters: params,
+      execute: validatedExecute(rawExecute, params),
     });
   }
 }
@@ -60,22 +90,37 @@ export async function refreshMcpTools(): Promise<void> {
 /** Register Qt-specific tools. Called when a Qt project is detected. */
 export function registerQtTools(toolDefs: ToolDefinition[]): void {
   qtTools.length = 0;
-  qtTools.push(...toolDefs);
+  qtTools.push(...toolDefs.map(wrapToolValidation));
 }
 
 /** Register math tools dynamically. Replaces any previously registered math tools. */
 export function registerMathTools(toolDefs: ToolDefinition[]): void {
   mathTools.length = 0;
-  mathTools.push(...toolDefs);
+  mathTools.push(...toolDefs.map(wrapToolValidation));
 }
 
 export function getTool(name: string): ToolDefinition | undefined {
-  return (
-    tools.find((t) => t.name === name) ??
-    mcpTools.find((t) => t.name === name) ??
-    qtTools.find((t) => t.name === name) ??
-    mathTools.find((t) => t.name === name)
-  );
+  const all = [...tools, ...mcpTools, ...qtTools, ...mathTools];
+  let found = all.find((t) => t.name === name);
+  if (!found) {
+    const canonical = resolveAlias(name);
+    if (canonical) found = all.find((t) => t.name === canonical);
+  }
+  return found;
+}
+
+/** Get all registered tool definitions (built-in + MCP + Qt + Math). */
+export function getAllTools(): ToolDefinition[] {
+  return [...tools, ...mcpTools, ...qtTools, ...mathTools];
+}
+
+/**
+ * Fuzzy-search tool names among all registered tools.
+ * Returns up to `max` matching names sorted by relevance.
+ */
+export function fuzzyFindToolNames(query: string, max = 10): string[] {
+  const names = getAllTools().map((t) => t.name);
+  return fuzzyFindTools(query, names).slice(0, max);
 }
 
 export function toolSchemas(): Array<{

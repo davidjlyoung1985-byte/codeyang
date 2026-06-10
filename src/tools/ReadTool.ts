@@ -1,5 +1,6 @@
 import { readFile, stat, readdir } from 'node:fs/promises';
 import { resolveSafePath } from './shared.js';
+import { fileNotFound } from './errors.js';
 
 export async function executeRead(filePath: string, offset?: number, limit?: number): Promise<string> {
   const resolved = resolveSafePath(filePath);
@@ -8,7 +9,7 @@ export async function executeRead(filePath: string, offset?: number, limit?: num
   try {
     stats = await stat(resolved);
   } catch {
-    throw new Error(`File or directory not found: ${filePath}`);
+    throw new Error(fileNotFound(filePath));
   }
 
   // Directory listing

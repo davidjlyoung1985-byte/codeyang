@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
 import { executeGrep } from './GrepTool.js';
-import { executeGlob } from './GlobTool.js';
+import { getProjectIndex } from '../utils/projectIndex.js';
 
 /**
  * Combined file name + content search.
@@ -25,22 +25,24 @@ export async function executeSearch(
 
   const results: Array<{ type: 'name' | 'content'; path: string; line?: number; snippet?: string }> = [];
 
-  // 1. File name search via glob
+  // 1. File name search via cached project index
   if (searchNames) {
     const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = caseSensitive ? new RegExp(escaped) : new RegExp(escaped, 'i');
     try {
-      // glob all files then filter by name
-      const allFiles = await executeGlob(includeGlob ?? '**/*', rootDir);
-      for (const filePath of allFiles.split('\n').filter(Boolean)) {
+      const idx = await getProjectIndex(rootDir);
+      for (const filePath of idx.files) {
+        // Quick path reject before calling .test()
+        if (!filePath.toLowerCase().includes(query.toLowerCase())) continue;
+
         const base = path.basename(filePath);
-        const re = caseSensitive ? new RegExp(escaped) : new RegExp(escaped, 'i');
         if (re.test(base)) {
           results.push({ type: 'name', path: filePath });
           if (results.length >= maxResults) break;
         }
       }
     } catch {
-      // ignore glob errors
+      // ignore index errors
     }
   }
 

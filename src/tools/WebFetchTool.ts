@@ -1,6 +1,8 @@
-﻿export async function executeWebFetch(url: string, format?: string): Promise<string> {
+﻿import { netError, invalidParam, toolError } from './errors.js';
+
+export async function executeWebFetch(url: string, format?: string): Promise<string> {
   if (!url || typeof url !== 'string') {
-    throw new Error('URL is required');
+    throw new Error(invalidParam('url', 'a non-empty URL string'));
   }
 
   // Validate URL
@@ -8,10 +10,10 @@
   try {
     parsed = new URL(url);
     if (!['http:', 'https:'].includes(parsed.protocol)) {
-      throw new Error(`Unsupported protocol: ${parsed.protocol}`);
+      throw new Error(netError(url, `Unsupported protocol: ${parsed.protocol}`));
     }
   } catch {
-    throw new Error(`Invalid URL: ${url}`);
+    throw new Error(netError(url, 'Invalid URL'));
   }
 
   const outputFormat = format === 'html' ? 'html' : 'text';
@@ -30,7 +32,7 @@
     clearTimeout(timeout);
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(netError(url, `HTTP ${response.status}: ${response.statusText}`));
     }
 
     const contentType = response.headers.get('content-type') || '';
@@ -70,7 +72,9 @@
     return html;
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error(`Request timed out after 15s: ${url}`);
+      throw new Error(
+        toolError('Network', `Request timed out after 15s: ${url}`, 'The server may be slow or unreachable.'),
+      );
     }
     throw err;
   }

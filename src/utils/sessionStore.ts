@@ -122,50 +122,49 @@ export async function listSessions(): Promise<SessionMeta[]> {
   return entries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export interface SessionSearchResult extends SessionMeta {
-  matchCount: number;
+export interface SessionSearchResult {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
 }
 
 /**
- * Search sessions by keyword. Checks title first (fast), then loads
- * full sessions to search message content. Returns up to 20 results.
+ * Search sessions by query text (title only) and/or recency in days.
+ * Returns enriched results with message count from the session file.
  */
-export async function searchSessions(keyword: string): Promise<SessionSearchResult[]> {
-  await ensureDir();
-  const index = await readIndex();
-  const kw = keyword.toLowerCase();
-  const results: SessionSearchResult[] = [];
+export async function searchSessions(query?: string, days?: number): Promise<SessionSearchResult[]> {
+  const all = await listSessions();
+  let filtered = all;
 
-  const entries = Object.values(index).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  // Filter by recency
+  if (days && days > 0) {
+    const cutoff = Date.now() - days * 86_400_000;
+    filtered = filtered.filter((s) => new Date(s.updatedAt).getTime() > cutoff);
+  }
 
-  for (const meta of entries) {
-    if (results.length >= 20) break;
+  // Filter by text query on title
+  if (query) {
+    const q = query.toLowerCase();
+    filtered = filtered.filter((s) => s.title.toLowerCase().includes(q));
+  }
 
-    // Quick match on title
-    if (meta.title.toLowerCase().includes(kw)) {
-      results.push({ ...meta, matchCount: 1 });
-      continue;
-    }
-
-    // Load session and search content
+  // Enrich with message count by reading the session file
+  const enriched: SessionSearchResult[] = [];
+  for (const s of filtered) {
     try {
-      const session = await loadSession(meta.id);
-      if (!session) continue;
-      let matchCount = 0;
-      for (const msg of session.messages) {
-        if (msg.content && msg.content.toLowerCase().includes(kw)) {
-          matchCount++;
-        }
-      }
-      if (matchCount > 0) {
-        results.push({ ...meta, matchCount });
-      }
+      const session = await loadSession(s.id);
+      enriched.push({
+        ...s,
+        messageCount: session?.messages.length ?? 0,
+      });
     } catch {
-      // Skip unreadable sessions
+      enriched.push({ ...s, messageCount: 0 });
     }
   }
 
-  return results;
+  return enriched;
 }
 
 export async function deleteSession(id: string): Promise<boolean> {

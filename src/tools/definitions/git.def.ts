@@ -18,6 +18,7 @@ import {
   executeGitBlame,
 } from '../GitTool.js';
 import { requiredString, optionalString, optionalNumber, optionalBoolean } from '../validate.js';
+import { invalidParam } from '../errors.js';
 
 export const definitions: ToolDefinition[] = [
   {
@@ -203,7 +204,7 @@ export const definitions: ToolDefinition[] = [
     execute: async (args) => {
       const files = (args['files'] as string[]) ?? [];
       if (!Array.isArray(files) || files.length === 0) {
-        throw new Error('Missing required parameter: files');
+        throw new Error(invalidParam('files', 'a non-empty array'));
       }
       const cwd = optionalString(args, 'cwd');
       return executeGitAdd(files, cwd);

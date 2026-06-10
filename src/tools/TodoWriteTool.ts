@@ -4,18 +4,26 @@ export interface TodoItem {
   priority: 'high' | 'medium' | 'low';
 }
 
-// In-memory todo state for the current agent session
-let currentTodos: TodoItem[] = [];
+// ── Persistence ──────────────────────────────────────────────────────────
 
-export function getTodos(): TodoItem[] {
-  return currentTodos;
+import { saveTodos, loadTodos, clearTodos, type TodoItem as PersistedTodoItem } from '../utils/todoStore.js';
+
+export async function getTodos(): Promise<TodoItem[]> {
+  const persisted = await loadTodos();
+  return persisted.map((t) => ({
+    content: t.content,
+    status: t.status,
+    priority: t.priority,
+  }));
 }
 
-export function resetTodos(): void {
-  currentTodos = [];
+export async function resetTodos(): Promise<void> {
+  await clearTodos();
 }
 
-export async function executeTodoWrite(todos: TodoItem[]): Promise<string> {
+export async function executeTodoWrite(
+  todos: Array<{ content: string; status: string; priority: string }>,
+): Promise<string> {
   if (!Array.isArray(todos) || todos.length === 0) {
     return (
       'Usage: Provide a non-empty array of todo items, each with:\n' +
@@ -29,66 +37,31 @@ export async function executeTodoWrite(todos: TodoItem[]): Promise<string> {
   const validStatuses = new Set(['pending', 'in_progress', 'completed', 'cancelled']);
   const validPriorities = new Set(['high', 'medium', 'low']);
 
-  const normalized: TodoItem[] = todos.map((t) => ({
+  const now = new Date().toISOString();
+  const existing = await loadTodos();
+  const existingMap = new Map(existing.map((t) => [t.content, t]));
+
+  const items: PersistedTodoItem[] = todos.map((t) => ({
     content: String(t.content ?? ''),
-    status: validStatuses.has(t.status) ? t.status : 'pending',
-    priority: validPriorities.has(t.priority) ? t.priority : 'medium',
+    status: (validStatuses.has(t.status) ? t.status : 'pending') as PersistedTodoItem['status'],
+    priority: (validPriorities.has(t.priority) ? t.priority : 'medium') as PersistedTodoItem['priority'],
+    createdAt: existingMap.get(t.content)?.createdAt ?? now,
+    updatedAt: now,
   }));
 
-  // Merge with existing todos: update by content match, add new ones
-  const existingMap = new Map(currentTodos.map((t) => [t.content, t]));
-  for (const item of normalized) {
-    existingMap.set(item.content, item);
-  }
-
-  // Save existing todos before overwriting
-  const prevTodos = currentTodos;
-
-  // Start with new normalized items (excluding completed/cancelled)
-  currentTodos = normalized.filter((t) => t.status !== 'completed' && t.status !== 'cancelled');
-
-  // Also keep any existing items not in the new list that are in_progress or pending
-  for (const item of prevTodos) {
-    if (item.status === 'completed' || item.status === 'cancelled') continue;
-    if (!normalized.some((t) => t.content === item.content)) {
-      currentTodos.push(item);
-    }
-  }
+  await saveTodos(items);
 
   // Format output
-  const statusIcons: Record<string, string> = {
-    pending: '[ ]',
-    in_progress: '[~]',
-    completed: '[x]',
-    cancelled: '[-]',
-  };
+  const active = items.filter((t) => t.status === 'pending' || t.status === 'in_progress');
+  const done = items.filter((t) => t.status === 'completed');
+  const cancelled = items.filter((t) => t.status === 'cancelled');
 
-  const statusCounts = { pending: 0, in_progress: 0, completed: 0, cancelled: 0 };
-  for (const t of todos) {
-    statusCounts[t.status]++;
-  }
-
-  const lines: string[] = [`## Todo List (${currentTodos.length} active)`];
-  const grouped: Record<string, TodoItem[]> = {
-    in_progress: [],
-    pending: [],
-    cancelled: [],
-    completed: [],
-  };
-
-  for (const t of todos) {
-    (grouped[t.status] ??= []).push(t);
-  }
-
-  for (const status of ['in_progress', 'pending', 'completed', 'cancelled'] as const) {
-    const items = grouped[status];
-    if (items.length === 0) continue;
-    lines.push(`\n### ${status.replace('_', ' ')}:`);
-    for (const item of items) {
-      const icon = statusIcons[item.status] ?? '?';
-      lines.push(`  ${icon} [${item.priority}] ${item.content}`);
+  let out = `Todos saved (${items.length}: ${active.length} active, ${done.length} done, ${cancelled.length} cancelled)`;
+  if (active.length > 0) {
+    out += '\n\nActive:';
+    for (const t of active) {
+      out += `\n  ${t.status === 'in_progress' ? '→' : '·'} ${t.content} (${t.priority})`;
     }
   }
-
-  return lines.join('\n');
+  return out;
 }

@@ -15,9 +15,9 @@ export class McpManager {
   /** Tracks connection errors per server (populated during initialize) */
   private _connectionErrors: Map<string, string> = new Map();
   /** Tracks reconnection attempts per server */
-  private reconnectAttempts = new Map<string, { count: number; timeout: ReturnType<typeof setTimeout> | null }>();
-  private readonly MAX_RECONNECT_ATTEMPTS = 3;
-  private readonly RECONNECT_DELAY_MS = 2_000;
+  private reconnectState = new Map<string, { attempts: number; timer: ReturnType<typeof setTimeout> | null }>();
+  private readonly MAX_RECONNECT = 3;
+  private readonly RECONNECT_BASE_MS = 2000;
 
   /** Configure MCP servers from config (does not connect yet). */
   configure(servers: Record<string, McpServerConfig>): void {
@@ -81,56 +81,45 @@ export class McpManager {
   }
 
   /** Get status of a specific server */
-  getServerStatus(name: string): 'connected' | 'disconnected' | 'error' | 'not_found' | 'not_configured' {
-    const client = this.clients.get(name);
-    if (!client) return 'not_configured';
-    if (!client.connected && this.reconnectAttempts.has(name)) return 'disconnected';
-    return client.connected ? 'connected' : 'error';
+  getServerStatus(name: string): string {
+    const cl = this.clients.get(name);
+    if (!cl) return 'not_configured';
+    if (!cl.connected && this.reconnectState.has(name)) return 'reconnecting';
+    return cl.connected ? 'connected' : 'error';
   }
 
   /**
    * Schedule a reconnect attempt for a disconnected server with exponential backoff.
    */
-  private scheduleReconnect(serverName: string): void {
-    const existing = this.reconnectAttempts.get(serverName);
-    const count = (existing?.count ?? 0) + 1;
+  private scheduleReconnect(name: string): void {
+    const state = this.reconnectState.get(name) ?? { attempts: 0, timer: null };
+    state.attempts++;
 
-    if (count > this.MAX_RECONNECT_ATTEMPTS) {
-      console.warn(
-        `[McpManager] Server "${serverName}" max reconnection attempts reached (${this.MAX_RECONNECT_ATTEMPTS}). Giving up.`,
-      );
-      this.reconnectAttempts.delete(serverName);
+    if (state.attempts > this.MAX_RECONNECT) {
+      console.warn(`[MCP] ${name}: max reconnects reached, giving up`);
+      this.reconnectState.delete(name);
       return;
     }
 
-    const delay = this.RECONNECT_DELAY_MS * Math.pow(2, count - 1); // Exponential backoff
-    console.log(
-      `[McpManager] Scheduling reconnect for "${serverName}" in ${delay}ms (attempt ${count}/${this.MAX_RECONNECT_ATTEMPTS})`,
-    );
+    const delay = this.RECONNECT_BASE_MS * Math.pow(2, state.attempts - 1);
+    console.log(`[MCP] ${name}: reconnect in ${delay}ms (attempt ${state.attempts}/${this.MAX_RECONNECT})`);
 
-    const timeout = setTimeout(async () => {
+    state.timer = setTimeout(async () => {
+      const cfg = this.serverConfigs.get(name);
+      if (!cfg) return;
       try {
-        const config = this.serverConfigs.get(serverName);
-        if (!config) return;
-
-        const client = new McpClient(serverName, config);
-        client.onDisconnect = (name) => this.scheduleReconnect(name);
-
-        const tools = await client.connect();
-        this.clients.set(serverName, client);
+        const cl = new McpClient(name, cfg);
+        const tools = await cl.connect();
+        this.clients.set(name, cl);
         this._allTools = this.collectTools();
-        console.log(`[McpManager] Server "${serverName}" reconnected successfully (${tools.length} tools)`);
-        this.reconnectAttempts.delete(serverName);
-      } catch (err) {
-        console.warn(
-          `[McpManager] Reconnect attempt ${count} for "${serverName}" failed:`,
-          err instanceof Error ? err.message : String(err),
-        );
-        this.scheduleReconnect(serverName); // Retry with backoff
+        console.log(`[MCP] ${name}: reconnected, ${tools.length} tools`);
+        this.reconnectState.delete(name);
+      } catch {
+        this.scheduleReconnect(name);
       }
     }, delay);
 
-    this.reconnectAttempts.set(serverName, { count, timeout });
+    this.reconnectState.set(name, state);
   }
 
   /** Re-discover tools from all connected MCP servers.
@@ -192,10 +181,10 @@ export class McpManager {
   /** Shutdown all servers */
   async shutdown(): Promise<void> {
     // Cancel any pending reconnect attempts
-    for (const [, entry] of this.reconnectAttempts) {
-      if (entry.timeout) clearTimeout(entry.timeout);
+    for (const [, state] of this.reconnectState) {
+      if (state.timer) clearTimeout(state.timer);
     }
-    this.reconnectAttempts.clear();
+    this.reconnectState.clear();
 
     const disconnects = Array.from(this.clients.values()).map((c) => c.disconnect());
     await Promise.allSettled(disconnects);

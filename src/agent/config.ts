@@ -94,6 +94,30 @@ export function setSessionApiKey(key: string) {
 }
 
 let sessionApiKey = '';
+let _configVersion = 0;
+
+export function getConfigVersion(): number {
+  return _configVersion;
+}
+
+export async function reloadConfig(): Promise<void> {
+  try {
+    const { readFile: fsReadFile } = await import('node:fs/promises');
+    const data = await fsReadFile(CONFIG_FILE, 'utf-8');
+    const parsed = JSON.parse(data);
+    // Merge without losing session API key
+    const currentKey = sessionApiKey || localConfig.apiKey;
+    localConfig = parsed;
+    if (currentKey) {
+      localConfig.apiKey = currentKey;
+      sessionApiKey = currentKey;
+    }
+    _configVersion++;
+    console.log(`Configuration reloaded (v${_configVersion})`);
+  } catch (err) {
+    throw new Error(`Failed to reload config: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
 
 export const config = {
   get model() {

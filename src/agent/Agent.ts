@@ -37,6 +37,17 @@ export class Agent {
   private questionResolve: ((answer: string) => void) | null = null;
   private maxRetries = 3;
 
+  // AI response cache — avoid redundant LLM calls for identical inputs
+  private responseCache = new Map<
+    string,
+    {
+      result: { toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>; assistantText: string };
+      timestamp: number;
+    }
+  >();
+  private static RESPONSE_CACHE_TTL = 60_000; // 1 minute
+  private static RESPONSE_CACHE_MAX_SIZE = 50;
+
   // Tool result cache — avoid re-reading unchanged files within a session
   private toolCache = new Map<string, { result: string; timestamp: number }>();
   private static CACHE_TTL_MS = 5_000;
@@ -49,8 +60,14 @@ export class Agent {
   private recentAssistantTexts: string[] = [];
   private repeatCount = 0;
 
+  // Cancellation support for running tool batches
+  private abortController: AbortController | null = null;
+
   // Token usage tracking across turns
   private tokenUsage = { inputTokens: 0, outputTokens: 0 };
+
+  // Per-tool usage statistics for /stats command
+  private toolStats = new Map<string, { calls: number; totalMs: number; errors: number }>();
 
   // Persistent memory cache
   private memorySummary: string | null = null;
@@ -74,6 +91,37 @@ export class Agent {
 
   private cacheKey(name: string, args: Record<string, unknown>): string {
     return `${name}:${JSON.stringify(args)}`;
+  }
+
+  /** Build a deterministic cache key for AI responses from the full input context. */
+  private getResponseCacheKey(system: string, messagesJson: string, toolsJson: string): string {
+    // Use the last user message (the prompt) combined with system/tool fingerprints
+    const lastUser = messagesJson.split('"role":"user"').pop()?.slice(0, 500) || '';
+    return `${system.length}:${lastUser}:${toolsJson.length}`;
+  }
+
+  /** Check the response cache for a matching key (respects TTL). */
+  private getResponseFromCache(
+    key: string,
+  ): { toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>; assistantText: string } | null {
+    const entry = this.responseCache.get(key);
+    if (entry && Date.now() - entry.timestamp < Agent.RESPONSE_CACHE_TTL) {
+      return entry.result;
+    }
+    this.responseCache.delete(key);
+    return null;
+  }
+
+  /** Store a response in the cache, evicting oldest entry if at capacity. */
+  private setResponseCache(
+    key: string,
+    result: { toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>; assistantText: string },
+  ): void {
+    if (this.responseCache.size >= Agent.RESPONSE_CACHE_MAX_SIZE) {
+      const oldest = this.responseCache.entries().next().value;
+      if (oldest) this.responseCache.delete(oldest[0]);
+    }
+    this.responseCache.set(key, { result, timestamp: Date.now() });
   }
 
   private invalidateCache() {
@@ -127,14 +175,30 @@ export class Agent {
     return { ...this.tokenUsage };
   }
 
+  /** Record a tool call for stats tracking */
+  recordToolCall(name: string, ms: number, isErr: boolean) {
+    const s = this.toolStats.get(name) ?? { calls: 0, totalMs: 0, errors: 0 };
+    s.calls++;
+    s.totalMs += ms;
+    if (isErr) s.errors++;
+    this.toolStats.set(name, s);
+  }
+
+  /** Get accumulated tool usage statistics */
+  getToolStats(): Record<string, { calls: number; totalMs: number; errors: number }> {
+    return Object.fromEntries(this.toolStats);
+  }
+
   /** Clear conversation history and start fresh */
   reset() {
     this.history = [];
+    this.responseCache.clear();
     this.invalidateCache();
     this.lastAssistantText = '';
     this.recentAssistantTexts = [];
     this.repeatCount = 0;
     this.tokenUsage = { inputTokens: 0, outputTokens: 0 };
+    this.toolStats.clear();
   }
 
   answerQuestion(answer: string) {
@@ -149,6 +213,14 @@ export class Agent {
     if (this.questionResolve) {
       this.questionResolve('[Cancelled by user]');
       this.questionResolve = null;
+    }
+  }
+
+  /** Cancel the currently running tool batch (called on SIGINT) */
+  cancelRunningTools() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
     }
   }
 
@@ -250,59 +322,78 @@ export class Agent {
     for (let turn = 0; turn < maxTurns; turn++) {
       logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
 
-      const streamResult = await this.withRetry(async () => {
-        const textParts: string[] = [];
-        const toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
-        const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
+      // Build system prompt before LLM call for cache key derivation
+      const memoryContext = await this.ensureMemoryLoaded();
+      const systemPrompt = memoryContext
+        ? config.getSystemPrompt(this.qtContext) + '\n\n## Your Memory\n' + memoryContext
+        : config.getSystemPrompt(this.qtContext);
 
-        const memoryContext = await this.ensureMemoryLoaded();
-        const systemPrompt = memoryContext
-          ? config.getSystemPrompt(this.qtContext) + '\n\n## Your Memory\n' + memoryContext
-          : config.getSystemPrompt(this.qtContext);
+      // Check AI response cache before making the LLM call
+      const cacheKey = this.getResponseCacheKey(systemPrompt, JSON.stringify(messages), JSON.stringify(toolSchemas()));
+      const cachedResponse = this.getResponseFromCache(cacheKey);
 
-        for await (const event of this.client.stream({
-          model: config.model,
-          maxTokens: config.maxTokens,
-          temperature: 0.5,
-          system: systemPrompt,
-          messages,
-          tools: toolSchemas() as ToolSchema[],
-        })) {
-          if (event.type === 'text_delta' && event.text) {
-            this.cbs.onAgentDelta?.(event.text);
-            textParts.push(event.text);
-          } else if (event.type === 'tool_call_start') {
-            toolCallsAccum.set(event.toolCallIndex!, {
-              id: event.toolCallId,
-              name: event.toolCallName,
-              args: '',
-            });
-          } else if (event.type === 'tool_call_delta') {
-            const accum = toolCallsAccum.get(event.toolCallIndex!);
-            if (accum) accum.args += event.toolCallArgs || '';
-          } else if (event.type === 'tool_call_end') {
-            const accum = toolCallsAccum.get(event.toolCallIndex!);
-            if (accum) {
-              try {
-                toolCalls.push({
-                  id: accum.id!,
-                  name: accum.name!,
-                  input: JSON.parse(accum.args || '{}'),
-                });
-              } catch {
-                toolCalls.push({ id: accum.id!, name: accum.name!, input: {} });
+      let toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>;
+      let assistantText: string;
+
+      if (cachedResponse) {
+        // Cache hit — reuse previous LLM response without API call
+        logger.debug(`[turn ${turn}] response cache HIT`);
+        toolCalls = cachedResponse.toolCalls;
+        assistantText = cachedResponse.assistantText;
+      } else {
+        // Cache miss — call LLM
+        const streamResult = await this.withRetry(async () => {
+          const textParts: string[] = [];
+          const toolCallsInner: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
+          const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
+
+          for await (const event of this.client.stream({
+            model: config.model,
+            maxTokens: config.maxTokens,
+            temperature: 0.5,
+            system: systemPrompt,
+            messages,
+            tools: toolSchemas() as ToolSchema[],
+          })) {
+            if (event.type === 'text_delta' && event.text) {
+              this.cbs.onAgentDelta?.(event.text);
+              textParts.push(event.text);
+            } else if (event.type === 'tool_call_start') {
+              toolCallsAccum.set(event.toolCallIndex!, {
+                id: event.toolCallId,
+                name: event.toolCallName,
+                args: '',
+              });
+            } else if (event.type === 'tool_call_delta') {
+              const accum = toolCallsAccum.get(event.toolCallIndex!);
+              if (accum) accum.args += event.toolCallArgs || '';
+            } else if (event.type === 'tool_call_end') {
+              const accum = toolCallsAccum.get(event.toolCallIndex!);
+              if (accum) {
+                try {
+                  toolCallsInner.push({
+                    id: accum.id!,
+                    name: accum.name!,
+                    input: JSON.parse(accum.args || '{}'),
+                  });
+                } catch {
+                  toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
+                }
               }
+            } else if (event.type === 'usage') {
+              if (event.inputTokens !== undefined) this.tokenUsage.inputTokens += event.inputTokens;
+              if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
             }
-          } else if (event.type === 'usage') {
-            if (event.inputTokens !== undefined) this.tokenUsage.inputTokens += event.inputTokens;
-            if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
           }
-        }
 
-        return { toolCalls, assistantText: textParts.join('') };
-      }, 'LLM streaming API call');
+          return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
+        }, 'LLM streaming API call');
 
-      const { toolCalls, assistantText } = streamResult;
+        // Store in response cache for future identical calls
+        this.setResponseCache(cacheKey, streamResult);
+
+        ({ toolCalls, assistantText } = streamResult);
+      }
 
       const assistantContent: AssistantContentBlock[] = [];
 
@@ -357,6 +448,8 @@ export class Agent {
       const toolResults: ToolResult[] = [];
       const toolResultIds: string[] = [];
       this.cbs.onToolBatch?.(toolCalls.length);
+      this.abortController = new AbortController();
+      const signal = this.abortController.signal;
 
       // Handle Question tool first (it blocks for user input)
       for (let i = 0; i < toolCalls.length; i++) {
@@ -364,6 +457,7 @@ export class Agent {
         toolResultIds[i] = tc.id;
 
         if (tc.name === 'Question') {
+          const t0 = Date.now();
           const q = String(tc.input['question'] ?? '');
           const options = Array.isArray(tc.input['options'])
             ? (tc.input['options'] as Array<{ label: string; description: string }>)
@@ -372,6 +466,7 @@ export class Agent {
           const answer = await new Promise<string>((resolve) => {
             this.questionResolve = resolve;
           });
+          this.recordToolCall(tc.name, Date.now() - t0, false);
           toolResults[i] = { tool: tc.name, input: tc.input, output: answer, isError: false };
         }
       }
@@ -379,6 +474,13 @@ export class Agent {
       // Execute all non-Question tools in parallel
       const parallelTasks = toolCalls.map(async (tc, i) => {
         if (tc.name === 'Question') return; // already handled above
+
+        // Check if cancelled before starting this tool
+        if (signal.aborted) {
+          toolResults[i] = { tool: tc.name, input: tc.input, output: '[Cancelled]', isError: true };
+          this.cbs.onToolResult?.(tc.name, '[Cancelled]', true);
+          return;
+        }
 
         toolResultIds[i] = tc.id;
 
@@ -416,6 +518,7 @@ export class Agent {
           }
         }
 
+        const t0 = Date.now();
         try {
           const executePromise = tool.execute(tc.input);
 
@@ -425,6 +528,7 @@ export class Agent {
           }
 
           const output = await executePromise;
+          this.recordToolCall(tc.name, Date.now() - t0, false);
           toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
           this.cbs.onToolResult?.(tc.name, output, false);
 
@@ -434,12 +538,14 @@ export class Agent {
             this.pendingReads.delete(cacheKey);
           }
 
-          // Invalidate cache on writes
+          // Invalidate caches on writes — filesystem state changed
           if (tc.name === 'Write' || tc.name === 'Edit') {
             this.invalidateCache();
+            this.responseCache.clear();
           }
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : String(err);
+          this.recordToolCall(tc.name, Date.now() - t0, true);
           toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
           this.cbs.onToolResult?.(tc.name, errorMsg, true);
 
@@ -451,6 +557,7 @@ export class Agent {
       });
 
       await Promise.all(parallelTasks);
+      this.abortController = null;
 
       // Map results to tool_use_ids by position (handles duplicate tool names correctly)
       const toolResultContent: ToolResultBlock[] = toolResults.map((tr, i) => ({

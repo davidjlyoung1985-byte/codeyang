@@ -6,6 +6,7 @@ import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
+import { clearTodos } from '../utils/todoStore.js';
 
 // ──────────────────────────────────────────────
 // GlobTool tests
@@ -108,8 +109,8 @@ describe('matchGlob', () => {
 // ──────────────────────────────────────────────
 
 describe('executeTodoWrite', () => {
-  beforeEach(() => {
-    resetTodos();
+  beforeEach(async () => {
+    await clearTodos();
   });
 
   it('rejects empty array', async () => {
@@ -130,19 +131,18 @@ describe('executeTodoWrite', () => {
     ]);
     expect(result).toContain('Task A');
     expect(result).toContain('Task B');
-    expect(result).toContain('Task C');
+    expect(result).toContain('3: 2 active, 1 done, 0 cancelled');
 
-    // Completed items should be removed from active list
-    const todos = getTodos();
-    expect(todos.length).toBe(2);
-    expect(todos.some((t) => t.content === 'Task C')).toBe(false);
+    // All items are persisted (including completed)
+    const todos = await getTodos();
+    expect(todos.length).toBe(3);
   });
 
   it('normalizes invalid status/priority', async () => {
     await executeTodoWrite([
       { content: 'X', status: 'invalid' as TodoItem['status'], priority: 'invalid' as TodoItem['priority'] },
     ]);
-    const todos = getTodos();
+    const todos = await getTodos();
     expect(todos[0].status).toBe('pending');
     expect(todos[0].priority).toBe('medium');
   });
@@ -150,15 +150,17 @@ describe('executeTodoWrite', () => {
   it('merges updates by content', async () => {
     await executeTodoWrite([{ content: 'Task', status: 'pending', priority: 'high' }]);
     await executeTodoWrite([{ content: 'Task', status: 'completed', priority: 'high' }]);
-    const todos = getTodos();
-    expect(todos.length).toBe(0); // completed items are removed
+    const todos = await getTodos();
+    expect(todos.length).toBe(1);
+    expect(todos[0].status).toBe('completed');
   });
 
-  it('preserves in_progress items not in update', async () => {
+  it('replaces items not in update', async () => {
     await executeTodoWrite([{ content: 'Task 1', status: 'in_progress', priority: 'high' }]);
     await executeTodoWrite([{ content: 'Task 2', status: 'pending', priority: 'medium' }]);
-    const todos = getTodos();
-    expect(todos.find((t) => t.content === 'Task 1')).toBeDefined();
+    const todos = await getTodos();
+    // Each write replaces the file — only Task 2 remains
+    expect(todos.find((t) => t.content === 'Task 1')).toBeUndefined();
     expect(todos.find((t) => t.content === 'Task 2')).toBeDefined();
   });
 });

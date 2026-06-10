@@ -16,14 +16,18 @@ import {
   listSessions,
   loadSession,
   deleteSession,
+  searchSessions,
   exportSessionAsMarkdown,
   exportSessionAsJson,
   importSessionFromFile,
 } from './utils/sessionStore.js';
 import { logger } from './utils/logger.js';
+import { writeFile } from 'node:fs/promises';
+import { editHistory } from './utils/editHistory.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
+import { checkNodeVersion } from './utils/nodeVersionCheck.js';
 import { VERSION } from './version.js';
 
 async function promptForApiKey(): Promise<string> {
@@ -74,6 +78,8 @@ async function resolveApiKey(): Promise<string> {
 }
 
 async function main() {
+  checkNodeVersion();
+
   // ── Global error handlers ────────────────────────────────────
   process.on('unhandledRejection', (reason) => {
     console.error('\n⚠️ Unhandled rejection:', reason instanceof Error ? reason.message : String(reason));
@@ -93,13 +99,20 @@ async function main() {
   }
 
   if (args.includes('--list') || args.includes('-l')) {
-    const sessions = await listSessions();
+    const listIdx = args.includes('--list') ? args.indexOf('--list') : args.indexOf('-l');
+    const nextArg = listIdx >= 0 && listIdx < args.length - 1 ? args[listIdx + 1] : undefined;
+    const searchQuery = nextArg && !nextArg.startsWith('-') ? nextArg : undefined;
+    const sessions = searchQuery
+      ? await searchSessions(searchQuery)
+      : (await listSessions()).map((s) => ({ ...s, messageCount: 0 }));
+
     if (sessions.length === 0) {
-      console.log('No saved sessions.');
+      console.log(searchQuery ? `No sessions matching "${searchQuery}".` : 'No saved sessions.');
       process.exit(0);
     }
     for (const s of sessions) {
-      console.log(`${s.id}  ${s.title}  (${s.updatedAt})`);
+      const msgInfo = s.messageCount ? ` ${s.messageCount}msgs` : '';
+      console.log(`${s.id.slice(0, 12)}  ${s.title.slice(0, 50).padEnd(50)}  ${s.updatedAt.slice(0, 10)}${msgInfo}`);
     }
     process.exit(0);
   }
@@ -111,7 +124,7 @@ Usage: codeyang [options]
 Options:
   --help, -h          Show this help message
   --version, -V       Show version number
-  --list, -l          List saved sessions
+  --list, -l [query]  List saved sessions (optionally filter by title)
   --resume <id>       Resume a saved session
   --delete <id>       Delete a saved session
   --api-key <key>     Set API key directly (overrides env/config)
@@ -131,10 +144,14 @@ Interactive Commands:
   /clear           Reset the conversation
   /sessions        List saved sessions
   /tools           List all available tools
+  /stats           Show tool usage statistics for this session
   /model           Show current model
   /model <name>    Switch model
   /mcp             Show MCP server status
   /config          Show current configuration
+  /undo            Undo the last file edit
+  /redo            Redo the last undone file edit
+  /reload          Reload configuration from ~/.codeyang/config.json
   /exit, /quit     Exit CodeYang
 
 API Key priority: --api-key arg > CODEYANG_API_KEY > saved config > prompt
@@ -341,11 +358,16 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     }
 
     if (lower === '/sessions') {
-      const sessions = await listSessions();
+      const sessions = await searchSessions();
       if (sessions.length === 0) {
         console.log('No saved sessions.');
       } else {
-        for (const s of sessions) console.log(`  ${s.id}  ${s.title}  (${s.updatedAt})`);
+        for (const s of sessions) {
+          const msgInfo = s.messageCount ? ` ${s.messageCount}msgs` : '';
+          console.log(
+            `  ${s.id.slice(0, 12)}  ${s.title.slice(0, 50).padEnd(50)}  ${s.updatedAt.slice(0, 10)}${msgInfo}`,
+          );
+        }
       }
       ui.promptUser();
       return;
@@ -359,6 +381,27 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
         console.log(`  · ${t.name.padEnd(18)} ${t.description.split('.')[0]}`);
       }
       console.log('');
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/stats') {
+      const stats = agent.getToolStats();
+      const entries = Object.entries(stats).sort((a, b) => b[1].calls - a[1].calls);
+      if (!entries.length) {
+        console.log('\n  No tools used yet.\n');
+      } else {
+        console.log(`\n  Tool Usage (${entries.length} tools):`);
+        console.log(`  ${'Tool'.padEnd(20)} ${'Calls'.padEnd(6)} ${'Avg ms'.padEnd(8)} ${'Errors'}`);
+        console.log(`  ${'─'.repeat(20)} ${'─'.repeat(6)} ${'─'.repeat(8)} ${'─'.repeat(6)}`);
+        for (const [n, s] of entries) {
+          const avg = s.calls > 0 ? Math.round(s.totalMs / s.calls) : 0;
+          console.log(
+            `  ${n.padEnd(20)} ${String(s.calls).padEnd(6)} ${String(avg).padEnd(8)} ${String(s.errors).padEnd(6)}`,
+          );
+        }
+        console.log('');
+      }
       ui.promptUser();
       return;
     }
@@ -392,6 +435,18 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       return;
     }
 
+    if (lower === '/reload') {
+      try {
+        const { reloadConfig } = await import('./agent/config.js');
+        await reloadConfig();
+        console.log('  Configuration reloaded from ~/.codeyang/config.json');
+      } catch (err) {
+        console.error(`  ✗ ${err instanceof Error ? err.message : String(err)}`);
+      }
+      ui.promptUser();
+      return;
+    }
+
     if (lower === '/mcp') {
       if (!mcpMgr.hasServers) {
         console.log('No MCP servers configured.');
@@ -412,9 +467,46 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       return;
     }
 
+    if (lower === '/undo') {
+      const entry = editHistory.undo();
+      if (!entry) {
+        console.log('  Nothing to undo.');
+      } else {
+        await writeFile(entry.filePath, entry.previousContent, 'utf-8');
+        console.log(`  Undone edit to ${entry.filePath}`);
+      }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/redo') {
+      const entry = editHistory.redo();
+      if (!entry) {
+        console.log('  Nothing to redo.');
+      } else {
+        await writeFile(entry.filePath, entry.previousContent, 'utf-8');
+        console.log(`  Redone edit to ${entry.filePath}`);
+      }
+      ui.promptUser();
+      return;
+    }
+
     // Command suggestion for unknown /commands
     if (lower.startsWith('/')) {
-      const validCommands = ['/clear', '/sessions', '/tools', '/model', '/mcp', '/config', '/exit', '/quit'];
+      const validCommands = [
+        '/clear',
+        '/sessions',
+        '/tools',
+        '/stats',
+        '/model',
+        '/mcp',
+        '/config',
+        '/reload',
+        '/undo',
+        '/redo',
+        '/exit',
+        '/quit',
+      ];
       if (!validCommands.includes(lower)) {
         const suggestions = validCommands.filter((v) => v.startsWith(lower) || v.includes(lower.slice(1)));
         if (suggestions.length > 0) {
@@ -442,6 +534,17 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       console.log('\nForce quitting...');
       process.exit(1);
     }
+
+    // If the agent is running tool executions, cancel them but stay alive
+    if (running && agent.cancelRunningTools) {
+      agent.cancelRunningTools();
+      // Also cancel any pending question so the agent can recover cleanly
+      agent.cancelQuestion();
+      console.log('\n  Tool execution cancelled. The agent will continue.');
+      // Don't set shuttingDown — the user can still interact
+      return;
+    }
+
     shuttingDown = true;
 
     console.log('\n\nSaving session before exit... (Ctrl+C again to force quit)');

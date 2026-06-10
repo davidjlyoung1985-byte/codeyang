@@ -1,5 +1,6 @@
 import { resolve, sep } from 'node:path';
 import { realpathSync } from 'node:fs';
+import { toolError } from './errors.js';
 
 /**
  * Resolve a user-supplied path to an absolute path.
@@ -26,7 +27,13 @@ export function resolveSafePath(inputPath: string, cwd?: string): string {
 
   const sandboxSep = absSandbox.endsWith(sep) ? absSandbox : absSandbox + sep;
   if (!real.startsWith(sandboxSep) && real !== absSandbox) {
-    throw new Error(`Path traversal blocked: "${inputPath}" resolves outside sandbox (${absSandbox})`);
+    throw new Error(
+      toolError(
+        'Security',
+        `Path traversal blocked: "${inputPath}" resolves outside sandbox (${absSandbox})`,
+        'Keep all file operations inside the sandbox directory.',
+      ),
+    );
   }
   return resolved;
 }

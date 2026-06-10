@@ -9,6 +9,7 @@ import { definitions as memoryDefs } from './memory.def.js';
 import { definitions as imageDefs } from './image.def.js';
 import { definitions as mathDefs } from './math.def.js';
 import { definitions as searchDefs } from './search.def.js';
+import { definitions as githubDefs } from './github.def.js';
 import { refactorToolDefinitions } from './refactor.def.js';
 
 /** All built-in tool definitions organized by category. */
@@ -22,6 +23,7 @@ export const builtinDefinitions: ToolDefinition[] = [
   ...memoryDefs,
   ...imageDefs,
   ...searchDefs,
+  ...githubDefs,
   ...refactorToolDefinitions,
 ];
 

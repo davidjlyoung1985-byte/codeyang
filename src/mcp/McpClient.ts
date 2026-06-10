@@ -1,6 +1,8 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { MCP_QUALIFIED_PREFIX, MCP_TOOL_SEPARATOR, type McpServerConfig } from './types.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { MCP_QUALIFIED_PREFIX, MCP_TOOL_SEPARATOR, type McpServerConfig, type McpTransportType } from './types.js';
 
 export interface McpToolDef {
   serverName: string;
@@ -12,12 +14,12 @@ export interface McpToolDef {
 }
 
 /**
- * Manages a single MCP server connection over stdio.
+ * Manages a single MCP server connection over stdio, SSE, or Streamable HTTP.
  * Handles startup, tool discovery, tool invocation, and shutdown.
  */
 export class McpClient {
   private client: Client;
-  private transport?: StdioClientTransport;
+  private transport?: StdioClientTransport | SSEClientTransport | StreamableHTTPClientTransport;
   private config: McpServerConfig;
   readonly serverName: string;
   private isConnected = false;
@@ -28,7 +30,7 @@ export class McpClient {
   constructor(serverName: string, config: McpServerConfig) {
     this.serverName = serverName;
     this.config = config;
-    this.client = new Client({ name: 'codeyang', version: '0.6.0' }, { capabilities: {} });
+    this.client = new Client({ name: 'codeyang', version: '0.7.0' }, { capabilities: {} });
   }
 
   get tools(): McpToolDef[] {
@@ -45,13 +47,27 @@ export class McpClient {
       return this._tools;
     }
 
-    this.transport = new StdioClientTransport({
-      command: this.config.command,
-      args: this.config.args ?? [],
-      env: this.config.env ? ({ ...process.env, ...this.config.env } as Record<string, string>) : undefined,
-      cwd: this.config.cwd,
-      stderr: 'pipe' as const, // Silence MCP server stderr noise
-    });
+    const transportType: McpTransportType = this.config.transport ?? 'stdio';
+
+    switch (transportType) {
+      case 'stdio':
+        this.transport = new StdioClientTransport({
+          command: this.config.command ?? '',
+          args: this.config.args ?? [],
+          env: this.config.env ? ({ ...process.env, ...this.config.env } as Record<string, string>) : undefined,
+          cwd: this.config.cwd,
+          stderr: 'pipe' as const, // Silence MCP server stderr noise
+        });
+        break;
+      case 'sse':
+        this.transport = new SSEClientTransport(new URL(this.config.url ?? 'http://localhost:3000/sse'));
+        break;
+      case 'streamable-http':
+        this.transport = new StreamableHTTPClientTransport(new URL(this.config.url ?? 'http://localhost:3000/mcp'));
+        break;
+      default:
+        throw new Error(`Unknown transport type: ${this.config.transport}. Supported: stdio, sse, streamable-http`);
+    }
 
     await this.client.connect(this.transport);
     this.isConnected = true;

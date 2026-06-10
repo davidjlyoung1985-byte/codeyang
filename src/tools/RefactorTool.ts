@@ -13,6 +13,7 @@ import * as ts from 'typescript';
 import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import * as path from 'node:path';
+import { toolError } from './errors.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type Definitions
@@ -117,7 +118,7 @@ function createLanguageService(program: ts.Program): ts.LanguageService {
 function getPositionFromLineColumn(sourceFile: ts.SourceFile, line: number, column: number): number {
   const lineStarts = sourceFile.getLineStarts();
   if (line < 1 || line > lineStarts.length) {
-    throw new Error(`Line ${line} is out of range (1-${lineStarts.length})`);
+    throw new Error(toolError('Refactor', `Line ${line} is out of range (1-${lineStarts.length})`));
   }
 
   const lineStart = lineStarts[line - 1];
