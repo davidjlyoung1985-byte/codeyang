@@ -37,10 +37,7 @@
     const html = await response.text();
 
     // Detect HTML even when Content-Type is wrong (e.g. text/plain for HTML pages)
-    const isHtml =
-      contentType.includes('text/html') ||
-      /<html[\s>]/i.test(html) ||
-      /<!doctype\s+html/i.test(html);
+    const isHtml = contentType.includes('text/html') || /<html[\s>]/i.test(html) || /<!doctype\s+html/i.test(html);
 
     if (isHtml && outputFormat === 'text') {
       // Simple HTML-to-text conversion: strip tags, decode entities

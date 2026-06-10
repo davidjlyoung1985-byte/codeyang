@@ -26,9 +26,7 @@ export function resolveSafePath(inputPath: string, cwd?: string): string {
 
   const sandboxSep = absSandbox.endsWith(sep) ? absSandbox : absSandbox + sep;
   if (!real.startsWith(sandboxSep) && real !== absSandbox) {
-    throw new Error(
-      `Path traversal blocked: "${inputPath}" resolves outside sandbox (${absSandbox})`,
-    );
+    throw new Error(`Path traversal blocked: "${inputPath}" resolves outside sandbox (${absSandbox})`);
   }
   return resolved;
 }

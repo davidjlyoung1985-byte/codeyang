@@ -65,10 +65,7 @@ describe('QtQmlTool', () => {
 
   describe('Component detection', () => {
     it('lists component types used in QML', async () => {
-      await createFile(
-        'comps.qml',
-        'import QtQuick 2.15\nRectangle {\n  Button {}\n  Text {}\n  TextInput {}\n}',
-      );
+      await createFile('comps.qml', 'import QtQuick 2.15\nRectangle {\n  Button {}\n  Text {}\n  TextInput {}\n}');
       const r = await executeQtQml(tempDir);
       expect(r).toContain('Components');
       expect(r).toContain('Rectangle');
@@ -76,10 +73,7 @@ describe('QtQmlTool', () => {
     });
 
     it('reports count for each component type', async () => {
-      await createFile(
-        'multi.qml',
-        'import QtQuick 2.15\nItem {\n  Button {}\n  Button {}\n  Label {}\n}',
-      );
+      await createFile('multi.qml', 'import QtQuick 2.15\nItem {\n  Button {}\n  Button {}\n  Label {}\n}');
       const r = await executeQtQml(tempDir);
       expect(r).toContain('Components');
       expect(r).toContain('Button');
@@ -88,39 +82,27 @@ describe('QtQmlTool', () => {
 
   describe('Anti-pattern detection', () => {
     it('detects anchors + x property conflict', async () => {
-      await createFile(
-        'anchorx.qml',
-        'import QtQuick 2.15\nRectangle {\n  anchors.left: parent.left; x: 20\n}',
-      );
+      await createFile('anchorx.qml', 'import QtQuick 2.15\nRectangle {\n  anchors.left: parent.left; x: 20\n}');
       const r = await executeQtQml(tempDir);
       expect(r).toContain('anchors');
       expect(r).toContain('override');
     });
 
     it('detects anchors + x property conflict on same line as y', async () => {
-      await createFile(
-        'anchory.qml',
-        'import QtQuick 2.15\nRectangle {\n  anchors.right: parent.right; x: 10\n}',
-      );
+      await createFile('anchory.qml', 'import QtQuick 2.15\nRectangle {\n  anchors.right: parent.right; x: 10\n}');
       const r = await executeQtQml(tempDir);
       expect(r).toContain('anchors');
       expect(r).toContain('override');
     });
 
     it('warns about missing id on top-level component', async () => {
-      await createFile(
-        'noid.qml',
-        'import QtQuick 2.15\nRectangle {\n  width: 100\n  height: 100\n  color: "red"\n}',
-      );
+      await createFile('noid.qml', 'import QtQuick 2.15\nRectangle {\n  width: 100\n  height: 100\n  color: "red"\n}');
       const r = await executeQtQml(tempDir);
       expect(r).toContain('lacks an id');
     });
 
     it('does not warn when id is present', async () => {
-      await createFile(
-        'withid.qml',
-        'import QtQuick 2.15\nRectangle {\n  id: root\n  width: 100\n  height: 100\n}',
-      );
+      await createFile('withid.qml', 'import QtQuick 2.15\nRectangle {\n  id: root\n  width: 100\n  height: 100\n}');
       const r = await executeQtQml(tempDir);
       expect(r).not.toContain('lacks an id');
     });
@@ -137,17 +119,17 @@ describe('QtQmlTool', () => {
 
   describe('C++ integration detection', () => {
     it('detects qmlRegisterType calls in C++ Integration section', async () => {
-      await createFile('register.qml', '// qmlRegisterType<MyClass>("MyModule", 1, 0, "MyClass");\nimport QtQuick 2.15\nRectangle {}');
+      await createFile(
+        'register.qml',
+        '// qmlRegisterType<MyClass>("MyModule", 1, 0, "MyClass");\nimport QtQuick 2.15\nRectangle {}',
+      );
       const r = await executeQtQml(tempDir);
       expect(r).toContain('C++ Integration');
       expect(r).toContain('qmlRegisterType');
     });
 
     it('detects QML_ELEMENT usage in C++ Integration section', async () => {
-      await createFile(
-        'integration.qml',
-        '// QML_ELEMENT\nimport QtQuick 2.15\nRectangle { }',
-      );
+      await createFile('integration.qml', '// QML_ELEMENT\nimport QtQuick 2.15\nRectangle { }');
       const r = await executeQtQml(tempDir);
       // The tool looks for registerType|qmlRegisterType|QML_ELEMENT|QML_NAMED_ELEMENT
       expect(r).toContain('C++ Integration');
@@ -164,10 +146,7 @@ describe('QtQmlTool', () => {
     });
 
     it('reports total line count', async () => {
-      await createFile(
-        'lines.qml',
-        'import QtQuick 2.15\nItem {\n  width: 100\n  height: 100\n}',
-      );
+      await createFile('lines.qml', 'import QtQuick 2.15\nItem {\n  width: 100\n  height: 100\n}');
       const r = await executeQtQml(tempDir);
       expect(r).toContain('lines');
     });

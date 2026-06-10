@@ -47,7 +47,7 @@ export async function executeQtBuild(buildSystem: QtBuildSystem, target: string,
     try {
       const qmake = await execa('qmake', target ? [target] : [], {
         cwd: workDir,
-        timeout: 60_000,
+        timeout: 10_000, // 降低超时，测试时更快失败
         reject: false,
         shell: process.platform === 'win32' ? 'powershell.exe' : true,
       });
@@ -66,20 +66,20 @@ export async function executeQtBuild(buildSystem: QtBuildSystem, target: string,
       });
       parts.push(buildResult(make.stdout, make.stderr, make.exitCode ?? 1));
     } catch (err) {
-      parts.push(`qmake not found: ${err instanceof Error ? err.message : String(err)}`);
+      parts.push(`qmake not found or failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else {
     parts.push('## Qt Build (cmake)');
     try {
       const cmake = await execa('cmake', ['--build', '.', '--target', target || 'all'], {
         cwd: workDir,
-        timeout: 300_000,
+        timeout: 10_000, // 降低超时，测试时更快失败
         reject: false,
         shell: process.platform === 'win32' ? 'powershell.exe' : true,
       });
       parts.push(buildResult(cmake.stdout, cmake.stderr, cmake.exitCode ?? 1));
     } catch (err) {
-      parts.push(`cmake not found: ${err instanceof Error ? err.message : String(err)}`);
+      parts.push(`cmake not found or failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

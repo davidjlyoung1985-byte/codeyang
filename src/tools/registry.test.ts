@@ -10,35 +10,68 @@ vi.mock('./GrepTool.js', () => ({ executeGrep: vi.fn() }));
 vi.mock('./TodoWriteTool.js', () => ({ executeTodoWrite: vi.fn(), getTodos: vi.fn(), resetTodos: vi.fn() }));
 vi.mock('./WebFetchTool.js', () => ({ executeWebFetch: vi.fn() }));
 vi.mock('./FileSystemTool.js', () => ({
-  executeCopy: vi.fn(), executeMove: vi.fn(), executeDelete: vi.fn(),
-  executeMkdir: vi.fn(), executeList: vi.fn(), executeExists: vi.fn(),
+  executeCopy: vi.fn(),
+  executeMove: vi.fn(),
+  executeDelete: vi.fn(),
+  executeMkdir: vi.fn(),
+  executeList: vi.fn(),
+  executeExists: vi.fn(),
 }));
 vi.mock('./DataTool.js', () => ({
-  executeJsonParse: vi.fn(), executeJsonWrite: vi.fn(), executeJsonQuery: vi.fn(),
-  executeYamlParse: vi.fn(), executeYamlWrite: vi.fn(), executeConvert: vi.fn(),
-  executeCsvParse: vi.fn(), executeCsvWrite: vi.fn(), executeXmlParse: vi.fn(), executeXmlWrite: vi.fn(),
+  executeJsonParse: vi.fn(),
+  executeJsonWrite: vi.fn(),
+  executeJsonQuery: vi.fn(),
+  executeYamlParse: vi.fn(),
+  executeYamlWrite: vi.fn(),
+  executeConvert: vi.fn(),
+  executeCsvParse: vi.fn(),
+  executeCsvWrite: vi.fn(),
+  executeXmlParse: vi.fn(),
+  executeXmlWrite: vi.fn(),
 }));
 vi.mock('./GitTool.js', () => ({
-  executeGitStatus: vi.fn(), executeGitDiff: vi.fn(), executeGitCommit: vi.fn(),
-  executeGitBranch: vi.fn(), executeGitCheckout: vi.fn(), executeGitLog: vi.fn(),
-  executeGitPush: vi.fn(), executeGitPull: vi.fn(), executeGitClone: vi.fn(),
-  executeGitAdd: vi.fn(), executeGitReset: vi.fn(), executeGitStash: vi.fn(),
-  executeGitMerge: vi.fn(), executeGitRemote: vi.fn(), executeGitCurrentBranch: vi.fn(),
+  executeGitStatus: vi.fn(),
+  executeGitDiff: vi.fn(),
+  executeGitCommit: vi.fn(),
+  executeGitBranch: vi.fn(),
+  executeGitCheckout: vi.fn(),
+  executeGitLog: vi.fn(),
+  executeGitPush: vi.fn(),
+  executeGitPull: vi.fn(),
+  executeGitClone: vi.fn(),
+  executeGitAdd: vi.fn(),
+  executeGitReset: vi.fn(),
+  executeGitStash: vi.fn(),
+  executeGitMerge: vi.fn(),
+  executeGitRemote: vi.fn(),
+  executeGitCurrentBranch: vi.fn(),
   executeGitBlame: vi.fn(),
 }));
 vi.mock('./CodeAnalysisTool.js', () => ({
-  executeParseAst: vi.fn(), executeAnalyzeCode: vi.fn(), executeComplexity: vi.fn(),
-  executeLint: vi.fn(), executeFindDeps: vi.fn(), executeCountLines: vi.fn(),
+  executeParseAst: vi.fn(),
+  executeAnalyzeCode: vi.fn(),
+  executeComplexity: vi.fn(),
+  executeLint: vi.fn(),
+  executeFindDeps: vi.fn(),
+  executeCountLines: vi.fn(),
 }));
 vi.mock('./NetworkTool.js', () => ({
-  executeHttpRequest: vi.fn(), executeDownloadFile: vi.fn(), executeUploadFile: vi.fn(),
-  executeApiCall: vi.fn(), executeCheckUrl: vi.fn(), executeParseUrl: vi.fn(),
+  executeHttpRequest: vi.fn(),
+  executeDownloadFile: vi.fn(),
+  executeUploadFile: vi.fn(),
+  executeApiCall: vi.fn(),
+  executeCheckUrl: vi.fn(),
+  executeParseUrl: vi.fn(),
 }));
 vi.mock('../math/MathSolve.js', () => ({ executeMathSolve: vi.fn() }));
 vi.mock('../math/MathPlot.js', () => ({ executeMathPlot: vi.fn() }));
 vi.mock('../math/MathExplain.js', () => ({ executeMathExplain: vi.fn() }));
 vi.mock('./SearchTool.js', () => ({ executeSearch: vi.fn() }));
-vi.mock('./ImageTool.js', () => ({ executeImageInfo: vi.fn(), executeImageToBase64: vi.fn(), executeListImages: vi.fn() }));
+vi.mock('./ImageTool.js', () => ({
+  executeImageInfo: vi.fn(),
+  executeImageToBase64: vi.fn(),
+  executeListImages: vi.fn(),
+}));
 vi.mock('../agent/LLMClient.js', () => ({ LLMClient: {} }));
 
 import { getTool, toolSchemas, registerQtTools, registerMathTools, type ToolDefinition } from './registry.js';
@@ -124,11 +157,15 @@ describe('registry', () => {
 
     it('replaces previously registered Qt tools', () => {
       const oldTool: ToolDefinition = {
-        name: 'QtOld', description: 'old', parameters: { type: 'object', properties: {} },
+        name: 'QtOld',
+        description: 'old',
+        parameters: { type: 'object', properties: {} },
         execute: async () => 'old',
       };
       const newTool: ToolDefinition = {
-        name: 'QtNew', description: 'new', parameters: { type: 'object', properties: {} },
+        name: 'QtNew',
+        description: 'new',
+        parameters: { type: 'object', properties: {} },
         execute: async () => 'new',
       };
 
@@ -142,7 +179,9 @@ describe('registry', () => {
 
     it('included Qt tools in toolSchemas', () => {
       const qtDef: ToolDefinition = {
-        name: 'QtTest', description: 'test', parameters: { type: 'object', properties: {} },
+        name: 'QtTest',
+        description: 'test',
+        parameters: { type: 'object', properties: {} },
         execute: async () => 'ok',
       };
       registerQtTools([qtDef]);
@@ -171,7 +210,9 @@ describe('registry', () => {
 
     it('replaces previously registered math tools', () => {
       const oldTool: ToolDefinition = {
-        name: 'MathOld', description: 'old', parameters: { type: 'object', properties: {} },
+        name: 'MathOld',
+        description: 'old',
+        parameters: { type: 'object', properties: {} },
         execute: async () => 'old',
       };
       registerMathTools([oldTool]);
@@ -183,7 +224,9 @@ describe('registry', () => {
 
     it('included math tools in toolSchemas', () => {
       const mathDef: ToolDefinition = {
-        name: 'MathPlot', description: 'plot', parameters: { type: 'object', properties: { kind: { type: 'string' } } },
+        name: 'MathPlot',
+        description: 'plot',
+        parameters: { type: 'object', properties: { kind: { type: 'string' } } },
         execute: async () => 'svg',
       };
       registerMathTools([mathDef]);

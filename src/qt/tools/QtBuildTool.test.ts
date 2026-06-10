@@ -13,7 +13,14 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(tempDir, { recursive: true, force: true });
+  // 等待一小段时间确保进程释放文件句柄
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  try {
+    await rm(tempDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+  } catch (err) {
+    // 在 Windows 上资源可能被占用，忽略清理错误
+    console.warn(`Failed to clean up temp dir: ${tempDir}`, err);
+  }
 });
 
 async function createFile(name: string, content: string): Promise<string> {

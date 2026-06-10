@@ -59,10 +59,7 @@ describe('QtProFileTool', () => {
     });
 
     it('parses CONFIG values', async () => {
-      await createFile(
-        'config.pro',
-        'QT += core\nCONFIG += qt warn_on release\nTEMPLATE = app\n',
-      );
+      await createFile('config.pro', 'QT += core\nCONFIG += qt warn_on release\nTEMPLATE = app\n');
       const r = await executeQtProFile(join(tempDir, 'config.pro'), tempDir);
       expect(r).toContain('CONFIG');
       expect(r).toContain('qt');
@@ -72,10 +69,7 @@ describe('QtProFileTool', () => {
 
   describe('Source and header parsing', () => {
     it('parses SOURCES list', async () => {
-      await createFile(
-        'src.pro',
-        'QT += core widgets\nTEMPLATE = app\nSOURCES = main.cpp widget.cpp dialog.cpp\n',
-      );
+      await createFile('src.pro', 'QT += core widgets\nTEMPLATE = app\nSOURCES = main.cpp widget.cpp dialog.cpp\n');
       const r = await executeQtProFile(join(tempDir, 'src.pro'), tempDir);
       expect(r).toContain('SOURCES (3)');
       expect(r).toContain('main.cpp');
@@ -84,10 +78,7 @@ describe('QtProFileTool', () => {
     });
 
     it('parses HEADERS list', async () => {
-      await createFile(
-        'hdr.pro',
-        'QT += core widgets\nTEMPLATE = app\nHEADERS = widget.h dialog.h\n',
-      );
+      await createFile('hdr.pro', 'QT += core widgets\nTEMPLATE = app\nHEADERS = widget.h dialog.h\n');
       const r = await executeQtProFile(join(tempDir, 'hdr.pro'), tempDir);
       expect(r).toContain('HEADERS');
       expect(r).toContain('widget.h');
@@ -95,10 +86,7 @@ describe('QtProFileTool', () => {
     });
 
     it('parses FORMS list', async () => {
-      await createFile(
-        'forms.pro',
-        'QT += core widgets\nTEMPLATE = app\nFORMS = mainwindow.ui dialog.ui\n',
-      );
+      await createFile('forms.pro', 'QT += core widgets\nTEMPLATE = app\nFORMS = mainwindow.ui dialog.ui\n');
       const r = await executeQtProFile(join(tempDir, 'forms.pro'), tempDir);
       expect(r).toContain('FORMS');
       expect(r).toContain('mainwindow.ui');
@@ -106,20 +94,14 @@ describe('QtProFileTool', () => {
     });
 
     it('parses RESOURCES list', async () => {
-      await createFile(
-        'res.pro',
-        'QT += core\nTEMPLATE = app\nRESOURCES = resources.qrc icons.qrc\n',
-      );
+      await createFile('res.pro', 'QT += core\nTEMPLATE = app\nRESOURCES = resources.qrc icons.qrc\n');
       const r = await executeQtProFile(join(tempDir, 'res.pro'), tempDir);
       expect(r).toContain('RESOURCES');
       expect(r).toContain('resources.qrc');
     });
 
     it('parses LIBS entries', async () => {
-      await createFile(
-        'libs.pro',
-        'QT += core\nTEMPLATE = app\nLIBS += -lssl -lcrypto -L/usr/local/lib\n',
-      );
+      await createFile('libs.pro', 'QT += core\nTEMPLATE = app\nLIBS += -lssl -lcrypto -L/usr/local/lib\n');
       const r = await executeQtProFile(join(tempDir, 'libs.pro'), tempDir);
       expect(r).toContain('LIBS');
       expect(r).toContain('-lssl');
@@ -144,10 +126,7 @@ describe('QtProFileTool', () => {
     });
 
     it('handles multiline QT modules', async () => {
-      await createFile(
-        'qtmultiline.pro',
-        'QT += core gui widgets sql\nTEMPLATE = app\n',
-      );
+      await createFile('qtmultiline.pro', 'QT += core gui widgets sql\nTEMPLATE = app\n');
       const r = await executeQtProFile(join(tempDir, 'qtmultiline.pro'), tempDir);
       expect(r).toContain('Qt Modules (4)');
       expect(r).toContain('widgets');
@@ -197,10 +176,7 @@ describe('QtProFileTool', () => {
     });
 
     it('handles comments in .pro file', async () => {
-      await createFile(
-        'comments.pro',
-        '# This is a comment\nQT += core gui\n# Another comment\nSOURCES = main.cpp\n',
-      );
+      await createFile('comments.pro', '# This is a comment\nQT += core gui\n# Another comment\nSOURCES = main.cpp\n');
       const r = await executeQtProFile(join(tempDir, 'comments.pro'), tempDir);
       expect(r).toContain('core');
       expect(r).toContain('main.cpp');
@@ -214,10 +190,7 @@ describe('QtProFileTool', () => {
 
     it('truncates long source lists (more than 20)', async () => {
       const srcs = Array.from({ length: 25 }, (_, i) => `file${i}.cpp`).join(' ');
-      await createFile(
-        'long.pro',
-        `QT += core\nTEMPLATE = app\nSOURCES += ${srcs}\n`,
-      );
+      await createFile('long.pro', `QT += core\nTEMPLATE = app\nSOURCES += ${srcs}\n`);
       const r = await executeQtProFile(join(tempDir, 'long.pro'), tempDir);
       expect(r).toContain('5 more');
     });

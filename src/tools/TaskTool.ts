@@ -52,7 +52,9 @@ export async function executeTask(
             tools: toolSchemas() as ToolSchema[],
           });
 
-          const assistantContent: Array<{ type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown }> = [];
+          const assistantContent: Array<
+            { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown }
+          > = [];
           if (textOutput) {
             assistantContent.push({ type: 'text', text: textOutput });
           }
@@ -64,7 +66,8 @@ export async function executeTask(
           if (textOutput) lines.push(textOutput);
           if (toolCalls.length === 0) break;
 
-          const toolResults: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error: boolean }> = [];
+          const toolResults: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error: boolean }> =
+            [];
           for (const tc of toolCalls) {
             if (tc.name === 'Question' || tc.name === 'Task') {
               toolResults.push({

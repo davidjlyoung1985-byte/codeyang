@@ -20,22 +20,14 @@ export function requiredString(args: Record<string, unknown>, key: string, label
 }
 
 /** Optional string parameter returns the value or a default. */
-export function optionalString(
-  args: Record<string, unknown>,
-  key: string,
-  defaultVal?: string,
-): string | undefined {
+export function optionalString(args: Record<string, unknown>, key: string, defaultVal?: string): string | undefined {
   const val = args[key];
   if (val === undefined || val === null) return defaultVal;
   return String(val);
 }
 
 /** Optional number parameter; validates it can be parsed as a number. */
-export function optionalNumber(
-  args: Record<string, unknown>,
-  key: string,
-  defaultVal?: number,
-): number | undefined {
+export function optionalNumber(args: Record<string, unknown>, key: string, defaultVal?: number): number | undefined {
   const val = args[key];
   if (val === undefined || val === null) return defaultVal;
   const n = Number(val);
@@ -46,11 +38,7 @@ export function optionalNumber(
 }
 
 /** Optional boolean parameter; accepts true/'true' as truthy. */
-export function optionalBoolean(
-  args: Record<string, unknown>,
-  key: string,
-  defaultVal?: boolean,
-): boolean | undefined {
+export function optionalBoolean(args: Record<string, unknown>, key: string, defaultVal?: boolean): boolean | undefined {
   const val = args[key];
   if (val === undefined || val === null) return defaultVal;
   return val === true || val === 'true';

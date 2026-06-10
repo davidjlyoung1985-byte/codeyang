@@ -25,7 +25,11 @@ describe('dotenv', () => {
       if (existsSync(p)) unlinkSync(p);
     }
     if (existsSync(tmpDir)) {
-      try { unlinkSync(tmpDir); } catch { /* ignore */ }
+      try {
+        unlinkSync(tmpDir);
+      } catch {
+        /* ignore */
+      }
     }
   });
 

@@ -296,8 +296,10 @@ export async function executeLint(filePath: string, fix = false): Promise<string
     }
 
     // ESLint 9+ flat config format
+    // Use simple configuration that doesn't depend on tsconfig
     const eslint = new ESLint({
       fix,
+      overrideConfigFile: true, // 不使用项目配置文件
       overrideConfig: [
         {
           languageOptions: {

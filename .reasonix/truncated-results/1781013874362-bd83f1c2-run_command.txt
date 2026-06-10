@@ -1,0 +1,187 @@
+$ npm test
+[exit 1]
+
+> codeyang@0.6.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.7 [39m[90mE:/Qt/ai-code-agent[39m
+
+ [32m✓[39m src/tools/ImageTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 95[2mms[22m[39m
+ [32m✓[39m src/tools/index.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 81[2mms[22m[39m
+ [32m✓[39m src/qt/tools/QtProFileTool.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 278[2mms[22m[39m
+ [32m✓[39m src/tools/GlobTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 325[2mms[22m[39m
+ [32m✓[39m src/tools/NetworkTool.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 263[2mms[22m[39m
+ [32m✓[39m src/qt/tools/QtQmlTool.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 761[2mms[22m[39m
+ [32m✓[39m src/tools/FileSystemTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 645[2mms[22m[39m
+ [32m✓[39m src/tools/DataTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 549[2mms[22m[39m
+ [32m✓[39m src/qt/tools.test.ts [2m([22m[2m25 tests[22m[2m)[22m[33m 714[2mms[22m[39m
+ [32m✓[39m src/qt/tools/QtMigrationTool.test.ts [2m([22m[2m39 tests[22m[2m)[22m[33m 855[2mms[22m[39m
+ [32m✓[39m src/agent/Agent.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 143[2mms[22m[39m
+ [32m✓[39m src/qt/index.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 240[2mms[22m[39m
+ [32m✓[39m src/utils/dotenv.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+ [32m✓[39m src/utils/sessionStore.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 107[2mms[22m[39m
+ [32m✓[39m src/ui/CliUI.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32m✓[39m src/tools/MemoryTool.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [31m❯[39m src/tools/GlobTool.bench.ts [2m([22m[2m4 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 1564[2mms[22m[39m
+[31m     [31m×[31m **/*.ts across project under 500ms[39m[33m 833[2mms[22m[39m
+     [32m✓[39m **/*.{ts,js,json} across project under 1000ms[32m 291[2mms[22m[39m
+[31m     [31m×[31m src/**/*.ts under 200ms[39m[33m 430[2mms[22m[39m
+     [32m✓[39m single-level pattern *.ts (shallow) under 100ms[32m 3[2mms[22m[39m
+ [32m✓[39m src/tools/SearchTool.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1589[2mms[22m[39m
+     [33m[2m✓[22m[39m finds files by content [33m 751[2mms[22m[39m
+     [33m[2m✓[22m[39m combined search returns name matches first [33m 329[2mms[22m[39m
+ [32m✓[39m src/tools/registry.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m src/tools/TaskTool.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m src/math/index.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m src/agent/config.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m src/tools/tools.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 2377[2mms[22m[39m
+     [33m[2m✓[22m[39m executes a simple echo command [33m 715[2mms[22m[39m
+     [33m[2m✓[22m[39m returns exit code for failing commands [33m 429[2mms[22m[39m
+ [32m✓[39m src/tools/mcp.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/utils/memoryStore.bench.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 5273[2mms[22m[39m
+ [32m✓[39m src/qt/tools/QtBuildTool.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 6851[2mms[22m[39m
+       [33m[2m✓[22m[39m handles qmake not being installed gracefully [33m 2396[2mms[22m[39m
+       [33m[2m✓[22m[39m reports qmake build header [33m 1432[2mms[22m[39m
+       [33m[2m✓[22m[39m handles cmake not being installed gracefully [33m 438[2mms[22m[39m
+       [33m[2m✓[22m[39m reports cmake build header [33m 440[2mms[22m[39m
+       [33m[2m✓[22m[39m auto mode defaults to cmake [33m 429[2mms[22m[39m
+       [33m[2m✓[22m[39m accepts target parameter for cmake [33m 419[2mms[22m[39m
+       [33m[2m✓[22m[39m accepts empty target for qmake [33m 1291[2mms[22m[39m
+ [31m❯[39m src/tools/CodeAnalysisTool.test.ts [2m([22m[2m19 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 6449[2mms[22m[39m
+       [32m✓[39m should parse JavaScript code[32m 88[2mms[22m[39m
+       [32m✓[39m should parse TypeScript code[32m 25[2mms[22m[39m
+       [32m✓[39m should handle missing file[32m 4[2mms[22m[39m
+       [32m✓[39m should analyze imports[32m 28[2mms[22m[39m
+       [32m✓[39m should analyze functions[32m 37[2mms[22m[39m
+       [32m✓[39m should analyze classes[32m 23[2mms[22m[39m
+       [32m✓[39m should analyze variables[32m 20[2mms[22m[39m
+       [32m✓[39m should analyze exports[32m 21[2mms[22m[39m
+       [32m✓[39m should calculate complexity for simple code[32m 22[2mms[22m[39m
+       [32m✓[39m should calculate complexity for branching code[32m 15[2mms[22m[39m
+       [32m✓[39m should calculate complexity for loops[32m 14[2mms[22m[39m
+[31m       [31m×[31m should find no issues in clean code[39m[33m 6119[2mms[22m[39m
+[31m       [31m×[31m should find unused variables[39m[32m 13[2mms[22m[39m
+       [32m✓[39m should handle missing file[32m 1[2mms[22m[39m
+       [32m✓[39m should find dependencies in package.json[32m 3[2mms[22m[39m
+       [32m✓[39m should handle missing package.json[32m 1[2mms[22m[39m
+       [32m✓[39m should count lines correctly[32m 3[2mms[22m[39m
+       [32m✓[39m should handle block comments[32m 3[2mms[22m[39m
+       [32m✓[39m should handle missing file[32m 1[2mms[22m[39m
+ [32m✓[39m src/tools/GitTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 21170[2mms[22m[39m
+       [33m[2m✓[22m[39m should show clean status for new repo [33m 1398[2mms[22m[39m
+       [33m[2m✓[22m[39m should show untracked files [33m 991[2mms[22m[39m
+       [33m[2m✓[22m[39m should show modified files [33m 1067[2mms[22m[39m
+       [33m[2m✓[22m[39m should show short format [33m 562[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage files [33m 804[2mms[22m[39m
+       [33m[2m✓[22m[39m should fail with no files [33m 496[2mms[22m[39m
+       [33m[2m✓[22m[39m should create commit with staged files [33m 958[2mms[22m[39m
+       [33m[2m✓[22m[39m should stage all and commit with addAll=true [33m 785[2mms[22m[39m
+       [33m[2m✓[22m[39m should fail with no staged changes [33m 577[2mms[22m[39m
+       [33m[2m✓[22m[39m should list branches [33m 878[2mms[22m[39m
+       [33m[2m✓[22m[39m should show multiple branches [33m 923[2mms[22m[39m
+       [33m[2m✓[22m[39m should create and switch to new branch [33m 942[2mms[22m[39m
+       [33m[2m✓[22m[39m should switch to existing branch [33m 958[2mms[22m[39m
+       [33m[2m✓[22m[39m should show commit history [33m 823[2mms[22m[39m
+       [33m[2m✓[22m[39m should limit commit count [33m 2112[2mms[22m[39m
+       [33m[2m✓[22m[39m should show oneline format [33m 892[2mms[22m[39m
+       [33m[2m✓[22m[39m should show no diff for clean repo [33m 479[2mms[22m[39m
+       [33m[2m✓[22m[39m should show unstaged changes [33m 822[2mms[22m[39m
+       [33m[2m✓[22m[39m should show staged changes [33m 928[2mms[22m[39m
+       [33m[2m✓[22m[39m should unstage files [33m 732[2mms[22m[39m
+       [33m[2m✓[22m[39m should stash changes [33m 985[2mms[22m[39m
+       [33m[2m✓[22m[39m should list stashes [33m 1219[2mms[22m[39m
+       [33m[2m✓[22m[39m should return current branch [33m 834[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 4 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/tools/CodeAnalysisTool.test.ts[2m > [22mCodeAnalysisTool[2m > [22mexecuteLint[2m > [22mshould find no issues in clean code
+[31m[1mAssertionError[22m: expected 'File: E:\Qt\ai-code-agent\.test-code-…' to contain 'No issues found'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- No issues found[39m
+[31m+ File: E:\Qt\ai-code-agent\.test-code-analysis\test.js[39m
+[31m+ Errors: 1, Warnings: 0[39m
+[31m+[39m
+[31m+ Error at line undefined:undefined[39m
+[31m+   Parsing error: ESLint was configured to run on `<tsconfigRootDir>/.test-code-analysis\test.js` using `parserOptions.project`: <tsconfigRootDir>/tsconfig.eslint.json[39m
+[31m+ However, that TSConfig does not include this file. Either:[39m
+[31m+ - Change ESLint's list of included files to not include this file[39m
+[31m+ - Change that TSConfig to include this file[39m
+[31m+ - Create a new TSConfig that includes this file and include it in your parserOptions.project[39m
+[31m+ See the typescript-eslint docs for more info: https://tseslint.com/none-of-those-tsconfigs-include-this-file[39m
+[31m+   Rule: unknown[39m
+[31m+[39m
+
+[36m [2m❯[22m src/tools/CodeAnalysisTool.test.ts:[2m178:22[22m[39m
+    [90m176|[39m       [35mconst[39m result [33m=[39m [35mawait[39m [34mexecuteLint[39m(file[33m,[39m [35mfalse[39m)[33m;[39m
+    [90m177|[39m
+    [90m178|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'No issues found'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m179|[39m     })[33m;[39m
+    [90m180|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/CodeAnalysisTool.test.ts[2m > [22mCodeAnalysisTool[2m > [22mexecuteLint[2m > [22mshould find unused variables
+[31m[1mAssertionError[22m: expected 'File: E:\Qt\ai-code-agent\.test-code-…' to contain 'no-unused-vars'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- no-unused-vars[39m
+[31m+ File: E:\Qt\ai-code-agent\.test-code-analysis\test.js[39m
+[31m+ Errors: 1, Warnings: 0[39m
+[31m+[39m
+[31m+ Error at line undefined:undefined[39m
+[31m+   Parsing error: ESLint was configured to run on `<tsconfigRootDir>/.test-code-analysis\test.js` using `parserOptions.project`: <tsconfigRootDir>/tsconfig.eslint.json[39m
+[31m+ However, that TSConfig does not include this file. Either:[39m
+[31m+ - Change ESLint's list of included files to not include this file[39m
+[31m+ - Change that TSConfig to include this file[39m
+[31m+ - Create a new TSConfig that includes this file and include it in your parserOptions.project[39m
+[31m+ See the typescript-eslint docs for more info: https://tseslint.com/none-of-those-tsconfigs-include-this-file[39m
+[31m+   Rule: unknown[39m
+[31m+[39m
+
+[36m [2m❯[22m src/tools/CodeAnalysisTool.test.ts:[2m188:22[22m[39m
+    [90m186|[39m
+    [90m187|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'Warning'[39m)[33m;[39m
+    [90m188|[39m       [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'no-unused-vars'[39m)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m189|[39m     })[33m;[39m
+    [90m190|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/GlobTool.bench.ts[2m > [22mGlobTool benchmarks[2m > [22m**/*.ts across project under 500ms
+[31m[1mAssertionError[22m: expected 813 to be less than 500[39m
+[36m [2m❯[22m src/tools/GlobTool.bench.ts:[2m10:21[22m[39m
+    [90m  8|[39m     [35mconst[39m elapsed [33m=[39m [33mDate[39m[33m.[39m[34mnow[39m() [33m-[39m start[33m;[39m
+    [90m  9|[39m
+    [90m 10|[39m     [34mexpect[39m(elapsed)[33m.[39m[34mtoBeLessThan[39m([34m500[39m)[33m;[39m
+    [90m   |[39m                     [31m^[39m
+    [90m 11|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'.ts'[39m)[33m;[39m
+    [90m 12|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/tools/GlobTool.bench.ts[2m > [22mGlobTool benchmarks[2m > [22msrc/**/*.ts under 200ms
+[31m[1mAssertionError[22m: expected 427 to be less than 200[39m
+[36m [2m❯[22m src/tools/GlobTool.bench.ts:[2m28:21[22m[39m
+    [90m 26|[39m     [35mconst[39m elapsed [33m=[39m [33mDate[39m[33m.[39m[34mnow[39m() [33m-[39m start[33m;[39m
+    [90m 27|[39m
+    [90m 28|[39m     [34mexpect[39m(elapsed)[33m.[39m[34mtoBeLessThan[39m([34m200[39m)[33m;[39m
+    [90m   |[39m                     [31m^[39m
+    [90m 29|[39m     [34mexpect[39m(result)[33m.[39m[34mtoContain[39m([32m'src/'[39m)[33m;[39m
+    [90m 30|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m26 passed[39m[22m[90m (28)[39m
+[2m      Tests [22m [1m[31m4 failed[39m[22m[2m | [22m[1m[32m473 passed[39m[22m[90m (477)[39m
+[2m   Start at [22m 22:04:11
+[2m   Duration [22m 22.76s[2m (transform 9.74s, setup 0ms, import 20.48s, tests 50.63s, environment 12ms)[22m
+

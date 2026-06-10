@@ -10,7 +10,9 @@ const PREFIXES: Record<LogLevel, string> = {
 let currentLevel: LogLevel = process.env['CODEX_DEBUG'] ? 'debug' : 'info';
 
 export const logger = {
-  setLevel(level: LogLevel) { currentLevel = level; },
+  setLevel(level: LogLevel) {
+    currentLevel = level;
+  },
 
   debug(...args: unknown[]) {
     if (currentLevel === 'debug') console.log(`[DEBUG]`, ...args);
