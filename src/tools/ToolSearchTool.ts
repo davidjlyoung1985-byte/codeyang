@@ -23,7 +23,7 @@ export async function executeToolSearch(query: string): Promise<string> {
   for (const t of matches) {
     lines.push(`  ${t.name}`);
     lines.push(`    ${t.description.split('.')[0]}.`);
-    const props = (t.input_schema as any)?.properties;
+    const props = (t.input_schema as { properties?: Record<string, unknown> })?.properties;
     if (props) {
       const paramList = Object.keys(props).join(', ');
       lines.push(`    Parameters: ${paramList}`);

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
 import {
@@ -11,7 +12,7 @@ import {
   executeCountLines,
 } from './CodeAnalysisTool.js';
 
-const TEST_DIR = path.join(process.cwd(), '.test-code-analysis');
+const TEST_DIR = path.join(os.tmpdir(), 'codeyang-test-code-analysis');
 
 describe('CodeAnalysisTool', () => {
   beforeEach(async () => {

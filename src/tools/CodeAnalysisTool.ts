@@ -295,21 +295,23 @@ export async function executeLint(filePath: string, fix = false): Promise<string
       return `Error: File does not exist: ${filePath}`;
     }
 
-    // ESLint 9+ flat config format
+    // ESLint 10: use overrideConfigFile=true to skip project config lookup,
+    // and provide inline config via overrideConfig to avoid parserOptions.project issues.
     const eslint = new ESLint({
       fix,
+      cwd: path.dirname(absPath),
+      overrideConfigFile: true,
       overrideConfig: [
         {
+          files: ['**/*.{js,ts}'],
           languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'module',
             globals: {
-              // Browser globals
               window: 'readonly',
               document: 'readonly',
               navigator: 'readonly',
               console: 'readonly',
-              // Node globals
               process: 'readonly',
               Buffer: 'readonly',
               __dirname: 'readonly',

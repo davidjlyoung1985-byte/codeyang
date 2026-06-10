@@ -17,6 +17,7 @@ import {
   executeGitCurrentBranch,
   executeGitBlame,
 } from '../GitTool.js';
+import { requiredString } from '../validate.js';
 
 export const definitions: ToolDefinition[] = [
   {
@@ -68,7 +69,7 @@ export const definitions: ToolDefinition[] = [
       required: ['message'],
     },
     execute: async (args) => {
-      const message = String(args['message'] ?? '');
+      const message = requiredString(args, 'message');
       const cwd = args['cwd'] ? String(args['cwd']) : undefined;
       const addAll = args['addAll'] === true;
       return executeGitCommit(message, cwd, addAll);
