@@ -179,29 +179,11 @@ export class CliUI {
   // ─── Welcome ──────────────────────────────────────────────────────
 
   welcome() {
-    const w = termW();
     console.log('');
-    console.log(c.cyan('  ╭' + '─'.repeat(w - 4) + '╮'));
-    console.log(
-      c.cyan('  │') +
-        '  ' +
-        c.bold(c.green('CodeYang')) +
-        c.dim(' v' + VERSION) +
-        c.dim(' — AI Coding Agent') +
-        ' '.repeat(w - 36 - VERSION.length) +
-        c.cyan('│')
-    );
-    console.log(
-      c.cyan('  │') +
-        '  ' +
-        c.dim('💡 64+ Tools | Qt Support | Code Refactoring') +
-        ' '.repeat(w - 52) +
-        c.cyan('│')
-    );
-    console.log(c.cyan('  ╰' + '─'.repeat(w - 4) + '╯'));
+    console.log(`  ${c.bold(c.green('CodeYang'))} ${c.dim(`v${VERSION}`)}  ${c.dim('—')}  ${c.dim('AI Coding Agent')}`);
     console.log('');
     console.log(
-      `  ${c.dim('Commands:')} ${c.cyan('/clear')} ${c.cyan('/sessions')} ${c.cyan('/model')} ${c.cyan('/mcp')} ${c.cyan('/help')}  ${c.dim('·')}  ${c.dim('Ctrl+C to exit')}`
+      `  ${c.dim('/clear')}  ${c.dim('/sessions')}  ${c.dim('/model')}  ${c.dim('/mcp')}  ${c.dim('·')}  ${c.dim('Ctrl+C to exit')}`,
     );
     console.log('');
     hr('ready');
