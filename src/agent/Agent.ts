@@ -323,14 +323,15 @@ export class Agent {
       const parallelTasks = toolCalls.map(async (tc, i) => {
         if (tc.name === 'Question') return; // already handled above
 
-        toolResultIds[i] = tc.id;
+        try {
+          toolResultIds[i] = tc.id;
 
-        const tool = getTool(tc.name);
-        if (!tool) {
-          toolResults[i] = { tool: tc.name, input: tc.input, output: `Unknown: ${tc.name}`, isError: true };
-          this.cbs.onToolResult?.(tc.name, `Unknown: ${tc.name}`, true);
-          return;
-        }
+          const tool = getTool(tc.name);
+          if (!tool) {
+            toolResults[i] = { tool: tc.name, input: tc.input, output: `Unknown: ${tc.name}`, isError: true };
+            this.cbs.onToolResult?.(tc.name, `Unknown: ${tc.name}`, true);
+            return;
+          }
 
         this.cbs.onToolStart?.(tc.name, tc.input);
 
@@ -390,6 +391,9 @@ export class Agent {
           if (cacheKey) {
             this.pendingReads.delete(cacheKey);
           }
+        }
+        } catch {
+          toolResults[i] = { tool: tc.name, input: tc.input, output: 'Unexpected error in tool executor', isError: true };
         }
       });
 

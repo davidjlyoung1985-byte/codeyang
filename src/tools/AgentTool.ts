@@ -7,7 +7,7 @@
  * - Agent memory sharing (output of one agent feeds into another)
  * - Configurable max turns per sub-agent
  */
-import type { LLMClient, LLMMessage } from '../agent/LLMClient.js';
+import type { LLMMessage } from '../agent/LLMClient.js';
 import { consumeStream } from '../agent/LLMClient.js';
 import { toolSchemas, getTool, getCurrentContext } from './registry.js';
 

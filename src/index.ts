@@ -8,8 +8,8 @@ import { logger } from './utils/logger.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
+import { VERSION } from './version.js';
 
-const VERSION = '0.6.0';
 
 async function promptForApiKey(): Promise<string> {
   return new Promise((resolve) => {
