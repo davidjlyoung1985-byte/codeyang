@@ -116,7 +116,7 @@ export class McpClient {
     }
 
     const result = await this.client.callTool({ name, arguments: args });
-    const content = result.content as Array<{ type: string; text?: string }>;
+    const content = (result.content ?? []) as Array<{ type: string; text?: string }>;
     const textContent = content
       .filter((c: { type: string; text?: string }) => c.type === 'text')
       .map((c: { type: string; text?: string }) => c.text ?? '')

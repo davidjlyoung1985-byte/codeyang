@@ -34,6 +34,7 @@ export class Agent {
   private client: LLMClient;
   private history: LLMMessage[] = [];
   private cbs: AgentCallbacks = {};
+  private checkpoints: LLMMessage[][] = [];
   private questionResolve: ((answer: string) => void) | null = null;
   private maxRetries = 3;
 
@@ -175,18 +176,24 @@ export class Agent {
     return { ...this.tokenUsage };
   }
 
-  /** Record a tool call for stats tracking */
-  recordToolCall(name: string, ms: number, isErr: boolean) {
-    const s = this.toolStats.get(name) ?? { calls: 0, totalMs: 0, errors: 0 };
-    s.calls++;
-    s.totalMs += ms;
-    if (isErr) s.errors++;
-    this.toolStats.set(name, s);
+  /** Save a checkpoint of the current conversation history */
+  saveCheckpoint(): number {
+    const idx = this.checkpoints.length;
+    this.checkpoints.push(this.jsonClone(this.history));
+    return idx;
   }
 
-  /** Get accumulated tool usage statistics */
-  getToolStats(): Record<string, { calls: number; totalMs: number; errors: number }> {
-    return Object.fromEntries(this.toolStats);
+  /** Restore to the most recent checkpoint. Returns false if none available. */
+  restoreCheckpoint(): boolean {
+    if (this.checkpoints.length === 0) return false;
+    const saved = this.checkpoints.pop()!;
+    this.history = saved;
+    return true;
+  }
+
+  /** Number of saved checkpoints */
+  get checkpointCount(): number {
+    return this.checkpoints.length;
   }
 
   /** Clear conversation history and start fresh */
@@ -435,8 +442,9 @@ export class Agent {
           this.recentAssistantTexts.shift();
         }
 
-        // Display only after passing the repetition check
-        this.cbs.onAgentText?.(assistantText);
+        // Text was already streamed via onAgentDelta deltas — skip onAgentText
+        // to avoid duplicate output. Only fire for non-streamed responses.
+        // this.cbs.onAgentText?.(assistantText); // removed: causes double output
       }
 
       if (toolCalls.length === 0) {
@@ -475,21 +483,15 @@ export class Agent {
       const parallelTasks = toolCalls.map(async (tc, i) => {
         if (tc.name === 'Question') return; // already handled above
 
-        // Check if cancelled before starting this tool
-        if (signal.aborted) {
-          toolResults[i] = { tool: tc.name, input: tc.input, output: '[Cancelled]', isError: true };
-          this.cbs.onToolResult?.(tc.name, '[Cancelled]', true);
-          return;
-        }
+        try {
+          toolResultIds[i] = tc.id;
 
-        toolResultIds[i] = tc.id;
-
-        const tool = getTool(tc.name);
-        if (!tool) {
-          toolResults[i] = { tool: tc.name, input: tc.input, output: `Unknown: ${tc.name}`, isError: true };
-          this.cbs.onToolResult?.(tc.name, `Unknown: ${tc.name}`, true);
-          return;
-        }
+          const tool = getTool(tc.name);
+          if (!tool) {
+            toolResults[i] = { tool: tc.name, input: tc.input, output: `Unknown: ${tc.name}`, isError: true };
+            this.cbs.onToolResult?.(tc.name, `Unknown: ${tc.name}`, true);
+            return;
+          }
 
         this.cbs.onToolStart?.(tc.name, tc.input);
 
@@ -553,6 +555,9 @@ export class Agent {
           if (cacheKey) {
             this.pendingReads.delete(cacheKey);
           }
+        }
+        } catch {
+          toolResults[i] = { tool: tc.name, input: tc.input, output: 'Unexpected error in tool executor', isError: true };
         }
       });
 

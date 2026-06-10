@@ -1,13 +1,6 @@
 import type { ToolDefinition } from '../../types.js';
-import {
-  executeCopy,
-  executeMove,
-  executeDelete,
-  executeMkdir,
-  executeList,
-  executeExists,
-} from '../FileSystemTool.js';
-import { requiredString, optionalBoolean } from '../validate.js';
+import { executeCopy, executeMove, executeDelete, executeMkdir, executeList, executeExists } from '../FileSystemTool.js';
+import { requiredString } from '../validate.js';
 
 export const definitions: ToolDefinition[] = [
   {
