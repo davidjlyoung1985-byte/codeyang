@@ -9,6 +9,7 @@ import { definitions as memoryDefs } from './memory.def.js';
 import { definitions as imageDefs } from './image.def.js';
 import { definitions as mathDefs } from './math.def.js';
 import { definitions as searchDefs } from './search.def.js';
+import { definitions as shellDefs } from './shell.def.js';
 import { definitions as searchWebDefs } from './search-web.def.js';
 import { definitions as planDefs } from './plan.def.js';
 import { definitions as agentDefs } from './agent.def.js';
@@ -25,6 +26,7 @@ export const builtinDefinitions: ToolDefinition[] = [
   ...memoryDefs,
   ...imageDefs,
   ...searchDefs,
+  ...shellDefs,
   ...searchWebDefs,
   ...planDefs,
   ...agentDefs,

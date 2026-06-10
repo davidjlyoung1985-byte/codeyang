@@ -258,6 +258,68 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       return;
     }
 
+    if (lower === '/rewind') {
+      const ok = agent.restoreCheckpoint();
+      if (ok) {
+        console.log('  Rewound to previous checkpoint.');
+      } else {
+        console.log('  No checkpoints available.');
+      }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/diff') {
+      const { executeGitDiff } = await import('./tools/GitTool.js');
+      const result = await executeGitDiff(process.cwd(), line.includes('--staged'), undefined);
+      console.log(`\n${result}`);
+      ui.promptUser();
+      return;
+    }
+
+    if (lower.startsWith('/commit')) {
+      const msg = line.slice(8).trim();
+      if (!msg) {
+        console.log('  Usage: /commit <message>');
+      } else {
+        const { executeGitCommit } = await import('./tools/GitTool.js');
+        const result = await executeGitCommit(msg, process.cwd(), true);
+        console.log(`\n${result}`);
+      }
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/branch') {
+      const { executeGitBranch } = await import('./tools/GitTool.js');
+      const result = await executeGitBranch(process.cwd(), false);
+      console.log(`\n${result}`);
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/tag') {
+      const idx = agent.saveCheckpoint();
+      console.log(`  Checkpoint ${idx} saved. Use /rewind to return here.`);
+      ui.promptUser();
+      return;
+    }
+
+    if (lower === '/ctx_viz' || lower === '/context') {
+      const usage = agent.getTokenUsage();
+      const totalTokens = usage.inputTokens + usage.outputTokens;
+      const maxTokens = config.maxTokens;
+      const pct = Math.round((totalTokens / maxTokens) * 100);
+      const barLen = 30;
+      const filled = Math.round((pct / 100) * barLen);
+      const bar = '█'.repeat(filled) + '░'.repeat(Math.max(0, barLen - filled));
+      console.log(`  Context: ${bar} ${pct}%`);
+      console.log(`  Used: ${totalTokens.toLocaleString()} / ${maxTokens.toLocaleString()} tokens`);
+      console.log(`  Messages in history: ${agent.exportMessages().length}`);
+      ui.promptUser();
+      return;
+    }
+
     if (lower === '/plan') {
       const { isPlanMode, setPlanMode } = await import('./tools/registry.js');
       if (isPlanMode()) {

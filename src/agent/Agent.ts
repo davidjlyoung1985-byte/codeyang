@@ -34,6 +34,7 @@ export class Agent {
   private client: LLMClient;
   private history: LLMMessage[] = [];
   private cbs: AgentCallbacks = {};
+  private checkpoints: LLMMessage[][] = [];
   private questionResolve: ((answer: string) => void) | null = null;
   private maxRetries = 3;
 
@@ -124,6 +125,26 @@ export class Agent {
   /** Get accumulated token usage across all turns */
   getTokenUsage(): { inputTokens: number; outputTokens: number } {
     return { ...this.tokenUsage };
+  }
+
+  /** Save a checkpoint of the current conversation history */
+  saveCheckpoint(): number {
+    const idx = this.checkpoints.length;
+    this.checkpoints.push(this.jsonClone(this.history));
+    return idx;
+  }
+
+  /** Restore to the most recent checkpoint. Returns false if none available. */
+  restoreCheckpoint(): boolean {
+    if (this.checkpoints.length === 0) return false;
+    const saved = this.checkpoints.pop()!;
+    this.history = saved;
+    return true;
+  }
+
+  /** Number of saved checkpoints */
+  get checkpointCount(): number {
+    return this.checkpoints.length;
   }
 
   /** Clear conversation history and start fresh */
