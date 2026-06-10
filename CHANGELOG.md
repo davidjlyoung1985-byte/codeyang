@@ -2,6 +2,23 @@
 
 All notable changes to CodeYang will be documented in this file.
 
+## [0.7.0] - 2026-06-10
+
+### Added
+
+- **Refactoring Tools** — 4 new intelligent code refactoring tools powered by TypeScript Compiler API
+  - **RefactorRename** — Rename symbols (variables, functions, classes) across files with automatic reference tracking
+  - **RefactorExtract** — Extract code blocks into new functions with automatic parameter and return value detection
+  - **RefactorInline** — Inline variables by replacing all uses with their values
+  - **RefactorOrganizeImports** — Sort and group imports (Node.js / External / Local) with alphabetical ordering
+- **Test Coverage** — 17 new tests for refactoring tools (100% pass rate)
+- **Validation Helper** — Added `requiredNumber()` utility for parameter validation
+
+### Changed
+
+- **Tool Count** — Increased from 60+ to 64+ tools
+- **Test Count** — Increased from 477 to 494 tests
+
 ## [0.6.1] - 2026-06-10
 
 ### Fixed

@@ -11,4 +11,4 @@ export {
 } from './registry.js';
 export type { ToolContext } from './registry.js';
 
-export { requiredString, optionalString, optionalNumber, optionalBoolean } from './validate.js';
+export { requiredString, requiredNumber, optionalString, optionalNumber, optionalBoolean } from './validate.js';

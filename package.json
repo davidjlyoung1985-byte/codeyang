@@ -1,7 +1,7 @@
 {
   "name": "codeyang",
-  "version": "0.6.1",
-  "description": "Terminal-based AI coding agent with 60+ tools, MCP support, and session persistence",
+  "version": "0.7.0",
+  "description": "Terminal-based AI coding agent with 64+ tools, code refactoring, MCP support, and session persistence",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

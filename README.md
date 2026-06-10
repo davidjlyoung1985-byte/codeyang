@@ -7,7 +7,7 @@ Also includes a **VS Code extension** for in-editor AI chat with the same tool-u
 ## Features
 
 - **Natural language coding** — describe what you want and CodeYang figures out how to do it
-- **60+ built-in tools** — File ops (Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists), Search (Glob, Grep, Search), Code analysis (AST parsing, dependency analysis, complexity, lint), Git (16 operations), Data (JSON/YAML/CSV/XML parse/write/query/convert), Network (HTTP requests, download, upload, URL tools), Memory (persistent key-value across sessions), Image (info, base64, listing), Math (solver, plotter, concept explainer), Task management (TodoWrite), Delegation (Task sub-agent), Web (WebFetch), Interactive (Question)
+- **64+ built-in tools** — File ops (Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists), Search (Glob, Grep, Search), Code analysis (AST parsing, dependency analysis, complexity, lint), Git (16 operations), Data (JSON/YAML/CSV/XML parse/write/query/convert), Network (HTTP requests, download, upload, URL tools), Memory (persistent key-value across sessions), Image (info, base64, listing), Math (solver, plotter, concept explainer), Refactoring (rename, extract function, inline, organize imports), Task management (TodoWrite), Delegation (Task sub-agent), Web (WebFetch), Interactive (Question)
 - **Streaming responses** — see output in real-time as it generates
 - **Multi-provider support** — DeepSeek (default), any OpenAI-compatible API, or Anthropic Claude
 - **MCP (Model Context Protocol) support** — connect external tool servers for extended capabilities

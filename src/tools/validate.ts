@@ -19,6 +19,19 @@ export function requiredString(args: Record<string, unknown>, key: string, label
   return str;
 }
 
+/** Require a number parameter; throws if missing, null, or not a valid number. */
+export function requiredNumber(args: Record<string, unknown>, key: string, label?: string): number {
+  const val = args[key];
+  if (val === undefined || val === null) {
+    throw new Error(`Missing required parameter: ${label || key}`);
+  }
+  const n = Number(val);
+  if (Number.isNaN(n)) {
+    throw new Error(`Invalid number for parameter: ${label || key}`);
+  }
+  return n;
+}
+
 /** Optional string parameter returns the value or a default. */
 export function optionalString(args: Record<string, unknown>, key: string, defaultVal?: string): string | undefined {
   const val = args[key];

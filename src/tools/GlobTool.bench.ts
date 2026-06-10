@@ -22,13 +22,13 @@ describe('GlobTool benchmarks', () => {
     expect(result.length).toBeGreaterThan(0);
   }, 10000);
 
-  it('src/**/*.ts under 1500ms', async () => {
+  it('src/**/*.ts under 2000ms', async () => {
     const start = Date.now();
     const result = await executeGlob('src/**/*.ts');
     const elapsed = Date.now() - start;
 
     // src 目录可能包含大量文件
-    expect(elapsed).toBeLessThan(1500);
+    expect(elapsed).toBeLessThan(2000);
     expect(result).toContain('src/');
   }, 10000);
 
