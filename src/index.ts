@@ -258,6 +258,19 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       return;
     }
 
+    if (lower === '/plan') {
+      const { isPlanMode, setPlanMode } = await import('./tools/registry.js');
+      if (isPlanMode()) {
+        setPlanMode(false);
+        console.log('  Planning mode deactivated.');
+      } else {
+        console.log('  Enter planning mode: the agent will plan before executing.');
+        console.log('  Use EnterPlanMode tool in conversation, or /plan again to exit.');
+      }
+      ui.promptUser();
+      return;
+    }
+
     if (lower === '/sessions') {
       const sessions = await listSessions();
       if (sessions.length === 0) {

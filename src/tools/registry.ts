@@ -14,6 +14,7 @@ export interface ToolContext {
 
 let currentContext: ToolContext | null = null;
 let mcpManager: McpManager | null = null;
+let planMode = false;
 const mcpTools: ToolDefinition[] = [];
 const qtTools: ToolDefinition[] = [];
 const mathTools: ToolDefinition[] = [];
@@ -24,6 +25,16 @@ export const tools: ToolDefinition[] = [...builtinDefinitions];
 /** Retrieve the current tool context (used by Task tool definition). */
 export function getCurrentContext(): ToolContext | null {
   return currentContext;
+}
+
+/** Check whether the agent is in planning mode. */
+export function isPlanMode(): boolean {
+  return planMode;
+}
+
+/** Toggle planning mode. When active, the agent plans before executing. */
+export function setPlanMode(v: boolean): void {
+  planMode = v;
 }
 
 export function setToolContext(ctx: ToolContext | null) {

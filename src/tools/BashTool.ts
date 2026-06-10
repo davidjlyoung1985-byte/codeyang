@@ -1,25 +1,5 @@
 import { execa } from 'execa';
-
-// Dangerous command patterns that require user confirmation
-const DANGEROUS_PATTERNS: RegExp[] = [
-  /\brm\s+-rf\b/i,           // rm -rf (recursive force delete)
-  /\brm\s+-r\s+\//,          // rm -r /
-  /\brm\s+-rf\s+\//,         // rm -rf /
-  /\brmdir\s+\/s\b/i,        // Windows rmdir /s
-  /\bformat\s+/i,            // Windows format
-  /\bdestroy\b/i,            // destroy operations
-  /\bdd\s+if=/i,             // dd with input (disk operations)
-  /\b>:?\s*\/dev\//,         // redirect to /dev/ (disk write)
-  /\bmkfs\b/i,               // make filesystem
-  /\bfdisk\b/i,              // partition tool
-  /\bgit\s+push\s+--force\b/i,  // force push
-  /\bgit\s+push\s+-f\b/i,       // force push (short)
-  /\bcurl\s+.*\|\s*(bash|sh|zsh|powershell)\b/i,  // curl | sh
-  /\bwget\s+.*\|\s*(bash|sh|zsh|powershell)\b/i,  // wget | sh
-  /\bsudo\s+/i,              // sudo
-  /\bchmod\s+-R\s+777\b/i,   // dangerous chmod
-  /\bchown\s+-R\b/i,         // recursive chown
-];
+import { checkPermission } from '../permission/index.js';
 
 // User-customizable deny list from env var (comma-separated substrings)
 const DENY_LIST = (process.env['CODEYANG_DENY_COMMANDS'] || '')
@@ -28,18 +8,20 @@ const DENY_LIST = (process.env['CODEYANG_DENY_COMMANDS'] || '')
   .filter(Boolean);
 
 export async function executeBash(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
-  // Check deny list (exact substring match)
+  // Check deny list (exact substring match — fastest check)
   for (const denied of DENY_LIST) {
     if (command.includes(denied)) {
-      return `[SAFETY] Command blocked by deny list: "${denied}" appears in the command. Ask the user if they want to allow it.`;
+      return `[SAFETY] Command blocked by deny list: "${denied}". Ask the user if they want to allow it via Question tool, then retry with "ALLOW: <command>" prefix.`;
     }
   }
 
-  // Check dangerous patterns
-  for (const pattern of DANGEROUS_PATTERNS) {
-    if (pattern.test(command)) {
-      return `[SAFETY] Command flagged as dangerous: "${command.slice(0, 150)}". Use the Question tool to ask the user if they want to proceed.`;
-    }
+  // Check permission system (rule-based + configurable)
+  const perm = await checkPermission('bash', command.split(' ')[0]);
+  if (perm.level === 'deny') {
+    return `[PERMISSION DENIED] ${perm.reason || 'This command is not permitted.'} Use the Question tool to ask the user if they want to override.`;
+  }
+  if (perm.level === 'ask') {
+    return `[PERMISSION REQUIRED] ${perm.reason || 'This operation needs confirmation.'} Use the Question tool to ask the user to approve: "${command.slice(0, 200)}". If approved, re-run with "ALLOW: " prefix.`;
   }
   const result = await execa(command, {
     shell: process.platform === 'win32' ? 'powershell.exe' : 'bash',
