@@ -9,6 +9,7 @@ import { definitions as memoryDefs } from './memory.def.js';
 import { definitions as imageDefs } from './image.def.js';
 import { definitions as mathDefs } from './math.def.js';
 import { definitions as searchDefs } from './search.def.js';
+import { definitions as taskDefs } from './task.def.js';
 
 /** All built-in tool definitions organized by category. */
 export const builtinDefinitions: ToolDefinition[] = [
@@ -21,6 +22,7 @@ export const builtinDefinitions: ToolDefinition[] = [
   ...memoryDefs,
   ...imageDefs,
   ...searchDefs,
+  ...taskDefs,
 ];
 
 /** Math tool definitions (registered dynamically via registerMathTools). */

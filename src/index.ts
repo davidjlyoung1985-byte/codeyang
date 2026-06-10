@@ -100,6 +100,8 @@ Environment Variables:
 Interactive Commands:
   /clear           Reset the conversation
   /sessions        List saved sessions
+  /tasks           List tasks
+  /tasks --search <keyword>  Search tasks
   /tools           List all available tools
   /model           Show current model
   /model <name>    Switch model
@@ -240,6 +242,22 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       return;
     }
 
+    if (lower === '/tasks') {
+      const { listTasks } = await import('./utils/taskStore.js');
+      const tasks = await listTasks();
+      if (tasks.length === 0) {
+        console.log('No tasks. Create one with TaskCreate tool.');
+      } else {
+        console.log(`  ${tasks.length} task(s):`);
+        for (const t of tasks) {
+          const icon = t.status === 'completed' ? '✓' : t.status === 'in_progress' ? '►' : '○';
+          console.log(`  ${icon} ${t.id.slice(0, 16)}  ${t.title.slice(0, 60)}  [${t.status}]`);
+        }
+      }
+      ui.promptUser();
+      return;
+    }
+
     if (lower === '/sessions') {
       const sessions = await listSessions();
       if (sessions.length === 0) {
@@ -297,7 +315,7 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
 
     // Command suggestion for unknown /commands
     if (lower.startsWith('/')) {
-      const validCommands = ['/clear', '/sessions', '/tools', '/model', '/mcp', '/exit', '/quit'];
+      const validCommands = ['/clear', '/sessions', '/tasks', '/tools', '/model', '/mcp', '/stats', '/exit', '/quit'];
       if (!validCommands.includes(lower)) {
         const suggestions = validCommands.filter(v => v.startsWith(lower) || v.includes(lower.slice(1)));
         if (suggestions.length > 0) {
