@@ -20,7 +20,7 @@ import { homedir } from 'node:os';
 export type PermissionLevel = 'allow' | 'deny' | 'ask';
 
 export interface PermissionRule {
-  pattern: string;       // glob or regex pattern matching the command/path
+  pattern: string; // glob or regex pattern matching the command/path
   level: PermissionLevel;
   category: 'bash' | 'file' | 'network';
   reason?: string;
@@ -95,12 +95,21 @@ export async function checkPermission(
     .sort((a, b) => b.pattern.length - a.pattern.length); // more specific first
 
   for (const rule of categoryRules) {
+    // Convert glob pattern to regex, but prevent ReDoS by using non-backtracking quantifiers
+    // where possible and limiting pattern complexity
     const escaped = rule.pattern
-      .replace(/\*/g, '.*')
-      .replace(/\?/g, '.');
-    const regex = new RegExp(`^${escaped}$`, 'i');
-    if (regex.test(input.trim())) {
-      return { level: rule.level, reason: rule.reason };
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&') // escape regex metacharacters first
+      .replace(/\*/g, '[^\\s]*') // * matches non-whitespace (prevents catastrophic backtracking)
+      .replace(/\?/g, '[^\\s]'); // ? matches single non-whitespace char
+
+    try {
+      const regex = new RegExp(`^${escaped}$`, 'i');
+      if (regex.test(input.trim())) {
+        return { level: rule.level, reason: rule.reason };
+      }
+    } catch {
+      // Invalid regex from pattern — skip this rule
+      continue;
     }
   }
 
