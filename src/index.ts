@@ -28,7 +28,7 @@ import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registr
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
 import { VERSION } from './version.js';
-
+import { checkNodeVersion } from './utils/nodeVersionCheck.js';
 
 async function promptForApiKey(): Promise<string> {
   return new Promise((resolve) => {
@@ -422,6 +422,25 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       return;
     }
 
+    if (lower === '/matlab') {
+      const { saveMcpServers, getMcpServers } = await import('./agent/config.js');
+      const servers = getMcpServers();
+      if (servers['matlab']) {
+        console.log('  MATLAB MCP server is already configured.');
+        console.log('  Restart CodeYang to apply.');
+      } else {
+        servers['matlab'] = {
+          command: 'npx',
+          args: ['tsx', 'mcp-servers/matlab/server.ts'],
+        };
+        await saveMcpServers(servers);
+        console.log('  ✅ MATLAB MCP server configured.');
+        console.log('  Restart CodeYang to connect.');
+      }
+      ui.promptUser();
+      return;
+    }
+
     if (lower === '/ctx_viz' || lower === '/context') {
       const usage = agent.getTokenUsage();
       const totalTokens = usage.inputTokens + usage.outputTokens;
@@ -586,7 +605,18 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
 
     // Command suggestion for unknown /commands
     if (lower.startsWith('/')) {
-      const validCommands = ['/clear', '/sessions', '/tasks', '/tools', '/model', '/mcp', '/stats', '/exit', '/quit'];
+      const validCommands = [
+        '/clear',
+        '/sessions',
+        '/tasks',
+        '/tools',
+        '/model',
+        '/mcp',
+        '/stats',
+        '/matlab',
+        '/exit',
+        '/quit',
+      ];
       if (!validCommands.includes(lower)) {
         const suggestions = validCommands.filter((v) => v.startsWith(lower) || v.includes(lower.slice(1)));
         if (suggestions.length > 0) {
