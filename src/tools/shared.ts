@@ -22,16 +22,6 @@ export function resolveSafePath(inputPath: string, cwd?: string): string {
 
   if (resolved === absSandbox) return resolved;
 
-  // Check drive whitelist (Windows only)
-  const allowDrives = (process.env['CODEYANG_ALLOW_DRIVES'] || '')
-    .split(',')
-    .map((d) => d.trim().replace(/:?$/, '').toUpperCase())
-    .filter(Boolean);
-  if (allowDrives.length > 0) {
-    const drive = resolved.charAt(0).toUpperCase();
-    if (allowDrives.includes(drive)) return resolved;
-  }
-
   // realpath resolves symlinks — use when the path exists
   let real = resolved;
   try {
@@ -40,8 +30,35 @@ export function resolveSafePath(inputPath: string, cwd?: string): string {
     // path doesn't exist yet (write) — use the resolved form
   }
 
+  // Sandbox check: path must be inside sandbox directory
   const sandboxSep = absSandbox.endsWith(sep) ? absSandbox : absSandbox + sep;
-  if (!real.startsWith(sandboxSep) && real !== absSandbox) {
+  const isInsideSandbox = real.startsWith(sandboxSep) || real === absSandbox;
+
+  // Drive whitelist: allows specific drives BUT still requires sandbox check
+  const allowDrives = (process.env['CODEYANG_ALLOW_DRIVES'] || '')
+    .split(',')
+    .map((d) => d.trim().replace(/:?$/, '').toUpperCase())
+    .filter(Boolean);
+
+  if (allowDrives.length > 0) {
+    const drive = resolved.charAt(0).toUpperCase();
+    if (allowDrives.includes(drive)) {
+      // Drive is whitelisted, but path must STILL be inside sandbox
+      if (!isInsideSandbox) {
+        throw new Error(
+          toolError(
+            'Security',
+            `Path traversal blocked: "${inputPath}" is on whitelisted drive ${drive}: but outside sandbox (${absSandbox})`,
+            `Whitelisted drives still enforce sandbox boundaries.`,
+          ),
+        );
+      }
+      return resolved;
+    }
+  }
+
+  // Default: enforce sandbox
+  if (!isInsideSandbox) {
     throw new Error(
       toolError(
         'Security',

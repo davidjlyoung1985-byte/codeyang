@@ -71,6 +71,13 @@ export async function executeGitDiff(cwd?: string, staged = false, filePath?: st
  * Create a git commit
  */
 export async function executeGitCommit(message: string, cwd?: string, addAll = false): Promise<string> {
+  // Validate message doesn't contain git flags disguised as commit message
+  // (defense in depth — execa array args already prevent injection, but this
+  // catches attempts to trick the LLM into passing "--no-verify" as message)
+  if (message.startsWith('-')) {
+    return `Error: Commit message cannot start with '-' (looks like a git flag). Please provide a proper commit message.`;
+  }
+
   // Stage files if requested
   if (addAll) {
     const addResult = await executeGitCommand(['add', '-A'], cwd);

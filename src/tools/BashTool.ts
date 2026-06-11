@@ -28,48 +28,34 @@ function isDenied(command: string): boolean {
  */
 export async function executeBash(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
   // Handle ALLOW prefix — user has explicitly approved this command
+  let skipPermissionCheck = false;
   if (command.startsWith('ALLOW: ')) {
     command = command.slice(7).trim();
-    // Run without further permission checks
-    const result = await execa(command, {
-      shell: process.platform === 'win32' ? 'powershell.exe' : 'bash',
-      cwd: cwd || process.cwd(),
-      timeout: timeoutSecs * 1000,
-      reject: false,
-      env: { ...process.env, CI: undefined },
-    });
-    const stdout = result.stdout?.trim() || '';
-    const stderr = result.stderr?.trim() || '';
-    if (result.exitCode === 0) {
-      const output = stdout || '(no output)';
-      return stderr ? `${output}\n\n(stderr):\n${stderr}` : output;
-    }
-    const parts: string[] = [];
-    if (stdout) parts.push(`stdout:\n${stdout}`);
-    if (stderr) parts.push(`stderr:\n${stderr}`);
-    parts.push(`exit code: ${result.exitCode}`);
-    return parts.join('\n\n');
+    skipPermissionCheck = true;
   }
 
-  // Check deny list
+  // Security: always check deny list, even with ALLOW prefix
+  // (deny list is a hard security boundary, not a soft permission check)
   if (isDenied(command)) {
-    throw new Error(`[SAFETY] Command blocked by deny list. Use "ALLOW: <command>" to override (after user approval).`);
+    throw new Error(`[SAFETY] Command blocked by deny list (cannot be overridden with ALLOW).`);
   }
 
-  // Check permission system for each command segment (prevents chaining bypass)
-  const segments = command.split(/[\s;|&]+/).filter(Boolean);
-  for (const segment of segments) {
-    const firstWord = segment.split(' ')[0];
-    const perm = await checkPermission('bash', firstWord);
-    if (perm.level === 'deny') {
-      throw new Error(
-        `[PERMISSION DENIED] ${perm.reason || 'This command is not permitted.'} Use "ALLOW: <command>" to override (after user approval).`,
-      );
-    }
-    if (perm.level === 'ask') {
-      throw new Error(
-        `[PERMISSION REQUIRED] ${perm.reason || 'This operation needs confirmation.'} Ask the user for approval, then retry with "ALLOW: <command>".`,
-      );
+  // Check permission system unless ALLOW prefix was used
+  if (!skipPermissionCheck) {
+    const segments = command.split(/[\s;|&]+/).filter(Boolean);
+    for (const segment of segments) {
+      const firstWord = segment.split(' ')[0];
+      const perm = await checkPermission('bash', firstWord);
+      if (perm.level === 'deny') {
+        throw new Error(
+          `[PERMISSION DENIED] ${perm.reason || 'This command is not permitted.'} Use "ALLOW: <command>" to override (after user approval).`,
+        );
+      }
+      if (perm.level === 'ask') {
+        throw new Error(
+          `[PERMISSION REQUIRED] ${perm.reason || 'This operation needs confirmation.'} Ask the user for approval, then retry with "ALLOW: <command>".`,
+        );
+      }
     }
   }
 

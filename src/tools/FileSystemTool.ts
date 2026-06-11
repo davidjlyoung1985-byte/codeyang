@@ -107,6 +107,9 @@ export async function executeMove(sourcePath: string, destPath: string, overwrit
 
 /**
  * Delete a file or directory
+ * @param targetPath - Path to delete
+ * @param recursive - Allow deleting non-empty directories
+ * @param force - Ignore "path does not exist" errors (does NOT override read-only protection)
  */
 export async function executeDelete(targetPath: string, recursive = false, force = false): Promise<string> {
   const absPath = resolveSafePath(targetPath);
@@ -128,7 +131,8 @@ export async function executeDelete(targetPath: string, recursive = false, force
       }
     }
     // On Windows, rm requires recursive: true even for empty directories
-    await rm(absPath, { recursive: true, force });
+    // Note: force is NOT passed to rm() to prevent bypassing read-only protection
+    await rm(absPath, { recursive: true });
     return `Deleted directory: ${targetPath}${recursive ? ' (recursive)' : ''}`;
   } else {
     await rm(absPath);
