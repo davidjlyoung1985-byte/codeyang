@@ -387,11 +387,22 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       // Cancel any pending question so the agent can exit cleanly
       agent.cancelQuestion();
 
-      if (running) {
-        await saveSession(agent.exportMessages(), currentSessionId);
-        console.log('Session saved.');
-      }
-      await cleanup();
+      // Timeout: force exit after 5s even if save/cleanup hangs
+      await Promise.race([
+        (async () => {
+          if (running) {
+            await saveSession(agent.exportMessages(), currentSessionId);
+            console.log('Session saved.');
+          }
+          await cleanup();
+        })(),
+        new Promise<void>((resolve) => {
+          setTimeout(() => {
+            console.log('\n  Shutdown timeout — forcing exit.');
+            resolve();
+          }, 5000);
+        }),
+      ]);
     } catch {
       // Best-effort shutdown
     }

@@ -1,4 +1,4 @@
-﻿import { readFile, writeFile, mkdir } from 'node:fs/promises';
+﻿import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { McpServerConfig } from '../mcp/types.js';
@@ -7,6 +7,14 @@ import { buildQtPrompt } from '../qt/index.js';
 
 const CONFIG_DIR = join(homedir(), '.codeyang');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
+
+/** Atomic JSON write: write to temp file then rename to prevent corruption on crash. */
+async function atomicWriteConfig(data: unknown): Promise<void> {
+  const tmp = `${CONFIG_FILE}.tmp.${process.pid}`;
+  const json = JSON.stringify(data, null, 2);
+  await writeFile(tmp, json, 'utf-8');
+  await rename(tmp, CONFIG_FILE);
+}
 
 interface LocalConfig {
   apiKey?: string;
@@ -74,7 +82,7 @@ export async function saveApiSettings(settings: {
   localConfig.apiKey = settings.apiKey;
   if (settings.apiBaseURL) localConfig.apiBaseURL = settings.apiBaseURL;
   if (settings.apiProvider) localConfig.apiProvider = settings.apiProvider;
-  await writeFile(CONFIG_FILE, JSON.stringify(localConfig, null, 2), 'utf-8');
+  await atomicWriteConfig(localConfig);
 }
 
 export function getMcpServers(): Record<string, McpServerConfig> {
@@ -84,7 +92,7 @@ export function getMcpServers(): Record<string, McpServerConfig> {
 export async function saveMcpServers(servers: Record<string, McpServerConfig>): Promise<void> {
   await mkdir(CONFIG_DIR, { recursive: true });
   localConfig.mcpServers = servers;
-  await writeFile(CONFIG_FILE, JSON.stringify(localConfig, null, 2), 'utf-8');
+  await atomicWriteConfig(localConfig);
 }
 
 let modelOverride: string | undefined;
