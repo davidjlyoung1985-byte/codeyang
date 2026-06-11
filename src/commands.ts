@@ -47,6 +47,7 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
   if (lower === '/mcp') return cmdMcp(ctx);
   if (lower === '/undo') return await cmdUndo(ctx);
   if (lower === '/redo') return await cmdRedo(ctx);
+  if (lower === '/matlab') return await cmdMatlab(ctx);
 
   if (lower.startsWith('/')) {
     const validCommands = ['/clear', '/sessions', '/tasks', '/tools', '/model', '/mcp', '/stats', '/exit', '/quit'];
@@ -286,6 +287,25 @@ async function cmdRedo(ctx: CommandContext): Promise<DispatchResult> {
   } else {
     await writeFile(entry.filePath, entry.previousContent, 'utf-8');
     console.log(`  Redone edit to ${entry.filePath}`);
+  }
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+async function cmdMatlab(ctx: CommandContext): Promise<DispatchResult> {
+  const { saveMcpServers, getMcpServers } = await import('./agent/config.js');
+  const servers = getMcpServers();
+  if (servers['matlab']) {
+    console.log('  MATLAB MCP server is already configured.');
+    console.log('  Restart CodeYang to apply.');
+  } else {
+    servers['matlab'] = {
+      command: 'npx',
+      args: ['tsx', 'mcp-servers/matlab/server.ts'],
+    };
+    await saveMcpServers(servers);
+    console.log('  ✅ MATLAB MCP server configured.');
+    console.log('  Restart CodeYang to connect.');
   }
   ctx.ui.promptUser();
   return { handled: true };

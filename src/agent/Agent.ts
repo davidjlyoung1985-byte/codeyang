@@ -299,8 +299,27 @@ export class Agent {
     // to prevent token overflow in long sessions
     const CONTEXT_SOFT_LIMIT = 40; // messages beyond this trigger summarization
     if (messages.length > CONTEXT_SOFT_LIMIT) {
-      const keepRecent = 16; // keep this many most recent messages intact
-      const toSummarize = messages.slice(0, messages.length - keepRecent);
+      const keepRecent = 16; // target: keep this many most recent messages intact
+
+      // Find a safe cut point that doesn't split tool_use/tool_result pairs.
+      // If the first retained message is an assistant with tool_use blocks whose
+      // corresponding tool_result landed in the summarized portion, the API
+      // will reject the conversation with 422/400.
+      let cutIndex = messages.length - keepRecent;
+      while (cutIndex < messages.length) {
+        const firstRetained = messages[cutIndex];
+        const hasOrphanToolUse =
+          firstRetained.role === 'assistant' &&
+          Array.isArray(firstRetained.content) &&
+          firstRetained.content.some((b: { type: string }) => b.type === 'tool_use');
+        if (hasOrphanToolUse) {
+          cutIndex++; // include this message in the summary instead
+        } else {
+          break;
+        }
+      }
+
+      const toSummarize = messages.slice(0, cutIndex);
 
       // Build a compact summary of the summarized messages
       let summary = '[Prior context summary:\n';
@@ -320,7 +339,7 @@ export class Agent {
       summary += ']';
 
       // Replace old messages with summary + keep recent ones
-      const recent = messages.slice(-keepRecent);
+      const recent = messages.slice(cutIndex);
       messages.length = 0;
       messages.push({ role: 'user' as const, content: summary });
       messages.push(...recent);

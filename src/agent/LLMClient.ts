@@ -224,34 +224,54 @@ class OpenAICompatClient implements LLMClient {
 
     for (const msg of params.messages) {
       if (typeof msg.content === 'string') {
+        // Plain text message — push as-is
         openaiMessages.push({ role: msg.role, content: msg.content });
-      } else {
-        const textParts = msg.content.filter((b) => b.type === 'text').map((b) => b.text || '');
-        if (textParts.length > 0) {
-          openaiMessages.push({ role: msg.role, content: textParts.join('\n') });
-        }
+        continue;
+      }
 
-        const toolCalls = msg.content.filter((b) => b.type === 'tool_use');
-        if (toolCalls.length > 0 && msg.role === 'assistant') {
-          openaiMessages.push({
-            role: 'assistant',
-            content: '',
-            tool_calls: toolCalls.map((tc) => ({
-              id: tc.id!,
-              type: 'function' as const,
-              function: { name: tc.name!, arguments: JSON.stringify(tc.input || {}) },
-            })),
-          });
-        }
+      const textBlocks = msg.content.filter((b): b is { type: 'text'; text: string } => b.type === 'text');
+      const toolUseBlocks = msg.content.filter((b: { type: string }) => b.type === 'tool_use');
+      const toolResultBlocks = msg.content.filter((b: { type: string }) => b.type === 'tool_result');
 
-        const toolResults = msg.content.filter((b) => b.type === 'tool_result');
-        for (const tr of toolResults) {
+      // Assistant with tool_use → OpenAI tool_calls format
+      if (msg.role === 'assistant' && toolUseBlocks.length > 0) {
+        openaiMessages.push({
+          role: 'assistant',
+          content: textBlocks.map((b) => b.text).join('\n') || null,
+          tool_calls: toolUseBlocks.map((tc) => ({
+            id: tc.id!,
+            type: 'function' as const,
+            function: { name: tc.name!, arguments: JSON.stringify(tc.input || {}) },
+          })),
+        });
+        continue;
+      }
+
+      // User with tool_result → OpenAI tool role messages
+      // IMPORTANT: tool role messages MUST immediately follow the assistant
+      // that declared the tool_calls. Never insert a user message between them.
+      if (toolResultBlocks.length > 0) {
+        for (const tr of toolResultBlocks) {
           openaiMessages.push({
             role: 'tool',
             tool_call_id: tr.tool_use_id!,
             content: tr.content || '',
           });
         }
+        // Any text blocks in the same user message are auxiliary (system notices).
+        // They should NOT be pushed as a separate user message here, because
+        // that would break the assistant(tool_calls) → tool(results) ordering.
+        // If there's meaningful text content, emit it as a user message after
+        // all tool results.
+        if (textBlocks.length > 0 && toolResultBlocks.length === 0) {
+          openaiMessages.push({ role: 'user', content: textBlocks.map((b) => b.text).join('\n') });
+        }
+        continue;
+      }
+
+      // Plain user/assistant with text only
+      if (textBlocks.length > 0) {
+        openaiMessages.push({ role: msg.role, content: textBlocks.map((b) => b.text).join('\n') });
       }
     }
 
