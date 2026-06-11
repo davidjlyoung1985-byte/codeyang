@@ -422,6 +422,20 @@ export class Agent {
           this.repeatCount++;
           if (this.repeatCount >= 1) {
             this.cbs.onError?.('Agent loop detected (exact repeat) — stopping');
+            // Fill in placeholder results for any pending tool calls so the API
+            // history remains consistent (assistant + tool_use must be followed
+            // by tool_result).
+            if (toolCalls.length > 0) {
+              messages.push({
+                role: 'user',
+                content: toolCalls.map((tc) => ({
+                  type: 'tool_result' as const,
+                  tool_use_id: tc.id,
+                  content: '[Cancelled by anti-repetition guard]',
+                  is_error: true,
+                })),
+              });
+            }
             this.history = this.jsonClone(messages);
             break;
           }
@@ -430,6 +444,17 @@ export class Agent {
           const similarity = this.computeSimilarity(assistantText);
           if (similarity > 0.85 && this.recentAssistantTexts.length >= 2) {
             this.cbs.onError?.('Agent loop detected (similar repeat) — stopping');
+            if (toolCalls.length > 0) {
+              messages.push({
+                role: 'user',
+                content: toolCalls.map((tc) => ({
+                  type: 'tool_result' as const,
+                  tool_use_id: tc.id,
+                  content: '[Cancelled by anti-repetition guard]',
+                  is_error: true,
+                })),
+              });
+            }
             this.history = this.jsonClone(messages);
             break;
           }
