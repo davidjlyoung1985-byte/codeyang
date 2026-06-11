@@ -29,6 +29,10 @@
     "build": "tsup --config tsup.config.ts",
     "dev": "tsup src/index.ts --format esm --clean --sourcemap --watch --outDir dist",
     "start": "node dist/index.js",
+    "web:server": "tsx web/server/index.ts",
+    "web:client": "vite",
+    "web:build": "vite build",
+    "web:dev": "concurrently \"npm run web:server\" \"npm run web:client\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -58,6 +62,7 @@
     "form-data": "^4.0.5",
     "openai": "^6.42.0",
     "picocolors": "^1.1.0",
+    "ws": "^8.18.0",
     "yaml": "^2.9.0"
   },
   "lint-staged": {
@@ -69,16 +74,25 @@
   "devDependencies": {
     "@types/babel__traverse": "^7.28.0",
     "@types/node": "^25.9.1",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/ws": "^8.5.13",
     "@typescript-eslint/eslint-plugin": "^8.60.0",
     "@typescript-eslint/parser": "^8.60.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
     "electron": "^42.3.1",
     "eslint": "^10.4.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "prettier": "^3.8.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tsup": "^8.2.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.60.0",
+    "vite": "^6.0.11",
     "vitest": "^4.1.7"
   }
 }
