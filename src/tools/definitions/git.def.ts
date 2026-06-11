@@ -17,7 +17,8 @@ import {
   executeGitCurrentBranch,
   executeGitBlame,
 } from '../GitTool.js';
-import { requiredString } from '../validate.js';
+import { requiredString, optionalString, optionalBoolean, optionalNumber } from '../validate.js';
+import { invalidParam } from '../errors.js';
 
 export const definitions: ToolDefinition[] = [
   {

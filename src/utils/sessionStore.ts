@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, unlink, readdir, stat } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, unlink, readdir, stat, rename as atomicRename } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import crypto from 'node:crypto';
@@ -16,6 +16,13 @@ async function ensureDir() {
   await mkdir(SESSIONS_DIR, { recursive: true });
 }
 
+/** Atomic file write: write to temp then rename to prevent partial reads by concurrent callers. */
+async function atomicWrite(filePath: string, data: string): Promise<void> {
+  const tmp = `${filePath}.tmp.${process.pid}`;
+  await writeFile(tmp, data, 'utf-8');
+  await atomicRename(tmp, filePath);
+}
+
 async function readIndex(): Promise<Record<string, SessionMeta>> {
   try {
     return JSON.parse(await readFile(INDEX_FILE, 'utf-8'));
@@ -25,7 +32,7 @@ async function readIndex(): Promise<Record<string, SessionMeta>> {
 }
 
 async function writeIndex(index: Record<string, SessionMeta>): Promise<void> {
-  await writeFile(INDEX_FILE, JSON.stringify(index), 'utf-8');
+  await atomicWrite(INDEX_FILE, JSON.stringify(index));
 }
 
 /**
@@ -71,7 +78,7 @@ export async function saveSession(messages: Message[], existingId?: string): Pro
   const prunedMessages = pruneMessages(messages);
 
   const session: Session = { id, title, createdAt, updatedAt: now, messages: prunedMessages };
-  await writeFile(join(SESSIONS_DIR, `${id}.json`), JSON.stringify(session, null, 2));
+  await atomicWrite(join(SESSIONS_DIR, `${id}.json`), JSON.stringify(session, null, 2));
 
   // Update index (metadata only — fast listing)
   const index = await readIndex();

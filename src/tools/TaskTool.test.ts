@@ -29,7 +29,6 @@ vi.mock('./registry.js', () => ({
   }),
 }));
 
-import type { LLMClient } from '../agent/LLMClient.js';
 import { executeTask } from './TaskTool.js';
 
 // ── Tests ────────────────────────────────────

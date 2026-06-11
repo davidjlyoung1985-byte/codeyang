@@ -1,4 +1,5 @@
 ﻿import { VERSION } from '../version.js';
+import { invalidParam, netError, toolError } from './errors.js';
 
 export async function executeWebFetch(url: string, format?: string): Promise<string> {
   if (!url || typeof url !== 'string') {

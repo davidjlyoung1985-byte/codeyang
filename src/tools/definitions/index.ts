@@ -33,6 +33,3 @@ export const builtinDefinitions: ToolDefinition[] = [
   ...queryDefs,
   ...taskDefs,
 ];
-
-/** Math tool definitions (registered dynamically via registerMathTools). */
-export { definitions as mathDefs } from './math.def.js';

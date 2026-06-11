@@ -26,6 +26,11 @@ vi.mock('node:readline', () => ({
     on: vi.fn(),
     close: vi.fn(),
     question: vi.fn(),
+    prompt: vi.fn(function () {
+      if (typeof process !== 'undefined' && process.stdout) {
+        process.stdout.write('-> ');
+      }
+    }),
   })),
 }));
 
