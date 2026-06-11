@@ -17,9 +17,9 @@ export interface ToolContext {
 let currentContext: ToolContext | null = null;
 let mcpManager: McpManager | null = null;
 let planMode = false;
-const mcpTools: ToolDefinition[] = [];
-const qtTools: ToolDefinition[] = [];
-const mathTools: ToolDefinition[] = [];
+let mcpTools: ToolDefinition[] = []; // Replaced atomically on refresh
+let qtTools: ToolDefinition[] = [];
+let mathTools: ToolDefinition[] = [];
 
 /**
  * Wrap a tool's execute function with JSON Schema parameter validation.
@@ -76,10 +76,13 @@ export function setMcpManager(mgr: McpManager | null) {
 
 /** Rebuild the MCP tool list from the manager. Call after server init or tool refresh. */
 export async function refreshMcpTools(): Promise<void> {
-  mcpTools.length = 0;
-  if (!mcpManager) return;
+  if (!mcpManager) {
+    mcpTools = []; // clear when no manager is set
+    return;
+  }
 
   const discovered = await mcpManager.refreshTools();
+  const newTools: ToolDefinition[] = [];
   for (const t of discovered) {
     const params = t.inputSchema as Record<string, unknown>;
     const rawExecute = async (args: Record<string, unknown>) => {
@@ -89,25 +92,27 @@ export async function refreshMcpTools(): Promise<void> {
       const result = await mcpManager.callTool(t.qualifiedName, args);
       return result.isError ? `[MCP Error] ${result.output}` : result.output;
     };
-    mcpTools.push({
+    newTools.push({
       name: t.qualifiedName,
       description: `[MCP:${t.serverName}] ${t.description}`,
       parameters: params,
       execute: validatedExecute(rawExecute, params),
     });
   }
+
+  // Atomic swap — concurrent readers see either the old list or the new one,
+  // never an empty intermediate state
+  mcpTools = newTools;
 }
 
 /** Register Qt-specific tools. Called when a Qt project is detected. */
 export function registerQtTools(toolDefs: ToolDefinition[]): void {
-  qtTools.length = 0;
-  qtTools.push(...toolDefs.map(wrapToolValidation));
+  qtTools = toolDefs.map(wrapToolValidation);
 }
 
 /** Register math tools dynamically. Replaces any previously registered math tools. */
 export function registerMathTools(toolDefs: ToolDefinition[]): void {
-  mathTools.length = 0;
-  mathTools.push(...toolDefs.map(wrapToolValidation));
+  mathTools = toolDefs.map(wrapToolValidation);
 }
 
 export function getTool(name: string): ToolDefinition | undefined {
