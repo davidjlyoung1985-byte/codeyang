@@ -48,6 +48,7 @@ export class Agent {
   >();
   private static RESPONSE_CACHE_TTL = 0; // disabled: cache key is derived from session context which changes every turn, making the 60s TTL ineffective
   private static RESPONSE_CACHE_MAX_SIZE = 50;
+  private static RESPONSE_CACHE_MAX_ENTRY_SIZE = 100_000; // 100KB per entry
 
   // Tool result cache — avoid re-reading unchanged files within a session
   private toolCache = new Map<string, { result: string; timestamp: number }>();
@@ -118,6 +119,12 @@ export class Agent {
     key: string,
     result: { toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>; assistantText: string },
   ): void {
+    // Skip caching if the response is too large (prevent memory bloat)
+    const estimatedSize = result.assistantText.length + JSON.stringify(result.toolCalls).length;
+    if (estimatedSize > Agent.RESPONSE_CACHE_MAX_ENTRY_SIZE) {
+      return; // silently skip — this is a memory optimization, not a hard error
+    }
+
     if (this.responseCache.size >= Agent.RESPONSE_CACHE_MAX_SIZE) {
       const oldest = this.responseCache.entries().next().value;
       if (oldest) this.responseCache.delete(oldest[0]);
@@ -237,7 +244,16 @@ export class Agent {
 
   private jsonClone<T>(obj: T): T {
     if (obj === undefined) return undefined as T;
-    return JSON.parse(JSON.stringify(obj));
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch (err) {
+      // Fallback: if cloning fails (circular refs, non-serializable objects),
+      // log error and return the original object. This prevents crashes but
+      // loses the clone protection — acceptable tradeoff for robustness.
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[Agent] jsonClone failed: ${msg}. Returning original object.`);
+      return obj;
+    }
   }
 
   /** Compute word-level Jaccard similarity between text and any recent response */

@@ -19,48 +19,36 @@ const DANGEROUS_PATTERNS: RegExp[] = [
 
 export async function executePowerShell(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
   // Handle ALLOW prefix — user has explicitly approved this command
+  let skipPermissionCheck = false;
   if (command.startsWith('ALLOW: ')) {
     command = command.slice(7).trim();
-    const result = await execa(command, {
-      shell: 'powershell.exe',
-      cwd: cwd || process.cwd(),
-      timeout: timeoutSecs * 1000,
-      reject: false,
-    });
-    const stdout = result.stdout?.trim() || '';
-    const stderr = result.stderr?.trim() || '';
-    if (result.exitCode === 0) {
-      const output = stdout || '(no output)';
-      return stderr ? `${output}\n\n(stderr):\n${stderr}` : output;
-    }
-    const parts: string[] = [];
-    if (stdout) parts.push(`stdout:\n${stdout}`);
-    if (stderr) parts.push(`stderr:\n${stderr}`);
-    parts.push(`exit code: ${result.exitCode}`);
-    return parts.join('\n\n');
+    skipPermissionCheck = true;
   }
 
-  // Check permission system for each command segment
-  const segments = command.split(/[\s;|&]+/).filter(Boolean);
-  for (const segment of segments) {
-    const firstWord = segment.split(' ')[0];
-    const perm = await checkPermission('bash', firstWord);
-    if (perm.level === 'deny') {
-      throw new Error(`[PERMISSION DENIED] ${perm.reason || 'Command not permitted.'}`);
-    }
-    if (perm.level === 'ask') {
-      throw new Error(
-        `[PERMISSION REQUIRED] ${perm.reason || 'This operation needs confirmation.'} Ask user for approval, then retry with "ALLOW: <command>".`,
-      );
-    }
-  }
-
-  // Check dangerous patterns
+  // Security: always check dangerous patterns, even with ALLOW prefix
+  // (these are hard safety boundaries that cannot be bypassed)
   for (const pattern of DANGEROUS_PATTERNS) {
     if (pattern.test(command)) {
       throw new Error(
-        `[SAFETY] PowerShell command flagged: "${command.slice(0, 150)}". Use "ALLOW: <command>" to override.`,
+        `[SAFETY] PowerShell command flagged by dangerous pattern check (cannot be overridden): "${command.slice(0, 150)}".`,
       );
+    }
+  }
+
+  // Check permission system unless ALLOW prefix was used
+  if (!skipPermissionCheck) {
+    const segments = command.split(/[\s;|&]+/).filter(Boolean);
+    for (const segment of segments) {
+      const firstWord = segment.split(' ')[0];
+      const perm = await checkPermission('bash', firstWord);
+      if (perm.level === 'deny') {
+        throw new Error(`[PERMISSION DENIED] ${perm.reason || 'Command not permitted.'}`);
+      }
+      if (perm.level === 'ask') {
+        throw new Error(
+          `[PERMISSION REQUIRED] ${perm.reason || 'This operation needs confirmation.'} Ask user for approval, then retry with "ALLOW: <command>".`,
+        );
+      }
     }
   }
 
