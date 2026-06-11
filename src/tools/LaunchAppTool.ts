@@ -28,8 +28,21 @@ async function exec(...args: string[]): Promise<{ stdout: string; stderr: string
 export async function executeLaunchApp(target: string, args?: string): Promise<string> {
   if (!target.trim()) return 'Error: target cannot be empty';
 
+  // Validate target — prevent shell metacharacters and dangerous patterns
+  const DANGEROUS_CHARS = /[;&|`$<>{}[\]\\!]/;
+  if (DANGEROUS_CHARS.test(target)) {
+    return `Error: target contains dangerous shell characters: ${target}`;
+  }
+
   const platform = detectPlatform();
-  const extraArgs = args ? args.split(/\s+/) : [];
+  const extraArgs = args ? args.split(/\s+/).filter(Boolean) : [];
+
+  // Validate extraArgs — each arg must not contain shell metacharacters
+  for (const arg of extraArgs) {
+    if (DANGEROUS_CHARS.test(arg)) {
+      return `Error: argument contains dangerous shell characters: ${arg}`;
+    }
+  }
 
   // Check if it's a URL
   const isUrl = /^https?:\/\//i.test(target);

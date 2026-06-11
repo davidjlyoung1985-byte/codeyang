@@ -127,6 +127,21 @@ async function generateFunctionGraph(fnExpr: string, outputPath?: string): Promi
   const scale = 40;
   const range = 5;
 
+  // Validate expression — only allow safe math operations (prevent code injection)
+  const SAFE_EXPR_PATTERN = /^[0-9x+\-*/().\s]+$/;
+  const SAFE_MATH_FUNCS = ['sin', 'cos', 'tan', 'sqrt', 'abs', 'log', 'exp', 'pow', 'pi', 'e'];
+
+  // Remove all safe function names temporarily for validation
+  let exprForValidation = fnExpr.toLowerCase();
+  for (const func of SAFE_MATH_FUNCS) {
+    exprForValidation = exprForValidation.replace(new RegExp(func, 'gi'), '');
+  }
+
+  // After removing safe functions, only safe chars should remain
+  if (!SAFE_EXPR_PATTERN.test(exprForValidation)) {
+    return `**Error**: expression contains unsafe characters. Only allow: numbers, x, operators (+,-,*,/,^), parentheses, and math functions (${SAFE_MATH_FUNCS.join(', ')}).`;
+  }
+
   // Compile function
   let fn: (x: number) => number;
   try {
@@ -136,7 +151,12 @@ async function generateFunctionGraph(fnExpr: string, outputPath?: string): Promi
       .replace(/tan/gi, 'Math.tan')
       .replace(/sqrt/gi, 'Math.sqrt')
       .replace(/abs/gi, 'Math.abs')
-      .replace(/pi/gi, 'Math.PI');
+      .replace(/log/gi, 'Math.log')
+      .replace(/exp/gi, 'Math.exp')
+      .replace(/pow/gi, 'Math.pow')
+      .replace(/\^/g, '**') // power operator
+      .replace(/pi/gi, 'Math.PI')
+      .replace(/\be\b/gi, 'Math.E');
     fn = new Function('x', `"use strict"; return (${compiled})`) as (x: number) => number;
     // Test
     fn(0);

@@ -150,9 +150,36 @@ function evaluateExpression(expr: string): string {
   // Sanitize: only allow numbers, operators, parens, basic math functions, whitespace
   const sanitized = expr.replace(/\s+/g, ' ').trim();
 
-  // Whitelist check
-  if (/[^0-9+\-*/().%\s,xeEpiPIqwertyuiopasdfghjklzxcvbnm^]/.test(sanitized)) {
-    return `**Error**: expression contains unsafe characters.\nExpression: \`${sanitized}\``;
+  // Define safe math functions
+  const SAFE_MATH_FUNCS = [
+    'sin',
+    'cos',
+    'tan',
+    'sqrt',
+    'abs',
+    'log',
+    'log10',
+    'exp',
+    'floor',
+    'ceil',
+    'round',
+    'pow',
+    'min',
+    'max',
+    'pi',
+    'e',
+  ];
+
+  // Remove all safe function names temporarily for validation
+  let exprForValidation = sanitized.toLowerCase();
+  for (const func of SAFE_MATH_FUNCS) {
+    exprForValidation = exprForValidation.replace(new RegExp(`\\b${func}\\b`, 'gi'), '');
+  }
+
+  // After removing safe functions, only safe chars should remain
+  const SAFE_CHAR_PATTERN = /^[0-9+\-*/().%^\s]*$/;
+  if (!SAFE_CHAR_PATTERN.test(exprForValidation)) {
+    return `**Error**: expression contains unsafe characters or forbidden identifiers.\nExpression: \`${sanitized}\`\nOnly allowed: numbers, operators (+,-,*,/,%,^), parentheses, and functions (${SAFE_MATH_FUNCS.join(', ')}).`;
   }
 
   // Try native eval with Function constructor (safer than eval)
@@ -160,7 +187,9 @@ function evaluateExpression(expr: string): string {
     // Map common math function names
     const mapped = sanitized
       .replace(/\bpi\b/gi, 'Math.PI')
-      .replace(/\b(?:sin|cos|tan|sqrt|abs|log|log10|exp|floor|ceil|round|pow|min|max|random)\b/gi, (m) => `Math.${m}`);
+      .replace(/\be\b/gi, 'Math.E')
+      .replace(/\^/g, '**') // power operator
+      .replace(/\b(?:sin|cos|tan|sqrt|abs|log|log10|exp|floor|ceil|round|pow|min|max)\b/gi, (m) => `Math.${m}`);
 
     const result = new Function(`"use strict"; return (${mapped})`)();
 

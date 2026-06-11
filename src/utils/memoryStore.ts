@@ -46,15 +46,14 @@ function rebuildIndex(memories: Memory[]): void {
       tokenMap.get(token)!.add(m.id);
     }
   }
-  // Limit index size to prevent unbounded growth
-  const entries = tokenMap.entries();
+  // Limit index size to prevent unbounded growth — drop least frequent tokens
   if (tokenMap.size > MAX_TOKEN_MAP_ENTRIES) {
-    const i = entries.next();
-    // keep first MAX_TOKEN_MAP_ENTRIES tokens (least significant ones may be dropped)
-    const dropped = tokenMap.size - MAX_TOKEN_MAP_ENTRIES;
-    for (let d = 0; d < dropped; d++) {
-      const val = entries.next();
-      if (!val.done) tokenMap.delete(val.value[0]);
+    // Sort tokens by frequency (ascending) and drop the least common ones
+    const sorted = Array.from(tokenMap.entries()).sort((a, b) => a[1].size - b[1].size);
+    const toKeep = sorted.slice(-MAX_TOKEN_MAP_ENTRIES);
+    tokenMap.clear();
+    for (const [token, ids] of toKeep) {
+      tokenMap.set(token, ids);
     }
   }
   searchIndex = { tokenMap, dirty: false };
