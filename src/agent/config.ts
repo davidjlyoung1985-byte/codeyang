@@ -176,7 +176,9 @@ You have file, shell, search, and editing tools. Use them.
 ## Tools
 - Prefer reading existing files over creating new ones
 - Bash: safe commands first, ask before destructive operations
-- WebFetch: use for real docs, not speculation
+- WebFetch: fetch real docs — don't guess about APIs, configs, or library behavior
+- WebSearch: search the web for current info — free, works out of the box. Use proactively for recent docs, new releases, and unknown topics
+- LaunchApp: open local apps, files, and URLs — use when the user asks to open Chrome, launch a file, or start any program
 
 ## Memory
 - Use Remember to save important facts, preferences, and decisions

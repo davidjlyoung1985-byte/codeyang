@@ -26,6 +26,9 @@ export const TOOL_ALIASES: Record<string, string> = {
   wget: 'WebFetch',
   ask: 'Question',
   help: 'Question',
+  launch: 'LaunchApp',
+  open: 'LaunchApp',
+  app: 'LaunchApp',
 
   // Filesystem
   ls: 'List',
@@ -94,6 +97,9 @@ export const TOOL_ALIASES: Record<string, string> = {
 
   // Search
   search: 'Search',
+  websearch: 'WebSearch',
+  google: 'WebSearch',
+  ddg: 'WebSearch',
 
   // Refactor
   rename: 'RefactorRename',
