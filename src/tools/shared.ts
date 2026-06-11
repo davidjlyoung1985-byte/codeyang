@@ -5,17 +5,32 @@ import { toolError } from './errors.js';
 /**
  * Resolve a user-supplied path to an absolute path.
  * When CODEX_SANDBOX is set, enforces the path stays inside that directory.
+ *
+ * Bypass options:
+ *   CODEYANG_NO_SANDBOX=true  — completely disable sandbox enforcement
+ *   CODEYANG_ALLOW_DRIVES=E,F — whitelist Windows drive letters (colon optional)
  */
 export function resolveSafePath(inputPath: string, cwd?: string): string {
   const base = cwd || process.cwd();
   const resolved = resolve(base, inputPath);
   const sandbox = process.env['CODEX_SANDBOX'];
 
-  if (!sandbox) return resolved; // no sandbox — just resolve
+  if (!sandbox) return resolved;
+  if (process.env['CODEYANG_NO_SANDBOX'] === 'true') return resolved;
 
   const absSandbox = resolve(sandbox);
 
   if (resolved === absSandbox) return resolved;
+
+  // Check drive whitelist (Windows only)
+  const allowDrives = (process.env['CODEYANG_ALLOW_DRIVES'] || '')
+    .split(',')
+    .map((d) => d.trim().replace(/:?$/, '').toUpperCase())
+    .filter(Boolean);
+  if (allowDrives.length > 0) {
+    const drive = resolved.charAt(0).toUpperCase();
+    if (allowDrives.includes(drive)) return resolved;
+  }
 
   // realpath resolves symlinks — use when the path exists
   let real = resolved;
@@ -31,7 +46,7 @@ export function resolveSafePath(inputPath: string, cwd?: string): string {
       toolError(
         'Security',
         `Path traversal blocked: "${inputPath}" resolves outside sandbox (${absSandbox})`,
-        'Keep all file operations inside the sandbox directory.',
+        `To allow: set CODEYANG_NO_SANDBOX=true or CODEYANG_ALLOW_DRIVES=E,F,... (Windows) to whitelist drives.`,
       ),
     );
   }
