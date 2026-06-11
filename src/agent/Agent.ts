@@ -176,6 +176,11 @@ export class Agent {
     return { ...this.tokenUsage };
   }
 
+  /** Get tool usage statistics (stub for `/stats` command) */
+  getToolStats(): Record<string, { calls: number; errors: number; totalMs: number }> {
+    return {};
+  }
+
   /** Save a checkpoint of the current conversation history */
   saveCheckpoint(): number {
     const idx = this.checkpoints.length;
@@ -493,71 +498,76 @@ export class Agent {
             return;
           }
 
-        this.cbs.onToolStart?.(tc.name, tc.input);
+          this.cbs.onToolStart?.(tc.name, tc.input);
 
-        // Check cache for read-only tools (Read, Glob)
-        const cacheable = tc.name === 'Read' || tc.name === 'Glob';
-        const cacheKey = cacheable ? this.cacheKey(tc.name, tc.input) : undefined;
-        if (cacheKey) {
-          const cached = this.toolCache.get(cacheKey);
-          if (cached && Date.now() - cached.timestamp < Agent.CACHE_TTL_MS) {
-            toolResults[i] = { tool: tc.name, input: tc.input, output: cached.result, isError: false };
-            return;
-          }
-
-          // Deduplicate concurrent reads: if another call is already fetching
-          // the same key, await that in-flight promise instead of re-executing.
-          const pending = this.pendingReads.get(cacheKey);
-          if (pending) {
-            try {
-              const output = await pending;
-              toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
-              this.cbs.onToolResult?.(tc.name, output, false);
+          // Check cache for read-only tools (Read, Glob)
+          const cacheable = tc.name === 'Read' || tc.name === 'Glob';
+          const cacheKey = cacheable ? this.cacheKey(tc.name, tc.input) : undefined;
+          if (cacheKey) {
+            const cached = this.toolCache.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < Agent.CACHE_TTL_MS) {
+              toolResults[i] = { tool: tc.name, input: tc.input, output: cached.result, isError: false };
               return;
-            } catch {
-              // Pending read failed; fall through to retry
+            }
+
+            // Deduplicate concurrent reads: if another call is already fetching
+            // the same key, await that in-flight promise instead of re-executing.
+            const pending = this.pendingReads.get(cacheKey);
+            if (pending) {
+              try {
+                const output = await pending;
+                toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
+                this.cbs.onToolResult?.(tc.name, output, false);
+                return;
+              } catch {
+                // Pending read failed; fall through to retry
+              }
             }
           }
-        }
 
-        const t0 = Date.now();
-        try {
-          const executePromise = tool.execute(tc.input);
+          const t0 = Date.now();
+          try {
+            const executePromise = tool.execute(tc.input);
 
-          // Register in-flight promise so concurrent calls for the same key can share it
-          if (cacheKey) {
-            this.pendingReads.set(cacheKey, executePromise);
+            // Register in-flight promise so concurrent calls for the same key can share it
+            if (cacheKey) {
+              this.pendingReads.set(cacheKey, executePromise);
+            }
+
+            const output = await executePromise;
+            this.recordToolCall(tc.name, Date.now() - t0, false);
+            toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
+            this.cbs.onToolResult?.(tc.name, output, false);
+
+            // Cache successful read-only tool results
+            if (cacheKey) {
+              this.toolCache.set(cacheKey, { result: output, timestamp: Date.now() });
+              this.pendingReads.delete(cacheKey);
+            }
+
+            // Invalidate caches on writes — filesystem state changed
+            if (tc.name === 'Write' || tc.name === 'Edit') {
+              this.invalidateCache();
+              this.responseCache.clear();
+            }
+          } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            this.recordToolCall(tc.name, Date.now() - t0, true);
+            toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
+            this.cbs.onToolResult?.(tc.name, errorMsg, true);
+
+            // Clean up pending read on failure so subsequent calls retry
+            if (cacheKey) {
+              this.pendingReads.delete(cacheKey);
+            }
           }
-
-          const output = await executePromise;
-          this.recordToolCall(tc.name, Date.now() - t0, false);
-          toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
-          this.cbs.onToolResult?.(tc.name, output, false);
-
-          // Cache successful read-only tool results
-          if (cacheKey) {
-            this.toolCache.set(cacheKey, { result: output, timestamp: Date.now() });
-            this.pendingReads.delete(cacheKey);
-          }
-
-          // Invalidate caches on writes — filesystem state changed
-          if (tc.name === 'Write' || tc.name === 'Edit') {
-            this.invalidateCache();
-            this.responseCache.clear();
-          }
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : String(err);
-          this.recordToolCall(tc.name, Date.now() - t0, true);
-          toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
-          this.cbs.onToolResult?.(tc.name, errorMsg, true);
-
-          // Clean up pending read on failure so subsequent calls retry
-          if (cacheKey) {
-            this.pendingReads.delete(cacheKey);
-          }
-        }
         } catch {
-          toolResults[i] = { tool: tc.name, input: tc.input, output: 'Unexpected error in tool executor', isError: true };
+          toolResults[i] = {
+            tool: tc.name,
+            input: tc.input,
+            output: 'Unexpected error in tool executor',
+            isError: true,
+          };
         }
       });
 
