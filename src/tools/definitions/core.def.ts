@@ -8,6 +8,7 @@ import { executeGrep } from '../GrepTool.js';
 import { executeTodoWrite } from '../TodoWriteTool.js';
 import { executeWebFetch } from '../WebFetchTool.js';
 import { executeTask } from '../TaskTool.js';
+import { executeLaunchApp } from '../LaunchAppTool.js';
 import { getCurrentContext } from '../registry.js';
 import { requiredString, optionalString, optionalNumber } from '../validate.js';
 import { invalidParam } from '../errors.js';
@@ -30,6 +31,33 @@ export const definitions: ToolDefinition[] = [
       const cwd = optionalString(args, 'cwd');
       const timeoutSecs = optionalNumber(args, 'timeout_secs');
       return executeBash(command, cwd, timeoutSecs);
+    },
+  },
+  {
+    name: 'LaunchApp',
+    description:
+      'Open a local application, file, URL, or document using the OS default launcher. ' +
+      'Use to: open Chrome/Firefox/etc, launch VS Code on a file, open a PDF/image with the default viewer, ' +
+      'open a URL in the default browser, or start any installed program. ' +
+      'On Windows: "chrome", "notepad", "explorer .", "https://github.com". ' +
+      'On macOS: "Google Chrome", "/Applications/App.app". ' +
+      'On Linux: "firefox", "code .". ' +
+      'Files/URLs are opened with their default associated app.',
+    parameters: {
+      type: 'object',
+      properties: {
+        target: {
+          type: 'string',
+          description: 'App name, file path, or URL to open (e.g. "chrome", "C:\\file.pdf", "https://example.com")',
+        },
+        args: { type: 'string', description: 'Optional arguments to pass to the application' },
+      },
+      required: ['target'],
+    },
+    execute: async (args) => {
+      const target = requiredString(args, 'target');
+      const appArgs = optionalString(args, 'args');
+      return await executeLaunchApp(target, appArgs);
     },
   },
   {
@@ -254,7 +282,7 @@ export const definitions: ToolDefinition[] = [
       },
       required: ['question'],
     },
-    execute: async (args) => {
+    execute: (args) => {
       const q = requiredString(args, 'question');
       const options = args['options'] as Array<{ label: string; description: string }> | undefined;
       if (options && options.length > 0) {
