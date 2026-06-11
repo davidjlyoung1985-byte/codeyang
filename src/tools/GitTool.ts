@@ -108,14 +108,35 @@ export async function executeGitBranch(cwd?: string, remotes = false): Promise<s
 }
 
 /**
+ * Validate a git repository URL — only allow ssh:// and https://
+ */
+function validateGitUrl(url: string): string | null {
+  // Allow git@ style (SSH deploy keys)
+  if (/^[^@]+@[^:]+:.+$/.test(url)) return null;
+  // Allow ssh:// and https://
+  if (/^ssh:\/\/.+/.test(url)) return null;
+  if (/^https:\/\/.+/.test(url)) return null;
+  return `Invalid git URL scheme. Only ssh:// and https:// (or git@host:path) are allowed`;
+}
+
+/**
+ * Sanitize a branch name — reject anything that could be interpreted as a git flag or contain path traversal
+ */
+function sanitizeBranchName(name: string): string | null {
+  if (name.startsWith('-')) return 'Branch name cannot start with -';
+  if (name.includes('..')) return 'Branch name cannot contain ..';
+  if (name.includes('/--')) return 'Branch name cannot contain --';
+  return null;
+}
+
+/**
  * Create or switch to a branch
  */
 export async function executeGitCheckout(branch: string, cwd?: string, create = false): Promise<string> {
-  const args = ['checkout'];
-  if (create) {
-    args.push('-b');
-  }
-  args.push(branch);
+  const sanitized = sanitizeBranchName(branch);
+  if (sanitized !== null) return `Error: ${sanitized}`;
+
+  const args = create ? ['checkout', '-b', branch] : ['checkout', branch, '--'];
 
   const result = await executeGitCommand(args, cwd);
 
@@ -189,8 +210,12 @@ export async function executeGitPull(cwd?: string, remote = 'origin', branch?: s
  * Clone a repository
  */
 export async function executeGitClone(url: string, destination?: string, cwd?: string): Promise<string> {
+  const urlErr = validateGitUrl(url);
+  if (urlErr) return `Error: ${urlErr}`;
   const args = ['clone', url];
   if (destination) {
+    const destSanitized = sanitizeBranchName(destination);
+    if (destSanitized) return `Error: ${destSanitized}`;
     args.push(destination);
   }
 

@@ -59,10 +59,7 @@ describe('FileSystemTool', () => {
       await fs.writeFile(source, 'source');
       await fs.writeFile(dest, 'dest');
 
-      const result = await executeCopy(source, dest, false);
-
-      expect(result).toContain('Error');
-      expect(result).toContain('already exists');
+      await expect(executeCopy(source, dest, false)).rejects.toThrow('already exists');
     });
 
     it('should overwrite if overwrite=true', async () => {
@@ -84,10 +81,7 @@ describe('FileSystemTool', () => {
       const destDir = path.join(sourceDir, 'dest-dir');
 
       await fs.mkdir(sourceDir);
-      const result = await executeCopy(sourceDir, destDir);
-
-      expect(result).toContain('Error');
-      expect(result).toContain('into itself');
+      await expect(executeCopy(sourceDir, destDir)).rejects.toThrow('into itself');
     });
   });
 
@@ -159,10 +153,7 @@ describe('FileSystemTool', () => {
       await fs.mkdir(dir);
       await fs.writeFile(path.join(dir, 'file.txt'), 'content');
 
-      const result = await executeDelete(dir, false);
-
-      expect(result).toContain('Error');
-      expect(result).toContain('not empty');
+      await expect(executeDelete(dir, false)).rejects.toThrow('not empty');
       expect(existsSync(dir)).toBe(true);
     });
 

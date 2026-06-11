@@ -5,9 +5,95 @@ import axios, { AxiosRequestConfig, Method } from 'axios';
 import FormData from 'form-data';
 import { resolveSafePath } from './shared.js';
 
-/**
- * Send HTTP request with configurable method, headers, and body
- */
+// ── SSRF / URL validation ────────────────────────────────────────
+
+/** Private / loopback / dangerous IP ranges */
+const DANGEROUS_SUBNETS = [
+  '10.',
+  '172.16.',
+  '172.17.',
+  '172.18.',
+  '172.19.',
+  '172.20.',
+  '172.21.',
+  '172.22.',
+  '172.23.',
+  '172.24.',
+  '172.25.',
+  '172.26.',
+  '172.27.',
+  '172.28.',
+  '172.29.',
+  '172.30.',
+  '172.31.',
+  '192.168.',
+  '127.',
+  '169.254.',
+  '0.',
+  '::1', // IPv6 loopback
+  'fc00:', // IPv6 unique local
+  'fe80:', // IPv6 link-local
+];
+
+/** Block dangerous URL schemes */
+const BLOCKED_SCHEMES = new Set(['file', 'ftp', 'telnet', 'gopher', 'dict', 'ssh', 'git']);
+
+/** Return an error string if the URL is unsafe, or null if safe */
+function validateUrl(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return 'Invalid URL';
+  }
+
+  // Block dangerous schemes
+  if (BLOCKED_SCHEMES.has(parsed.protocol.replace(':', '').toLowerCase())) {
+    return `Scheme '${parsed.protocol}' is not allowed`;
+  }
+
+  // Only allow http/https
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return `Only http and https schemes are allowed, got '${parsed.protocol}'`;
+  }
+
+  const host = parsed.hostname.toLowerCase();
+
+  // Block IP literal (direct IP address — blocks both IPv4 and IPv6)
+  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+    return 'Accessing IP addresses directly is not allowed';
+  }
+  if (host.startsWith('[')) {
+    return 'Accessing IP addresses directly is not allowed';
+  }
+
+  // Block loopback / private / link-local / local networks by hostname
+  for (const subnet of DANGEROUS_SUBNETS) {
+    if (host === subnet.replace('.', '') || host.endsWith('.' + subnet.replace('.', ''))) {
+      return 'Access to internal/private networks is not allowed';
+    }
+  }
+
+  // Block well-known dangerous hostnames
+  const dangerousHosts = new Set([
+    'localhost',
+    'metadata.google.internal',
+    'influxdb',
+    'redis',
+    'mongo',
+    'mysql',
+    'postgres',
+    '127.0.0.1',
+    '::1',
+  ]);
+  if (dangerousHosts.has(host)) {
+    return 'Access to internal services is not allowed';
+  }
+
+  return null;
+}
+
+// ── Network tools ─────────────────────────────────────────────────
 export async function executeHttpRequest(
   url: string,
   method: Method = 'GET',
@@ -15,6 +101,8 @@ export async function executeHttpRequest(
   body?: unknown,
   timeout = 30000,
 ): Promise<string> {
+  const urlErr = validateUrl(url);
+  if (urlErr) return `Error: ${urlErr}`;
   try {
     const config: AxiosRequestConfig = {
       method,
@@ -60,6 +148,8 @@ export async function executeHttpRequest(
  * Download file from URL to local path
  */
 export async function executeDownloadFile(url: string, destPath: string, timeout = 60000): Promise<string> {
+  const urlErr = validateUrl(url);
+  if (urlErr) return `Error: ${urlErr}`;
   try {
     const absPath = resolveSafePath(destPath);
     const dir = path.dirname(absPath);
@@ -102,6 +192,8 @@ export async function executeUploadFile(
   additionalFields?: Record<string, string>,
   timeout = 60000,
 ): Promise<string> {
+  const urlErr = validateUrl(url);
+  if (urlErr) return `Error: ${urlErr}`;
   try {
     const absPath = resolveSafePath(filePath);
 
@@ -157,6 +249,8 @@ export async function executeApiCall(
   headers?: Record<string, string>,
   timeout = 30000,
 ): Promise<string> {
+  const urlErr = validateUrl(url);
+  if (urlErr) return `Error: ${urlErr}`;
   try {
     const config: AxiosRequestConfig = {
       method,
@@ -212,6 +306,8 @@ export async function executeApiCall(
  * Check if URL is accessible and return status info
  */
 export async function executeCheckUrl(url: string, timeout = 10000): Promise<string> {
+  const urlErr = validateUrl(url);
+  if (urlErr) return `Error: ${urlErr}`;
   try {
     const startTime = Date.now();
     const response = await axios.head(url, {

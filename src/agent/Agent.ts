@@ -46,7 +46,7 @@ export class Agent {
       timestamp: number;
     }
   >();
-  private static RESPONSE_CACHE_TTL = 60_000; // 1 minute
+  private static RESPONSE_CACHE_TTL = 0; // disabled: cache key is derived from session context which changes every turn, making the 60s TTL ineffective
   private static RESPONSE_CACHE_MAX_SIZE = 50;
 
   // Tool result cache — avoid re-reading unchanged files within a session
@@ -174,11 +174,6 @@ export class Agent {
   /** Get accumulated token usage across all turns */
   getTokenUsage(): { inputTokens: number; outputTokens: number } {
     return { ...this.tokenUsage };
-  }
-
-  /** Get tool usage statistics (stub for `/stats` command) */
-  getToolStats(): Record<string, { calls: number; errors: number; totalMs: number }> {
-    return {};
   }
 
   /** Save a checkpoint of the current conversation history */
@@ -561,11 +556,12 @@ export class Agent {
               this.pendingReads.delete(cacheKey);
             }
           }
-        } catch {
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
           toolResults[i] = {
             tool: tc.name,
             input: tc.input,
-            output: 'Unexpected error in tool executor',
+            output: `Unexpected error in tool executor: ${errMsg}`,
             isError: true,
           };
         }
@@ -587,6 +583,20 @@ export class Agent {
     }
 
     setToolContext(null);
+  }
+
+  /** Record a tool call for usage statistics. */
+  recordToolCall(name: string, ms: number, isError: boolean): void {
+    const s = this.toolStats.get(name) || { calls: 0, totalMs: 0, errors: 0 };
+    s.calls++;
+    s.totalMs += ms;
+    if (isError) s.errors++;
+    this.toolStats.set(name, s);
+  }
+
+  /** Get per-tool usage statistics. */
+  getToolStats(): ReadonlyMap<string, { calls: number; totalMs: number; errors: number }> {
+    return this.toolStats;
   }
 
   /** Restore history from saved messages including tool_result blocks */

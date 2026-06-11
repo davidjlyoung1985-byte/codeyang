@@ -3,6 +3,8 @@ import 'dotenv/config';
 import * as readline from 'node:readline';
 import { CliUI } from './ui/CliUI.js';
 import { Agent } from './agent/Agent.js';
+import { editHistory } from './utils/editHistory.js';
+import { writeFile } from 'node:fs/promises';
 import {
   config,
   loadLocalConfig,
@@ -22,11 +24,10 @@ import {
   importSessionFromFile,
 } from './utils/sessionStore.js';
 import { logger } from './utils/logger.js';
-import { writeFile } from 'node:fs/promises';
-import { editHistory } from './utils/editHistory.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
+import { dispatch as dispatchCommand, type CommandContext } from './commands.js';
 import { VERSION } from './version.js';
 import { checkNodeVersion } from './utils/nodeVersionCheck.js';
 
@@ -342,6 +343,8 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     }
   }
 
+  const cmdCtx: CommandContext = { ui, agent, mcpMgr, currentSessionId };
+
   ui.setInputHandler(async (line) => {
     const lower = line.toLowerCase().trim();
 
@@ -629,6 +632,7 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
       }
     }
 
+    // Handle non-command input (agent prompts, question answers)
     if (agent.waitingForAnswer) {
       agent.answerQuestion(line);
       return;

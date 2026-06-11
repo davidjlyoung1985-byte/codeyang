@@ -163,7 +163,7 @@ export class CliUI {
       input: process.stdin,
       output: process.stdout,
       terminal: true,
-      prompt: '',
+      prompt: c.cyan('-> '),
       historySize: 50,
     });
 
@@ -208,7 +208,7 @@ export class CliUI {
   }
 
   promptUser() {
-    process.stdout.write(`\n  ${c.cyan('->')} `);
+    this.rl.prompt();
   }
 
   setToolProgressTotal(total: number) {
@@ -361,7 +361,7 @@ export class CliUI {
   }
 
   promptForAnswer() {
-    process.stdout.write(`  ${c.yellow('▸')} `);
+    this.rl.prompt(true);
   }
 
   // ─── Error ────────────────────────────────────────────────────────

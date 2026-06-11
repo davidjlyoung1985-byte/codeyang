@@ -11,6 +11,7 @@ const MEMORY_DIR = join(homedir(), '.codeyang', 'memory');
 let memoryCache: Memory[] | null = null;
 let cacheTimestamp = 0;
 const CACHE_TTL_MS = 30_000; // 30-second cache TTL
+const MAX_CACHE_ENTRIES = 500; // Prevent unbounded memory growth
 
 // ── Full-text search index ───────────────────────────────────────────────
 // Token-based inverted index built from cached memories. Rebuilt on cache
@@ -22,6 +23,7 @@ interface SearchIndex {
 }
 
 let searchIndex: SearchIndex = { tokenMap: new Map(), dirty: false };
+const MAX_TOKEN_MAP_ENTRIES = 20_000;
 
 /** Lowercase tokeniser — splits on non-[a-z0-9\u4e00-\u9fff-] characters. */
 function tokenize(text: string): string[] {
@@ -42,6 +44,17 @@ function rebuildIndex(memories: Memory[]): void {
         tokenMap.set(token, new Set());
       }
       tokenMap.get(token)!.add(m.id);
+    }
+  }
+  // Limit index size to prevent unbounded growth
+  const entries = tokenMap.entries();
+  if (tokenMap.size > MAX_TOKEN_MAP_ENTRIES) {
+    const i = entries.next();
+    // keep first MAX_TOKEN_MAP_ENTRIES tokens (least significant ones may be dropped)
+    const dropped = tokenMap.size - MAX_TOKEN_MAP_ENTRIES;
+    for (let d = 0; d < dropped; d++) {
+      const val = entries.next();
+      if (!val.done) tokenMap.delete(val.value[0]);
     }
   }
   searchIndex = { tokenMap, dirty: false };
@@ -118,6 +131,11 @@ async function getCachedMemories(): Promise<Memory[]> {
   }
   memoryCache = memories.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   cacheTimestamp = Date.now();
+
+  // Evict oldest entries if over limit to prevent unbounded memory growth
+  if (memoryCache.length > MAX_CACHE_ENTRIES) {
+    memoryCache = memoryCache.slice(0, MAX_CACHE_ENTRIES);
+  }
 
   // Rebuild search index alongside the cache
   if (searchIndex.dirty || searchIndex.tokenMap.size === 0) {

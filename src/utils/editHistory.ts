@@ -8,11 +8,20 @@ class EditHistory {
   private stack: EditEntry[] = [];
   private redoStack: EditEntry[] = [];
   private readonly MAX_HISTORY = 50;
+  private readonly MAX_TOTAL_BYTES = 10 * 1024 * 1024; // 10 MB total cap
 
   push(filePath: string, previousContent: string): void {
     this.stack.push({ filePath, previousContent, timestamp: Date.now() });
-    if (this.stack.length > this.MAX_HISTORY) this.stack.shift();
     this.redoStack = []; // Clear redo on new edit
+
+    // Enforce both count and total size limits
+    if (this.stack.length > this.MAX_HISTORY) {
+      this.stack.shift();
+    }
+    // If total content exceeds the cap, discard oldest entries
+    while (this.totalBytes() > this.MAX_TOTAL_BYTES && this.stack.length > 1) {
+      this.stack.shift();
+    }
   }
 
   undo(): EditEntry | null {
@@ -30,6 +39,14 @@ class EditHistory {
   clear(): void {
     this.stack = [];
     this.redoStack = [];
+  }
+
+  private totalBytes(): number {
+    let total = 0;
+    for (const e of this.stack) {
+      total += e.previousContent.length;
+    }
+    return total;
   }
 
   get canUndo(): boolean {
