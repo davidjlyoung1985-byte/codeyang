@@ -525,7 +525,10 @@ export class Agent {
         toolResultIds[i] = tc.id;
 
         if (tc.name === 'Question') {
-          if (signal.aborted) continue;
+          if (signal.aborted) {
+            toolResults[i] = { tool: tc.name, input: tc.input, output: 'Cancelled by user', isError: true };
+            continue;
+          }
           const t0 = Date.now();
           const q = String(tc.input['question'] ?? '');
           const options = Array.isArray(tc.input['options'])
@@ -543,7 +546,10 @@ export class Agent {
       // Execute all non-Question tools in parallel
       const parallelTasks = toolCalls.map(async (tc, i) => {
         if (tc.name === 'Question') return; // already handled above
-        if (signal.aborted) return; // cancellation requested
+        if (signal.aborted) {
+          toolResults[i] = { tool: tc.name, input: tc.input, output: 'Cancelled by user', isError: true };
+          return;
+        }
 
         try {
           toolResultIds[i] = tc.id;

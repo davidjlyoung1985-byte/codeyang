@@ -1,6 +1,8 @@
 import { readFile, stat, readdir } from 'node:fs/promises';
 import { resolveSafePath } from './shared.js';
-import { fileNotFound } from './errors.js';
+import { fileNotFound, toolError } from './errors.js';
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB — larger files require offset/limit
 
 export async function executeRead(filePath: string, offset?: number, limit?: number): Promise<string> {
   const resolved = resolveSafePath(filePath);
@@ -33,7 +35,16 @@ export async function executeRead(filePath: string, offset?: number, limit?: num
       : '(empty directory)';
   }
 
-  // File reading
+  // File reading — enforce size limit to prevent OOM on huge files
+  if (stats.size > MAX_FILE_SIZE && offset === undefined) {
+    throw new Error(
+      toolError(
+        'Read',
+        `File is ${(stats.size / 1024 / 1024).toFixed(1)} MB (max ${MAX_FILE_SIZE / 1024 / 1024} MB). Use offset and limit to read specific sections.`,
+      ),
+    );
+  }
+
   const content = await readFile(resolved, 'utf-8');
   const lines = content.split('\n');
   const totalLines = lines.length;
