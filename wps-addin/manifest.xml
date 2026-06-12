@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WpsAddin>
+  <Id>CodeYangAI</Id>
+  <Version>1.0.0</Version>
+  <DisplayName>CodeYang AI</DisplayName>
+  <Description>AI 编程助手</Description>
+  <Type>TaskPane</Type>
+  
+  <Icons>
+    <Icon>file:///C:\Users\Ehua\codeyang\wps-addin\icon.png</Icon>
+  </Icons>
+  
+  <Pages>
+    <Page Name="main">
+      <Title>CodeYang AI</Title>
+      <Url>file:///C:\Users\Ehua\codeyang\wps-addin\panel.html</Url>
+  <RuntimeType>local</RuntimeType>
+    </Page>
+  </Pages>
+
+  <Hosts>
+    <Host Name="wps" />
+    <Host Name="et" />
+    <Host Name="wpp" />
+  </Hosts>
+</WpsAddin>
