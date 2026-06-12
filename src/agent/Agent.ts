@@ -328,8 +328,12 @@ export class Agent {
           firstRetained.role === 'assistant' &&
           Array.isArray(firstRetained.content) &&
           firstRetained.content.some((b: { type: string }) => b.type === 'tool_use');
-        if (hasOrphanToolUse) {
-          cutIndex++; // include this message in the summary instead
+        const hasOrphanToolResult =
+          firstRetained.role === 'user' &&
+          Array.isArray(firstRetained.content) &&
+          firstRetained.content.some((b: { type: string }) => b.type === 'tool_result');
+        if (hasOrphanToolUse || hasOrphanToolResult) {
+          cutIndex++; // include this message in the summary to keep tool_use/tool_result pairs intact
         } else {
           break;
         }
