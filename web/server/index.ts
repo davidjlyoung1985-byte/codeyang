@@ -1,131 +1,125 @@
+import 'dotenv/config';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'node:http';
 import { Agent } from '../../src/agent/Agent.js';
-import type { ToolCall, ToolResult } from '../../src/types.js';
+import { config, loadLocalConfig, setSessionApiKey, getMcpServers } from '../../src/agent/config.js';
+import { setMcpManager, refreshMcpTools, registerQtTools } from '../../src/tools/registry.js';
+import { McpManager } from '../../src/mcp/McpManager.js';
+import { createLLMClient } from '../../src/agent/LLMClient.js';
+import { detectQtProject, createQtTools } from '../../src/qt/index.js';
+import { loadEnvFiles } from '../../src/utils/dotenv.js';
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+const PORT = Number(process.env['PORT'] || 3000);
 
-// HTTP server for serving static files
-const httpServer = createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.end(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>CodeYang Web</title>
-        <meta charset="utf-8">
-      </head>
-      <body>
-        <h1>CodeYang Web Server</h1>
-        <p>WebSocket server running on port ${PORT}</p>
-        <p>Connect your client to: ws://localhost:${PORT}</p>
-      </body>
-    </html>
-  `);
-});
+async function init() {
+  loadEnvFiles();
+  await loadLocalConfig();
 
-// WebSocket server
-const wss = new WebSocketServer({ server: httpServer });
+  const key = config.apiKey;
+  if (!key) {
+    console.error('[Server] No API key configured. Set CODEYANG_API_KEY or DEEPSEEK_API_KEY.');
+    process.exit(1);
+  }
+  setSessionApiKey(key);
 
-interface ClientSession {
-  agent: Agent;
-  ws: WebSocket;
+  const mcpMgr = new McpManager();
+  const mcpServers = getMcpServers();
+  if (Object.keys(mcpServers).length > 0) {
+    mcpMgr.configure(mcpServers);
+    await mcpMgr.initialize(() => {});
+    setMcpManager(mcpMgr);
+    await refreshMcpTools();
+  } else {
+    setMcpManager(null);
+  }
+
+  const qtContext = await detectQtProject(process.cwd());
+  if (qtContext.isQtProject) registerQtTools(createQtTools(qtContext));
+  return qtContext;
 }
 
-const sessions = new Map<WebSocket, ClientSession>();
+// HTTP server for health check
+const httpServer = createServer((_req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/html' });
+  res.end(`<!DOCTYPE html><html><head><title>CodeYang Web</title><meta charset="utf-8"></head><body>
+    <h1>CodeYang Web Server</h1>
+    <p>WebSocket: ws://localhost:${PORT}</p>
+    <p>Client: <a href="http://localhost:5173">http://localhost:5173</a></p>
+  </body></html>`);
+});
 
-wss.on('connection', (ws: WebSocket) => {
+const wss = new WebSocketServer({ server: httpServer });
+
+wss.on('connection', async (ws: WebSocket) => {
   console.log('[WebSocket] Client connected');
 
-  // Create agent instance for this session
-  const agent = new Agent({
-    model: 'claude-opus-4',
-    systemPrompt: 'You are CodeYang, an AI coding assistant.',
-    onToolCall: (toolName: string) => {
-      ws.send(JSON.stringify({ type: 'tool_call', toolName }));
-    },
-    onToolResult: (toolName: string, result: string) => {
-      ws.send(JSON.stringify({ type: 'tool_result', toolName, result }));
-    },
-    onText: (text: string) => {
+  const agent = new Agent();
+  let isRunning = false;
+
+  agent.setCallbacks({
+    onAgentDelta(text: string) {
       ws.send(JSON.stringify({ type: 'assistant_text', text }));
     },
-    onToolBatch: (count: number) => {
-      ws.send(JSON.stringify({ type: 'tool_batch', count }));
+    onToolStart(name: string) {
+      ws.send(JSON.stringify({ type: 'tool_call', toolName: name }));
+    },
+    onToolResult(_name: string, _output: string) {
+      // Optionally send result
+    },
+    onError(err: string) {
+      ws.send(JSON.stringify({ type: 'error', error: err }));
     },
   });
 
-  sessions.set(ws, { agent, ws });
+  ws.send(JSON.stringify({ type: 'connected', message: 'Connected to CodeYang Web Server' }));
 
   ws.on('message', async (data: Buffer) => {
     try {
-      const message = JSON.parse(data.toString());
-      const session = sessions.get(ws);
+      const msg = JSON.parse(data.toString());
+      console.log('[WebSocket] Message:', msg.type);
 
-      if (!session) {
-        ws.send(JSON.stringify({ type: 'error', error: 'Session not found' }));
-        return;
-      }
-
-      switch (message.type) {
+      switch (msg.type) {
         case 'prompt': {
-          // User sent a prompt
-          const { prompt } = message;
-          if (typeof prompt !== 'string') {
-            ws.send(JSON.stringify({ type: 'error', error: 'Invalid prompt' }));
-            return;
-          }
-
+          if (isRunning) return;
+          isRunning = true;
           ws.send(JSON.stringify({ type: 'status', status: 'processing' }));
-
           try {
-            await session.agent.run(prompt);
+            await agent.run(msg.prompt);
             ws.send(JSON.stringify({ type: 'status', status: 'completed' }));
-          } catch (err) {
-            const errMsg = err instanceof Error ? err.message : String(err);
-            ws.send(JSON.stringify({ type: 'error', error: errMsg }));
+          } catch (err: any) {
+            ws.send(JSON.stringify({ type: 'error', error: err.message }));
           }
+          isRunning = false;
           break;
         }
-
         case 'cancel': {
-          // User wants to cancel current execution
-          session.agent.cancelExecution();
+          agent.cancelQuestion();
           ws.send(JSON.stringify({ type: 'status', status: 'cancelled' }));
+          isRunning = false;
           break;
         }
-
         case 'reset': {
-          // Reset conversation history
-          session.agent.reset();
+          agent.reset();
           ws.send(JSON.stringify({ type: 'status', status: 'reset' }));
           break;
         }
-
-        default:
-          ws.send(JSON.stringify({ type: 'error', error: `Unknown message type: ${message.type}` }));
       }
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      ws.send(JSON.stringify({ type: 'error', error: `Failed to parse message: ${errMsg}` }));
+    } catch (err: any) {
+      ws.send(JSON.stringify({ type: 'error', error: `Parse error: ${err.message}` }));
     }
   });
 
-  ws.on('close', () => {
-    console.log('[WebSocket] Client disconnected');
-    sessions.delete(ws);
-  });
-
-  ws.on('error', (err) => {
-    console.error('[WebSocket] Error:', err);
-    sessions.delete(ws);
-  });
-
-  // Send welcome message
-  ws.send(JSON.stringify({ type: 'connected', message: 'Connected to CodeYang Web Server' }));
+  ws.on('close', () => console.log('[WebSocket] Client disconnected'));
+  ws.on('error', () => {});
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`[Server] HTTP server running on http://localhost:${PORT}`);
-  console.log(`[Server] WebSocket server running on ws://localhost:${PORT}`);
+  console.log(`[Server] HTTP: http://localhost:${PORT}`);
+  console.log(`[Server] WebSocket: ws://localhost:${PORT}`);
+  console.log(`[Server] Client: http://localhost:5173 (npm run web:client)`);
+});
+
+init().catch((err) => {
+  console.error('[Server] Init failed:', err);
+  process.exit(1);
 });

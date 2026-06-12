@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig([
   {
-    entry: { index: 'src/index.ts', codeyangx: 'src/codeyangx.ts' },
+    entry: { index: 'src/index.ts', codeyangx: 'src/codeyangx.ts', 'web-server': 'src/web-server.ts' },
     format: ['esm'],
     clean: true,
     sourcemap: true,
