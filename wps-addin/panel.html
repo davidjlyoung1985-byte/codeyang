@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>CodeYang for WPS</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:#0d1117;color:#e6edf3;display:flex;flex-direction:column;height:100vh;font-size:13px}
+header{padding:6px 10px;background:#161b22;border-bottom:1px solid #30363d;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:14px;color:#58a6ff}
+#status{font-size:11px;color:#8b949e}
+#chat{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px}
+.msg{padding:8px 10px;border-radius:6px;line-height:1.5;white-space:pre-wrap;font-size:12px;max-width:92%}
+.user{background:#1f6feb;align-self:flex-end}
+.agent{background:#21262d;align-self:flex-start;border:1px solid #30363d}
+.tool{font-size:11px;color:#8b949e;padding:2px 8px;align-self:flex-start}
+#input-bar{display:flex;gap:4px;padding:6px 8px;background:#161b22;border-top:1px solid #30363d}
+#input{flex:1;padding:6px 8px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#e6edf3;outline:none;font-size:12px}
+#input:focus{border-color:#58a6ff}
+#send{padding:4px 16px;border-radius:4px;border:none;background:#238636;color:#fff;cursor:pointer;font-size:12px}
+#send:disabled{opacity:0.5}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid #58a6ff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle}
+</style>
+</head>
+<body>
+<header><h1>CodeYang</h1><span id="status">启动中...</span></header>
+<div id="chat"><p style="color:#8b949e;padding:20px;text-align:center;font-size:12px">正在连接 CodeYang 服务器...<br><br><span class="spinner"></span></p></div>
+<div id="input-bar">
+  <textarea id="input" rows="1" placeholder="输入消息..." style="flex:1;padding:6px 8px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#e6edf3;outline:none;resize:none;font-size:12px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+  <button id="send" onclick="send()" disabled>发送</button>
+</div>
+<script>
+const API='http://localhost:3456';
+const chat=document.getElementById('chat'),input=document.getElementById('input'),sendBtn=document.getElementById('send'),statusEl=document.getElementById('status');
+let loading=false;
+(async function(){try{const r=await fetch(API+'/api/config');if(r.ok){statusEl.textContent='已连接';sendBtn.disabled=false;chat.innerHTML='';return}}catch(e){}setTimeout(()=>location.reload(),3000)})();
+async function send(){const msg=input.value.trim();if(!msg||loading)return;input.value='';
+const d=document.createElement('div');d.className='msg user';d.textContent=msg;chat.appendChild(d);
+loading=true;sendBtn.disabled=true;statusEl.textContent='等待回复...';
+const a=document.createElement('div');a.className='msg agent';a.textContent='';chat.appendChild(a);
+try{const r=await fetch(API+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+const reader=r.body.getReader();let t='',buf='';const decoder=new TextDecoder();
+while(true){const{done,value}=await reader.read();if(done)break;buf+=decoder.decode(value,{stream:true});
+for(const l of buf.split('\n').filter(Boolean)){if(!l.startsWith('data: '))continue;buf='';
+try{const data=JSON.parse(l.slice(6));if(data.type==='delta'){t+=data.text;a.textContent=t}
+else if(data.type==='tool_call'){const tc=document.createElement('div');tc.className='tool';tc.textContent='>'+(data.name||'');chat.appendChild(tc)}
+else if(data.type==='error'){a.textContent+='\n❌ '+data.text}}catch(e){}}}chat.scrollTop=chat.scrollHeight}catch(e){a.textContent='❌ 连接失败: '+e.message}
+loading=false;sendBtn.disabled=false;statusEl.textContent='就绪';input.focus()}
+</script>
+</body>
+</html>

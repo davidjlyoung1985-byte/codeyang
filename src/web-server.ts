@@ -146,6 +146,49 @@ async function main() {
       return;
     }
 
+    // WPS integration page
+    if (req.url === '/wps') {
+      res.writeHead(200, { 'Content-Type': 'text/html;charset=utf-8' });
+      res.end(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeYang for WPS</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  body{background:#0d1117;color:#e6edf3;display:flex;flex-direction:column;height:100vh;font-size:13px}
+  #chat{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px}
+  .msg{padding:6px 10px;border-radius:4px;line-height:1.4;white-space:pre-wrap;font-size:12px}
+  .user{background:#1f6feb;align-self:flex-end;max-width:90%}
+  .agent{background:#21262d;align-self:flex-start;border:1px solid #30363d;max-width:90%}
+  #input-bar{display:flex;gap:4px;padding:6px 8px;background:#161b22;border-top:1px solid #30363d}
+  #input{flex:1;padding:6px 8px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#e6edf3;font-size:12px;outline:none}
+  #input:focus{border-color:#58a6ff}
+  #send{padding:4px 12px;border-radius:4px;border:none;background:#238636;color:#fff;cursor:pointer;font-size:12px}
+  #send:disabled{opacity:0.5;cursor:default}
+  header{padding:6px 8px;background:#161b22;border-bottom:1px solid #30363d;font-size:12px;color:#58a6ff;display:flex;justify-content:space-between}
+  .tool-call{font-size:11px;color:#8b949e;padding:2px 8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spinner{display:inline-block;width:10px;height:10px;border:2px solid #58a6ff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+</style></head><body>
+<header><span>CodeYang AI</span><span id="status" style="color:#8b949e">就绪</span></header>
+<div id="chat"></div>
+<div id="input-bar">
+  <textarea id="input" rows="1" placeholder="输入消息..." style="flex:1;padding:6px 8px;border-radius:4px;border:1px solid #30363d;background:#0d1117;color:#e6edf3;font-size:12px;outline:none;resize:none" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
+  <button id="send" onclick="send()" style="padding:4px 12px;border-radius:4px;border:none;background:#238636;color:#fff;cursor:pointer;font-size:12px">发送</button>
+</div>
+<script>
+let loading=false;const chat=document.getElementById('chat'),input=document.getElementById('input'),sendBtn=document.getElementById('send'),statusEl=document.getElementById('status');
+async function send(){const msg=input.value.trim();if(!msg||loading)return;input.value='';const d=document.createElement('div');d.className='msg user';d.textContent=msg;chat.appendChild(d);
+loading=true;sendBtn.disabled=true;statusEl.textContent='思考中...';const a=document.createElement('div');a.className='msg agent';const s=document.createElement('span');s.className='spinner';a.prepend(s);chat.appendChild(a);
+try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});const reader=r.body.getReader();let t='',buf='';
+while(true){const{done,value}=await reader.read();if(done)break;buf+=new TextDecoder().decode(value,{stream:true});for(const l of buf.split('\\n').filter(Boolean)){if(!l.startsWith('data: '))continue;buf='';
+const data=JSON.parse(l.slice(6));if(data.type==='delta'){t+=data.text;a.textContent=t}else if(data.type==='tool_call'){const tc=document.createElement('div');tc.className='tool-call';tc.textContent='>'+(data.name||'');chat.appendChild(tc)}
+else if(data.type==='error'){a.textContent+='\\n❌ '+data.text;a.style.borderLeftColor='#f85149'}}}chat.scrollTop=chat.scrollHeight}catch(err){a.textContent+='\\n❌ '+err.message}
+s.remove();loading=false;sendBtn.disabled=false;statusEl.textContent='就绪';input.focus()}
+</script>
+</body></html>`);
+      return;
+    }
+
     // Static files
     const file = serveStatic(req.url || '/');
     if (file) {
