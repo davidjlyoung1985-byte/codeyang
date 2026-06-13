@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, unlink, readdir, stat, rename as atomicRename } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, unlink, readdir, stat, rename, copyFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import crypto from 'node:crypto';
@@ -33,11 +33,31 @@ async function ensureDir() {
   await mkdir(SESSIONS_DIR, { recursive: true });
 }
 
+/**
+ * 跨设备安全的原子写入。
+ *
+ * 先用临时文件写入，再 rename 到目标路径。
+ * rename() 在跨文件系统时抛出 EXDEV（例如 %TEMP% 在 C: 而 .codeyang 在 D:），
+ * 此时回退到 copyFile + unlink。
+ */
+async function safeRename(src: string, dest: string): Promise<void> {
+  try {
+    await rename(src, dest);
+  } catch (err: unknown) {
+    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EXDEV') {
+      await copyFile(src, dest);
+      await unlink(src).catch(() => {}); // 尽力清理临时文件
+    } else {
+      throw err;
+    }
+  }
+}
+
 /** Atomic file write: write to temp then rename to prevent partial reads by concurrent callers. */
 async function atomicWrite(filePath: string, data: string): Promise<void> {
   const tmp = `${filePath}.tmp.${process.pid}`;
   await writeFile(tmp, data, 'utf-8');
-  await atomicRename(tmp, filePath);
+  await safeRename(tmp, filePath);
 }
 
 async function readIndex(): Promise<Record<string, SessionMeta>> {

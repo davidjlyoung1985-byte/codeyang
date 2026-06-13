@@ -1,4 +1,4 @@
-﻿import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+﻿import { readFile, writeFile, mkdir, rename, copyFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { McpServerConfig } from '../mcp/types.js';
@@ -8,12 +8,34 @@ import { buildQtPrompt } from '../qt/index.js';
 const CONFIG_DIR = join(homedir(), '.codeyang');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 
+/**
+ * 跨设备安全的原子写入。
+ *
+ * 先用临时文件写入，再 rename 到目标路径，这样对读者来说是原子的（文件内容要么完整要么不变）。
+ *
+ * rename() 在源和目标跨文件系统时抛出 EXDEV（例如 %TEMP% 在 C: 而 .codeyang 在 D:）。
+ * 此时回退到 copyFile + unlink，语义上仍是原子的（copyFile 是统计语义）。
+ */
+async function safeRename(src: string, dest: string): Promise<void> {
+  try {
+    await rename(src, dest);
+  } catch (err: unknown) {
+    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EXDEV') {
+      // 跨设备：copy + unlink
+      await copyFile(src, dest);
+      await unlink(src).catch(() => {}); // 尽力清理临时文件
+    } else {
+      throw err;
+    }
+  }
+}
+
 /** Atomic JSON write: write to temp file then rename to prevent corruption on crash. */
 async function atomicWriteConfig(data: unknown): Promise<void> {
   const tmp = `${CONFIG_FILE}.tmp.${process.pid}`;
   const json = JSON.stringify(data, null, 2);
   await writeFile(tmp, json, 'utf-8');
-  await rename(tmp, CONFIG_FILE);
+  await safeRename(tmp, CONFIG_FILE);
 }
 
 interface LocalConfig {

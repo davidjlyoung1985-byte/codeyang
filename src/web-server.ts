@@ -16,6 +16,7 @@ import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registr
 import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
 import { loadEnvFiles } from './utils/dotenv.js';
+import { saveSession } from './utils/sessionStore.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env['CODEYANG_PORT'] || 3456);
@@ -75,74 +76,124 @@ async function initAgent(): Promise<Agent> {
 // ── HTTP server ────────────────────────────────
 async function main() {
   const agent = await initAgent();
+  let currentSessionId: string | undefined;
+
   console.log(`\n  🌐 CodeYang Web UI: http://localhost:${PORT}\n`);
 
   const server = createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
 
-    // API: chat
-    if (req.method === 'POST' && req.url === '/api/chat') {
-      let body = '';
-      req.on('data', (chunk) => (body += chunk));
-      req.on('end', async () => {
-        try {
-          const { message } = JSON.parse(body);
-          if (!message) {
-            res.writeHead(400);
-            res.end(JSON.stringify({ error: 'message required' }));
-            return;
-          }
-
-          // Stream response via SSE
-          res.writeHead(200, {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            Connection: 'keep-alive',
-          });
-
-          let fullText = '';
-          agent.setCallbacks({
-            onAgentDelta(text: string) {
-              fullText += text;
-              res.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`);
-            },
-            onToolStart(name: string, args: Record<string, unknown>) {
-              res.write(`data: ${JSON.stringify({ type: 'tool_start', name, args })}\n\n`);
-            },
-            onToolResult(name: string, output: string, isError: boolean) {
-              const snippet = output.slice(0, 200);
-              res.write(`data: ${JSON.stringify({ type: 'tool_result', name, snippet, isError })}\n\n`);
-            },
-            onError(err: string) {
-              res.write(`data: ${JSON.stringify({ type: 'error', text: err })}\n\n`);
-            },
-          });
-
-          try {
-            await agent.run(message);
-          } catch (err: any) {
-            res.write(`data: ${JSON.stringify({ type: 'error', text: err.message })}\n\n`);
-          }
-
-          res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-          res.end();
-        } catch {
-          res.writeHead(400);
-          res.end(JSON.stringify({ error: 'invalid JSON' }));
-        }
+    // Helper: parse JSON body
+    function readBody(): Promise<string> {
+      return new Promise((resolve) => {
+        let body = '';
+        req.on('data', (chunk: string) => (body += chunk));
+        req.on('end', () => resolve(body));
       });
-      return;
     }
 
     // API: config
     if (req.method === 'GET' && req.url === '/api/config') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        model: config.model,
-        provider: config.provider,
-        maxTokens: config.maxTokens,
-        version: '0.7.0',
-      }));
+      res.end(
+        JSON.stringify({
+          model: config.model,
+          provider: config.provider,
+          maxTokens: config.maxTokens,
+          version: '0.7.0',
+          hasSession: !!currentSessionId,
+          sessionId: currentSessionId || null,
+        }),
+      );
+      return;
+    }
+
+    // API: history — return full conversation history with tool call details
+    if (req.method === 'GET' && req.url === '/api/history') {
+      const msgs = agent.exportMessages();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          sessionId: currentSessionId || null,
+          messages: msgs,
+          messageCount: msgs.length,
+        }),
+      );
+      return;
+    }
+
+    // API: new session — reset agent and session
+    if (req.method === 'POST' && req.url === '/api/session/new') {
+      agent.reset();
+      currentSessionId = undefined;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', message: 'New session started' }));
+      return;
+    }
+
+    // API: chat
+    if (req.method === 'POST' && req.url === '/api/chat') {
+      try {
+        const { message } = JSON.parse(await readBody());
+        if (!message) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'message required' }));
+          return;
+        }
+
+        // Stream response via SSE
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        });
+
+        const toolCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+        const toolResults: Array<{ output: string; isError: boolean }> = [];
+
+        agent.setCallbacks({
+          onAgentDelta(text: string) {
+            res.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`);
+          },
+          onToolStart(name: string, args: Record<string, unknown>) {
+            toolCalls.push({ name, args });
+            const argStr = JSON.stringify(args).slice(0, 200);
+            res.write(`data: ${JSON.stringify({ type: 'tool_start', name, args: argStr })}\n\n`);
+          },
+          onToolResult(name: string, output: string, isError: boolean) {
+            toolResults.push({ output, isError });
+            const snippet = output.slice(0, 300);
+            res.write(`data: ${JSON.stringify({ type: 'tool_result', name, snippet, isError })}\n\n`);
+          },
+          onError(err: string) {
+            res.write(`data: ${JSON.stringify({ type: 'error', text: err })}\n\n`);
+          },
+        });
+
+        try {
+          await agent.run(message);
+        } catch (err: unknown) {
+          res.write(
+            `data: ${JSON.stringify({ type: 'error', text: err instanceof Error ? err.message : String(err) })}\n\n`,
+          );
+        }
+
+        // Save session after each turn
+        try {
+          currentSessionId = await saveSession(agent.exportMessages(), currentSessionId);
+        } catch {
+          // best-effort save
+        }
+
+        // Send final summary with full tool details
+        res.write(
+          `data: ${JSON.stringify({ type: 'done', toolCalls: toolCalls.length, toolResults: toolResults.length, sessionId: currentSessionId })}\n\n`,
+        );
+        res.end();
+      } catch {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: 'invalid JSON' }));
+      }
       return;
     }
 

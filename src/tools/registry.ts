@@ -12,6 +12,8 @@ export interface ToolContext {
   model: string;
   maxTokens: number;
   cwd: string;
+  /** 可选的取消信号，SIGINT 时触发，用于支持子代理取消 */
+  signal?: AbortSignal;
 }
 
 let currentContext: ToolContext | null = null;
