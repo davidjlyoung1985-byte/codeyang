@@ -1,7 +1,7 @@
 {
   "name": "codeyang-vscode",
   "displayName": "CodeYang AI Agent",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "AI coding agent — chat with tool-using CodeYang inside VS Code",
   "publisher": "codeyang",
   "engines": {
@@ -12,14 +12,22 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:codeyang.startChat"
+    "onStartupFinished"
   ],
   "main": "./extension.js",
   "contributes": {
     "commands": [
       {
         "command": "codeyang.startChat",
-        "title": "CodeYang: Start Chat"
+        "title": "CodeYang: Start Chat",
+        "category": "CodeYang"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "codeyang.startChat",
+        "key": "ctrl+shift+y",
+        "mac": "cmd+shift+y"
       }
     ],
     "configuration": {
@@ -32,18 +40,16 @@
         },
         "codeyang.apiBaseUrl": {
           "type": "string",
-          "description": "API Base URL (default: https://api.deepseek.com/v1)",
-          "default": "https://api.deepseek.com/v1"
+          "description": "API Base URL (DeepSeek Anthropic-compatible: https://api.deepseek.com/anthropic, OpenAI-compatible: https://api.deepseek.com/v1)",
+          "default": "https://api.deepseek.com/anthropic"
         },
         "codeyang.model": {
           "type": "string",
-          "description": "Model to use (e.g. deepseek-chat, claude-sonnet-4-20250514)",
-          "default": "deepseek-chat"
+          "description": "Model to use (deepseek-v4-pro for best quality, deepseek-v4-flash for speed, or claude model names for auto-mapping)",
+          "default": "deepseek-v4-pro"
         }
       }
     }
   },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.0"
-  }
+  "dependencies": {}
 }

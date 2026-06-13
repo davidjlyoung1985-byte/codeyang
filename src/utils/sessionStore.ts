@@ -7,10 +7,27 @@ import type { Session, Message } from '../types.js';
 const SESSIONS_DIR = join(homedir(), '.codeyang', 'sessions');
 const INDEX_FILE = join(homedir(), '.codeyang', 'sessions.index.json');
 
-/** Maximum messages retained per session before pruning older entries. */
-const MAX_SESSION_MESSAGES = 100;
+/** Estimated max tokens per saved session (≈ 32K tokens). Prune based on content size, not message count. */
+const MAX_SESSION_TOKENS = 32_000;
 
-type SessionMeta = Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt'>;
+/** Rough token estimate: 1 token ≈ 4 characters for typical code/text. */
+function estimateTokens(msg: Message): number {
+  const content = msg.content || '';
+  let total = Math.ceil(content.length / 4);
+  if (msg.toolCalls) {
+    for (const tc of msg.toolCalls) {
+      total += Math.ceil(JSON.stringify(tc.args).length / 4);
+    }
+  }
+  if (msg.toolResults) {
+    for (const tr of msg.toolResults) {
+      total += Math.ceil(tr.output.length / 4);
+    }
+  }
+  return total;
+}
+
+type SessionMeta = Pick<Session, 'id' | 'title' | 'createdAt' | 'updatedAt'> & { messageCount: number };
 
 async function ensureDir() {
   await mkdir(SESSIONS_DIR, { recursive: true });
@@ -36,28 +53,39 @@ async function writeIndex(index: Record<string, SessionMeta>): Promise<void> {
 }
 
 /**
- * Prune session messages to the latest N entries.
- * Keeps the first (system) message + the last (MAX_SESSION_MESSAGES - 1) messages
- * so the conversation context and instructions aren't lost entirely.
+ * Prune session messages using token-based threshold.
+ * Keeps the first message + as many recent messages as fit within MAX_SESSION_TOKENS.
  */
 function pruneMessages(messages: Message[]): Message[] {
-  if (messages.length <= MAX_SESSION_MESSAGES) return messages;
+  // Estimate total tokens — skip pruning if under limit
+  let totalTokens = 0;
+  for (const m of messages) totalTokens += estimateTokens(m);
+  if (totalTokens <= MAX_SESSION_TOKENS) return messages;
 
-  // Always keep the first message (typically system prompt / instructions)
+  // Always keep the first message
   const keepHead = 1;
-  const keepTail = MAX_SESSION_MESSAGES - keepHead;
-
   const head = messages.slice(0, keepHead);
-  const tail = messages.slice(-keepTail);
+
+  // Keep as many recent messages as fit within token budget
+  const keepTail: Message[] = [];
+  let tailTokens = 0;
+  for (let i = messages.length - 1; i >= keepHead; i--) {
+    const msg = messages[i];
+    const tokens = estimateTokens(msg);
+    if (tailTokens + tokens > MAX_SESSION_TOKENS * 0.7) break; // leave room for system notice
+    keepTail.unshift(msg);
+    tailTokens += tokens;
+  }
 
   // Add a notice that older messages were pruned
-  const prunedCount = messages.length - (keepHead + keepTail);
+  const prunedCount = messages.length - (keepHead + keepTail.length);
+  if (prunedCount <= 0) return messages;
   const notice: Message = {
     role: 'system',
-    content: `[System: ${prunedCount} older message(s) were pruned due to context length limits. Key information from those messages has been preserved in the session's persistent memory.]`,
+    content: `[System: ${prunedCount} message(s) (~${Math.round((totalTokens - tailTokens) / 1000)}K tokens) were pruned due to size limits.]`,
   };
 
-  return [...head, notice, ...tail];
+  return [...head, notice, ...keepTail];
 }
 
 export async function saveSession(messages: Message[], existingId?: string): Promise<string> {
@@ -82,7 +110,7 @@ export async function saveSession(messages: Message[], existingId?: string): Pro
 
   // Update index (metadata only — fast listing)
   const index = await readIndex();
-  index[id] = { id, title, createdAt, updatedAt: now };
+  index[id] = { id, title, createdAt, updatedAt: now, messageCount: prunedMessages.length };
   await writeIndex(index);
 
   return id;
@@ -119,8 +147,10 @@ export async function listSessions(): Promise<SessionMeta[]> {
     const sessions: SessionMeta[] = [];
     for (const { name: f } of withMtime) {
       try {
-        const { id, title, createdAt, updatedAt } = JSON.parse(await readFile(join(SESSIONS_DIR, f), 'utf-8'));
-        sessions.push({ id, title, createdAt, updatedAt });
+        const { id, title, createdAt, updatedAt, messages } = JSON.parse(
+          await readFile(join(SESSIONS_DIR, f), 'utf-8'),
+        );
+        sessions.push({ id, title, createdAt, updatedAt, messageCount: messages?.length ?? 0 });
       } catch {}
     }
     return sessions;
@@ -139,7 +169,7 @@ export interface SessionSearchResult {
 
 /**
  * Search sessions by query text (title only) and/or recency in days.
- * Returns enriched results with message count from the session file.
+ * Returns enriched results with message count from the index.
  */
 export async function searchSessions(query?: string, days?: number): Promise<SessionSearchResult[]> {
   const all = await listSessions();
@@ -157,21 +187,14 @@ export async function searchSessions(query?: string, days?: number): Promise<Ses
     filtered = filtered.filter((s) => s.title.toLowerCase().includes(q));
   }
 
-  // Enrich with message count by reading the session file
-  const enriched: SessionSearchResult[] = [];
-  for (const s of filtered) {
-    try {
-      const session = await loadSession(s.id);
-      enriched.push({
-        ...s,
-        messageCount: session?.messages.length ?? 0,
-      });
-    } catch {
-      enriched.push({ ...s, messageCount: 0 });
-    }
-  }
-
-  return enriched;
+  // messageCount is already in the index — no need to load individual files
+  return filtered.map((s) => ({
+    id: s.id,
+    title: s.title,
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+    messageCount: s.messageCount,
+  }));
 }
 
 export async function deleteSession(id: string): Promise<boolean> {

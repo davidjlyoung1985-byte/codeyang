@@ -69,21 +69,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sa
 <div id="setup-area" style="display:flex;">
   <div class="setup-row">
     <label>API Base URL:</label>
-    <input type="text" id="api-base-input" value="https://api.deepseek.com/v1" />
+    <input type="text" id="api-base-input" value="https://api.deepseek.com/anthropic" />
   </div>
   <div class="setup-row">
     <label>Model:</label>
-    <input type="text" id="api-model-input" value="deepseek-chat" placeholder="deepseek-chat, claude-sonnet-4-20250514..." />
+    <input type="text" id="api-model-input" value="deepseek-v4-pro" placeholder="deepseek-v4-pro, deepseek-v4-flash, claude-opus-4..." />
   </div>
   <div class="setup-row">
     <label>API Key:</label>
-    <input type="password" id="api-key-input" placeholder="Paste your API key..." />
+    <input type="password" id="api-key-input" placeholder="sk-xxxxxxxxxxxxxxxx (DeepSeek API Key)" />
   </div>
   <div class="setup-row" style="justify-content: flex-end;">
     <button id="save-key-btn" onclick="saveApiKey()">Connect</button>
   </div>
 </div>
-<div id="setup-hint" style="display:block;">Default: DeepSeek (https://api.deepseek.com/v1) · For Anthropic, change URL to https://api.anthropic.com and model to claude-sonnet-4-20250514</div>
+<div id="setup-hint" style="display:block;">🚀 DeepSeek Anthropic API (https://api.deepseek.com/anthropic) · Claude model names auto-map: opus→v4-pro, sonnet/haiku→v4-flash · Get key: platform.deepseek.com</div>
 <div id="messages"></div>
 <div id="loading"><span class="spinner"></span> CodeYang is thinking...</div>
 <div id="error-banner"></div>
@@ -231,8 +231,8 @@ function addToolResult(output, isError) {
 
 function saveApiKey() {
   var key = apiKeyInput.value.trim();
-  var baseUrl = apiBaseInput.value.trim() || 'https://api.deepseek.com/v1';
-  var model = apiModelInput.value.trim() || 'deepseek-chat';
+  var baseUrl = apiBaseInput.value.trim() || 'https://api.deepseek.com/anthropic';
+  var model = apiModelInput.value.trim() || 'deepseek-v4-pro';
   if (!key) {
     addSystemMessage('Please enter your API key.');
     return;

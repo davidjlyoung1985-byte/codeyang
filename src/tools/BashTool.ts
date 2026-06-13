@@ -7,6 +7,10 @@ const DENY_LIST = (process.env['CODEYANG_DENY_COMMANDS'] || '')
   .map((s) => s.trim())
   .filter(Boolean);
 
+/** Permission cache: avoids redundant async checkPermission calls within TTL. */
+const permissionCache = new Map<string, { level: string; timestamp: number }>();
+const PERMISSION_CACHE_TTL = 60_000; // 60 seconds
+
 /**
  * Check if a command matches any deny-listed word.
  * Uses word-boundary matching to reduce false positives.
@@ -45,7 +49,23 @@ export async function executeBash(command: string, cwd?: string, timeoutSecs = 3
     const segments = command.split(/[\s;|&]+/).filter(Boolean);
     for (const segment of segments) {
       const firstWord = segment.split(' ')[0];
+      // Check permission cache first
+      const cached = permissionCache.get(firstWord);
+      if (cached && Date.now() - cached.timestamp < PERMISSION_CACHE_TTL) {
+        if (cached.level === 'deny') {
+          throw new Error(
+            `[PERMISSION DENIED] ${cached.level === 'deny' ? 'This command is not permitted.' : ''} Use "ALLOW: <command>" to override (after user approval).`,
+          );
+        }
+        if (cached.level === 'ask') {
+          throw new Error(
+            `[PERMISSION REQUIRED] This operation needs confirmation. Ask the user for approval, then retry with "ALLOW: <command>".`,
+          );
+        }
+        continue; // 'allow' — cache hit, skip async check
+      }
       const perm = await checkPermission('bash', firstWord);
+      permissionCache.set(firstWord, { level: perm.level, timestamp: Date.now() });
       if (perm.level === 'deny') {
         throw new Error(
           `[PERMISSION DENIED] ${perm.reason || 'This command is not permitted.'} Use "ALLOW: <command>" to override (after user approval).`,

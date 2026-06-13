@@ -13,6 +13,14 @@ let cacheTimestamp = 0;
 const CACHE_TTL_MS = 30_000; // 30-second cache TTL
 const MAX_CACHE_ENTRIES = 500; // Prevent unbounded memory growth
 
+/** Monotonic version counter — incremented on every write. Used by Agent to detect changes without re-reading. */
+let memoryVersion = 0;
+
+/** Get current memory version. Callers can compare across calls to detect changes. */
+export function getMemoryVersion(): number {
+  return memoryVersion;
+}
+
 // ── Full-text search index ───────────────────────────────────────────────
 // Token-based inverted index built from cached memories. Rebuilt on cache
 // refresh; marked dirty on invalidation so it is rebuilt lazily on next search.
@@ -107,6 +115,7 @@ function invalidateCache() {
   memoryCache = null;
   cacheTimestamp = 0;
   searchIndex.dirty = true;
+  memoryVersion++; // Signal to Agent that memory content changed
 }
 
 /**

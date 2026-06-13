@@ -263,8 +263,8 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
   async function cleanup() {
     try {
       await mcpMgr.shutdown();
-    } catch {
-      // Ignore shutdown errors
+    } catch (err) {
+      logger.debug(`[MCP] shutdown error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

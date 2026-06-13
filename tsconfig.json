@@ -12,7 +12,11 @@
     "resolveJsonModule": true,
     "types": ["node"],
     "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo"
+    "tsBuildInfoFile": ".tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": ["src"],
   "exclude": ["src/**/*.test.ts"]

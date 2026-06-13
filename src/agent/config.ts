@@ -141,7 +141,7 @@ export const config = {
     );
   },
   get baseURL() {
-    return process.env['CODEYANG_BASE_URL'] || localConfig.apiBaseURL || 'https://api.deepseek.com/v1';
+    return process.env['CODEYANG_BASE_URL'] || localConfig.apiBaseURL || 'https://api.deepseek.com/anthropic';
   },
   get provider() {
     return localConfig.apiProvider || 'deepseek';
