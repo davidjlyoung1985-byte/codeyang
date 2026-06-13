@@ -1,45 +1,134 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import * as dns from 'node:dns/promises';
 import { createWriteStream } from 'node:fs';
+import { isIPv4 } from 'node:net';
 import axios, { AxiosRequestConfig, Method } from 'axios';
 import FormData from 'form-data';
 import { resolveSafePath } from './shared.js';
 
 // ── SSRF / URL validation ────────────────────────────────────────
 
-/** Private / loopback / dangerous IP ranges */
-const DANGEROUS_SUBNETS = [
-  '10.',
-  '172.16.',
-  '172.17.',
-  '172.18.',
-  '172.19.',
-  '172.20.',
-  '172.21.',
-  '172.22.',
-  '172.23.',
-  '172.24.',
-  '172.25.',
-  '172.26.',
-  '172.27.',
-  '172.28.',
-  '172.29.',
-  '172.30.',
-  '172.31.',
-  '192.168.',
-  '127.',
-  '169.254.',
-  '0.',
-  '::1', // IPv6 loopback
-  'fc00:', // IPv6 unique local
-  'fe80:', // IPv6 link-local
+/** Private / loopback / dangerous IP ranges (for IPv4) */
+const DANGEROUS_IPV4_RANGES = [
+  { prefix: '10.', mask: 8 }, // 10.0.0.0/8
+  { prefix: '172.16.', mask: 12 }, // 172.16.0.0/12
+  { prefix: '192.168.', mask: 16 }, // 192.168.0.0/16
+  { prefix: '127.', mask: 8 }, // 127.0.0.0/8 loopback
+  { prefix: '169.254.', mask: 16 }, // 169.254.0.0/16 link-local
+  { prefix: '0.', mask: 8 }, // 0.0.0.0/8
+];
+
+/** Dangerous IPv6 ranges */
+const DANGEROUS_IPV6_PREFIXES = [
+  '::1', // loopback
+  'fc00:', // unique local
+  'fd00:', // unique local
+  'fe80:', // link-local
+  'ff00:', // multicast
 ];
 
 /** Block dangerous URL schemes */
 const BLOCKED_SCHEMES = new Set(['file', 'ftp', 'telnet', 'gopher', 'dict', 'ssh', 'git']);
 
-/** Return an error string if the URL is unsafe, or null if safe */
-function validateUrl(url: string): string | null {
+/** Convert IPv4 dotted string to a 32-bit number for prefix matching. */
+function ipv4ToNumber(ip: string): number {
+  const parts = ip.split('.').map(Number);
+  return ((parts[0] ?? 0) << 24) | ((parts[1] ?? 0) << 16) | ((parts[2] ?? 0) << 8) | (parts[3] ?? 0);
+}
+
+/** Check if an IPv4 address falls within a CIDR range (prefix/length). */
+function isInRange(ip: string, prefix: string, maskLen: number): boolean {
+  const ipNum = ipv4ToNumber(ip);
+  const prefixNum = ipv4ToNumber(prefix);
+  const mask = ~0 << (32 - maskLen);
+  return (ipNum & mask) === (prefixNum & mask);
+}
+
+/** Check if an IPv4 address is private/loopback/link-local. */
+function isDangerousIPv4(ip: string): boolean {
+  if (!isIPv4(ip)) return false;
+  for (const range of DANGEROUS_IPV4_RANGES) {
+    if (isInRange(ip, range.prefix, range.mask)) return true;
+  }
+  return false;
+}
+
+/** Check if an IPv6 address is dangerous. */
+function isDangerousIPv6(ip: string): boolean {
+  const lower = ip.toLowerCase();
+  for (const prefix of DANGEROUS_IPV6_PREFIXES) {
+    if (lower.startsWith(prefix)) return true;
+  }
+  return false;
+}
+
+/**
+ * 将 hostname DNS 解析为 IP，并检查是否指向内网。
+ * 此函数是 SSRF 防护的核心：对域名做 DNS 解析后检查 IP，
+ * 防止攻击者用外部域名指向内网 IP 绕过主机名校验。
+ */
+async function resolveAndCheckHostname(host: string): Promise<string | null> {
+  // IP 字面量已经在 validateUrl 中拦截——这里只处理域名
+  if (isIPv4(host) || host.startsWith('[') || host === '::1') return null;
+
+  // 已知的危险域名快速检查（免 DNS 查询）
+  const dangerousHosts = new Set([
+    'localhost',
+    'metadata.google.internal',
+    'metadata.internal',
+    '100.100.100.200', // 阿里云 metadata
+  ]);
+  if (dangerousHosts.has(host)) {
+    return 'Access to internal services is not allowed';
+  }
+
+  // 如果 host 看起来是裸 IP（但没被 isIPv4 捕获——极少边缘情况），拒绝
+  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+    return 'Accessing IP addresses directly is not allowed';
+  }
+
+  // DNS 解析：先尝试 A 记录（IPv4），再尝试 AAAA 记录（IPv6）
+  const addresses: string[] = [];
+  try {
+    const v4Result = await dns.resolve4(host, { ttl: false });
+    addresses.push(...v4Result.map((r) => (typeof r === 'string' ? r : r.address)));
+  } catch {
+    // A 记录解析失败是正常的（可能只有 AAAA）
+  }
+  try {
+    const v6Result = await dns.resolve6(host, { ttl: false });
+    addresses.push(...v6Result.map((r) => (typeof r === 'string' ? r : r.address)));
+  } catch {
+    // 可能只有 A 记录
+  }
+
+  if (addresses.length === 0) {
+    // DNS 解析完全失败——域名不存在或网络问题
+    return `DNS resolution failed for "${host}" — cannot verify destination.`;
+  }
+
+  // 逐一检查每个解析到的 IP
+  for (const addr of addresses) {
+    if (isIPv4(addr) && isDangerousIPv4(addr)) {
+      return `DNS resolved "${host}" to private IP ${addr} — access denied.`;
+    }
+    if (!isIPv4(addr) && isDangerousIPv6(addr)) {
+      return `DNS resolved "${host}" to private IP ${addr} — access denied.`;
+    }
+  }
+
+  return null; // 安全
+}
+
+/**
+ * 综合 URL 安全校验：
+ * 1. 协议白名单
+ * 2. IP 字面量直接拦截
+ * 3. 危险主机名快速拦截（免 DNS）
+ * 4. DNS 解析后检查 IP 是否落入内网范围
+ */
+async function validateUrl(url: string): Promise<string | null> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -59,36 +148,17 @@ function validateUrl(url: string): string | null {
 
   const host = parsed.hostname.toLowerCase();
 
-  // Block IP literal (direct IP address — blocks both IPv4 and IPv6)
-  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+  // Block direct IP literals (IPv4 and IPv6)
+  if (isIPv4(host)) {
     return 'Accessing IP addresses directly is not allowed';
   }
-  if (host.startsWith('[')) {
+  if (host.startsWith('[') || host === '::1') {
     return 'Accessing IP addresses directly is not allowed';
   }
 
-  // Block loopback / private / link-local / local networks by hostname
-  for (const subnet of DANGEROUS_SUBNETS) {
-    if (host === subnet.replace('.', '') || host.endsWith('.' + subnet.replace('.', ''))) {
-      return 'Access to internal/private networks is not allowed';
-    }
-  }
-
-  // Block well-known dangerous hostnames
-  const dangerousHosts = new Set([
-    'localhost',
-    'metadata.google.internal',
-    'influxdb',
-    'redis',
-    'mongo',
-    'mysql',
-    'postgres',
-    '127.0.0.1',
-    '::1',
-  ]);
-  if (dangerousHosts.has(host)) {
-    return 'Access to internal services is not allowed';
-  }
+  // DNS 解析检查（异步）
+  const dnsError = await resolveAndCheckHostname(host);
+  if (dnsError) return dnsError;
 
   return null;
 }
@@ -101,7 +171,7 @@ export async function executeHttpRequest(
   body?: unknown,
   timeout = 30000,
 ): Promise<string> {
-  const urlErr = validateUrl(url);
+  const urlErr = await validateUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
   try {
     const config: AxiosRequestConfig = {
@@ -148,7 +218,7 @@ export async function executeHttpRequest(
  * Download file from URL to local path
  */
 export async function executeDownloadFile(url: string, destPath: string, timeout = 60000): Promise<string> {
-  const urlErr = validateUrl(url);
+  const urlErr = await validateUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
   try {
     const absPath = resolveSafePath(destPath);
@@ -192,7 +262,7 @@ export async function executeUploadFile(
   additionalFields?: Record<string, string>,
   timeout = 60000,
 ): Promise<string> {
-  const urlErr = validateUrl(url);
+  const urlErr = await validateUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
   try {
     const absPath = resolveSafePath(filePath);
@@ -249,7 +319,7 @@ export async function executeApiCall(
   headers?: Record<string, string>,
   timeout = 30000,
 ): Promise<string> {
-  const urlErr = validateUrl(url);
+  const urlErr = await validateUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
   try {
     const config: AxiosRequestConfig = {
@@ -306,7 +376,7 @@ export async function executeApiCall(
  * Check if URL is accessible and return status info
  */
 export async function executeCheckUrl(url: string, timeout = 10000): Promise<string> {
-  const urlErr = validateUrl(url);
+  const urlErr = await validateUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
   try {
     const startTime = Date.now();

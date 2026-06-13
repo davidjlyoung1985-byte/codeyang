@@ -294,6 +294,7 @@ export class Agent {
       model: config.model,
       maxTokens: config.maxTokens,
       cwd: process.cwd(),
+      signal: this.abortController?.signal,
     });
 
     const maxTurns = config.maxTurns;
@@ -525,6 +526,16 @@ export class Agent {
       this.cbs.onToolBatch?.(toolCalls.length);
       this.abortController = new AbortController();
       const signal = this.abortController.signal;
+
+      // 同步取消信号到 ToolContext，Task 子代理会读取它
+      setToolContext({
+        anthropicClient: null,
+        llmClient: this.client,
+        model: config.model,
+        maxTokens: config.maxTokens,
+        cwd: process.cwd(),
+        signal,
+      });
 
       // Handle Question tool first (it blocks for user input)
       for (let i = 0; i < toolCalls.length; i++) {

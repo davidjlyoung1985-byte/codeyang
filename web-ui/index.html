@@ -12,15 +12,29 @@
   }
   header {
     padding: 12px 20px; background: #161b22; border-bottom: 1px solid #30363d;
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   }
   header h1 { font-size: 16px; color: #58a6ff; }
   header span { color: #8b949e; font-size: 12px; }
-  #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  #session-info { margin-left: auto; font-size: 11px; color: #8b949e; display: flex; gap: 12px; align-items: center; }
+  #new-session-btn { background: #21262d; color: #8b949e; border: 1px solid #30363d; border-radius: 4px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+  #new-session-btn:hover { background: #30363d; color: #e6edf3; }
+  #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 4px; }
+  .turn-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+  .turn-divider { font-size: 11px; color: #30363d; text-align: center; padding: 4px 0; }
   .msg { max-width: 85%; padding: 10px 14px; border-radius: 8px; line-height: 1.5; font-size: 14px; white-space: pre-wrap; }
   .user { background: #1f6feb; align-self: flex-end; }
   .agent { background: #21262d; align-self: flex-start; border: 1px solid #30363d; }
-  .tool-call { background: #0d1117; border: 1px solid #30363d; align-self: flex-start; font-size: 12px; color: #8b949e; padding: 6px 10px; border-radius: 4px; }
+  .agent-label { font-size: 11px; color: #58a6ff; font-weight: 600; margin-bottom: 4px; }
+  .tool-group { align-self: flex-start; margin-left: 16px; border-left: 2px solid #30363d; padding-left: 12px; }
+  .tool-call { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 6px 10px; margin: 2px 0; font-size: 12px; color: #8b949e; }
+  .tool-call .tool-name { color: #58a6ff; font-weight: 600; }
+  .tool-call .tool-args { color: #8b949e; font-size: 11px; margin-top: 2px; word-break: break-all; }
+  .tool-result { font-size: 12px; padding: 4px 10px; border-radius: 4px; margin: 2px 0 2px 12px; }
+  .tool-result.success { color: #7ec894; background: #0d2818; }
+  .tool-result.error { color: #f85149; background: #2d1215; }
+  .tool-result .result-preview { color: #8b949e; font-size: 11px; }
+  .tool-result .result-lines { color: #484f58; font-size: 10px; }
   .streaming { border-left: 3px solid #58a6ff; }
   #input-bar {
     padding: 12px 20px; background: #161b22; border-top: 1px solid #30363d;
@@ -34,21 +48,27 @@
     color: #fff; font-size: 14px; cursor: pointer; }
   #send:disabled { opacity: 0.5; cursor: not-allowed; }
   #send:hover:not(:disabled) { background: #2ea043; }
-  .loading::after { content: '...'; animation: dots 1.5s infinite; }
   @keyframes dots { 0%,20% { content: '.'; } 40% { content: '..'; } 60%,100% { content: '...'; } }
   .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #58a6ff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .status-bar { padding: 4px 20px; background: #161b22; border-top: 1px solid #30363d; font-size: 11px; color: #8b949e; display: flex; gap: 16px; }
   code { background: #30363d; padding: 1px 4px; border-radius: 3px; font-size: 13px; }
+  .empty-state { font-size: 14px; color: #484f58; text-align: center; padding: 40px 20px; }
 </style>
 </head>
 <body>
 <header>
   <h1>CodeYang</h1>
   <span>v0.7.0</span>
-  <span id="model-badge" style="margin-left:auto;font-size:12px;color:#8b949e;"></span>
+  <span id="model-badge" style="font-size:12px;color:#8b949e;"></span>
+  <div id="session-info">
+    <span id="msg-count"></span>
+    <button id="new-session-btn" onclick="newSession()">+ New Session</button>
+  </div>
 </header>
-<div id="chat"></div>
+<div id="chat">
+  <div class="empty-state">Loading conversation history...</div>
+</div>
 <div id="input-bar">
   <textarea id="input" rows="1" placeholder="输入消息..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"></textarea>
   <button id="send" onclick="send()">发送</button>
@@ -63,50 +83,182 @@ const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('send');
 const statusEl = document.getElementById('status');
-const tokenEl = document.getElementById('token-count');
+const msgCountEl = document.getElementById('msg-count');
 const modelBadge = document.getElementById('model-badge');
 let loading = false;
-let totalTokens = 0;
+let turnIndex = 0;
+let historyLoaded = false;
 
-// Fetch config
-fetch('/api/config').then(r => r.json()).then(cfg => {
-  modelBadge.textContent = `${cfg.model} | ${cfg.provider}`;
-});
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-function addMsg(role, text) {
-  const div = document.createElement('div');
-  div.className = `msg ${role}`;
-  div.textContent = text;
-  chat.appendChild(div);
+function scrollToBottom() {
   chat.scrollTop = chat.scrollHeight;
+}
+
+// ── Turn render ────────────────────────────────
+
+function addTurnDivider(idx) {
+  const div = document.createElement('div');
+  div.className = 'turn-divider';
+  div.textContent = `── Turn #${idx} ──`;
+  chat.appendChild(div);
+}
+
+function addUserMsg(text) {
+  const turnGroup = getOrCreateTurnGroup();
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.textContent = text;
+  turnGroup.appendChild(div);
+  scrollToBottom();
+}
+
+function getOrCreateTurnGroup() {
+  let last = chat.lastElementChild;
+  if (last && last.classList.contains('turn-group')) return last;
+  const group = document.createElement('div');
+  group.className = 'turn-group';
+  chat.appendChild(group);
+  return group;
+}
+
+function addAgentMsg(text) {
+  const turnGroup = getOrCreateTurnGroup();
+  const div = document.createElement('div');
+  div.className = 'msg agent';
+  div.innerHTML = '<div class="agent-label">CodeYang</div><div class="agent-content"></div>';
+  const content = div.querySelector('.agent-content');
+  content.textContent = text;
+  turnGroup.appendChild(div);
+  scrollToBottom();
+  return { div, content };
+}
+
+function addToolCallEl(name, args) {
+  const turnGroup = getOrCreateTurnGroup();
+  let toolGroup = turnGroup.querySelector('.tool-group');
+  if (!toolGroup) {
+    toolGroup = document.createElement('div');
+    toolGroup.className = 'tool-group';
+    turnGroup.appendChild(toolGroup);
+  }
+  const div = document.createElement('div');
+  div.className = 'tool-call';
+  const argStr = typeof args === 'string' ? args : JSON.stringify(args, null, 2).slice(0, 200);
+  div.innerHTML = `<span class="tool-name">🔧 ${escapeHtml(name)}</span><div class="tool-args">${escapeHtml(argStr)}</div>`;
+  toolGroup.appendChild(div);
+  scrollToBottom();
   return div;
 }
 
-function addToolCall(name, args) {
+function addToolResultEl(output, isError) {
+  const turnGroup = getOrCreateTurnGroup();
+  let toolGroup = turnGroup.querySelector('.tool-group');
+  if (!toolGroup) return;
   const div = document.createElement('div');
-  div.className = 'tool-call';
-  const argStr = Object.entries(args).map(([k,v]) => `${k}=${String(v).slice(0,60)}`).join(' ');
-  div.textContent = `🔧 ${name}  ${argStr}`;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+  div.className = 'tool-result ' + (isError ? 'error' : 'success');
+  const firstLine = output.split('\n')[0] || '(empty)';
+  const lines = output.split('\n').length;
+  const preview = firstLine.slice(0, 200);
+  const icon = isError ? '✗' : '✓';
+  div.innerHTML = `${icon} <span class="result-preview">${escapeHtml(preview)}</span>${lines > 1 ? ` <span class="result-lines">(${lines} lines)</span>` : ''}`;
+  toolGroup.appendChild(div);
+  scrollToBottom();
 }
+
+function addSystemMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.style.cssText = 'align-self:center;background:none;color:#484f58;font-size:12px;font-style:italic;padding:4px;';
+  div.textContent = text;
+  chat.appendChild(div);
+  scrollToBottom();
+}
+
+function showEmptyState() {
+  chat.innerHTML = '<div class="empty-state">Start a conversation — describe what you want CodeYang to do.</div>';
+}
+
+// ── Load history ───────────────────────────────
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/history');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.messages && data.messages.length > 0) {
+      renderHistory(data.messages);
+      historyLoaded = true;
+      msgCountEl.textContent = `${data.messageCount} msgs | ${data.sessionId ? data.sessionId.slice(0,8)+'…' : 'new'}`;
+    } else {
+      showEmptyState();
+    }
+  } catch {
+    showEmptyState();
+  }
+}
+
+function renderHistory(messages) {
+  chat.innerHTML = '';
+  turnIndex = 0;
+  let pendingToolCalls = [];
+
+  for (const msg of messages) {
+    if (msg.role === 'user') {
+      turnIndex++;
+      addTurnDivider(turnIndex);
+      addUserMsg(msg.content);
+      pendingToolCalls = [];
+    } else if (msg.role === 'assistant') {
+      if (msg.content) addAgentMsg(msg.content);
+      if (msg.toolCalls) pendingToolCalls = msg.toolCalls;
+    }
+
+    // Tool results follow in user messages with toolResults
+    if (msg.toolResults && msg.toolResults.length > 0) {
+      for (let i = 0; i < msg.toolResults.length; i++) {
+        const tr = msg.toolResults[i];
+        const tc = i < pendingToolCalls.length ? pendingToolCalls[i] : null;
+        if (tc) addToolCallEl(tc.name, tc.args);
+        addToolResultEl(tr.output, tr.isError);
+      }
+      pendingToolCalls = [];
+    }
+  }
+}
+
+// ── New Session ────────────────────────────────
+
+async function newSession() {
+  await fetch('/api/session/new', { method: 'POST' });
+  showEmptyState();
+  turnIndex = 0;
+  msgCountEl.textContent = 'new session';
+  addSystemMsg('New session started');
+}
+
+// ── Send message ───────────────────────────────
 
 async function send() {
   const msg = input.value.trim();
   if (!msg || loading) return;
   input.value = '';
   input.style.height = 'auto';
-  addMsg('user', msg);
+
+  turnIndex++;
+  addTurnDivider(turnIndex);
+  addUserMsg(msg);
 
   loading = true;
   sendBtn.disabled = true;
   statusEl.textContent = '思考中...';
 
-  const agentMsg = addMsg('agent', '');
-  agentMsg.classList.add('streaming');
-  const spinner = document.createElement('span');
-  spinner.className = 'spinner';
-  agentMsg.prepend(spinner);
+  addAgentMsg('');
+  const lastAgent = chat.querySelector('.turn-group:last-child .msg.agent');
+  const agentContent = lastAgent ? lastAgent.querySelector('.agent-content') : null;
+  if (agentContent) agentContent.parentElement.classList.add('streaming');
 
   try {
     const res = await fetch('/api/chat', {
@@ -118,47 +270,63 @@ async function send() {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let text = '';
+    let buffer = '';
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      for (const line of chunk.split('\n').filter(Boolean)) {
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const data = JSON.parse(line.slice(6));
         switch (data.type) {
           case 'delta':
             text += data.text;
-            agentMsg.textContent = text;
+            if (agentContent) agentContent.textContent = text;
             break;
           case 'tool_start':
-            addToolCall(data.name, data.args);
+            addToolCallEl(data.name, data.args);
             break;
           case 'tool_result':
-            statusEl.textContent = `工具: ${data.name}`;
-            break;
-          case 'error':
-            agentMsg.textContent += `\n\n❌ ${data.text}`;
-            agentMsg.style.borderLeftColor = '#f85149';
+            addToolResultEl(data.snippet, data.isError);
             break;
           case 'done':
-            agentMsg.classList.remove('streaming');
+            if (agentContent) agentContent.parentElement.classList.remove('streaming');
+            if (data.sessionId) {
+              msgCountEl.textContent = `${turnIndex} turns | ${data.sessionId.slice(0,8)}…`;
+            }
+            statusEl.textContent = '就绪';
+            break;
+          case 'error':
+            if (agentContent) agentContent.textContent += `\n\n❌ ${data.text}`;
             break;
         }
         chat.scrollTop = chat.scrollHeight;
       }
     }
   } catch (err) {
-    agentMsg.textContent += `\n\n❌ 连接错误: ${err.message}`;
-    agentMsg.style.borderLeftColor = '#f85149';
+    if (agentContent) agentContent.textContent += `\n\n❌ 连接错误: ${err.message}`;
   }
 
-  spinner.remove();
   loading = false;
   sendBtn.disabled = false;
   statusEl.textContent = '就绪';
   input.focus();
 }
+
+// ── Init ───────────────────────────────────────
+
+fetch('/api/config').then(r => r.json()).then(cfg => {
+  modelBadge.textContent = `${cfg.model} | ${cfg.provider}`;
+  if (cfg.hasSession) {
+    msgCountEl.textContent = `resuming session…`;
+  }
+  loadHistory();
+});
 
 // Auto-resize textarea
 input.addEventListener('input', () => {

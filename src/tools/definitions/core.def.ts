@@ -253,11 +253,11 @@ export const definitions: ToolDefinition[] = [
       if (!ctx) {
         return 'Task sub-agent is not available: no tool context configured.';
       }
-      const { llmClient, model, maxTokens, cwd } = ctx;
+      const { llmClient, model, maxTokens, cwd, signal } = ctx;
       if (!llmClient) {
         return 'Task sub-agent is not available.';
       }
-      return executeTask(llmClient, model, maxTokens, desc, subtasks, cwd);
+      return executeTask(llmClient, model, maxTokens, desc, subtasks, cwd, signal);
     },
   },
   {
@@ -282,7 +282,7 @@ export const definitions: ToolDefinition[] = [
       },
       required: ['question'],
     },
-    execute: async (args) => {
+    execute: (args) => {
       const q = requiredString(args, 'question');
       const options = args['options'] as Array<{ label: string; description: string }> | undefined;
       if (options && options.length > 0) {

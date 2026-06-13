@@ -1,6 +1,8 @@
 ﻿import { VERSION } from '../version.js';
 import { invalidParam, netError, toolError } from './errors.js';
 
+const MAX_REDIRECTS = 5;
+
 export async function executeWebFetch(url: string, format?: string): Promise<string> {
   if (!url || typeof url !== 'string') {
     throw new Error(invalidParam('url', 'a non-empty URL string'));
@@ -19,11 +21,32 @@ export async function executeWebFetch(url: string, format?: string): Promise<str
 
   const outputFormat = format === 'html' ? 'html' : 'text';
 
+  return fetchWithRedirectLimit(url, outputFormat, 0);
+}
+
+/**
+ * 带重定向次数限制的 fetch。
+ *
+ * Node.js 内置 fetch 默认跟随无限重定向，可能被恶意服务器利用进行重定向循环攻击。
+ * 本函数手动控制重定向流程，最多跟随 MAX_REDIRECTS（5）次。
+ */
+async function fetchWithRedirectLimit(url: string, outputFormat: string, redirectCount: number): Promise<string> {
+  if (redirectCount > MAX_REDIRECTS) {
+    throw new Error(
+      toolError(
+        'Network',
+        `Too many redirects (max ${MAX_REDIRECTS}): ${url}`,
+        'The URL may be caught in a redirect loop.',
+      ),
+    );
+  }
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15_000);
 
     const response = await fetch(url, {
+      redirect: 'manual', // 手动处理重定向，不自动跟随
       signal: controller.signal,
       headers: {
         'User-Agent': `CodeYang/${VERSION} (AI Coding Agent)`,
@@ -31,6 +54,16 @@ export async function executeWebFetch(url: string, format?: string): Promise<str
       },
     });
     clearTimeout(timeout);
+
+    // 处理重定向响应（301、302、303、307、308）
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get('location');
+      if (!location) {
+        throw new Error(netError(url, `Redirect ${response.status} without Location header`));
+      }
+      const nextUrl = new URL(location, url).href;
+      return fetchWithRedirectLimit(nextUrl, outputFormat, redirectCount + 1);
+    }
 
     if (!response.ok) {
       throw new Error(netError(url, `HTTP ${response.status}: ${response.statusText}`));
