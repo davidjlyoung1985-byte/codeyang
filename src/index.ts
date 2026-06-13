@@ -136,7 +136,7 @@ Environment Variables:
   CODEYANG_API_KEY          API key for the LLM provider
   CODEYANG_MODEL            Model name (default: deepseek-chat)
   CODEYANG_BASE_URL         Custom API base URL
-  CODEYANG_MAX_TOKENS       Max tokens per response (default: 8192)
+  CODEYANG_MAX_TOKENS       Max tokens per response (default: 1000000)
   DEEPSEEK_API_KEY          Alternative env var for API key
 
 Interactive Commands:

@@ -7,8 +7,8 @@ import type { Session, Message } from '../types.js';
 const SESSIONS_DIR = join(homedir(), '.codeyang', 'sessions');
 const INDEX_FILE = join(homedir(), '.codeyang', 'sessions.index.json');
 
-/** Estimated max tokens per saved session (≈ 32K tokens). Prune based on content size, not message count. */
-const MAX_SESSION_TOKENS = 32_000;
+/** Estimated max tokens per saved session (≈ 1M tokens). Prune based on content size, not message count. */
+const MAX_SESSION_TOKENS = 1_000_000;
 
 /** Rough token estimate: 1 token ≈ 4 characters for typical code/text. */
 function estimateTokens(msg: Message): number {
