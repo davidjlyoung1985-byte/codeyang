@@ -138,8 +138,9 @@ function cmdCtxViz(ctx: CommandContext): DispatchResult {
   const usage = ctx.agent.getTokenUsage();
   const totalTokens = usage.inputTokens + usage.outputTokens;
   const maxTokens = config.maxTokens;
-  const pct = Math.round((totalTokens / maxTokens) * 100);
   const barLen = 30;
+  // For 1M context, scale the bar differently — use percentage of maxTokens
+  const pct = Math.min(100, Math.round((totalTokens / maxTokens) * 100));
   const filled = Math.round((pct / 100) * barLen);
   const bar = '█'.repeat(filled) + '░'.repeat(Math.max(0, barLen - filled));
   console.log(`  Context: ${bar} ${pct}%`);

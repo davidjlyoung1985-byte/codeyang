@@ -146,8 +146,8 @@ export const config = {
   get provider() {
     return localConfig.apiProvider || 'deepseek';
   },
-  maxTokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
-  maxTurns: Number(process.env['CODEYANG_MAX_TURNS'] || '20'),
+  maxTokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '1000000'),
+  maxTurns: Number(process.env['CODEYANG_MAX_TURNS'] || '40'),
   getSystemPrompt(qtContext?: QtContext): string {
     let prompt = BASE_SYSTEM_PROMPT;
     if (qtContext?.isQtProject) {

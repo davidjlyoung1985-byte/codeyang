@@ -298,11 +298,11 @@ export class Agent {
 
     const maxTurns = config.maxTurns;
 
-    // Context window management: if history is large, insert a structured summary
-    // to prevent token overflow in long sessions while preserving key information.
-    const CONTEXT_SOFT_LIMIT = 40; // messages beyond this trigger summarization
+    // Context window management: if history is very large, insert a structured summary
+    // 1M context allows ~200+ messages before compression is needed
+    const CONTEXT_SOFT_LIMIT = 200; // messages beyond this trigger summarization
     if (messages.length > CONTEXT_SOFT_LIMIT) {
-      const keepRecent = 16; // keep this many most recent messages intact
+      const keepRecent = 50; // keep this many most recent messages intact
 
       // Find a safe cut point that doesn't split tool_use/tool_result pairs
       let cutIndex = messages.length - keepRecent;
