@@ -9,3 +9,4 @@ claude-code-src/
 coverage/
 .DS_Store
 Thumbs.db
+*.vsix

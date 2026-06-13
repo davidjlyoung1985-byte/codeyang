@@ -1,125 +1,181 @@
-import 'dotenv/config';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer } from 'node:http';
 import { Agent } from '../../src/agent/Agent.js';
-import { config, loadLocalConfig, setSessionApiKey, getMcpServers } from '../../src/agent/config.js';
-import { setMcpManager, refreshMcpTools, registerQtTools } from '../../src/tools/registry.js';
-import { McpManager } from '../../src/mcp/McpManager.js';
-import { createLLMClient } from '../../src/agent/LLMClient.js';
-import { detectQtProject, createQtTools } from '../../src/qt/index.js';
-import { loadEnvFiles } from '../../src/utils/dotenv.js';
+import { config, loadLocalConfig, setSessionApiKey } from '../../src/agent/config.js';
 
-const PORT = Number(process.env['PORT'] || 3000);
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
-async function init() {
-  loadEnvFiles();
-  await loadLocalConfig();
-
-  const key = config.apiKey;
-  if (!key) {
-    console.error('[Server] No API key configured. Set CODEYANG_API_KEY or DEEPSEEK_API_KEY.');
-    process.exit(1);
-  }
-  setSessionApiKey(key);
-
-  const mcpMgr = new McpManager();
-  const mcpServers = getMcpServers();
-  if (Object.keys(mcpServers).length > 0) {
-    mcpMgr.configure(mcpServers);
-    await mcpMgr.initialize(() => {});
-    setMcpManager(mcpMgr);
-    await refreshMcpTools();
-  } else {
-    setMcpManager(null);
-  }
-
-  const qtContext = await detectQtProject(process.cwd());
-  if (qtContext.isQtProject) registerQtTools(createQtTools(qtContext));
-  return qtContext;
-}
-
-// HTTP server for health check
-const httpServer = createServer((_req, res) => {
+const httpServer = createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/html' });
-  res.end(`<!DOCTYPE html><html><head><title>CodeYang Web</title><meta charset="utf-8"></head><body>
-    <h1>CodeYang Web Server</h1>
-    <p>WebSocket: ws://localhost:${PORT}</p>
-    <p>Client: <a href="http://localhost:5173">http://localhost:5173</a></p>
-  </body></html>`);
+  res.end(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>CodeYang Web</title>
+        <meta charset="utf-8">
+      </head>
+      <body>
+        <h1>CodeYang Web Server</h1>
+        <p>WebSocket server running on port ${PORT}</p>
+        <p>Connect your client to: ws://localhost:${PORT}</p>
+      </body>
+    </html>
+  `);
 });
 
 const wss = new WebSocketServer({ server: httpServer });
 
-wss.on('connection', async (ws: WebSocket) => {
+interface ClientSession {
+  agent: Agent;
+  ws: WebSocket;
+}
+
+const sessions = new Map<WebSocket, ClientSession>();
+
+wss.on('connection', (ws: WebSocket) => {
   console.log('[WebSocket] Client connected');
 
   const agent = new Agent();
-  let isRunning = false;
 
   agent.setCallbacks({
-    onAgentDelta(text: string) {
-      ws.send(JSON.stringify({ type: 'assistant_text', text }));
+    onAgentText(text) {
+      console.log('[Agent] TEXT CALLBACK:', JSON.stringify(text).slice(0, 200));
+      safeSend(ws, { type: 'assistant_text', text });
     },
-    onToolStart(name: string) {
-      ws.send(JSON.stringify({ type: 'tool_call', toolName: name }));
+    onAgentDelta(text) {
+      console.log('[Agent] DELTA:', JSON.stringify(text));
+      safeSend(ws, { type: 'assistant_delta', text });
     },
-    onToolResult(_name: string, _output: string) {
-      // Optionally send result
+    onToolBatch(total) {
+      safeSend(ws, { type: 'tool_batch', total });
     },
-    onError(err: string) {
-      ws.send(JSON.stringify({ type: 'error', error: err }));
+    onToolStart(name, args) {
+      safeSend(ws, { type: 'tool_call', toolName: name, args });
+    },
+    onToolResult(name, output, isError) {
+      safeSend(ws, { type: 'tool_result', toolName: name, result: output, isError });
+    },
+    onQuestion(q, options) {
+      safeSend(ws, { type: 'question', question: q, options });
+    },
+    onError(err) {
+      console.error('[Agent] Error:', err);
+      safeSend(ws, { type: 'error', error: err });
     },
   });
 
-  ws.send(JSON.stringify({ type: 'connected', message: 'Connected to CodeYang Web Server' }));
+  sessions.set(ws, { agent, ws });
+
+  safeSend(ws, { type: 'connected', message: 'Connected to CodeYang Web Server' });
 
   ws.on('message', async (data: Buffer) => {
     try {
-      const msg = JSON.parse(data.toString());
-      console.log('[WebSocket] Message:', msg.type);
+      const message = JSON.parse(data.toString());
+      console.log('[WebSocket] Received:', message.type);
+      const session = sessions.get(ws);
 
-      switch (msg.type) {
+      if (!session) {
+        safeSend(ws, { type: 'error', error: 'Session not found' });
+        return;
+      }
+
+      switch (message.type) {
         case 'prompt': {
-          if (isRunning) return;
-          isRunning = true;
-          ws.send(JSON.stringify({ type: 'status', status: 'processing' }));
-          try {
-            await agent.run(msg.prompt);
-            ws.send(JSON.stringify({ type: 'status', status: 'completed' }));
-          } catch (err: any) {
-            ws.send(JSON.stringify({ type: 'error', error: err.message }));
+          const prompt = message.prompt || '';
+          if (typeof prompt !== 'string' || !prompt.trim()) {
+            safeSend(ws, { type: 'error', error: 'Invalid prompt' });
+            return;
           }
-          isRunning = false;
+
+          safeSend(ws, { type: 'status', status: 'processing' });
+
+          try {
+            console.log('[Agent] Running prompt:', prompt.slice(0, 100));
+            console.log('[Agent] Model:', config.model);
+            console.log('[Agent] BaseURL:', config.baseURL);
+            const startTime = Date.now();
+            await session.agent.run(prompt);
+            const elapsed = Date.now() - startTime;
+            console.log('[Agent] Completed in', elapsed + 'ms');
+            safeSend(ws, { type: 'status', status: 'completed' });
+          } catch (err) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            console.error('[Agent] Run failed:', errMsg);
+            if (err instanceof Error && err.stack) {
+              console.error('[Agent] Stack:', err.stack.split('\n').slice(0, 5).join('\n'));
+            }
+            safeSend(ws, { type: 'error', error: errMsg });
+            safeSend(ws, { type: 'status', status: 'error' });
+          }
           break;
         }
+
         case 'cancel': {
           agent.cancelQuestion();
-          ws.send(JSON.stringify({ type: 'status', status: 'cancelled' }));
-          isRunning = false;
+          safeSend(ws, { type: 'status', status: 'cancelled' });
           break;
         }
+
         case 'reset': {
           agent.reset();
-          ws.send(JSON.stringify({ type: 'status', status: 'reset' }));
+          safeSend(ws, { type: 'status', status: 'reset' });
           break;
         }
+
+        default:
+          safeSend(ws, { type: 'error', error: `Unknown message type: ${message.type}` });
       }
-    } catch (err: any) {
-      ws.send(JSON.stringify({ type: 'error', error: `Parse error: ${err.message}` }));
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error('[WebSocket] Parse error:', errMsg);
+      safeSend(ws, { type: 'error', error: `Failed: ${errMsg}` });
     }
   });
 
-  ws.on('close', () => console.log('[WebSocket] Client disconnected'));
-  ws.on('error', () => {});
+  ws.on('close', () => {
+    console.log('[WebSocket] Client disconnected');
+    sessions.delete(ws);
+  });
+
+  ws.on('error', (err) => {
+    console.error('[WebSocket] Connection error:', err.message);
+    sessions.delete(ws);
+  });
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`[Server] HTTP: http://localhost:${PORT}`);
-  console.log(`[Server] WebSocket: ws://localhost:${PORT}`);
-  console.log(`[Server] Client: http://localhost:5173 (npm run web:client)`);
-});
+function safeSend(ws: WebSocket, data: unknown) {
+  try {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(data));
+    }
+  } catch {
+    // ignore send errors
+  }
+}
 
-init().catch((err) => {
-  console.error('[Server] Init failed:', err);
+async function start() {
+  await loadLocalConfig();
+  const apiKey = config.apiKey || process.env['CODEYANG_API_KEY'] || process.env['DEEPSEEK_API_KEY'] || '';
+  if (!apiKey) {
+    console.error('[Server] No API key found. Set CODEYANG_API_KEY or DEEPSEEK_API_KEY env var.');
+    process.exit(1);
+  }
+  setSessionApiKey(apiKey);
+
+  // Use DeepSeek API directly (local proxy may not be running)
+  const baseURL = config.baseURL || process.env['CODEYANG_BASE_URL'] || 'https://api.deepseek.com/v1';
+  process.env['CODEYANG_BASE_URL'] = baseURL;
+
+  httpServer.listen(PORT, () => {
+    console.log(`[Server] HTTP: http://localhost:${PORT}`);
+    console.log(`[Server] WS:   ws://localhost:${PORT}`);
+    console.log(`[Server] Model: ${config.model}`);
+    console.log(`[Server] URL:   ${baseURL}`);
+    console.log(`[Server] Key:   ${config.apiKey ? 'SET (len=' + config.apiKey.length + ')' : 'EMPTY'}`);
+  });
+}
+
+start().catch((err) => {
+  console.error('[Server] Fatal:', err);
   process.exit(1);
 });

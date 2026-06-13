@@ -2,8 +2,8 @@ import type { Message, ToolCall, ToolResult } from '../types.js';
 import { config } from './config.js';
 import { toolSchemas, getTool, setToolContext } from '../tools/registry.js';
 import type { QtContext } from '../qt/index.js';
-import { createLLMClient, type LLMClient, type LLMMessage, type ToolSchema } from './LLMClient.js';
-import { getMemorySummary } from '../utils/memoryStore.js';
+import { createLLMClient, type LLMClient, type LLMMessage } from './LLMClient.js';
+import { getMemorySummary, getMemoryVersion } from '../utils/memoryStore.js';
 import { logger } from '../utils/logger.js';
 
 /** A content block emitted by the assistant (text or tool_use). */
@@ -38,21 +38,9 @@ export class Agent {
   private questionResolve: ((answer: string) => void) | null = null;
   private maxRetries = 3;
 
-  // AI response cache — avoid redundant LLM calls for identical inputs
-  private responseCache = new Map<
-    string,
-    {
-      result: { toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>; assistantText: string };
-      timestamp: number;
-    }
-  >();
-  private static RESPONSE_CACHE_TTL = 0; // disabled: cache key is derived from session context which changes every turn, making the 60s TTL ineffective
-  private static RESPONSE_CACHE_MAX_SIZE = 50;
-  private static RESPONSE_CACHE_MAX_ENTRY_SIZE = 100_000; // 100KB per entry
-
   // Tool result cache — avoid re-reading unchanged files within a session
   private toolCache = new Map<string, { result: string; timestamp: number }>();
-  private static CACHE_TTL_MS = 5_000;
+  private static CACHE_TTL_MS = 30_000; // 30s cache for read-only tools
 
   // Pending reads — deduplicate concurrent Read/Glob calls for the same key
   private pendingReads = new Map<string, Promise<string>>();
@@ -71,69 +59,67 @@ export class Agent {
   // Per-tool usage statistics for /stats command
   private toolStats = new Map<string, { calls: number; totalMs: number; errors: number }>();
 
-  // Persistent memory cache
+  // Persistent memory cache with version tracking
   private memorySummary: string | null = null;
   private memoryLoadFailure = false;
+  private lastMemoryVersion = -1;
+  private cachedSystemPrompt: string | null = null;
+  private cachedSystemPromptVersion = -1;
 
   constructor(private qtContext?: QtContext) {
     this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
   }
 
   private async ensureMemoryLoaded(): Promise<string> {
-    if (this.memorySummary === null && !this.memoryLoadFailure) {
-      try {
-        this.memorySummary = await getMemorySummary();
-      } catch {
-        this.memoryLoadFailure = true;
-        this.memorySummary = '';
-      }
+    const currentVersion = getMemoryVersion();
+    // Re-read only when version changes — avoids defeating LLM prompt caching
+    if (this.memorySummary !== null && currentVersion === this.lastMemoryVersion) {
+      return this.memorySummary;
+    }
+    if (this.memoryLoadFailure) return '';
+
+    try {
+      this.memorySummary = await getMemorySummary();
+      this.lastMemoryVersion = currentVersion;
+      this.memoryLoadFailure = false;
+    } catch {
+      this.memoryLoadFailure = true;
+      this.memorySummary = '';
     }
     return this.memorySummary ?? '';
+  }
+
+  /** Get cached system prompt, only rebuilds when memory version changes. */
+  private async getSystemPrompt(): Promise<string> {
+    const memVersion = getMemoryVersion();
+    if (this.cachedSystemPrompt !== null && memVersion === this.cachedSystemPromptVersion) {
+      return this.cachedSystemPrompt;
+    }
+    const memoryContext = await this.ensureMemoryLoaded();
+    const prompt = memoryContext
+      ? config.getSystemPrompt(this.qtContext) + '\n\n## Your Memory\n' + memoryContext
+      : config.getSystemPrompt(this.qtContext);
+    this.cachedSystemPrompt = prompt;
+    this.cachedSystemPromptVersion = memVersion;
+    return prompt;
   }
 
   private cacheKey(name: string, args: Record<string, unknown>): string {
     return `${name}:${JSON.stringify(args)}`;
   }
 
-  /** Build a deterministic cache key for AI responses from the full input context. */
-  private getResponseCacheKey(system: string, messagesJson: string, toolsJson: string): string {
-    // Use the last user message (the prompt) combined with system/tool fingerprints
-    const lastUser = messagesJson.split('"role":"user"').pop()?.slice(0, 500) || '';
-    return `${system.length}:${lastUser}:${toolsJson.length}`;
-  }
-
-  /** Check the response cache for a matching key (respects TTL). */
-  private getResponseFromCache(
-    key: string,
-  ): { toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>; assistantText: string } | null {
-    const entry = this.responseCache.get(key);
-    if (entry && Date.now() - entry.timestamp < Agent.RESPONSE_CACHE_TTL) {
-      return entry.result;
+  /** Invalidate tool cache. If a filePath is provided, only invalidate entries referencing that path. */
+  private invalidateCache(filePath?: string) {
+    if (!filePath) {
+      this.toolCache.clear();
+      return;
     }
-    this.responseCache.delete(key);
-    return null;
-  }
-
-  /** Store a response in the cache, evicting oldest entry if at capacity. */
-  private setResponseCache(
-    key: string,
-    result: { toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>; assistantText: string },
-  ): void {
-    // Skip caching if the response is too large (prevent memory bloat)
-    const estimatedSize = result.assistantText.length + JSON.stringify(result.toolCalls).length;
-    if (estimatedSize > Agent.RESPONSE_CACHE_MAX_ENTRY_SIZE) {
-      return; // silently skip — this is a memory optimization, not a hard error
+    // Precise invalidation: only clear entries whose key (serialized args) contains the given path
+    for (const [key] of this.toolCache) {
+      if (key.includes(filePath)) {
+        this.toolCache.delete(key);
+      }
     }
-
-    if (this.responseCache.size >= Agent.RESPONSE_CACHE_MAX_SIZE) {
-      const oldest = this.responseCache.entries().next().value;
-      if (oldest) this.responseCache.delete(oldest[0]);
-    }
-    this.responseCache.set(key, { result, timestamp: Date.now() });
-  }
-
-  private invalidateCache() {
-    this.toolCache.clear();
   }
 
   private async sleep(ms: number): Promise<void> {
@@ -160,9 +146,28 @@ export class Agent {
 
         if (attempt < this.maxRetries && isRetryable) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30_000);
-          this.cbs.onError?.(`${label} attempt ${attempt}/${this.maxRetries} failed, retrying in ${delay}ms...`);
+          const delayStr = delay >= 1000 ? `${(delay / 1000).toFixed(1)}s` : `${delay}ms`;
+          this.cbs.onError?.(
+            `⚠️ ${label} failed (attempt ${attempt}/${this.maxRetries})\n` +
+              `  💡 Retrying in ${delayStr}...\n` +
+              `  📝 Reason: ${err.message}`,
+          );
           await this.sleep(delay);
           continue;
+        }
+
+        // Final failure - provide actionable feedback
+        if (isRetryable) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          throw new Error(
+            `🔴 ${label} failed after ${this.maxRetries} attempts\n` +
+              `  💡 Last error: ${errMsg}\n` +
+              `  📝 Try:\n` +
+              `    1) Check your network connection\n` +
+              `    2) Verify API endpoint is accessible\n` +
+              `    3) Check API key and rate limits\n` +
+              `    4) Wait a moment and retry manually`,
+          );
         }
         throw err;
       }
@@ -206,13 +211,14 @@ export class Agent {
   /** Clear conversation history and start fresh */
   reset() {
     this.history = [];
-    this.responseCache.clear();
     this.invalidateCache();
     this.lastAssistantText = '';
     this.recentAssistantTexts = [];
     this.repeatCount = 0;
     this.tokenUsage = { inputTokens: 0, outputTokens: 0 };
     this.toolStats.clear();
+    this.cachedSystemPrompt = null;
+    this.cachedSystemPromptVersion = -1;
   }
 
   answerQuestion(answer: string) {
@@ -245,48 +251,29 @@ export class Agent {
   private jsonClone<T>(obj: T): T {
     if (obj === undefined) return undefined as T;
     try {
-      return JSON.parse(JSON.stringify(obj));
-    } catch (err) {
-      // Fallback: if cloning fails (circular refs, non-serializable objects),
-      // log error and return the original object. This prevents crashes but
-      // loses the clone protection — acceptable tradeoff for robustness.
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[Agent] jsonClone failed: ${msg}. Returning original object.`);
-      return obj;
+      return structuredClone(obj);
+    } catch {
+      // Fallback: if structuredClone fails (non-serializable objects),
+      // use JSON round-trip as fallback.
+      try {
+        return JSON.parse(JSON.stringify(obj));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[Agent] jsonClone failed: ${msg}. Returning original object.`);
+        return obj;
+      }
     }
   }
 
-  /** Compute word-level Jaccard similarity between text and any recent response */
+  /** Check if text is near-duplicate of any recent response (simple prefix match). */
   private computeSimilarity(text: string): number {
     if (this.recentAssistantTexts.length === 0) return 0;
-
-    const words = new Set(
-      text
-        .toLowerCase()
-        .split(/\s+/)
-        .filter((w) => w.length > 1),
-    );
-    if (words.size === 0) return 0;
-
-    let maxSim = 0;
+    const prefix = text.slice(0, 100).toLowerCase();
+    // Exact prefix match with any of the last 4 responses → treat as repeat
     for (const prev of this.recentAssistantTexts) {
-      const prevWords = new Set(
-        prev
-          .toLowerCase()
-          .split(/\s+/)
-          .filter((w) => w.length > 1),
-      );
-      if (prevWords.size === 0) continue;
-
-      let intersection = 0;
-      for (const w of words) {
-        if (prevWords.has(w)) intersection++;
-      }
-      const union = words.size + prevWords.size - intersection;
-      const sim = union > 0 ? intersection / union : 0;
-      if (sim > maxSim) maxSim = sim;
+      if (prev.slice(0, 100).toLowerCase() === prefix) return 1.0;
     }
-    return maxSim;
+    return 0;
   }
 
   async run(prompt: string): Promise<void> {
@@ -311,16 +298,13 @@ export class Agent {
 
     const maxTurns = config.maxTurns;
 
-    // Context window management: if history is large, insert a summary
-    // to prevent token overflow in long sessions
+    // Context window management: if history is large, insert a structured summary
+    // to prevent token overflow in long sessions while preserving key information.
     const CONTEXT_SOFT_LIMIT = 40; // messages beyond this trigger summarization
     if (messages.length > CONTEXT_SOFT_LIMIT) {
-      const keepRecent = 16; // target: keep this many most recent messages intact
+      const keepRecent = 16; // keep this many most recent messages intact
 
-      // Find a safe cut point that doesn't split tool_use/tool_result pairs.
-      // If the first retained message is an assistant with tool_use blocks whose
-      // corresponding tool_result landed in the summarized portion, the API
-      // will reject the conversation with 422/400.
+      // Find a safe cut point that doesn't split tool_use/tool_result pairs
       let cutIndex = messages.length - keepRecent;
       while (cutIndex < messages.length) {
         const firstRetained = messages[cutIndex];
@@ -341,105 +325,125 @@ export class Agent {
 
       const toSummarize = messages.slice(0, cutIndex);
 
-      // Build a compact summary of the summarized messages
-      let summary = '[Prior context summary:\n';
+      // Build a structured summary instead of truncated text:
+      // extract modified files, key decisions, tool usage patterns
+      const modifiedFiles = new Set<string>();
+      const decisions: string[] = [];
+      const toolCounts = new Map<string, number>();
+      let totalUserMsgs = 0;
+
       for (const m of toSummarize) {
-        const content = typeof m.content === 'string' ? m.content : '';
-        if (content.length > 0) {
-          summary += `  ${m.role}: ${content.slice(0, 200)}${content.length > 200 ? '...' : ''}\n`;
-        } else if (Array.isArray(m.content)) {
-          const tools = m.content
-            .filter((b: { type: string }) => b.type === 'tool_use')
-            .map((b: { name?: string }) => b.name);
-          const results = m.content.filter((b: { type: string }) => b.type === 'tool_result').length;
-          if (tools.length > 0) summary += `  ${m.role}: used tools [${tools.join(', ')}]\n`;
-          if (results > 0) summary += `  ${m.role}: ${results} tool results\n`;
+        if (m.role === 'user' && typeof m.content === 'string' && m.content.length > 0) {
+          totalUserMsgs++;
+          // Capture user's last directive in this summarized segment
+          if (m.content.length < 200 && !m.content.startsWith('[')) {
+            decisions.push(m.content.replace(/\n/g, ' ').slice(0, 150));
+          }
+        }
+        if (Array.isArray(m.content)) {
+          for (const b of m.content) {
+            if (b.type === 'tool_use' && b.name) {
+              toolCounts.set(b.name, (toolCounts.get(b.name) || 0) + 1);
+              // Track modified files from Write/Edit tool calls
+              if ((b.name === 'Write' || b.name === 'Edit') && b.input) {
+                const path = String((b.input as Record<string, unknown>)['filePath'] ?? '');
+                if (path) modifiedFiles.add(path);
+              }
+              if (b.name === 'Bash' && b.input) {
+                const cmd = String((b.input as Record<string, unknown>)['command'] ?? '');
+                if (cmd.startsWith('cd ') || cmd.startsWith('mkdir ')) {
+                  const path = cmd.split(/\s+/)[1];
+                  if (path) modifiedFiles.add(path);
+                }
+              }
+            }
+          }
         }
       }
-      summary += ']';
+
+      const summaryParts: string[] = ['[Prior context summary:'];
+      if (totalUserMsgs > 0) summaryParts.push(`  assistant responded to ${totalUserMsgs} user messages`);
+      if (modifiedFiles.size > 0) {
+        summaryParts.push(`  files modified: ${[...modifiedFiles].join(', ').slice(0, 300)}`);
+      }
+      if (toolCounts.size > 0) {
+        const toolsStr = [...toolCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([name, count]) => `${name}(${count})`)
+          .join(', ');
+        summaryParts.push(`  tools used: ${toolsStr}`);
+      }
+      // Include key decisions from user messages
+      const keyDecisions = decisions.slice(-5);
+      if (keyDecisions.length > 0) {
+        summaryParts.push('  key requests:');
+        for (const d of keyDecisions) summaryParts.push(`    · ${d}`);
+      }
+      summaryParts.push(']');
 
       // Replace old messages with summary + keep recent ones
       const recent = messages.slice(cutIndex);
       messages.length = 0;
-      messages.push({ role: 'user' as const, content: summary });
+      messages.push({ role: 'user' as const, content: summaryParts.join('\n') });
       messages.push(...recent);
     }
 
     for (let turn = 0; turn < maxTurns; turn++) {
       logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
 
-      // Build system prompt before LLM call for cache key derivation
-      const memoryContext = await this.ensureMemoryLoaded();
-      const systemPrompt = memoryContext
-        ? config.getSystemPrompt(this.qtContext) + '\n\n## Your Memory\n' + memoryContext
-        : config.getSystemPrompt(this.qtContext);
+      // Build system prompt (cached, only rebuilds when memory changes)
+      const systemPrompt = await this.getSystemPrompt();
 
-      // Check AI response cache before making the LLM call
-      const cacheKey = this.getResponseCacheKey(systemPrompt, JSON.stringify(messages), JSON.stringify(toolSchemas()));
-      const cachedResponse = this.getResponseFromCache(cacheKey);
+      // Call LLM
+      const streamResult = await this.withRetry(async () => {
+        const textParts: string[] = [];
+        const toolCallsInner: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
+        const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
 
-      let toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>;
-      let assistantText: string;
-
-      if (cachedResponse) {
-        // Cache hit — reuse previous LLM response without API call
-        logger.debug(`[turn ${turn}] response cache HIT`);
-        toolCalls = cachedResponse.toolCalls;
-        assistantText = cachedResponse.assistantText;
-      } else {
-        // Cache miss — call LLM
-        const streamResult = await this.withRetry(async () => {
-          const textParts: string[] = [];
-          const toolCallsInner: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
-          const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
-
-          for await (const event of this.client.stream({
-            model: config.model,
-            maxTokens: config.maxTokens,
-            temperature: 0.5,
-            system: systemPrompt,
-            messages,
-            tools: toolSchemas() as ToolSchema[],
-          })) {
-            if (event.type === 'text_delta' && event.text) {
-              this.cbs.onAgentDelta?.(event.text);
-              textParts.push(event.text);
-            } else if (event.type === 'tool_call_start') {
-              toolCallsAccum.set(event.toolCallIndex!, {
-                id: event.toolCallId,
-                name: event.toolCallName,
-                args: '',
-              });
-            } else if (event.type === 'tool_call_delta') {
-              const accum = toolCallsAccum.get(event.toolCallIndex!);
-              if (accum) accum.args += event.toolCallArgs || '';
-            } else if (event.type === 'tool_call_end') {
-              const accum = toolCallsAccum.get(event.toolCallIndex!);
-              if (accum) {
-                try {
-                  toolCallsInner.push({
-                    id: accum.id!,
-                    name: accum.name!,
-                    input: JSON.parse(accum.args || '{}'),
-                  });
-                } catch {
-                  toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
-                }
+        for await (const event of this.client.stream({
+          model: config.model,
+          maxTokens: config.maxTokens,
+          temperature: 0.5,
+          system: systemPrompt,
+          messages,
+          tools: toolSchemas(),
+        })) {
+          if (event.type === 'text_delta' && event.text) {
+            this.cbs.onAgentDelta?.(event.text);
+            textParts.push(event.text);
+          } else if (event.type === 'tool_call_start') {
+            toolCallsAccum.set(event.toolCallIndex!, {
+              id: event.toolCallId,
+              name: event.toolCallName,
+              args: '',
+            });
+          } else if (event.type === 'tool_call_delta') {
+            const accum = toolCallsAccum.get(event.toolCallIndex!);
+            if (accum) accum.args += event.toolCallArgs || '';
+          } else if (event.type === 'tool_call_end') {
+            const accum = toolCallsAccum.get(event.toolCallIndex!);
+            if (accum) {
+              try {
+                toolCallsInner.push({
+                  id: accum.id!,
+                  name: accum.name!,
+                  input: JSON.parse(accum.args || '{}'),
+                });
+              } catch {
+                toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
               }
-            } else if (event.type === 'usage') {
-              if (event.inputTokens !== undefined) this.tokenUsage.inputTokens += event.inputTokens;
-              if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
             }
+          } else if (event.type === 'usage') {
+            if (event.inputTokens !== undefined) this.tokenUsage.inputTokens += event.inputTokens;
+            if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
           }
+        }
 
-          return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
-        }, 'LLM streaming API call');
+        return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
+      }, 'LLM streaming API call');
 
-        // Store in response cache for future identical calls
-        this.setResponseCache(cacheKey, streamResult);
-
-        ({ toolCalls, assistantText } = streamResult);
-      }
+      const { toolCalls, assistantText } = streamResult;
 
       const assistantContent: AssistantContentBlock[] = [];
 
@@ -475,13 +479,12 @@ export class Agent {
                 })),
               });
             }
-            this.history = this.jsonClone(messages);
+            this.history = messages;
             break;
           }
         } else {
-          // Fuzzy check: compare with recent responses
-          const similarity = this.computeSimilarity(assistantText);
-          if (similarity > 0.85 && this.recentAssistantTexts.length >= 2) {
+          // Fuzzy check: compare prefix with recent responses
+          if (this.computeSimilarity(assistantText) > 0 && this.recentAssistantTexts.length >= 2) {
             this.cbs.onError?.('Agent loop detected (similar repeat) — stopping');
             if (toolCalls.length > 0) {
               messages.push({
@@ -494,7 +497,7 @@ export class Agent {
                 })),
               });
             }
-            this.history = this.jsonClone(messages);
+            this.history = messages;
             break;
           }
           this.repeatCount = 0;
@@ -512,7 +515,7 @@ export class Agent {
       }
 
       if (toolCalls.length === 0) {
-        this.history = this.jsonClone(messages);
+        this.history = messages;
         break;
       }
 
@@ -612,10 +615,9 @@ export class Agent {
               this.pendingReads.delete(cacheKey);
             }
 
-            // Invalidate caches on writes — filesystem state changed
+            // Invalidate tool cache on writes — filesystem state changed
             if (tc.name === 'Write' || tc.name === 'Edit') {
               this.invalidateCache();
-              this.responseCache.clear();
             }
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err);
@@ -651,7 +653,7 @@ export class Agent {
       }));
 
       messages.push({ role: 'user', content: toolResultContent });
-      this.history = this.jsonClone(messages);
+      this.history = messages;
     }
 
     setToolContext(null);

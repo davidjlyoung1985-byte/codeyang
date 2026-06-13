@@ -21,6 +21,20 @@ let mcpTools: ToolDefinition[] = []; // Replaced atomically on refresh
 let qtTools: ToolDefinition[] = [];
 let mathTools: ToolDefinition[] = [];
 
+/** Lazily-built merged tool list cache. Invalidated when any dynamic tool list changes. */
+let allToolsCache: ToolDefinition[] | null = null;
+
+function invalidateAllToolsCache(): void {
+  allToolsCache = null;
+}
+
+function buildAllTools(): ToolDefinition[] {
+  if (!allToolsCache) {
+    allToolsCache = [...tools, ...mcpTools, ...qtTools, ...mathTools];
+  }
+  return allToolsCache;
+}
+
 /**
  * Wrap a tool's execute function with JSON Schema parameter validation.
  * Validation errors are returned as a user-facing string so the LLM
@@ -75,48 +89,66 @@ export function setMcpManager(mgr: McpManager | null) {
 }
 
 /** Rebuild the MCP tool list from the manager. Call after server init or tool refresh. */
+let mcpRefreshLock: Promise<void> | null = null;
 export async function refreshMcpTools(): Promise<void> {
-  if (!mcpManager) {
-    mcpTools = []; // clear when no manager is set
+  // Prevent concurrent refreshes — queue or skip if already in progress
+  if (mcpRefreshLock) {
+    await mcpRefreshLock;
     return;
   }
 
-  const discovered = await mcpManager.refreshTools();
-  const newTools: ToolDefinition[] = [];
-  for (const t of discovered) {
-    const params = t.inputSchema as Record<string, unknown>;
-    const rawExecute = async (args: Record<string, unknown>) => {
+  mcpRefreshLock = (async () => {
+    try {
       if (!mcpManager) {
-        return 'MCP manager not available';
+        mcpTools = [];
+        invalidateAllToolsCache();
+        return;
       }
-      const result = await mcpManager.callTool(t.qualifiedName, args);
-      return result.isError ? `[MCP Error] ${result.output}` : result.output;
-    };
-    newTools.push({
-      name: t.qualifiedName,
-      description: `[MCP:${t.serverName}] ${t.description}`,
-      parameters: params,
-      execute: validatedExecute(rawExecute, params),
-    });
-  }
 
-  // Atomic swap — concurrent readers see either the old list or the new one,
-  // never an empty intermediate state
-  mcpTools = newTools;
+      const discovered = await mcpManager.refreshTools();
+      const newTools: ToolDefinition[] = [];
+      for (const t of discovered) {
+        const params = t.inputSchema as Record<string, unknown>;
+        const rawExecute = async (args: Record<string, unknown>) => {
+          if (!mcpManager) {
+            return 'MCP manager not available';
+          }
+          const result = await mcpManager.callTool(t.qualifiedName, args);
+          return result.isError ? `[MCP Error] ${result.output}` : result.output;
+        };
+        newTools.push({
+          name: t.qualifiedName,
+          description: `[MCP:${t.serverName}] ${t.description}`,
+          parameters: params,
+          execute: validatedExecute(rawExecute, params),
+        });
+      }
+
+      // Atomic swap — concurrent readers see either the old list or the new one
+      mcpTools = newTools;
+      invalidateAllToolsCache();
+    } finally {
+      mcpRefreshLock = null;
+    }
+  })();
+
+  await mcpRefreshLock;
 }
 
 /** Register Qt-specific tools. Called when a Qt project is detected. */
 export function registerQtTools(toolDefs: ToolDefinition[]): void {
   qtTools = toolDefs.map(wrapToolValidation);
+  invalidateAllToolsCache();
 }
 
 /** Register math tools dynamically. Replaces any previously registered math tools. */
 export function registerMathTools(toolDefs: ToolDefinition[]): void {
   mathTools = toolDefs.map(wrapToolValidation);
+  invalidateAllToolsCache();
 }
 
 export function getTool(name: string): ToolDefinition | undefined {
-  const all = [...tools, ...mcpTools, ...qtTools, ...mathTools];
+  const all = buildAllTools();
   let found = all.find((t) => t.name === name);
   if (!found) {
     const canonical = resolveAlias(name);
@@ -127,7 +159,7 @@ export function getTool(name: string): ToolDefinition | undefined {
 
 /** Get all registered tool definitions (built-in + MCP + Qt + Math). */
 export function getAllTools(): ToolDefinition[] {
-  return [...tools, ...mcpTools, ...qtTools, ...mathTools];
+  return buildAllTools();
 }
 
 /**

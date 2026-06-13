@@ -7,35 +7,101 @@
  */
 
 const HINT_SEPARATOR = '\n  \u{1F4A1} '; // 💡
+const ACTION_SEPARATOR = '\n  \u{1F4DD} '; // 📝
 
-/** Build a tagged error string. */
-export function toolError(ctx: string, msg: string, hint?: string): string {
-  let r = `[${ctx}] ${msg}`;
+/** Error severity levels */
+export type ErrorSeverity = 'critical' | 'error' | 'warning' | 'info';
+
+/** Extended error with severity and actionable steps */
+export interface ToolErrorDetails {
+  severity: ErrorSeverity;
+  context: string;
+  message: string;
+  hint?: string;
+  actions?: string[];
+}
+
+/** Build a tagged error string with optional severity indicator. */
+export function toolError(ctx: string, msg: string, hint?: string, severity: ErrorSeverity = 'error'): string {
+  const severityIcon = {
+    critical: '🔴',
+    error: '❌',
+    warning: '⚠️',
+    info: 'ℹ️',
+  }[severity];
+
+  let r = `${severityIcon} [${ctx}] ${msg}`;
   if (hint) r += `${HINT_SEPARATOR}${hint}`;
   return r;
 }
 
+/** Build an error with actionable steps. */
+export function toolErrorWithActions(details: ToolErrorDetails): string {
+  let r = toolError(details.context, details.message, details.hint, details.severity);
+  if (details.actions && details.actions.length > 0) {
+    r += `${ACTION_SEPARATOR}Try:`;
+    details.actions.forEach((action, i) => {
+      r += `\n    ${i + 1}) ${action}`;
+    });
+  }
+  return r;
+}
+
 /** File-system related errors. */
-export function fileNotFound(p: string): string {
-  return toolError('FS', `File not found: ${p}`, 'Check the path and try again.');
+export function fileNotFound(p: string, cwd?: string): string {
+  const hint = cwd ? `Working directory: ${cwd}` : undefined;
+  return toolErrorWithActions({
+    severity: 'error',
+    context: 'FS',
+    message: `File not found: ${p}`,
+    hint,
+    actions: [
+      'Check the file path for typos',
+      'Use Glob or List to find available files',
+      'Verify you are in the correct directory',
+    ],
+  });
 }
 
 /** Parameter validation errors (used by validate.ts). */
 export function invalidParam(k: string, expect: string): string {
-  return toolError('Validation', `"${k}" expected ${expect}`, 'Check the parameter value.');
+  return toolErrorWithActions({
+    severity: 'error',
+    context: 'Validation',
+    message: `"${k}" expected ${expect}`,
+    actions: ['Check the parameter value', 'Refer to tool documentation for correct format'],
+  });
 }
 
 /** Network-level errors. */
-export function netError(url: string, detail: string): string {
-  return toolError('Network', `${url}: ${detail}`, 'Check connectivity and URL.');
+export function netError(url: string, detail: string, isTimeout = false): string {
+  return toolErrorWithActions({
+    severity: 'error',
+    context: 'Network',
+    message: `${url}: ${detail}`,
+    hint: isTimeout ? 'Request timed out' : 'Check connectivity and URL',
+    actions: isTimeout
+      ? ['Retry the request', 'Check network connection', 'Verify the URL is accessible']
+      : ['Check your internet connection', 'Verify the URL is correct', 'Check if the server is online'],
+  });
 }
 
 /** Git-related errors. */
 export function gitError(op: string, detail: string): string {
-  return toolError('Git', `${op}: ${detail}`, 'Run GitStatus to check repo state.');
+  return toolErrorWithActions({
+    severity: 'error',
+    context: 'Git',
+    message: `${op}: ${detail}`,
+    actions: ['Run GitStatus to check repo state', 'Verify you are in a git repository', 'Check git configuration'],
+  });
 }
 
 /** Parse / format errors. */
 export function parseError(fmt: string, detail: string): string {
-  return toolError('Parse', `${fmt}: ${detail}`, 'Validate the input format.');
+  return toolErrorWithActions({
+    severity: 'error',
+    context: 'Parse',
+    message: `${fmt}: ${detail}`,
+    actions: ['Validate the input format', 'Check for syntax errors', 'Verify file encoding'],
+  });
 }

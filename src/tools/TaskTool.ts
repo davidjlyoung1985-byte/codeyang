@@ -1,5 +1,5 @@
 import { toolSchemas, getTool } from './registry.js';
-import { consumeStream, type LLMClient, type LLMMessage, type ToolSchema } from '../agent/LLMClient.js';
+import { consumeStream, type LLMClient, type LLMMessage } from '../agent/LLMClient.js';
 
 export interface TaskResult {
   description: string;
@@ -49,7 +49,7 @@ export async function executeTask(
             temperature: 0.5,
             system: TASK_SYSTEM_PROMPT,
             messages,
-            tools: toolSchemas() as ToolSchema[],
+            tools: toolSchemas(),
           });
 
           const assistantContent: Array<

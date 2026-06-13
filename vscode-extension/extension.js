@@ -17,7 +17,7 @@ const {
   executeImageInfo: _executeImageInfo,
   executeImageToBase64: _executeImageToBase64,
   executeListImages: _executeListImages,
-} = require('../../dist/cjs/tools.cjs');
+} = require('./tools.cjs');
 
 // ─── Provider-agnostic config ──────────────────────────────────────
 
@@ -28,6 +28,13 @@ const SUPPORTED_PROVIDERS = {
     defaultModel: 'deepseek-chat',
     apiKeyEnvVars: ['CODEYANG_API_KEY', 'DEEPSEEK_API_KEY'],
     type: 'openai',
+  },
+  deepseek_anthropic: {
+    name: 'DeepSeek (Anthropic API)',
+    baseURL: 'https://api.deepseek.com/anthropic',
+    defaultModel: 'deepseek-v4-pro',
+    apiKeyEnvVars: ['CODEYANG_API_KEY', 'DEEPSEEK_API_KEY'],
+    type: 'anthropic',
   },
   anthropic: {
     name: 'Anthropic',
@@ -55,8 +62,12 @@ function getApiKey() {
 function getProviderType() {
   const baseUrl = getApiBaseUrl();
   const model = getModel();
+  // DeepSeek's Anthropic API endpoint
+  if (baseUrl && baseUrl.includes('api.deepseek.com/anthropic')) return 'anthropic';
+  // Official Anthropic API
   if (baseUrl && (baseUrl.includes('anthropic') || baseUrl.includes('api.anthropic.com'))) return 'anthropic';
-  if (model && model.includes('claude')) return 'anthropic';
+  // Model-based detection (deepseek-v4-* uses Anthropic format, claude-* also)
+  if (model && (model.startsWith('deepseek-v4-') || model.includes('claude'))) return 'anthropic';
   return 'openai';
 }
 
@@ -69,13 +80,13 @@ function getApiBaseUrl() {
     const data = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
     if (data.apiBaseUrl) return data.apiBaseUrl;
   } catch {}
-  return 'https://api.deepseek.com/v1';
+  return 'https://api.deepseek.com/anthropic';
 }
 
 function getModel() {
   return vscode.workspace.getConfiguration('codeyang').get('model', '') ||
     process.env['CODEYANG_MODEL'] ||
-    'deepseek-chat';
+    'deepseek-v4-pro';
 }
 
 async function saveApiKey(key, baseUrl, model) {
@@ -280,6 +291,106 @@ function saveSession(messages) {
   }
 }
 
+// ─── Anthropic SSE stream helper ───────────────────────────────────
+
+function anthropicStreamRequest(apiKey, baseURL, model, systemPrompt, messages, tools, onTextDelta) {
+  return new Promise((resolve, reject) => {
+    // Anthropic Messages API format: system is a top-level param, not a message
+    const body = JSON.stringify({
+      model,
+      max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
+      temperature: 0.5,
+      system: systemPrompt,
+      messages,
+      tools,
+      stream: true,
+    });
+
+    const url = new URL(baseURL + '/v1/messages');
+    const opts = {
+      hostname: url.hostname,
+      port: url.port || 443,
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+
+    const req = https.request(opts, (res) => {
+      const blocks = [];       // content blocks indexed by position
+      let currentEvent = '';
+      let buffer = '';
+
+      res.on('data', (chunk) => {
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6);
+            try {
+              const event = JSON.parse(dataStr);
+              switch (event.type) {
+                case 'content_block_start':
+                  blocks[event.index] = event.content_block;
+                  break;
+                case 'content_block_delta':
+                  if (event.delta.type === 'text_delta' && blocks[event.index]) {
+                    blocks[event.index].text = (blocks[event.index].text || '') + event.delta.text;
+                    if (onTextDelta) onTextDelta(event.delta.text);
+                  } else if (event.delta.type === 'input_json_delta' && blocks[event.index]) {
+                    blocks[event.index].input_json = (blocks[event.index].input_json || '') + event.delta.partial_json;
+                  }
+                  break;
+                case 'content_block_stop':
+                  if (blocks[event.index]?.type === 'tool_use') {
+                    try { blocks[event.index].input = JSON.parse(blocks[event.index].input_json || '{}'); }
+                    catch { blocks[event.index].input = {}; }
+                  }
+                  break;
+              }
+            } catch {}
+          }
+        }
+      });
+
+      res.on('end', () => {
+        if (res.statusCode >= 400) {
+          let errMsg = 'HTTP ' + res.statusCode;
+          try {
+            const err = JSON.parse(buffer);
+            errMsg = err.error?.message || errMsg;
+          } catch {}
+          reject(new Error(errMsg));
+          return;
+        }
+        const result = { blocks, textBlocks: [], toolCalls: [], assistantText: '' };
+        for (const block of blocks) {
+          if (!block) continue;
+          if (block.type === 'text') {
+            result.assistantText += (block.text || '');
+            result.textBlocks.push({ type: 'text', text: block.text || '' });
+          } else if (block.type === 'tool_use') {
+            result.toolCalls.push({ id: block.id, name: block.name, input: block.input || {} });
+          }
+        }
+        resolve(result);
+      });
+    });
+
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
 // ─── OpenAI-compatible SSE stream helper ───────────────────────────
 
 function openaiStreamRequest(apiKey, baseURL, model, systemPrompt, messages, tools) {
@@ -354,11 +465,15 @@ function openaiStreamRequest(apiKey, baseURL, model, systemPrompt, messages, too
       res.on('end', () => {
         if (res.statusCode >= 400) {
           let errMsg = 'HTTP ' + res.statusCode;
+          let fullError = data;
           try {
             const err = JSON.parse(data);
             errMsg = err.error?.message || err.error?.code || errMsg;
           } catch {}
-          reject(new Error(errMsg));
+          console.error('[CodeYang] API Error:', res.statusCode, fullError);
+          console.error('[CodeYang] Request URL:', baseURL);
+          console.error('[CodeYang] Model:', model);
+          reject(new Error(errMsg + ' - ' + fullError));
           return;
         }
         // Finalize tool call arguments
@@ -398,60 +513,17 @@ async function runAgent(apiKey, baseUrl, model, messages, panel) {
     let assistantText;
 
     if (provider === 'anthropic') {
-      const { Anthropic } = require('@anthropic-ai/sdk');
-      const client = new Anthropic({ apiKey, baseURL: baseUrl });
-
-      const stream = await withRetry(
-        () => client.messages.stream({
-          model,
-          max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
-          temperature: 0.5,
-          system: systemPrompt,
-          messages,
-          tools: toolDefinitions,
-        }),
+      const result = await withRetry(
+        () => anthropicStreamRequest(
+          apiKey, baseUrl, model, systemPrompt, messages, toolDefinitions,
+          (text) => panel.webview.postMessage({ type: 'append', content: text })
+        ),
         'Anthropic streaming API',
       );
 
-      const blocks = [];
-      let currentIndex = -1;
-
-      for await (const event of stream) {
-        switch (event.type) {
-          case 'content_block_start':
-            currentIndex = event.index;
-            blocks[currentIndex] = event.content_block;
-            break;
-          case 'content_block_delta':
-            if (event.delta?.type === 'text_delta' && event.delta.text) {
-              panel.webview.postMessage({ type: 'append', content: event.delta.text });
-              if (blocks[currentIndex]?.type === 'text') {
-                blocks[currentIndex].text = (blocks[currentIndex].text || '') + event.delta.text;
-              }
-            } else if (event.delta?.type === 'input_json_delta' && event.delta.partial_json) {
-              if (blocks[currentIndex]?.type === 'tool_use') {
-                blocks[currentIndex].input_json = (blocks[currentIndex].input_json || '') + event.delta.partial_json;
-              }
-            }
-            break;
-          case 'content_block_stop':
-            if (blocks[currentIndex]?.type === 'tool_use') {
-              try { blocks[currentIndex].input = JSON.parse(blocks[currentIndex].input_json || '{}'); }
-              catch { blocks[currentIndex].input = {}; }
-            }
-            break;
-        }
-      }
-
-      contentBlocks = blocks;
-      toolCalls = [];
-      assistantText = '';
-
-      for (const block of contentBlocks) {
-        if (!block) continue;
-        if (block.type === 'text') assistantText += (block.text || '');
-        else if (block.type === 'tool_use') toolCalls.push({ id: block.id, name: block.name, input: block.input || {} });
-      }
+      contentBlocks = result.blocks;
+      toolCalls = result.toolCalls;
+      assistantText = result.assistantText;
     } else {
       const result = await withRetry(
         () => openaiStreamRequest(apiKey, baseUrl, model, systemPrompt, messages, toolDefinitions),
@@ -562,8 +634,8 @@ function createOrShowPanel(context) {
     switch (msg.type) {
       case 'setApiKey': {
         if (msg.key && msg.key.trim()) {
-          const baseUrl = msg.baseUrl && msg.baseUrl.trim() ? msg.baseUrl.trim() : 'https://api.deepseek.com/v1';
-          const model = msg.model && msg.model.trim() ? msg.model.trim() : 'deepseek-chat';
+          const baseUrl = msg.baseUrl && msg.baseUrl.trim() ? msg.baseUrl.trim() : 'https://api.deepseek.com/anthropic';
+          const model = msg.model && msg.model.trim() ? msg.model.trim() : 'deepseek-v4-pro';
           await saveApiKey(msg.key.trim(), baseUrl, model);
           panel.webview.postMessage({ type: 'apiKeySet' });
           vscode.window.showInformationMessage(`CodeYang: Connected to ${baseUrl} (${model})`);

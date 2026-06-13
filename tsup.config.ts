@@ -14,6 +14,9 @@ export default defineConfig([
     splitting: true,
     external: ['eslint', 'typescript'],
     noExternal: [],
+    alias: {
+      '@': './src',
+    },
   },
   // Shared tools (CJS) for VS Code extension
   {
@@ -25,5 +28,8 @@ export default defineConfig([
     platform: 'node',
     target: 'node18',
     shims: true,
+    alias: {
+      '@': './src',
+    },
   },
 ]);
