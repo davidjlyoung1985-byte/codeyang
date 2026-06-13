@@ -101,7 +101,7 @@ function renderMarkdown(text: string): string {
   return result.join('\n');
 }
 
-// ─── ProgressBar (spinner) ──────────────────────────────────────────
+// ─── ProgressBar (spinner and progress bar) ────────────────────────
 
 class Spinner {
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -142,12 +142,74 @@ class Spinner {
   }
 }
 
+class ProgressBar {
+  private label = '';
+  private current = 0;
+  private total = 100;
+  private startTime = 0;
+  private lastDraw = 0;
+
+  start(label: string, total = 100) {
+    this.label = label;
+    this.total = total;
+    this.current = 0;
+    this.startTime = Date.now();
+    this.lastDraw = 0;
+    this.draw();
+  }
+
+  update(current: number) {
+    this.current = Math.min(current, this.total);
+    // Throttle updates to avoid excessive redraws
+    const now = Date.now();
+    if (now - this.lastDraw > 100 || this.current === this.total) {
+      this.lastDraw = now;
+      this.draw();
+    }
+  }
+
+  private draw() {
+    const percent = Math.floor((this.current / this.total) * 100);
+    const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+    const timeStr = elapsed >= 60 ? `${Math.floor(elapsed / 60)}m${elapsed % 60}s` : `${elapsed}s`;
+
+    // Calculate ETA based on progress
+    let etaStr = '';
+    if (this.current > 0 && this.current < this.total) {
+      const rate = this.current / elapsed;
+      const remaining = (this.total - this.current) / rate;
+      if (remaining < 60) {
+        etaStr = ` ETA ${Math.ceil(remaining)}s`;
+      } else {
+        etaStr = ` ETA ${Math.floor(remaining / 60)}m${Math.ceil(remaining % 60)}s`;
+      }
+    }
+
+    // Progress bar: [████░░░░░░] 40%
+    const barWidth = 20;
+    const filled = Math.floor((percent / 100) * barWidth);
+    const bar = '█'.repeat(filled) + '░'.repeat(barWidth - filled);
+
+    process.stdout.write(
+      `\r  ${c.cyan('⟳')} ${this.label} [${c.green(bar)}] ${c.bold(percent + '%')} ${c.dim(timeStr)}${c.dim(etaStr)}`,
+    );
+  }
+
+  stop(message?: string) {
+    process.stdout.write('\r' + ' '.repeat(termW() - 4) + '\r');
+    if (message) {
+      console.log(`  ${message}`);
+    }
+  }
+}
+
 // ─── CliUI ──────────────────────────────────────────────────────────
 
 export class CliUI {
   private rl: readline.Interface;
   private onInput?: (line: string) => void;
   private spinner = new Spinner();
+  private progressBar = new ProgressBar();
   private streamBuf = '';
   private streamBatch: string[] = [];
   private batchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -304,6 +366,21 @@ export class CliUI {
 
   stopSpinner() {
     this.spinner.stop();
+  }
+
+  // Progress bar methods for long-running operations
+  startProgress(label: string, total = 100) {
+    this.clearBatch();
+    this.spinner.stop();
+    this.progressBar.start(label, total);
+  }
+
+  updateProgress(current: number) {
+    this.progressBar.update(current);
+  }
+
+  stopProgress(message?: string) {
+    this.progressBar.stop(message);
   }
 
   // ─── Tools ────────────────────────────────────────────────────────

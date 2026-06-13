@@ -127,10 +127,9 @@ export class McpManager {
    *  will be discovered without restarting the session. Returns updated tool list. */
   async refreshTools(): Promise<McpToolDef[]> {
     const results = await Promise.allSettled(Array.from(this.clients.values()).map((c) => c.refreshTools()));
-    // Log any refresh failures (but don't block)
     for (const r of results) {
       if (r.status === 'rejected') {
-        // Silently ignore individual server refresh failures
+        console.debug(`[MCP] Tool refresh failed: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
       }
     }
     this._allTools = this.collectTools();

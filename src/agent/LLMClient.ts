@@ -107,7 +107,11 @@ export async function consumeStream(
 }
 
 export function createLLMClient(provider: string, apiKey: string, baseURL?: string): LLMClient {
-  if (provider === 'deepseek' || provider === 'custom') {
+  if (provider === 'deepseek') {
+    // DeepSeek Claude-compatible API endpoint
+    return new DeepSeekClient(apiKey, baseURL || 'https://api.deepseek.com/anthropic');
+  }
+  if (provider === 'custom') {
     return new OpenAICompatClient(apiKey, baseURL || 'https://api.deepseek.com/v1');
   }
   return new AnthropicClient(apiKey, baseURL);
@@ -120,6 +124,94 @@ class AnthropicClient implements LLMClient {
     const opts: ConstructorParameters<typeof Anthropic>[0] = { apiKey };
     if (baseURL) opts.baseURL = baseURL;
     this.client = new Anthropic(opts);
+  }
+
+  async *stream(params: {
+    model: string;
+    maxTokens: number;
+    temperature: number;
+    system: string;
+    messages: LLMMessage[];
+    tools: ToolSchema[];
+  }): AsyncIterable<StreamEvent> {
+    const stream = this.client.messages.stream({
+      model: params.model,
+      max_tokens: params.maxTokens,
+      temperature: params.temperature,
+      system: params.system,
+      messages: params.messages as Anthropic.MessageParam[],
+      tools: params.tools as Anthropic.Tool[],
+    });
+
+    let blockIdx = -1;
+    const blocks: Array<{ type: string; id?: string; name?: string; input_json?: string }> = [];
+
+    for await (const event of stream) {
+      switch (event.type) {
+        case 'content_block_start':
+          blockIdx = event.index;
+          blocks[blockIdx] = event.content_block as { type: string; id?: string; name?: string };
+          if (event.content_block.type === 'tool_use') {
+            yield {
+              type: 'tool_call_start',
+              toolCallIndex: blockIdx,
+              toolCallId: event.content_block.id,
+              toolCallName: event.content_block.name,
+            };
+          }
+          break;
+
+        case 'content_block_delta':
+          if (event.delta?.type === 'text_delta' && event.delta.text) {
+            yield { type: 'text_delta', text: event.delta.text };
+          } else if (event.delta?.type === 'input_json_delta' && event.delta.partial_json) {
+            blocks[blockIdx].input_json = (blocks[blockIdx].input_json || '') + event.delta.partial_json;
+            yield {
+              type: 'tool_call_delta',
+              toolCallIndex: blockIdx,
+              toolCallArgs: event.delta.partial_json,
+            };
+          }
+          break;
+
+        case 'content_block_stop':
+          if (blocks[blockIdx]?.type === 'tool_use') {
+            yield {
+              type: 'tool_call_end',
+              toolCallIndex: blockIdx,
+              toolCallId: blocks[blockIdx].id,
+              toolCallArgs: blocks[blockIdx].input_json || '{}',
+            };
+          }
+          break;
+
+        case 'message_start':
+          yield {
+            type: 'usage',
+            inputTokens: event.message.usage.input_tokens,
+            outputTokens: event.message.usage.output_tokens,
+          };
+          break;
+
+        case 'message_delta':
+          if (event.usage) {
+            yield {
+              type: 'usage',
+              inputTokens: 0,
+              outputTokens: event.usage.output_tokens,
+            };
+          }
+          break;
+      }
+    }
+  }
+}
+
+class DeepSeekClient implements LLMClient {
+  private client: Anthropic;
+
+  constructor(apiKey: string, baseURL: string) {
+    this.client = new Anthropic({ apiKey, baseURL });
   }
 
   async *stream(params: {
