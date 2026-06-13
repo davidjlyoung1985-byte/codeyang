@@ -91,48 +91,49 @@ export function setMcpManager(mgr: McpManager | null) {
 /** Rebuild the MCP tool list from the manager. Call after server init or tool refresh. */
 let mcpRefreshLock: Promise<void> | null = null;
 export async function refreshMcpTools(): Promise<void> {
-  // Prevent concurrent refreshes — queue or skip if already in progress
+  // Prevent concurrent refreshes — if already in progress, wait and return
   if (mcpRefreshLock) {
     await mcpRefreshLock;
     return;
   }
 
-  mcpRefreshLock = (async () => {
-    try {
-      if (!mcpManager) {
-        mcpTools = [];
-        invalidateAllToolsCache();
-        return;
-      }
-
-      const discovered = await mcpManager.refreshTools();
-      const newTools: ToolDefinition[] = [];
-      for (const t of discovered) {
-        const params = t.inputSchema as Record<string, unknown>;
-        const rawExecute = async (args: Record<string, unknown>) => {
-          if (!mcpManager) {
-            return 'MCP manager not available';
-          }
-          const result = await mcpManager.callTool(t.qualifiedName, args);
-          return result.isError ? `[MCP Error] ${result.output}` : result.output;
-        };
-        newTools.push({
-          name: t.qualifiedName,
-          description: `[MCP:${t.serverName}] ${t.description}`,
-          parameters: params,
-          execute: validatedExecute(rawExecute, params),
-        });
-      }
-
-      // Atomic swap — concurrent readers see either the old list or the new one
-      mcpTools = newTools;
+  const task = (async () => {
+    if (!mcpManager) {
+      mcpTools = [];
       invalidateAllToolsCache();
-    } finally {
-      mcpRefreshLock = null;
+      return;
     }
+
+    const discovered = await mcpManager.refreshTools();
+    const newTools: ToolDefinition[] = [];
+    for (const t of discovered) {
+      const params = t.inputSchema as Record<string, unknown>;
+      const rawExecute = async (args: Record<string, unknown>) => {
+        if (!mcpManager) {
+          return 'MCP manager not available';
+        }
+        const result = await mcpManager.callTool(t.qualifiedName, args);
+        return result.isError ? `[MCP Error] ${result.output}` : result.output;
+      };
+      newTools.push({
+        name: t.qualifiedName,
+        description: `[MCP:${t.serverName}] ${t.description}`,
+        parameters: params,
+        execute: validatedExecute(rawExecute, params),
+      });
+    }
+
+    // Atomic swap — concurrent readers see either the old list or the new one
+    mcpTools = newTools;
+    invalidateAllToolsCache();
   })();
 
-  await mcpRefreshLock;
+  mcpRefreshLock = task;
+  try {
+    await task;
+  } finally {
+    mcpRefreshLock = null;
+  }
 }
 
 /** Register Qt-specific tools. Called when a Qt project is detected. */
