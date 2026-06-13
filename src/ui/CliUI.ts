@@ -1,6 +1,7 @@
 import * as readline from 'node:readline';
 import picocolors from 'picocolors';
 import { VERSION } from '../version.js';
+import type { Message } from '../types.js';
 
 const c = picocolors;
 
@@ -235,6 +236,114 @@ export class CliUI {
         this.onInput(trimmed);
       }
     });
+  }
+
+  // ─── History Display (for session resume) ───────────────────────────
+
+  /**
+   * Display full conversation history — messages, tool calls, and tool results
+   * stacked in chronological order so the user can see the full conversation.
+   */
+  showHistory(messages: Message[]) {
+    this.spinner.stop();
+    process.stdout.write('\n');
+    hr(c.dim('session history'));
+
+    let turnIndex = 0;
+    let pendingToolCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+    let pendingToolResults: Array<{ output: string; isError: boolean }> = [];
+
+    for (const msg of messages) {
+      if (msg.role === 'user') {
+        // Flush any pending tool context from previous assistant turn
+        this.flushToolContext(pendingToolCalls, pendingToolResults);
+        pendingToolCalls = [];
+        pendingToolResults = [];
+
+        turnIndex++;
+        process.stdout.write('\n');
+        console.log(`${c.bold(c.yellow('  👤 User'))} ${c.dim(`[#${turnIndex}]`)}`);
+        for (const line of msg.content.split('\n')) {
+          console.log(`  ${line}`);
+        }
+      } else if (msg.role === 'assistant') {
+        if (msg.content) {
+          process.stdout.write('\n');
+          console.log(`${c.bold(c.green('  🤖 CodeYang'))} ${c.dim(`[#${turnIndex}]`)}`);
+          const rendered = renderMarkdown(msg.content);
+          console.log(rendered);
+        }
+        // Collect tool calls but don't display yet — wait for their results
+        if (msg.toolCalls) {
+          for (const tc of msg.toolCalls) {
+            const argStr = Object.entries(tc.args || {})
+              .map(([k, v]) => {
+                const s = typeof v === 'string' ? v : JSON.stringify(v);
+                return s.length > 60 ? `${k}="${s.slice(0, 60)}…"` : `${k}=${JSON.stringify(v)}`;
+              })
+              .join(' ')
+              .slice(0, 100);
+            pendingToolCalls.push({ name: tc.name, args: tc.args });
+            process.stdout.write(`\n  ${c.dim(c.cyan('  🔧'))} ${c.white(tc.name)} ${c.dim(argStr)}`);
+          }
+        }
+      } else if (msg.role === 'system') {
+        process.stdout.write('\n');
+        console.log(`  ${c.dim('ℹ')} ${c.dim(msg.content)}`);
+      }
+
+      // Collect tool results — they come in the NEXT user message (tool_result pattern)
+      if (msg.toolResults && msg.toolResults.length > 0) {
+        for (const tr of msg.toolResults) {
+          pendingToolResults.push({ output: tr.output, isError: tr.isError });
+        }
+      }
+    }
+
+    // Flush any remaining tool context
+    this.flushToolContext(pendingToolCalls, pendingToolResults);
+
+    process.stdout.write('\n');
+    hr(c.dim('resumed'));
+    process.stdout.write('\n');
+  }
+
+  /** Display collected tool calls with their results. */
+  private flushToolContext(
+    calls: Array<{ name: string; args: Record<string, unknown> }>,
+    results: Array<{ output: string; isError: boolean }>,
+  ) {
+    if (calls.length === 0) return;
+
+    // Match tool calls with results by position
+    for (let i = 0; i < calls.length; i++) {
+      const tc = calls[i];
+      const tr = i < results.length ? results[i] : null;
+
+      // Format args
+      const argStr = Object.entries(tc.args || {})
+        .map(([k, v]) => {
+          const s = typeof v === 'string' ? v : JSON.stringify(v);
+          return s.length > 60 ? `${k}="${s.slice(0, 60)}…"` : `${k}=${JSON.stringify(v)}`;
+        })
+        .join(' ')
+        .slice(0, 100);
+
+      process.stdout.write(`\n  ${c.dim(c.cyan('  🔧'))} ${c.white(tc.name)} ${c.dim(argStr)}`);
+
+      if (tr) {
+        const firstLine = tr.output.split('\n')[0] || '(empty)';
+        const display = firstLine.slice(0, 150);
+        const lines = tr.output.split('\n').length;
+        const suffix = lines > 1 ? ` ${c.dim(`(${lines} lines)`)}` : '';
+        if (tr.isError) {
+          process.stdout.write(`\n  ${c.red('  ✗')} ${c.dim(display)}${suffix}`);
+        } else {
+          process.stdout.write(`\n  ${c.green('  ✓')} ${c.dim(display)}${suffix}`);
+        }
+      }
+    }
+    process.stdout.write('\n');
   }
 
   setInputHandler(handler: (line: string) => void) {

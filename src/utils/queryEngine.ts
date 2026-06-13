@@ -7,7 +7,7 @@
  * - Content search with caching
  * - Cross-file reference search
  */
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import { homedir } from 'node:os';
@@ -60,7 +60,10 @@ export async function listFiles(root: string, pattern?: string): Promise<string[
       timeout: 30_000,
       reject: false,
     });
-    const files = result.stdout.split('\n').filter(Boolean).map((f) => f.trim());
+    const files = result.stdout
+      .split('\n')
+      .filter(Boolean)
+      .map((f) => f.trim());
     await writeFile(cachePath, JSON.stringify(files));
     if (pattern) return files.filter((f) => f.includes(pattern));
     return files;
@@ -82,7 +85,9 @@ async function walkDir(dir: string): Promise<string[]> {
     let entries;
     try {
       entries = await readdir(current, { withFileTypes: true });
-    } catch { return; }
+    } catch {
+      return;
+    }
 
     for (const entry of entries) {
       if (skip.has(entry.name)) continue;
@@ -133,7 +138,7 @@ export async function extractSymbols(root: string, filePath: string): Promise<Sy
   const absPath = resolve(root, filePath);
   if (!existsSync(absPath)) return [];
 
-  const content = readFileSync(absPath, 'utf-8');
+  const content = await readFile(absPath, 'utf-8');
   const lines = content.split('\n');
   const symbols: SymbolEntry[] = [];
 

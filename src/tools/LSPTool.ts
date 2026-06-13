@@ -10,18 +10,13 @@
  *
  * Uses the file-based analysis from queryEngine as fallback when no LSP server is available.
  */
-import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { extractSymbols, searchContent } from '../utils/queryEngine.js';
 
 type LspAction = 'definition' | 'references' | 'hover' | 'symbols' | 'diagnostics';
 
-export async function executeLsp(
-  action: LspAction,
-  filePath: string,
-  line?: number,
-  symbol?: string,
-): Promise<string> {
+export async function executeLsp(action: LspAction, filePath: string, line?: number, symbol?: string): Promise<string> {
   const root = process.cwd();
 
   switch (action) {
@@ -88,20 +83,23 @@ export async function executeLsp(
 
       // Show first occurrence with surrounding context
       const first = results[0];
-      const content = readFileContent(join(root, first.file));
+      const content = await readFileContent(join(root, first.file));
       if (!content) return `Cannot read: ${first.file}`;
 
       const lines = content.split('\n');
       const start = Math.max(0, first.line - 3);
       const end = Math.min(lines.length, first.line + 2);
-      const ctx = lines.slice(start, end).map((l, i) => `${start + i + 1}: ${l}`).join('\n');
+      const ctx = lines
+        .slice(start, end)
+        .map((l, i) => `${start + i + 1}: ${l}`)
+        .join('\n');
 
       return `Symbol: ${symbol}\nFile: ${first.file}\nNear line: ${first.line}\n\nContext:\n${ctx}`;
     }
 
     case 'diagnostics': {
       // Simple diagnostics: check for common issues via regex
-      const content = readFileContent(join(root, filePath));
+      const content = await readFileContent(join(root, filePath));
       if (!content) return `Cannot read: ${filePath}`;
 
       const issues: string[] = [];
@@ -132,9 +130,9 @@ export async function executeLsp(
   }
 }
 
-function readFileContent(filePath: string): string | null {
+async function readFileContent(filePath: string): Promise<string | null> {
   try {
-    return readFileSync(filePath, 'utf-8');
+    return await readFile(filePath, 'utf-8');
   } catch {
     return null;
   }

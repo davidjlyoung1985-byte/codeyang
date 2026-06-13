@@ -8,6 +8,27 @@ import * as acornWalk from 'acorn-walk';
 import { ESLint } from 'eslint';
 
 /**
+ * 安全 JSON 序列化 — 处理循环引用、BigInt、undefined 等特殊情况。
+ * Babel AST 中存在 parent/child 循环引用，直接用 JSON.stringify 会抛出异常。
+ */
+function safeJsonStringify(value: unknown, space?: number): string {
+  const seen = new WeakSet<object>();
+  return JSON.stringify(
+    value,
+    (_key: string, val: unknown): unknown => {
+      if (typeof val === 'object' && val !== null) {
+        if (seen.has(val)) return '[Circular]';
+        seen.add(val);
+      }
+      if (typeof val === 'bigint') return val.toString();
+      if (val === undefined) return null;
+      return val;
+    },
+    space,
+  );
+}
+
+/**
  * Parse JavaScript/TypeScript code and return AST information
  */
 export async function executeParseAst(
@@ -32,21 +53,21 @@ export async function executeParseAst(
       plugins,
     });
 
-    // Extract useful information from AST
+    // 仅提取基础信息，避免序列化整个 AST（含循环引用）
     const info = {
       type: ast.type,
       program: {
         type: ast.program.type,
         bodyLength: ast.program.body.length,
-        statements: ast.program.body.map((node: unknown) => ({
-          type: (node as { type: string }).type,
-          start: (node as { start?: number }).start,
-          end: (node as { end?: number }).end,
+        statements: ast.program.body.map((node: { type: string; start?: number | null; end?: number | null }) => ({
+          type: node.type,
+          start: node.start ?? undefined,
+          end: node.end ?? undefined,
         })),
       },
     };
 
-    return JSON.stringify(info, null, 2);
+    return safeJsonStringify(info, 2);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return `Error parsing AST: ${msg}`;
@@ -86,23 +107,22 @@ export async function executeAnalyzeCode(
       variables: [] as Array<{ name: string; kind: string; line: number }>,
     };
 
+    // Babel visitor 类型较复杂，使用带类型守卫的 any 访问
     traverse(ast, {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ImportDeclaration(path: any) {
-        analysis.imports.push(path.node.source.value);
+        const sourceVal = path.node?.source?.value;
+        if (typeof sourceVal === 'string') analysis.imports.push(sourceVal);
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ExportNamedDeclaration(path: any) {
-        if (path.node.declaration) {
-          if (path.node.declaration.type === 'FunctionDeclaration') {
-            analysis.exports.push(path.node.declaration.id?.name || 'anonymous');
-          } else if (path.node.declaration.type === 'VariableDeclaration') {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            path.node.declaration.declarations.forEach((d: any) => {
-              if (d.id.name) {
-                analysis.exports.push(d.id.name);
-              }
-            });
+        const decl = path.node?.declaration;
+        if (!decl) return;
+        if (decl.type === 'FunctionDeclaration') {
+          analysis.exports.push(decl.id?.name || 'anonymous');
+        } else if (decl.type === 'VariableDeclaration') {
+          for (const d of decl.declarations ?? []) {
+            if (d.id?.name) analysis.exports.push(d.id.name);
           }
         }
       },
@@ -111,23 +131,24 @@ export async function executeAnalyzeCode(
         analysis.functions.push({
           name: path.node.id?.name || 'anonymous',
           line: path.node.loc?.start.line || 0,
-          params: path.node.params.length,
+          params: (path.node.params ?? []).length,
         });
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ArrowFunctionExpression(path: any) {
-        if (path.parent.type === 'VariableDeclarator' && path.parent.id.name) {
+        const parent = path.parent;
+        if (parent?.type === 'VariableDeclarator' && parent.id?.name) {
           analysis.functions.push({
-            name: path.parent.id.name,
+            name: parent.id.name,
             line: path.node.loc?.start.line || 0,
-            params: path.node.params.length,
+            params: (path.node.params ?? []).length,
           });
         }
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ClassDeclaration(path: any) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const methods = path.node.body.body.filter((n: any) => n.type === 'ClassMethod').length;
+        const body = path.node?.body?.body ?? [];
+        const methods = body.filter((n: { type: string }) => n.type === 'ClassMethod').length;
         analysis.classes.push({
           name: path.node.id?.name || 'anonymous',
           line: path.node.loc?.start.line || 0,
@@ -136,16 +157,15 @@ export async function executeAnalyzeCode(
       },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       VariableDeclaration(path: any) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        path.node.declarations.forEach((d: any) => {
-          if (d.id.name) {
+        for (const d of path.node.declarations ?? []) {
+          if (d.id?.name) {
             analysis.variables.push({
               name: d.id.name,
-              kind: path.node.kind,
+              kind: path.node.kind || 'var',
               line: d.loc?.start.line || 0,
             });
           }
-        });
+        }
       },
     });
 
@@ -199,48 +219,52 @@ export async function executeComplexity(filePath: string): Promise<string> {
     let branches = 0;
 
     acornWalk.recursive(
-      ast,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ast as any,
       { depth: 0 },
       {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         FunctionDeclaration(node: any, state: any, c: any) {
           functions++;
-          const newState = { depth: state.depth + 1 };
-          if (newState.depth > maxDepth) maxDepth = newState.depth;
-          c(node.body, newState);
+          state.depth++;
+          if (state.depth > maxDepth) maxDepth = state.depth;
+          c(node.body, state);
+          state.depth--;
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ArrowFunctionExpression(node: any, state: any, c: any) {
           functions++;
-          const newState = { depth: state.depth + 1 };
-          if (newState.depth > maxDepth) maxDepth = newState.depth;
-          if (node.body.type === 'BlockStatement') {
-            c(node.body, newState);
+          state.depth++;
+          if (state.depth > maxDepth) maxDepth = state.depth;
+          if (node.body?.type === 'BlockStatement') {
+            c(node.body, state);
           }
+          state.depth--;
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         IfStatement(node: any, state: any, c: any) {
           complexity++;
           branches++;
-          c(node.consequent, state);
+          if (node.consequent) c(node.consequent, state);
           if (node.alternate) c(node.alternate, state);
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         WhileStatement(node: any, state: any, c: any) {
           complexity++;
-          c(node.body, state);
+          if (node.body) c(node.body, state);
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ForStatement(node: any, state: any, c: any) {
           complexity++;
-          c(node.body, state);
+          if (node.body) c(node.body, state);
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         SwitchCase(node: any, state: any, c: any) {
           complexity++;
           branches++;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          node.consequent.forEach((n: any) => c(n, state));
+          if (node.consequent) {
+            for (const n of node.consequent) c(n, state);
+          }
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ConditionalExpression(_node: any) {

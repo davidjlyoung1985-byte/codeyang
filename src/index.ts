@@ -286,6 +286,8 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     if (session) {
       agent.loadMessages(session.messages);
       currentSessionId = session.id;
+      // Display the full conversation history so user can see past context
+      ui.showHistory(session.messages);
       logger.info(`\nResumed session: ${session.title}\n`);
     } else {
       console.log(`\nSession not found: ${sessionId}\n`);

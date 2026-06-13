@@ -6,6 +6,7 @@
  */
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import vm from 'node:vm';
 
 export async function executeMathPlot(kind: string, outputPath?: string): Promise<string> {
   const k = kind?.toLowerCase() || '';
@@ -127,41 +128,94 @@ async function generateFunctionGraph(fnExpr: string, outputPath?: string): Promi
   const scale = 40;
   const range = 5;
 
-  // Validate expression — only allow safe math operations (prevent code injection)
-  const SAFE_EXPR_PATTERN = /^[0-9x+\-*/().\s]+$/;
-  const SAFE_MATH_FUNCS = ['sin', 'cos', 'tan', 'sqrt', 'abs', 'log', 'exp', 'pow', 'pi', 'e'];
+  // 安全白名单校验：只允许数学表达式语法，拒绝任何非数学字符
+  // 注意：不依赖此作为唯一防线——VM 沙箱才是真正的安全屏障
+  const BLOCKED_PATTERNS = [
+    /__proto__/i,
+    /constructor/i,
+    /prototype/i,
+    /\bimport\b/i,
+    /\beval\b/i,
+    /\brequire\b/i,
+    /\bfetch\b/i,
+    /\bprocess\b/i,
+    /\bglobal\b/i,
+    /\bmodule\b/i,
+    /\bexport\b/i,
+    /\bFunction\b/i,
+    /\basync\b/i,
+    /\bawait\b/i,
+    /\bthis\b/i,
+    /\barguments\b/i,
+    /\\u/i,
+    /\\x/i,
+  ];
 
-  // Remove all safe function names temporarily for validation
-  let exprForValidation = fnExpr.toLowerCase();
-  for (const func of SAFE_MATH_FUNCS) {
-    exprForValidation = exprForValidation.replace(new RegExp(func, 'gi'), '');
+  // 黑名单模式检查
+  for (const pattern of BLOCKED_PATTERNS) {
+    if (pattern.test(fnExpr)) {
+      return `**Error**: expression contains blocked patterns. Only math expressions allowed.`;
+    }
   }
 
-  // After removing safe functions, only safe chars should remain
-  if (!SAFE_EXPR_PATTERN.test(exprForValidation)) {
-    return `**Error**: expression contains unsafe characters. Only allow: numbers, x, operators (+,-,*,/,^), parentheses, and math functions (${SAFE_MATH_FUNCS.join(', ')}).`;
-  }
+  // 编译表达式为可在沙箱中执行的函数
+  // 将所有数学函数名替换为沙箱中的对应方法
+  const compiled = fnExpr
+    .replace(/sin\b/gi, 'Math.sin')
+    .replace(/cos\b/gi, 'Math.cos')
+    .replace(/tan\b/gi, 'Math.tan')
+    .replace(/sqrt\b/gi, 'Math.sqrt')
+    .replace(/abs\b/gi, 'Math.abs')
+    .replace(/log\b/gi, 'Math.log')
+    .replace(/exp\b/gi, 'Math.exp')
+    .replace(/pow\b/gi, 'Math.pow')
+    .replace(/\^/g, '**')
+    .replace(/pi\b/gi, 'Math.PI')
+    .replace(/\be\b/gi, 'Math.E');
 
-  // Compile function
-  let fn: (x: number) => number;
+  // 创建 VM 沙箱上下文——只暴露 Math 和 x
+  // 这是真正的安全屏障：沙箱中没有 require、process、global 等全局对象
+  const sandbox = {
+    Math: {
+      sin: Math.sin,
+      cos: Math.cos,
+      tan: Math.tan,
+      sqrt: Math.sqrt,
+      abs: Math.abs,
+      log: Math.log,
+      exp: Math.exp,
+      pow: Math.pow,
+      PI: Math.PI,
+      E: Math.E,
+    },
+    x: 0,
+  };
+
+  const context = vm.createContext(sandbox);
+
+  // 预编译表达式脚本
+  let exprScript: vm.Script;
   try {
-    const compiled = fnExpr
-      .replace(/sin/gi, 'Math.sin')
-      .replace(/cos/gi, 'Math.cos')
-      .replace(/tan/gi, 'Math.tan')
-      .replace(/sqrt/gi, 'Math.sqrt')
-      .replace(/abs/gi, 'Math.abs')
-      .replace(/log/gi, 'Math.log')
-      .replace(/exp/gi, 'Math.exp')
-      .replace(/pow/gi, 'Math.pow')
-      .replace(/\^/g, '**') // power operator
-      .replace(/pi/gi, 'Math.PI')
-      .replace(/\be\b/gi, 'Math.E');
-    fn = new Function('x', `"use strict"; return (${compiled})`) as (x: number) => number;
-    // Test
-    fn(0);
+    exprScript = new vm.Script(`"use strict"; (${compiled})`, { filename: 'mathplot-expr' });
   } catch {
-    return `**Error**: cannot parse function \`${fnExpr}\`. Use JavaScript math syntax, e.g. \`x*2+1\`, \`x*x\`, \`Math.sin(x)\`.`;
+    return `**Error**: cannot parse expression \`${fnExpr}\`. Use JavaScript math syntax, e.g. \`x*2+1\`, \`x*x\`, \`sin(x)\`.`;
+  }
+
+  // 在沙箱中求值（每次传入不同的 x）
+  function evalFn(x: number): number {
+    sandbox.x = x;
+    try {
+      const result = exprScript.runInContext(context, { timeout: 1000, breakOnSigint: true });
+      if (typeof result !== 'number' || !isFinite(result)) return NaN;
+      return result;
+    } catch {
+      return NaN;
+    }
+  }
+
+  // 测试求值（x=0）
+  if (!isFinite(evalFn(0))) {
+    return `**Error**: expression \`${fnExpr}\` could not be evaluated at x=0. Check for division by zero.`;
   }
 
   let svg = svgHeader(w, h);
@@ -188,7 +242,7 @@ async function generateFunctionGraph(fnExpr: string, outputPath?: string): Promi
   for (let px = 0; px <= w; px++) {
     const x = (px - cx) / scale;
     try {
-      const y = fn(x);
+      const y = evalFn(x);
       const py = cy - y * scale;
       if (py >= -100 && py <= h + 100 && isFinite(py)) {
         path += inRange ? ` L${px},${py}` : ` M${px},${py}`;
