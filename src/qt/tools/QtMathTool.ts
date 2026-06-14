@@ -3,10 +3,10 @@
  * Provides instant lookup for Qt's math headers, constants, and common numerical patterns.
  * The `eval` sub-command performs safe expression evaluation for the agent.
  */
-export async function executeQtMath(action?: string, expression?: string): Promise<string> {
+export function executeQtMath(action?: string, expression?: string): string {
   // ─── Expression evaluation ────────────────────────────────────────────────
-  if (action === 'eval' && expression) {
-    return evaluateExpression(expression);
+  if (action === 'eval') {
+    return evaluateExpression(expression || '');
   }
 
   // ─── API reference ────────────────────────────────────────────────────────
@@ -143,56 +143,59 @@ export async function executeQtMath(action?: string, expression?: string): Promi
 
 // ─── Safe expression evaluator ──────────────────────────────────────────────
 
+import { create, all } from 'mathjs';
+
+// Create a sandboxed math.js instance with limited scope
+const math = create(all);
+
+// Create a restricted evaluation scope - only math functions, no access to imports/require
+const limitedScope = {
+  // Constants
+  pi: Math.PI,
+  e: Math.E,
+  // No functions that access filesystem, network, or allow code execution
+  import: undefined,
+  createUnit: undefined,
+  evaluate: undefined,
+  parse: undefined,
+};
+
 function evaluateExpression(expr: string): string {
   const lines: string[] = [];
   lines.push('## Math Evaluation\n');
 
-  // Sanitize: only allow numbers, operators, parens, basic math functions, whitespace
+  // Sanitize input
   const sanitized = expr.replace(/\s+/g, ' ').trim();
 
-  // Define safe math functions
-  const SAFE_MATH_FUNCS = [
-    'sin',
-    'cos',
-    'tan',
-    'sqrt',
-    'abs',
-    'log',
-    'log10',
-    'exp',
-    'floor',
-    'ceil',
-    'round',
-    'pow',
-    'min',
-    'max',
-    'pi',
-    'e',
+  // Prevent empty or excessively long expressions
+  if (!sanitized || sanitized.length > 500) {
+    return `**Error**: expression must be between 1 and 500 characters.\nExpression: \`${sanitized}\``;
+  }
+
+  // Block dangerous patterns
+  const FORBIDDEN_PATTERNS = [
+    /import\s*\(/i,
+    /require\s*\(/i,
+    /eval\s*\(/i,
+    /function\s*\(/i,
+    /=>/,
+    /\.\s*constructor/i,
+    /__proto__/i,
+    /prototype/i,
   ];
 
-  // Remove all safe function names temporarily for validation
-  let exprForValidation = sanitized.toLowerCase();
-  for (const func of SAFE_MATH_FUNCS) {
-    exprForValidation = exprForValidation.replace(new RegExp(`\\b${func}\\b`, 'gi'), '');
+  for (const pattern of FORBIDDEN_PATTERNS) {
+    if (pattern.test(sanitized)) {
+      return `**Error**: expression contains forbidden pattern: ${pattern.source}\nExpression: \`${sanitized}\``;
+    }
   }
 
-  // After removing safe functions, only safe chars should remain
-  const SAFE_CHAR_PATTERN = /^[0-9+\-*/().%^\s]*$/;
-  if (!SAFE_CHAR_PATTERN.test(exprForValidation)) {
-    return `**Error**: expression contains unsafe characters or forbidden identifiers.\nExpression: \`${sanitized}\`\nOnly allowed: numbers, operators (+,-,*,/,%,^), parentheses, and functions (${SAFE_MATH_FUNCS.join(', ')}).`;
-  }
-
-  // Try native eval with Function constructor (safer than eval)
   try {
-    // Map common math function names
-    const mapped = sanitized
-      .replace(/\bpi\b/gi, 'Math.PI')
-      .replace(/\be\b/gi, 'Math.E')
-      .replace(/\^/g, '**') // power operator
-      .replace(/\b(?:sin|cos|tan|sqrt|abs|log|log10|exp|floor|ceil|round|pow|min|max)\b/gi, (m) => `Math.${m}`);
+    // Use math.js evaluate with limited scope - this is sandboxed and safe
+    // mathjs only allows mathematical expressions, no code execution
+    const result = math.evaluate(sanitized, limitedScope);
 
-    const result = new Function(`"use strict"; return (${mapped})`)();
-
+    // Validate result is a number
     if (typeof result !== 'number' || !isFinite(result)) {
       return `**Error**: result is not a finite number (got: ${result}).\nExpression: \`${sanitized}\``;
     }
