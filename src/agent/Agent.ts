@@ -31,6 +31,19 @@ export interface AgentCallbacks {
 }
 
 export class Agent {
+  private static readonly CACHE_TTL_MS = 30_000;
+  private static readonly MAX_RETRY_DELAY_MS = 30_000;
+  private static readonly SIMILARITY_PREFIX_LEN = 100;
+  private static readonly MAX_RECENT_TEXTS = 4;
+  private static readonly MIN_REPEAT_TEXTS_FOR_FUZZY = 2;
+  private static readonly CONTEXT_SOFT_LIMIT = 200;
+  private static readonly CONTEXT_KEEP_RECENT = 50;
+  private static readonly DECISION_MAX_LEN = 200;
+  private static readonly DECISION_TRUNCATE = 150;
+  private static readonly FILE_LIST_TRUNCATE = 300;
+  private static readonly TOP_TOOLS_COUNT = 10;
+  private static readonly KEY_DECISIONS_COUNT = 5;
+
   private client: LLMClient;
   private history: LLMMessage[] = [];
   private cbs: AgentCallbacks = {};
@@ -40,7 +53,6 @@ export class Agent {
 
   // Tool result cache — avoid re-reading unchanged files within a session
   private toolCache = new Map<string, { result: string; timestamp: number }>();
-  private static CACHE_TTL_MS = 30_000; // 30s cache for read-only tools
 
   // Pending reads — deduplicate concurrent Read/Glob calls for the same key
   private pendingReads = new Map<string, Promise<string>>();
@@ -145,7 +157,7 @@ export class Agent {
             err.message.includes('ETIMEDOUT'));
 
         if (attempt < this.maxRetries && isRetryable) {
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30_000);
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), Agent.MAX_RETRY_DELAY_MS);
           const delayStr = delay >= 1000 ? `${(delay / 1000).toFixed(1)}s` : `${delay}ms`;
           this.cbs.onError?.(
             `⚠️ ${label} failed (attempt ${attempt}/${this.maxRetries})\n` +
@@ -268,18 +280,205 @@ export class Agent {
   /** Check if text is near-duplicate of any recent response (simple prefix match). */
   private computeSimilarity(text: string): number {
     if (this.recentAssistantTexts.length === 0) return 0;
-    const prefix = text.slice(0, 100).toLowerCase();
+    const prefix = text.slice(0, Agent.SIMILARITY_PREFIX_LEN).toLowerCase();
     // Exact prefix match with any of the last 4 responses → treat as repeat
     for (const prev of this.recentAssistantTexts) {
-      if (prev.slice(0, 100).toLowerCase() === prefix) return 1.0;
+      if (prev.slice(0, Agent.SIMILARITY_PREFIX_LEN).toLowerCase() === prefix) return 1.0;
     }
     return 0;
+  }
+
+  /** If history exceeds the soft limit, replace older messages with a structured summary. */
+  private summarizeContext(messages: LLMMessage[]): LLMMessage[] {
+    if (messages.length <= Agent.CONTEXT_SOFT_LIMIT) return messages;
+
+    let cutIndex = messages.length - Agent.CONTEXT_KEEP_RECENT;
+    while (cutIndex < messages.length) {
+      const firstRetained = messages[cutIndex];
+      const hasOrphanToolUse =
+        firstRetained.role === 'assistant' &&
+        Array.isArray(firstRetained.content) &&
+        firstRetained.content.some((b: { type: string }) => b.type === 'tool_use');
+      const hasOrphanToolResult =
+        firstRetained.role === 'user' &&
+        Array.isArray(firstRetained.content) &&
+        firstRetained.content.some((b: { type: string }) => b.type === 'tool_result');
+      if (hasOrphanToolUse || hasOrphanToolResult) {
+        cutIndex++;
+      } else {
+        break;
+      }
+    }
+
+    const toSummarize = messages.slice(0, cutIndex);
+    const modifiedFiles = new Set<string>();
+    const decisions: string[] = [];
+    const toolCounts = new Map<string, number>();
+    let totalUserMsgs = 0;
+
+    for (const m of toSummarize) {
+      if (m.role === 'user' && typeof m.content === 'string' && m.content.length > 0) {
+        totalUserMsgs++;
+        if (m.content.length < Agent.DECISION_MAX_LEN && !m.content.startsWith('[')) {
+          decisions.push(m.content.replace(/\n/g, ' ').slice(0, Agent.DECISION_TRUNCATE));
+        }
+      }
+      if (Array.isArray(m.content)) {
+        for (const b of m.content) {
+          if (b.type === 'tool_use' && b.name) {
+            toolCounts.set(b.name, (toolCounts.get(b.name) || 0) + 1);
+            if ((b.name === 'Write' || b.name === 'Edit') && b.input) {
+              const path = String((b.input as Record<string, unknown>)['filePath'] ?? '');
+              if (path) modifiedFiles.add(path);
+            }
+            if (b.name === 'Bash' && b.input) {
+              const cmd = String((b.input as Record<string, unknown>)['command'] ?? '');
+              if (cmd.startsWith('cd ') || cmd.startsWith('mkdir ')) {
+                const path = cmd.split(/\s+/)[1];
+                if (path) modifiedFiles.add(path);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const summaryParts: string[] = ['[Prior context summary:'];
+    if (totalUserMsgs > 0) summaryParts.push(`  assistant responded to ${totalUserMsgs} user messages`);
+    if (modifiedFiles.size > 0) {
+      summaryParts.push(`  files modified: ${[...modifiedFiles].join(', ').slice(0, Agent.FILE_LIST_TRUNCATE)}`);
+    }
+    if (toolCounts.size > 0) {
+      const toolsStr = [...toolCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, Agent.TOP_TOOLS_COUNT)
+        .map(([name, count]) => `${name}(${count})`)
+        .join(', ');
+      summaryParts.push(`  tools used: ${toolsStr}`);
+    }
+    const keyDecisions = decisions.slice(-Agent.KEY_DECISIONS_COUNT);
+    if (keyDecisions.length > 0) {
+      summaryParts.push('  key requests:');
+      for (const d of keyDecisions) summaryParts.push(`    · ${d}`);
+    }
+    summaryParts.push(']');
+
+    const recent = messages.slice(cutIndex);
+    const result: LLMMessage[] = [];
+    result.push({ role: 'user' as const, content: summaryParts.join('\n') });
+    result.push(...recent);
+    return result;
+  }
+
+  /** Execute Question tool (blocking) then all other tools in parallel. */
+  private async executeToolBatch(
+    toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>,
+    signal: AbortSignal,
+  ): Promise<{ results: ToolResult[]; ids: string[] }> {
+    const toolResults: ToolResult[] = [];
+    const toolResultIds: string[] = [];
+    this.cbs.onToolBatch?.(toolCalls.length);
+
+    // Handle Question tool first (blocking)
+    for (let i = 0; i < toolCalls.length; i++) {
+      const tc = toolCalls[i];
+      toolResultIds[i] = tc.id;
+      if (tc.name === 'Question') {
+        if (signal.aborted) {
+          toolResults[i] = { tool: tc.name, input: tc.input, output: 'Cancelled by user', isError: true };
+          continue;
+        }
+        const t0 = Date.now();
+        const q = String(tc.input['question'] ?? '');
+        const options = Array.isArray(tc.input['options'])
+          ? (tc.input['options'] as Array<{ label: string; description: string }>)
+          : undefined;
+        this.cbs.onQuestion?.(q, options);
+        const answer = await new Promise<string>((resolve) => {
+          this.questionResolve = resolve;
+        });
+        this.recordToolCall(tc.name, Date.now() - t0, false);
+        toolResults[i] = { tool: tc.name, input: tc.input, output: answer, isError: false };
+      }
+    }
+
+    // Execute non-Question tools in parallel
+    await Promise.all(
+      toolCalls.map(async (tc, i) => {
+        if (tc.name === 'Question') return;
+        if (signal.aborted) {
+          toolResults[i] = { tool: tc.name, input: tc.input, output: 'Cancelled by user', isError: true };
+          return;
+        }
+        try {
+          toolResultIds[i] = tc.id;
+          const tool = getTool(tc.name);
+          if (!tool) {
+            toolResults[i] = { tool: tc.name, input: tc.input, output: `Unknown: ${tc.name}`, isError: true };
+            this.cbs.onToolResult?.(tc.name, `Unknown: ${tc.name}`, true);
+            return;
+          }
+          this.cbs.onToolStart?.(tc.name, tc.input);
+
+          const cacheable = tc.name === 'Read' || tc.name === 'Glob';
+          const cacheKey = cacheable ? this.cacheKey(tc.name, tc.input) : undefined;
+          if (cacheKey) {
+            const cached = this.toolCache.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < Agent.CACHE_TTL_MS) {
+              toolResults[i] = { tool: tc.name, input: tc.input, output: cached.result, isError: false };
+              return;
+            }
+            const pending = this.pendingReads.get(cacheKey);
+            if (pending) {
+              try {
+                const output = await pending;
+                toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
+                this.cbs.onToolResult?.(tc.name, output, false);
+                return;
+              } catch {
+                // Pending read failed; fall through to retry
+              }
+            }
+          }
+
+          const t0 = Date.now();
+          try {
+            const executePromise = tool.execute(tc.input);
+            if (cacheKey) this.pendingReads.set(cacheKey, executePromise);
+            const output = await executePromise;
+            this.recordToolCall(tc.name, Date.now() - t0, false);
+            toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
+            this.cbs.onToolResult?.(tc.name, output, false);
+            if (cacheKey) {
+              this.toolCache.set(cacheKey, { result: output, timestamp: Date.now() });
+              this.pendingReads.delete(cacheKey);
+            }
+            if (tc.name === 'Write' || tc.name === 'Edit') this.invalidateCache();
+          } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            this.recordToolCall(tc.name, Date.now() - t0, true);
+            toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
+            this.cbs.onToolResult?.(tc.name, errorMsg, true);
+            if (cacheKey) this.pendingReads.delete(cacheKey);
+          }
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          toolResults[i] = {
+            tool: tc.name,
+            input: tc.input,
+            output: `Unexpected error in tool executor: ${errMsg}`,
+            isError: true,
+          };
+        }
+      }),
+    );
+
+    return { results: toolResults, ids: toolResultIds };
   }
 
   async run(prompt: string): Promise<void> {
     const messages = this.jsonClone(this.history);
 
-    // Pre-analysis: inject planning guidance for complex prompts
     const isComplex = prompt.length > 200 || (prompt.match(/[。；;.!?？]/g) || []).length >= 2 || prompt.includes('\n');
     const userMsg = isComplex
       ? `Task: ${prompt}\n\nFirst: briefly outline your approach (what you'll do step by step).\nThen: execute.`
@@ -299,104 +498,16 @@ export class Agent {
 
     const maxTurns = config.maxTurns;
 
-    // Context window management: if history is very large, insert a structured summary
-    // 1M context allows ~200+ messages before compression is needed
-    const CONTEXT_SOFT_LIMIT = 200; // messages beyond this trigger summarization
-    if (messages.length > CONTEXT_SOFT_LIMIT) {
-      const keepRecent = 50; // keep this many most recent messages intact
-
-      // Find a safe cut point that doesn't split tool_use/tool_result pairs
-      let cutIndex = messages.length - keepRecent;
-      while (cutIndex < messages.length) {
-        const firstRetained = messages[cutIndex];
-        const hasOrphanToolUse =
-          firstRetained.role === 'assistant' &&
-          Array.isArray(firstRetained.content) &&
-          firstRetained.content.some((b: { type: string }) => b.type === 'tool_use');
-        const hasOrphanToolResult =
-          firstRetained.role === 'user' &&
-          Array.isArray(firstRetained.content) &&
-          firstRetained.content.some((b: { type: string }) => b.type === 'tool_result');
-        if (hasOrphanToolUse || hasOrphanToolResult) {
-          cutIndex++; // include this message in the summary to keep tool_use/tool_result pairs intact
-        } else {
-          break;
-        }
-      }
-
-      const toSummarize = messages.slice(0, cutIndex);
-
-      // Build a structured summary instead of truncated text:
-      // extract modified files, key decisions, tool usage patterns
-      const modifiedFiles = new Set<string>();
-      const decisions: string[] = [];
-      const toolCounts = new Map<string, number>();
-      let totalUserMsgs = 0;
-
-      for (const m of toSummarize) {
-        if (m.role === 'user' && typeof m.content === 'string' && m.content.length > 0) {
-          totalUserMsgs++;
-          // Capture user's last directive in this summarized segment
-          if (m.content.length < 200 && !m.content.startsWith('[')) {
-            decisions.push(m.content.replace(/\n/g, ' ').slice(0, 150));
-          }
-        }
-        if (Array.isArray(m.content)) {
-          for (const b of m.content) {
-            if (b.type === 'tool_use' && b.name) {
-              toolCounts.set(b.name, (toolCounts.get(b.name) || 0) + 1);
-              // Track modified files from Write/Edit tool calls
-              if ((b.name === 'Write' || b.name === 'Edit') && b.input) {
-                const path = String((b.input as Record<string, unknown>)['filePath'] ?? '');
-                if (path) modifiedFiles.add(path);
-              }
-              if (b.name === 'Bash' && b.input) {
-                const cmd = String((b.input as Record<string, unknown>)['command'] ?? '');
-                if (cmd.startsWith('cd ') || cmd.startsWith('mkdir ')) {
-                  const path = cmd.split(/\s+/)[1];
-                  if (path) modifiedFiles.add(path);
-                }
-              }
-            }
-          }
-        }
-      }
-
-      const summaryParts: string[] = ['[Prior context summary:'];
-      if (totalUserMsgs > 0) summaryParts.push(`  assistant responded to ${totalUserMsgs} user messages`);
-      if (modifiedFiles.size > 0) {
-        summaryParts.push(`  files modified: ${[...modifiedFiles].join(', ').slice(0, 300)}`);
-      }
-      if (toolCounts.size > 0) {
-        const toolsStr = [...toolCounts.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 10)
-          .map(([name, count]) => `${name}(${count})`)
-          .join(', ');
-        summaryParts.push(`  tools used: ${toolsStr}`);
-      }
-      // Include key decisions from user messages
-      const keyDecisions = decisions.slice(-5);
-      if (keyDecisions.length > 0) {
-        summaryParts.push('  key requests:');
-        for (const d of keyDecisions) summaryParts.push(`    · ${d}`);
-      }
-      summaryParts.push(']');
-
-      // Replace old messages with summary + keep recent ones
-      const recent = messages.slice(cutIndex);
-      messages.length = 0;
-      messages.push({ role: 'user' as const, content: summaryParts.join('\n') });
-      messages.push(...recent);
-    }
+    // Apply context summarization if history is large
+    const summarized = this.summarizeContext(messages);
+    messages.length = 0;
+    messages.push(...summarized);
 
     for (let turn = 0; turn < maxTurns; turn++) {
       logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
 
-      // Build system prompt (cached, only rebuilds when memory changes)
       const systemPrompt = await this.getSystemPrompt();
 
-      // Call LLM
       const streamResult = await this.withRetry(async () => {
         const textParts: string[] = [];
         const toolCallsInner: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
@@ -440,35 +551,24 @@ export class Agent {
             if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
           }
         }
-
         return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
       }, 'LLM streaming API call');
 
       const { toolCalls, assistantText } = streamResult;
-
       const assistantContent: AssistantContentBlock[] = [];
 
-      if (assistantText) {
-        assistantContent.push({ type: 'text', text: assistantText });
-      }
-
+      if (assistantText) assistantContent.push({ type: 'text', text: assistantText });
       for (const tc of toolCalls) {
         assistantContent.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input });
       }
-
       messages.push({ role: 'assistant', content: assistantContent });
 
+      // Anti-repetition check
       if (assistantText) {
-        // Anti-repetition with fuzzy matching:
-        // 1. Exact match on consecutive turns → immediate stop
-        // 2. High word overlap (>85%) with any of last 4 responses → stop
         if (assistantText === this.lastAssistantText) {
           this.repeatCount++;
           if (this.repeatCount >= 1) {
             this.cbs.onError?.('Agent loop detected (exact repeat) — stopping');
-            // Fill in placeholder results for any pending tool calls so the API
-            // history remains consistent (assistant + tool_use must be followed
-            // by tool_result).
             if (toolCalls.length > 0) {
               messages.push({
                 role: 'user',
@@ -483,36 +583,32 @@ export class Agent {
             this.history = messages;
             break;
           }
+        } else if (
+          this.computeSimilarity(assistantText) > 0 &&
+          this.recentAssistantTexts.length >= Agent.MIN_REPEAT_TEXTS_FOR_FUZZY
+        ) {
+          this.cbs.onError?.('Agent loop detected (similar repeat) — stopping');
+          if (toolCalls.length > 0) {
+            messages.push({
+              role: 'user',
+              content: toolCalls.map((tc) => ({
+                type: 'tool_result' as const,
+                tool_use_id: tc.id,
+                content: '[Cancelled by anti-repetition guard]',
+                is_error: true,
+              })),
+            });
+          }
+          this.history = messages;
+          break;
         } else {
-          // Fuzzy check: compare prefix with recent responses
-          if (this.computeSimilarity(assistantText) > 0 && this.recentAssistantTexts.length >= 2) {
-            this.cbs.onError?.('Agent loop detected (similar repeat) — stopping');
-            if (toolCalls.length > 0) {
-              messages.push({
-                role: 'user',
-                content: toolCalls.map((tc) => ({
-                  type: 'tool_result' as const,
-                  tool_use_id: tc.id,
-                  content: '[Cancelled by anti-repetition guard]',
-                  is_error: true,
-                })),
-              });
-            }
-            this.history = messages;
-            break;
-          }
           this.repeatCount = 0;
         }
-
         this.lastAssistantText = assistantText;
         this.recentAssistantTexts.push(assistantText);
-        if (this.recentAssistantTexts.length > 4) {
+        if (this.recentAssistantTexts.length > Agent.MAX_RECENT_TEXTS) {
           this.recentAssistantTexts.shift();
         }
-
-        // Text was already streamed via onAgentDelta deltas — skip onAgentText
-        // to avoid duplicate output. Only fire for non-streamed responses.
-        // this.cbs.onAgentText?.(assistantText); // removed: causes double output
       }
 
       if (toolCalls.length === 0) {
@@ -520,14 +616,9 @@ export class Agent {
         break;
       }
 
-      // Execute tools — parallel for speed, Question handled first
-      const toolResults: ToolResult[] = [];
-      const toolResultIds: string[] = [];
-      this.cbs.onToolBatch?.(toolCalls.length);
+      // Execute tools
       this.abortController = new AbortController();
       const signal = this.abortController.signal;
-
-      // 同步取消信号到 ToolContext，Task 子代理会读取它
       setToolContext({
         anthropicClient: null,
         llmClient: this.client,
@@ -537,125 +628,9 @@ export class Agent {
         signal,
       });
 
-      // Handle Question tool first (it blocks for user input)
-      for (let i = 0; i < toolCalls.length; i++) {
-        const tc = toolCalls[i];
-        toolResultIds[i] = tc.id;
-
-        if (tc.name === 'Question') {
-          if (signal.aborted) {
-            toolResults[i] = { tool: tc.name, input: tc.input, output: 'Cancelled by user', isError: true };
-            continue;
-          }
-          const t0 = Date.now();
-          const q = String(tc.input['question'] ?? '');
-          const options = Array.isArray(tc.input['options'])
-            ? (tc.input['options'] as Array<{ label: string; description: string }>)
-            : undefined;
-          this.cbs.onQuestion?.(q, options);
-          const answer = await new Promise<string>((resolve) => {
-            this.questionResolve = resolve;
-          });
-          this.recordToolCall(tc.name, Date.now() - t0, false);
-          toolResults[i] = { tool: tc.name, input: tc.input, output: answer, isError: false };
-        }
-      }
-
-      // Execute all non-Question tools in parallel
-      const parallelTasks = toolCalls.map(async (tc, i) => {
-        if (tc.name === 'Question') return; // already handled above
-        if (signal.aborted) {
-          toolResults[i] = { tool: tc.name, input: tc.input, output: 'Cancelled by user', isError: true };
-          return;
-        }
-
-        try {
-          toolResultIds[i] = tc.id;
-
-          const tool = getTool(tc.name);
-          if (!tool) {
-            toolResults[i] = { tool: tc.name, input: tc.input, output: `Unknown: ${tc.name}`, isError: true };
-            this.cbs.onToolResult?.(tc.name, `Unknown: ${tc.name}`, true);
-            return;
-          }
-
-          this.cbs.onToolStart?.(tc.name, tc.input);
-
-          // Check cache for read-only tools (Read, Glob)
-          const cacheable = tc.name === 'Read' || tc.name === 'Glob';
-          const cacheKey = cacheable ? this.cacheKey(tc.name, tc.input) : undefined;
-          if (cacheKey) {
-            const cached = this.toolCache.get(cacheKey);
-            if (cached && Date.now() - cached.timestamp < Agent.CACHE_TTL_MS) {
-              toolResults[i] = { tool: tc.name, input: tc.input, output: cached.result, isError: false };
-              return;
-            }
-
-            // Deduplicate concurrent reads: if another call is already fetching
-            // the same key, await that in-flight promise instead of re-executing.
-            const pending = this.pendingReads.get(cacheKey);
-            if (pending) {
-              try {
-                const output = await pending;
-                toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
-                this.cbs.onToolResult?.(tc.name, output, false);
-                return;
-              } catch {
-                // Pending read failed; fall through to retry
-              }
-            }
-          }
-
-          const t0 = Date.now();
-          try {
-            const executePromise = tool.execute(tc.input);
-
-            // Register in-flight promise so concurrent calls for the same key can share it
-            if (cacheKey) {
-              this.pendingReads.set(cacheKey, executePromise);
-            }
-
-            const output = await executePromise;
-            this.recordToolCall(tc.name, Date.now() - t0, false);
-            toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
-            this.cbs.onToolResult?.(tc.name, output, false);
-
-            // Cache successful read-only tool results
-            if (cacheKey) {
-              this.toolCache.set(cacheKey, { result: output, timestamp: Date.now() });
-              this.pendingReads.delete(cacheKey);
-            }
-
-            // Invalidate tool cache on writes — filesystem state changed
-            if (tc.name === 'Write' || tc.name === 'Edit') {
-              this.invalidateCache();
-            }
-          } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : String(err);
-            this.recordToolCall(tc.name, Date.now() - t0, true);
-            toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
-            this.cbs.onToolResult?.(tc.name, errorMsg, true);
-
-            // Clean up pending read on failure so subsequent calls retry
-            if (cacheKey) {
-              this.pendingReads.delete(cacheKey);
-            }
-          }
-        } catch (err) {
-          const errMsg = err instanceof Error ? err.message : String(err);
-          toolResults[i] = {
-            tool: tc.name,
-            input: tc.input,
-            output: `Unexpected error in tool executor: ${errMsg}`,
-            isError: true,
-          };
-        }
-      });
-
-      await Promise.all(parallelTasks);
+      const { results: toolResults, ids: toolResultIds } = await this.executeToolBatch(toolCalls, signal);
       this.abortController = null;
 
-      // Map results to tool_use_ids by position (handles duplicate tool names correctly)
       const toolResultContent: ToolResultBlock[] = toolResults.map((tr, i) => ({
         type: 'tool_result',
         tool_use_id: toolResultIds[i] ?? 'unknown',
