@@ -1,5 +1,6 @@
 import { execa } from 'execa';
 import { checkPermission } from '../permission/index.js';
+import { auditLog } from '../utils/sessionStore.js';
 
 // User-customizable deny list from env var (comma-separated words)
 const DENY_LIST = (process.env['CODEYANG_DENY_COMMANDS'] || '')
@@ -36,11 +37,22 @@ export async function executeBash(command: string, cwd?: string, timeoutSecs = 3
   if (command.startsWith('ALLOW: ')) {
     command = command.slice(7).trim();
     skipPermissionCheck = true;
+    void auditLog({
+      action: 'bash_allow_bypass',
+      command,
+      cwd: cwd || process.cwd(),
+    });
   }
 
   // Security: always check deny list, even with ALLOW prefix
   // (deny list is a hard security boundary, not a soft permission check)
   if (isDenied(command)) {
+    void auditLog({
+      action: 'bash_denied',
+      command,
+      cwd: cwd || process.cwd(),
+      result: 'blocked_by_deny_list',
+    });
     throw new Error(`[SAFETY] Command blocked by deny list (cannot be overridden with ALLOW).`);
   }
 
