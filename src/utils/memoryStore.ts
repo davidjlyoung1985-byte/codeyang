@@ -83,8 +83,12 @@ function searchIndexed(query: string, allMemories: Map<string, Memory>): Memory[
   // Start with the first token's set, intersect with the rest
   let resultSet = allTokenSets[0];
   for (let i = 1; i < allTokenSets.length; i++) {
-    const next = allTokenSets[i];
-    resultSet = new Set([...resultSet].filter((id) => next.has(id)));
+    let next = allTokenSets[i];
+    // Iterate over smaller set for O(min(n,m)) complexity
+    if (next.size < resultSet.size) [resultSet, next] = [next, resultSet];
+    for (const id of resultSet) {
+      if (!next.has(id)) resultSet.delete(id);
+    }
   }
 
   return [...resultSet].map((id) => allMemories.get(id)).filter((m): m is Memory => m !== undefined);
