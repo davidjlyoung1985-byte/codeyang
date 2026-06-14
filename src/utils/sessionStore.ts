@@ -6,9 +6,14 @@ import type { Session, Message } from '../types.js';
 
 const SESSIONS_DIR = join(homedir(), '.codeyang', 'sessions');
 const INDEX_FILE = join(homedir(), '.codeyang', 'sessions.index.json');
+const AUDIT_LOG = join(homedir(), '.codeyang', 'audit.log');
 
 /** Estimated max tokens per saved session (≈ 1M tokens). Prune based on content size, not message count. */
 const MAX_SESSION_TOKENS = 1_000_000;
+
+const MAX_IMPORT_FILE_SIZE = 10 * 1024 * 1024;
+const VALID_ROLES = new Set(['system', 'user', 'assistant']);
+const TOOL_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9._-]{0,127}$/;
 
 /** Rough token estimate: 1 token ≈ 4 characters for typical code/text. */
 function estimateTokens(msg: Message): number {
@@ -299,6 +304,99 @@ export async function exportSessionAsJson(id: string): Promise<Session> {
   return session;
 }
 
+export function validateSession(data: unknown): string[] {
+  const errors: string[] = [];
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    errors.push('Data must be a non-null, non-array object');
+    return errors;
+  }
+  const obj = data as Record<string, unknown>;
+  if (typeof obj.id !== 'string' || obj.id.length === 0) {
+    errors.push('"id" must be a non-empty string');
+  }
+  if (!Array.isArray(obj.messages)) {
+    errors.push('"messages" must be an array');
+    return errors;
+  }
+  for (let i = 0; i < obj.messages.length; i++) {
+    const msg = obj.messages[i];
+    if (!msg || typeof msg !== 'object') {
+      errors.push(`messages[${i}]: must be an object`);
+      continue;
+    }
+    const m = msg as Record<string, unknown>;
+    if (typeof m.role !== 'string') {
+      errors.push(`messages[${i}]: missing "role" field`);
+    } else if (!VALID_ROLES.has(m.role)) {
+      errors.push(`messages[${i}]: invalid role "${m.role}"`);
+    }
+    if (m.content !== undefined && m.content !== null && typeof m.content !== 'string') {
+      errors.push(`messages[${i}]: "content" must be a string or null`);
+    }
+    if (m.toolCalls !== undefined) {
+      if (!Array.isArray(m.toolCalls)) {
+        errors.push(`messages[${i}]: "toolCalls" must be an array`);
+      } else {
+        for (let j = 0; j < (m.toolCalls as unknown[]).length; j++) {
+          const tc = (m.toolCalls as unknown[])[j] as Record<string, unknown>;
+          if (!tc || typeof tc !== 'object') {
+            errors.push(`messages[${i}].toolCalls[${j}]: must be an object`);
+            continue;
+          }
+          if (typeof tc.name !== 'string' || !TOOL_NAME_PATTERN.test(tc.name)) {
+            errors.push(`messages[${i}].toolCalls[${j}]: invalid tool name "${String(tc.name)}"`);
+          }
+          if (tc.args !== undefined && typeof tc.args !== 'object') {
+            errors.push(`messages[${i}].toolCalls[${j}]: "args" must be an object`);
+          }
+        }
+      }
+    }
+    if (m.toolResults !== undefined) {
+      if (!Array.isArray(m.toolResults)) {
+        errors.push(`messages[${i}]: "toolResults" must be an array`);
+      } else {
+        for (let j = 0; j < (m.toolResults as unknown[]).length; j++) {
+          const tr = (m.toolResults as unknown[])[j] as Record<string, unknown>;
+          if (!tr || typeof tr !== 'object') {
+            errors.push(`messages[${i}].toolResults[${j}]: must be an object`);
+            continue;
+          }
+          if (typeof tr.output !== 'string') {
+            errors.push(`messages[${i}].toolResults[${j}]: missing "output" string`);
+          }
+        }
+      }
+    }
+  }
+  if (obj.title !== undefined && typeof obj.title !== 'string') {
+    errors.push('"title" must be a string');
+  }
+  for (const field of ['createdAt', 'updatedAt']) {
+    if (obj[field] !== undefined && (typeof obj[field] !== 'string' || isNaN(Date.parse(obj[field] as string)))) {
+      errors.push(`"${field}" must be a valid ISO date string`);
+    }
+  }
+  return errors;
+}
+
+export async function auditLog(entry: {
+  action: string;
+  command?: string;
+  cwd?: string;
+  result?: string;
+  details?: string;
+}): Promise<void> {
+  const timestamp = new Date().toISOString();
+  const line = JSON.stringify({ timestamp, ...entry }) + '\n';
+  try {
+    await mkdir(join(homedir(), '.codeyang'), { recursive: true });
+    await writeFile(AUDIT_LOG, line, { flag: 'a' });
+  } catch {
+    // never throw
+  }
+}
+
 /**
  * Import a previously exported session JSON file and save it as a new
  * session (or update an existing one if the ID matches an existing session).
@@ -306,7 +404,10 @@ export async function exportSessionAsJson(id: string): Promise<Session> {
  * Returns the session ID.
  */
 export async function importSession(session: Session): Promise<string> {
-  // Preserve the original ID so re‑importing the same export is idempotent.
+  const errors = validateSession(session);
+  if (errors.length > 0) {
+    throw new Error(`Session validation failed:\n${errors.map((e) => `- ${e}`).join('\n')}`);
+  }
   return saveSession(session.messages, session.id);
 }
 
@@ -316,13 +417,37 @@ export async function importSession(session: Session): Promise<string> {
  */
 export async function importSessionFromFile(filePath: string): Promise<string> {
   const absPath = resolve(filePath);
-  const raw = await readFile(absPath, 'utf-8');
-  const session: Session = JSON.parse(raw);
-
-  // Validate minimal required fields
-  if (!session.id || !session.messages || !Array.isArray(session.messages)) {
-    throw new Error(`Invalid session file: must contain "id" (string) and "messages" (array).`);
+  let fileStat;
+  try {
+    fileStat = await stat(absPath);
+  } catch (err) {
+    throw new Error(
+      `Cannot read session file: "${filePath}" — ${
+        err instanceof Error ? err.message : 'file not found or inaccessible'
+      }`,
+    );
   }
-
-  return importSession(session);
+  if (fileStat.size > MAX_IMPORT_FILE_SIZE) {
+    throw new Error(
+      `Session file too large: ${(fileStat.size / (1024 * 1024)).toFixed(1)} MB (max: ${MAX_IMPORT_FILE_SIZE / (1024 * 1024)} MB)`,
+    );
+  }
+  let raw: string;
+  try {
+    raw = await readFile(absPath, 'utf-8');
+  } catch (err) {
+    throw new Error(`Cannot read session file: "${filePath}" — ${err instanceof Error ? err.message : String(err)}`);
+  }
+  let sessionData: unknown;
+  try {
+    sessionData = JSON.parse(raw);
+  } catch {
+    throw new Error(`Invalid JSON in session file: "${filePath}"`);
+  }
+  const errors = validateSession(sessionData);
+  if (errors.length > 0) {
+    throw new Error(`Session validation failed:\n${errors.map((e) => `- ${e}`).join('\n')}`);
+  }
+  const session = sessionData as Session;
+  return saveSession(session.messages, session.id);
 }
