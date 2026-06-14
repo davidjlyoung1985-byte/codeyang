@@ -11,3 +11,15 @@ coverage/
 Thumbs.db
 *.vsix
 Understand-Anything/
+
+# Debug artifacts
+debug-electron*.cjs
+debug-electron*.mjs
+fix-electron-index.js
+test-api.cjs
+test-esm.mjs
+test-final.cjs
+test-global.cjs
+test-native*.cjs
+test-app/
+.tmp-electron/
