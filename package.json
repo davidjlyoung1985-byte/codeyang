@@ -1,100 +1,100 @@
 {
-  "name": "codeyang",
-  "version": "0.7.0",
-  "description": "Terminal-based AI coding agent with 64+ tools, code refactoring, MCP support, and session persistence",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "bin": {
-    "codeyang": "./dist/index.js",
-    "codeyangx": "./dist/codeyangx.js",
-    "codeyang-web": "./dist/web-server.js"
-  },
-  "files": [
-    "dist",
-    "codeyangx"
-  ],
-  "engines": {
-    "node": ">=18"
-  },
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/davidjlyoung1985-byte/codeyang.git"
-  },
-  "homepage": "https://github.com/davidjlyoung1985-byte/codeyang#readme",
-  "bugs": {
-    "url": "https://github.com/davidjlyoung1985-byte/codeyang/issues"
-  },
-  "scripts": {
-    "build": "tsup --config tsup.config.ts",
-    "dev": "tsup src/index.ts --format esm --clean --sourcemap --watch --outDir dist",
-    "start": "node dist/index.js",
-    "web:server": "tsx web/server/index.ts",
-    "web:client": "vite",
-    "web:build": "vite build",
-    "web:dev": "concurrently \"npm run web:server\" \"npm run web:client\"",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "bench": "vitest run --reporter=verbose src/utils/memoryStore.bench.ts src/tools/GlobTool.bench.ts",
-    "prepublishOnly": "npm run build",
-    "lint": "eslint src/ --ext .ts",
-    "lint:fix": "eslint src/ --ext .ts --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
-    "generate-docs": "npx tsx src/tools/auto-docs.ts",
-    "check": "npx tsc --noEmit",
-    "prepare": "husky"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.0",
-    "@babel/parser": "^7.29.7",
-    "@babel/traverse": "^7.29.7",
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "acorn": "^8.16.0",
-    "acorn-walk": "^8.3.5",
-    "axios": "^1.17.0",
-    "csv-parse": "^6.2.1",
-    "csv-stringify": "^6.7.0",
-    "dotenv": "^17.4.2",
-    "execa": "^9.3.0",
-    "fast-xml-parser": "^5.8.0",
-    "form-data": "^4.0.5",
-    "openai": "^6.42.0",
-    "picocolors": "^1.1.0",
-    "ws": "^8.18.0",
-    "yaml": "^2.9.0"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "prettier --check",
-      "eslint --fix"
-    ]
-  },
-  "devDependencies": {
-    "@types/babel__traverse": "^7.28.0",
-    "@types/node": "^25.9.1",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "@types/ws": "^8.5.13",
-    "@typescript-eslint/eslint-plugin": "^8.60.0",
-    "@typescript-eslint/parser": "^8.60.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "@vitest/coverage-v8": "^4.1.8",
-    "concurrently": "^9.1.2",
-    "electron": "^42.3.1",
-    "eslint": "^10.4.1",
-    "husky": "^9.1.7",
-    "lint-staged": "^17.0.7",
-    "prettier": "^3.8.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tsup": "^8.2.0",
-    "tsx": "^4.19.2",
-    "typescript": "^5.5.0",
-    "typescript-eslint": "^8.60.0",
-    "vite": "^6.0.11",
-    "vitest": "^4.1.7"
-  }
+    "name": "codeyang",
+    "version": "0.7.0",
+    "description": "Terminal-based AI coding agent with 64+ tools, code refactoring, MCP support, and session persistence",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "bin": {
+        "codeyang": "./dist/index.js",
+        "codeyangx": "./dist/codeyangx.js",
+        "codeyang-web": "./dist/web-server.js"
+    },
+    "files": [
+        "dist",
+        "codeyangx"
+    ],
+    "engines": {
+        "node": ">=18"
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/davidjlyoung1985-byte/codeyang.git"
+    },
+    "homepage": "https://github.com/davidjlyoung1985-byte/codeyang#readme",
+    "bugs": {
+        "url": "https://github.com/davidjlyoung1985-byte/codeyang/issues"
+    },
+    "scripts": {
+        "build": "tsup --config tsup.config.ts",
+        "dev": "tsup src/index.ts --format esm --clean --sourcemap --watch --outDir dist",
+        "start": "node dist/index.js",
+        "web:server": "tsx web/server/index.ts",
+        "web:client": "vite",
+        "web:build": "vite build",
+        "web:dev": "concurrently \"npm run web:server\" \"npm run web:client\"",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
+        "bench": "vitest run --reporter=verbose src/utils/memoryStore.bench.ts src/tools/GlobTool.bench.ts",
+        "prepublishOnly": "npm run build",
+        "lint": "eslint src/ --ext .ts",
+        "lint:fix": "eslint src/ --ext .ts --fix",
+        "format": "prettier --write \"src/**/*.ts\"",
+        "format:check": "prettier --check \"src/**/*.ts\"",
+        "generate-docs": "npx tsx src/tools/auto-docs.ts",
+        "check": "npx tsc --noEmit",
+        "prepare": "husky"
+    },
+    "dependencies": {
+        "@anthropic-ai/sdk": "^0.32.0",
+        "@babel/parser": "^7.29.7",
+        "@babel/traverse": "^7.29.7",
+        "@modelcontextprotocol/sdk": "^1.29.0",
+        "acorn": "^8.16.0",
+        "acorn-walk": "^8.3.5",
+        "axios": "^1.17.0",
+        "csv-parse": "^6.2.1",
+        "csv-stringify": "^6.7.0",
+        "dotenv": "^17.4.2",
+        "execa": "^9.3.0",
+        "fast-xml-parser": "^5.8.0",
+        "form-data": "^4.0.5",
+        "mathjs": "^15.2.0",
+        "openai": "^6.42.0",
+        "picocolors": "^1.1.0",
+        "ws": "^8.18.0",
+        "yaml": "^2.9.0"
+    },
+    "lint-staged": {
+        "*.ts": [
+            "prettier --check",
+            "eslint --fix"
+        ]
+    },
+    "devDependencies": {
+        "@types/babel__traverse": "^7.28.0",
+        "@types/node": "^25.9.1",
+        "@types/react": "^18.3.18",
+        "@types/react-dom": "^18.3.5",
+        "@types/ws": "^8.5.13",
+        "@typescript-eslint/eslint-plugin": "^8.60.0",
+        "@typescript-eslint/parser": "^8.60.1",
+        "@vitejs/plugin-react": "^4.3.4",
+        "@vitest/coverage-v8": "^4.1.8",
+        "concurrently": "^9.1.2",
+        "eslint": "^10.4.1",
+        "husky": "^9.1.7",
+        "lint-staged": "^17.0.7",
+        "prettier": "^3.8.3",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "tsup": "^8.2.0",
+        "tsx": "^4.19.2",
+        "typescript": "^5.5.0",
+        "typescript-eslint": "^8.60.0",
+        "vite": "^6.0.11",
+        "vitest": "^4.1.7"
+    }
 }
