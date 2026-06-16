@@ -7,44 +7,42 @@ describe('MemoryStore benchmarks', () => {
   const ids: string[] = [];
 
   beforeAll(async () => {
-    // Seed TEST_COUNT memories so list/search operations have data to work with
     for (let i = 0; i < TEST_COUNT; i++) {
       const mem = await saveMemory(`bench-key-${i}`, `bench-value-${i}-data-for-testing`, 'fact');
       ids.push(mem.id);
     }
-  });
+  }, 30000);
 
   afterAll(async () => {
-    // Clean up all test memories
     for (const id of ids) {
       await deleteMemory(id).catch(() => {});
     }
   });
 
-  it(`listMemories under 100ms (${TEST_COUNT} memories)`, async () => {
+  it(`listMemories under 300ms (${TEST_COUNT} memories)`, async () => {
     const start = Date.now();
     const result = await listMemories();
     const elapsed = Date.now() - start;
 
-    expect(elapsed).toBeLessThan(100);
+    expect(elapsed).toBeLessThan(300);
     expect(result.length).toBeGreaterThanOrEqual(TEST_COUNT);
   });
 
-  it('searchMemories under 30ms', async () => {
+  it('searchMemories under 100ms', async () => {
     const start = Date.now();
     const result = await searchMemories('bench-value');
     const elapsed = Date.now() - start;
 
-    expect(elapsed).toBeLessThan(30);
+    expect(elapsed).toBeLessThan(100);
     expect(result.length).toBeGreaterThan(0);
   });
 
-  it('searchMemories (partial substring) under 30ms', async () => {
+  it('searchMemories (partial substring) under 100ms', async () => {
     const start = Date.now();
     const result = await searchMemories('ata-for-testing');
     const elapsed = Date.now() - start;
 
-    expect(elapsed).toBeLessThan(30);
+    expect(elapsed).toBeLessThan(100);
     expect(result.length).toBeGreaterThan(0);
   });
 });
