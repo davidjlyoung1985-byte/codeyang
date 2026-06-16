@@ -1,4 +1,5 @@
 import { readFile, writeFile, mkdir, unlink, readdir, stat, rename, copyFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import crypto from 'node:crypto';
@@ -60,9 +61,53 @@ async function safeRename(src: string, dest: string): Promise<void> {
 
 /** Atomic file write: write to temp then rename to prevent partial reads by concurrent callers. */
 async function atomicWrite(filePath: string, data: string): Promise<void> {
-  const tmp = `${filePath}.tmp.${process.pid}`;
-  await writeFile(tmp, data, 'utf-8');
-  await safeRename(tmp, filePath);
+  // SECURITY: Use crypto-secure UUID instead of predictable PID
+  const tmp = `${filePath}.tmp.${crypto.randomUUID()}`;
+  try {
+    await writeFile(tmp, data, 'utf-8');
+    await safeRename(tmp, filePath);
+  } catch (err) {
+    // SECURITY: Clean up temp file on error
+    try {
+      await unlink(tmp);
+    } catch {
+      // Ignore cleanup errors
+    }
+    throw err;
+  }
+}
+
+/**
+ * SECURITY: Clean up old temporary files (orphaned from crashes or errors)
+ *
+ * Removes .tmp.* files older than 1 hour from sessions directory
+ */
+export async function cleanupTempFiles(): Promise<number> {
+  try {
+    await ensureDir();
+    const files = await readdir(SESSIONS_DIR);
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    let cleaned = 0;
+
+    for (const file of files) {
+      if (!file.match(/\.tmp\.[a-f0-9-]+$/)) continue;
+
+      const filePath = join(SESSIONS_DIR, file);
+      try {
+        const stats = await stat(filePath);
+        if (stats.mtimeMs < oneHourAgo) {
+          await unlink(filePath);
+          cleaned++;
+        }
+      } catch {
+        // File might have been deleted already, ignore
+      }
+    }
+
+    return cleaned;
+  } catch {
+    return 0;
+  }
 }
 
 async function readIndex(): Promise<Record<string, SessionMeta>> {
@@ -113,6 +158,35 @@ function pruneMessages(messages: Message[]): Message[] {
   return [...head, notice, ...keepTail];
 }
 
+/**
+ * SECURITY: Sanitize messages to redact sensitive information before saving
+ *
+ * Redacts common patterns for passwords, tokens, and API keys from message content
+ */
+function sanitizeMessages(messages: Message[]): Message[] {
+  return messages.map((msg) => {
+    // Only sanitize user messages (assistant messages are AI-generated, less risky)
+    if (msg.role !== 'user') return msg;
+
+    let content = msg.content;
+
+    // Redact API keys and tokens
+    content = content.replace(/\b(sk-[a-zA-Z0-9]{20,})/g, '[REDACTED_API_KEY]');
+    content = content.replace(/\b([a-f0-9]{32,64})\b/g, '[REDACTED_TOKEN]');
+
+    // Redact Bearer tokens
+    content = content.replace(/\b(Bearer\s+)[^\s]+/gi, '$1[REDACTED]');
+
+    // Redact password-like patterns
+    content = content.replace(/\b(password|passwd|pwd)[=:]\s*\S+/gi, '$1=[REDACTED]');
+
+    // Redact basic auth credentials (user:pass format)
+    content = content.replace(/\b([a-zA-Z0-9._-]+):([^\s@]+)@/g, '$1:[REDACTED]@');
+
+    return { ...msg, content };
+  });
+}
+
 export async function saveSession(messages: Message[], existingId?: string): Promise<string> {
   await ensureDir();
   const now = new Date().toISOString();
@@ -127,8 +201,11 @@ export async function saveSession(messages: Message[], existingId?: string): Pro
     createdAt = index[existingId]?.createdAt ?? now;
   }
 
+  // SECURITY: Sanitize sensitive information before saving
+  const sanitizedMessages = sanitizeMessages(messages);
+
   // Prune messages to prevent unbounded growth
-  const prunedMessages = pruneMessages(messages);
+  const prunedMessages = pruneMessages(sanitizedMessages);
 
   const session: Session = { id, title, createdAt, updatedAt: now, messages: prunedMessages };
   await atomicWrite(join(SESSIONS_DIR, `${id}.json`), JSON.stringify(session, null, 2));
@@ -151,6 +228,12 @@ export async function loadSession(id: string): Promise<Session | null> {
 
 export async function listSessions(): Promise<SessionMeta[]> {
   await ensureDir();
+
+  // SECURITY: Clean up old temp files on each list operation (lightweight cleanup)
+  cleanupTempFiles().catch(() => {
+    // Ignore cleanup errors, don't block listing
+  });
+
   const index = await readIndex();
   const entries = Object.values(index);
 
@@ -391,6 +474,18 @@ export async function auditLog(entry: {
   const line = JSON.stringify({ timestamp, ...entry }) + '\n';
   try {
     await mkdir(join(homedir(), '.codeyang'), { recursive: true });
+
+    // Rotate log file if it exceeds 10 MB
+    try {
+      const stats = await stat(AUDIT_LOG);
+      if (stats.size >= 10 * 1024 * 1024) {
+        const rotated = `${AUDIT_LOG}.1`;
+        await rename(AUDIT_LOG, rotated).catch(() => {});
+      }
+    } catch {
+      // File doesn't exist yet — first write, nothing to rotate
+    }
+
     await writeFile(AUDIT_LOG, line, { flag: 'a' });
   } catch {
     // never throw
@@ -414,9 +509,31 @@ export async function importSession(session: Session): Promise<string> {
 /**
  * Load a session from a JSON file on disk (any path) and save it into the
  * sessions store. Returns the session ID.
+ *
+ * SECURITY: Uses realpathSync to resolve symlinks before path validation
  */
 export async function importSessionFromFile(filePath: string): Promise<string> {
-  const absPath = resolve(filePath);
+  // SECURITY: Resolve symlinks in allowed base directory
+  const allowedBase = realpathSync(join(homedir(), '.codeyang'));
+
+  // SECURITY: Resolve symlinks in target path to prevent traversal via symlink
+  let absPath: string;
+  try {
+    absPath = realpathSync(resolve(filePath));
+  } catch (err) {
+    throw new Error(
+      `Cannot access session file: "${filePath}" — ${
+        err instanceof Error ? err.message : 'file not found or symlink broken'
+      }`,
+    );
+  }
+
+  // SECURITY: Validate resolved path is under allowed base
+  if (!absPath.startsWith(allowedBase)) {
+    throw new Error(
+      `Access denied: import path must be under ~/.codeyang/, got "${filePath}" (resolves to "${absPath}")`,
+    );
+  }
   let fileStat;
   try {
     fileStat = await stat(absPath);

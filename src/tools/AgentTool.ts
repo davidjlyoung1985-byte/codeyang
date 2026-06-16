@@ -6,6 +6,8 @@
  * - Parallel sub-agent execution with result aggregation
  * - Agent memory sharing (output of one agent feeds into another)
  * - Configurable max turns per sub-agent
+ *
+ * SECURITY: Subagents have restricted tool access based on their type
  */
 import type { LLMMessage } from '../agent/LLMClient.js';
 import { consumeStream } from '../agent/LLMClient.js';
@@ -16,8 +18,58 @@ export type AgentType = 'explore' | 'plan' | 'execute';
 interface AgentConfig {
   type: AgentType;
   prompt: string;
-  memory?: string;       // context from previous agents
+  memory?: string; // context from previous agents
   maxTurns?: number;
+}
+
+/**
+ * SECURITY: Define allowed tools for each agent type
+ *
+ * - explore: Read-only tools for investigation
+ * - plan: Read-only tools + design tools
+ * - execute: Limited write access (still restricts dangerous operations)
+ */
+const AGENT_ALLOWED_TOOLS: Record<AgentType, Set<string>> = {
+  explore: new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'GitLog', 'GitStatus', 'GitDiff', 'Math']),
+
+  plan: new Set([
+    'Read',
+    'Glob',
+    'Grep',
+    'WebFetch',
+    'WebSearch',
+    'GitLog',
+    'GitStatus',
+    'GitDiff',
+    'Math',
+    // Planning agents can read but not write
+  ]),
+
+  execute: new Set([
+    // Read operations
+    'Read',
+    'Glob',
+    'Grep',
+    // Write operations (limited)
+    'Write',
+    'Edit',
+    // Git operations (limited)
+    'GitAdd',
+    'GitCommit',
+    'GitStatus',
+    'GitDiff',
+    // Bash is still allowed for execute agents
+    'Bash',
+    // But NOT: GitPush, Delete, LaunchApp, PowerShell
+  ]),
+};
+
+/**
+ * Filter tools based on agent type
+ */
+function getToolsForAgentType(type: AgentType) {
+  const allowedTools = AGENT_ALLOWED_TOOLS[type];
+  return toolSchemas().filter((tool) => allowedTools.has(tool.name));
 }
 
 const AGENT_SYSTEM_PROMPTS: Record<AgentType, string> = {
@@ -46,11 +98,12 @@ export async function executeAgent(config: AgentConfig): Promise<string> {
   const maxTokens = context.maxTokens;
   const maxTurns = config.maxTurns || 15;
 
-  const systemPrompt = AGENT_SYSTEM_PROMPTS[config.type] + '\n\n' + (config.memory ? `Context from previous agents:\n${config.memory}\n\n` : '');
+  const systemPrompt =
+    AGENT_SYSTEM_PROMPTS[config.type] +
+    '\n\n' +
+    (config.memory ? `Context from previous agents:\n${config.memory}\n\n` : '');
 
-  const messages: LLMMessage[] = [
-    { role: 'user', content: config.prompt },
-  ];
+  const messages: LLMMessage[] = [{ role: 'user', content: config.prompt }];
 
   const lines: string[] = [];
   lines.push(`## ${config.type.charAt(0).toUpperCase() + config.type.slice(1)} Agent`);
@@ -63,7 +116,7 @@ export async function executeAgent(config: AgentConfig): Promise<string> {
         temperature: 0.3,
         system: systemPrompt,
         messages,
-        tools: toolSchemas(),
+        tools: getToolsForAgentType(config.type), // SECURITY: Use filtered tools
       });
 
       messages.push({
@@ -95,13 +148,28 @@ export async function executeAgent(config: AgentConfig): Promise<string> {
         }
         const tool = getTool(tc.name);
         if (!tool) {
-          toolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: `Unknown tool: ${tc.name}`, is_error: true });
+          toolResults.push({
+            type: 'tool_result',
+            tool_use_id: tc.id,
+            content: `Unknown tool: ${tc.name}`,
+            is_error: true,
+          });
           continue;
         }
         try {
-          toolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: await tool.execute(tc.input), is_error: false });
+          toolResults.push({
+            type: 'tool_result',
+            tool_use_id: tc.id,
+            content: await tool.execute(tc.input),
+            is_error: false,
+          });
         } catch (err) {
-          toolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: err instanceof Error ? err.message : String(err), is_error: true });
+          toolResults.push({
+            type: 'tool_result',
+            tool_use_id: tc.id,
+            content: err instanceof Error ? err.message : String(err),
+            is_error: true,
+          });
         }
       }
       messages.push({ role: 'user', content: toolResults });

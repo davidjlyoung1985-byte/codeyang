@@ -115,15 +115,51 @@ export async function executeGitBranch(cwd?: string, remotes = false): Promise<s
 }
 
 /**
- * Validate a git repository URL — only allow ssh:// and https://
+ * Validate a git repository URL — only allow trusted hosts and secure protocols
+ *
+ * SECURITY: Whitelist trusted Git hosting providers to prevent supply chain attacks
  */
 function validateGitUrl(url: string): string | null {
-  // Allow git@ style (SSH deploy keys)
-  if (/^[^@]+@[^:]+:.+$/.test(url)) return null;
-  // Allow ssh:// and https://
-  if (/^ssh:\/\/.+/.test(url)) return null;
-  if (/^https:\/\/.+/.test(url)) return null;
-  return `Invalid git URL scheme. Only ssh:// and https:// (or git@host:path) are allowed`;
+  // Trusted Git hosting providers
+  const TRUSTED_HOSTS = new Set([
+    'github.com',
+    'gitlab.com',
+    'bitbucket.org',
+    'gitee.com',
+    // Add your enterprise Git servers here via environment variable
+    ...(process.env['CODEYANG_TRUSTED_GIT_HOSTS'] || '')
+      .split(',')
+      .map((h) => h.trim())
+      .filter(Boolean),
+  ]);
+
+  let hostname = '';
+
+  // Parse git@ style (SSH deploy keys): git@github.com:user/repo.git
+  const sshMatch = url.match(/^([^@]+)@([^:]+):(.+)$/);
+  if (sshMatch) {
+    hostname = sshMatch[2];
+  } else if (url.startsWith('https://') || url.startsWith('ssh://')) {
+    // Parse https:// and ssh:// URLs
+    try {
+      const parsed = new URL(url);
+      hostname = parsed.hostname;
+    } catch {
+      return 'Invalid git URL format';
+    }
+  } else {
+    return 'Invalid git URL scheme. Only ssh://, https://, or git@host:path are allowed';
+  }
+
+  // Validate hostname against whitelist
+  if (!TRUSTED_HOSTS.has(hostname)) {
+    return (
+      `Untrusted git host: ${hostname}. Only ${Array.from(TRUSTED_HOSTS).join(', ')} are allowed. ` +
+      `To add custom hosts, set CODEYANG_TRUSTED_GIT_HOSTS environment variable.`
+    );
+  }
+
+  return null;
 }
 
 /**
@@ -215,11 +251,16 @@ export async function executeGitPull(cwd?: string, remote = 'origin', branch?: s
 
 /**
  * Clone a repository
+ *
+ * SECURITY: Disables Git hooks to prevent arbitrary code execution
  */
 export async function executeGitClone(url: string, destination?: string, cwd?: string): Promise<string> {
   const urlErr = validateGitUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
-  const args = ['clone', url];
+
+  // SECURITY: Disable Git hooks during clone to prevent code execution
+  const args = ['clone', '--config', 'core.hooksPath=/dev/null', url];
+
   if (destination) {
     const destSanitized = sanitizeBranchName(destination);
     if (destSanitized) return `Error: ${destSanitized}`;
@@ -232,7 +273,7 @@ export async function executeGitClone(url: string, destination?: string, cwd?: s
     return `Error: ${result.stderr || result.stdout}`;
   }
 
-  return result.stdout || result.stderr || 'Repository cloned successfully';
+  return result.stdout || result.stderr || 'Repository cloned successfully (Git hooks disabled for security)';
 }
 
 /**

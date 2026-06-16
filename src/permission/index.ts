@@ -16,6 +16,7 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { minimatch } from 'minimatch';
 
 export type PermissionLevel = 'allow' | 'deny' | 'ask';
 
@@ -36,12 +37,14 @@ const DEFAULT_CONFIG: PermissionConfig = {
   version: 2,
   rules: [
     // Bash dangerous operations — default: ask
+    { pattern: 'rm -rf*', level: 'ask', category: 'bash', reason: 'Recursive force delete' },
     { pattern: 'rm -rf *', level: 'ask', category: 'bash', reason: 'Recursive force delete' },
+    { pattern: 'sudo*', level: 'ask', category: 'bash', reason: 'Sudo requires confirmation' },
     { pattern: 'sudo *', level: 'ask', category: 'bash', reason: 'Sudo requires confirmation' },
     { pattern: 'git push --force*', level: 'ask', category: 'bash', reason: 'Force push is destructive' },
     { pattern: 'git push -f*', level: 'ask', category: 'bash', reason: 'Force push is destructive' },
-    { pattern: 'curl *| sh', level: 'deny', category: 'bash', reason: 'Piping curl to shell is dangerous' },
-    { pattern: 'curl *| bash', level: 'deny', category: 'bash', reason: 'Piping curl to shell is dangerous' },
+    { pattern: 'curl*|*sh', level: 'deny', category: 'bash', reason: 'Piping curl to shell is dangerous' },
+    { pattern: 'curl*|*bash', level: 'deny', category: 'bash', reason: 'Piping curl to shell is dangerous' },
     { pattern: '> /dev/sd*', level: 'deny', category: 'bash', reason: 'Direct disk write' },
     { pattern: 'mkfs*', level: 'deny', category: 'bash', reason: 'Filesystem creation blocked' },
     // File operations — allow by default
@@ -95,20 +98,28 @@ export async function checkPermission(
     .sort((a, b) => b.pattern.length - a.pattern.length); // more specific first
 
   for (const rule of categoryRules) {
-    // Convert glob pattern to regex, but prevent ReDoS by using non-backtracking quantifiers
-    // where possible and limiting pattern complexity
-    const escaped = rule.pattern
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&') // escape regex metacharacters first
-      .replace(/\*/g, '[^\\s]*') // * matches non-whitespace (prevents catastrophic backtracking)
-      .replace(/\?/g, '[^\\s]'); // ? matches single non-whitespace char
-
     try {
-      const regex = new RegExp(`^${escaped}$`, 'i');
-      if (regex.test(input.trim())) {
+      // For bash commands, use simple wildcard matching (not file-path based)
+      // For file/network, use minimatch
+      let matched = false;
+
+      if (category === 'bash') {
+        // Simple wildcard matching for bash commands
+        const regex = rule.pattern
+          .replace(/[.+^${}()|[\]\\]/g, '\\$&') // escape special regex chars
+          .replace(/\*/g, '.*') // * matches any characters
+          .replace(/\?/g, '.'); // ? matches single char
+        matched = new RegExp(`^${regex}$`, 'i').test(input.trim());
+      } else {
+        // Use minimatch for file paths and URLs
+        matched = minimatch(input.trim(), rule.pattern, { nocase: true, dot: true });
+      }
+
+      if (matched) {
         return { level: rule.level, reason: rule.reason };
       }
     } catch {
-      // Invalid regex from pattern — skip this rule
+      // Invalid pattern — skip this rule
       continue;
     }
   }

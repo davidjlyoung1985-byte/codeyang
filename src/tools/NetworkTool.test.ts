@@ -270,7 +270,8 @@ describe('NetworkTool', () => {
 
       const result = await executeCheckUrl('https://invalid-domain-12345.com', 1000);
 
-      expect(result).toContain('URL check failed');
+      // DNS resolution failure is now caught before the request
+      expect(result).toMatch(/DNS resolution failed|URL check failed/);
     });
   });
 

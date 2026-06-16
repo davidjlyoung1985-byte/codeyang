@@ -10,6 +10,7 @@ import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
 import { Agent } from './agent/Agent.js';
 import { config, loadLocalConfig, setSessionApiKey, getMcpServers } from './agent/config.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
@@ -78,10 +79,32 @@ async function main() {
   const agent = await initAgent();
   let currentSessionId: string | undefined;
 
+  // SECURITY: Generate API key and CSRF token
+  const API_KEY = process.env['CODEYANG_WEB_API_KEY'] || randomUUID();
+  const CSRF_TOKEN = randomUUID();
+
+  if (!process.env['CODEYANG_WEB_API_KEY']) {
+    console.log(`\n  🔐 Web API Key (save to CODEYANG_WEB_API_KEY): ${API_KEY}\n`);
+  }
+
   console.log(`\n  🌐 CodeYang Web UI: http://localhost:${PORT}\n`);
 
   const server = createServer(async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // SECURITY: Restrict CORS to localhost only
+    const origin = req.headers.origin || '';
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    }
+
+    // Handle OPTIONS preflight
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
 
     // Helper: parse JSON body
     function readBody(): Promise<string> {
@@ -92,9 +115,63 @@ async function main() {
       });
     }
 
+    // SECURITY: Authentication middleware for API endpoints
+    function checkAuth(): boolean {
+      if (req.url?.startsWith('/api/')) {
+        const authHeader = req.headers['authorization'];
+        if (authHeader !== `Bearer ${API_KEY}`) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unauthorized. Provide valid API key in Authorization header.' }));
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // SECURITY: CSRF protection for POST requests
+    function checkCSRF(): boolean {
+      if (req.method === 'POST') {
+        const csrfHeader = req.headers['x-csrf-token'];
+        if (csrfHeader !== CSRF_TOKEN) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid CSRF token' }));
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // API: Get CSRF token
+    if (req.method === 'GET' && req.url === '/api/csrf-token') {
+      if (!checkAuth()) return;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ token: CSRF_TOKEN }));
+      return;
+    }
+
+    // Apply auth check to all API endpoints
+    if (req.url?.startsWith('/api/') && !checkAuth()) {
+      return;
+    }
+
+    // Apply CSRF check to POST requests
+    if (req.method === 'POST' && !checkCSRF()) {
+      return;
+    }
+
+    // SECURITY: Add security headers to all responses
+    const securityHeaders = {
+      'Content-Security-Policy':
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; font-src 'self'; object-src 'none'; media-src 'self'; frame-src 'none';",
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'X-XSS-Protection': '1; mode=block',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    };
+
     // API: config
     if (req.method === 'GET' && req.url === '/api/config') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.writeHead(200, { 'Content-Type': 'application/json', ...securityHeaders });
       res.end(
         JSON.stringify({
           model: config.model,
@@ -111,7 +188,7 @@ async function main() {
     // API: history — return full conversation history with tool call details
     if (req.method === 'GET' && req.url === '/api/history') {
       const msgs = agent.exportMessages();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.writeHead(200, { 'Content-Type': 'application/json', ...securityHeaders });
       res.end(
         JSON.stringify({
           sessionId: currentSessionId || null,
