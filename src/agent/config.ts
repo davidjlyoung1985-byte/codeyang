@@ -1,6 +1,7 @@
 ﻿import { readFile, writeFile, mkdir, rename, copyFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 import type { McpServerConfig } from '../mcp/types.js';
 import type { QtContext } from '../qt/index.js';
 import { buildQtPrompt } from '../qt/index.js';
@@ -32,7 +33,8 @@ async function safeRename(src: string, dest: string): Promise<void> {
 
 /** Atomic JSON write: write to temp file then rename to prevent corruption on crash. */
 async function atomicWriteConfig(data: unknown): Promise<void> {
-  const tmp = `${CONFIG_FILE}.tmp.${process.pid}`;
+  // SECURITY: Use crypto-secure UUID instead of predictable PID
+  const tmp = `${CONFIG_FILE}.tmp.${randomUUID()}`;
   const json = JSON.stringify(data, null, 2);
   await writeFile(tmp, json, 'utf-8');
   await safeRename(tmp, CONFIG_FILE);

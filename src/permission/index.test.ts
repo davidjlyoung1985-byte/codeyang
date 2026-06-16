@@ -127,11 +127,11 @@ describe('permission', () => {
     expect(r.level).toBe('deny');
   });
 
-  it('custom rule: asterisk does not match across whitespace', async () => {
+  it('custom rule: asterisk matches across whitespace with minimatch', async () => {
     await addRule({ pattern: 'test-*', level: 'deny', category: 'bash' });
-    // The * becomes [^\s]* which stops at whitespace, so "bar" makes it not match
+    // minimatch: * matches everything including whitespace
     const r = await checkPermission('bash', 'test-foo bar');
-    expect(r.level).toBe('allow');
+    expect(r.level).toBe('deny');
   });
 
   it('custom rule: persists after reload', async () => {

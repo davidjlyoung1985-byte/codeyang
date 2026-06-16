@@ -18,14 +18,10 @@ const DANGEROUS_PATTERNS: RegExp[] = [
 ];
 
 export async function executePowerShell(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
-  // Handle ALLOW prefix — user has explicitly approved this command
-  let skipPermissionCheck = false;
-  if (command.startsWith('ALLOW: ')) {
-    command = command.slice(7).trim();
-    skipPermissionCheck = true;
-  }
+  // SECURITY: ALLOW prefix removed - same fix as BashTool
+  // All commands must go through permission system
 
-  // Security: always check dangerous patterns, even with ALLOW prefix
+  // Security: always check dangerous patterns
   // (these are hard safety boundaries that cannot be bypassed)
   for (const pattern of DANGEROUS_PATTERNS) {
     if (pattern.test(command)) {
@@ -35,20 +31,18 @@ export async function executePowerShell(command: string, cwd?: string, timeoutSe
     }
   }
 
-  // Check permission system unless ALLOW prefix was used
-  if (!skipPermissionCheck) {
-    const segments = command.split(/[\s;|&]+/).filter(Boolean);
-    for (const segment of segments) {
-      const firstWord = segment.split(' ')[0];
-      const perm = await checkPermission('bash', firstWord);
-      if (perm.level === 'deny') {
-        throw new Error(`[PERMISSION DENIED] ${perm.reason || 'Command not permitted.'}`);
-      }
-      if (perm.level === 'ask') {
-        throw new Error(
-          `[PERMISSION REQUIRED] ${perm.reason || 'This operation needs confirmation.'} Ask user for approval, then retry with "ALLOW: <command>".`,
-        );
-      }
+  // Check permission system for all commands
+  const segments = command.split(/[\s;|&]+/).filter(Boolean);
+  for (const segment of segments) {
+    const firstWord = segment.split(' ')[0];
+    const perm = await checkPermission('bash', firstWord);
+    if (perm.level === 'deny') {
+      throw new Error(`[PERMISSION DENIED] ${perm.reason || 'Command not permitted.'}`);
+    }
+    if (perm.level === 'ask') {
+      throw new Error(
+        `[PERMISSION REQUIRED] ${perm.reason || 'This operation needs confirmation.'} User must approve this action first.`,
+      );
     }
   }
 

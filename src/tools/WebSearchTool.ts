@@ -8,11 +8,15 @@
  *
  * Env vars:
  *   CODEYANG_SEARCH_API    — "duckduckgo" | "searxng" | "serpapi" | "bing" | "google" (default: "duckduckgo")
- *   CODEYANG_SEARCH_URL    — base URL for self-hosted search (default: http://localhost:8888)
+ *   CODEYANG_SEARCH_URL    — base URL for SearXNG self-hosted search (default: http://localhost:8888)
  *   CODEYANG_SEARCH_KEY    — API key for commercial search APIs
+ *   CODEYANG_SEARCH_CX     — Google Custom Search Engine ID (required for Google API)
  *   CODEYANG_SEARCH_FALLBACK — if "true", falls back to WebFetch on search failure
+ *
+ * SECURITY: All search result URLs are validated against SSRF before returning
  */
 import axios from 'axios';
+import { validateUrl } from './NetworkTool.js';
 
 interface SearchResult {
   title: string;
@@ -25,6 +29,7 @@ function getConfig() {
     api: process.env['CODEYANG_SEARCH_API'] || 'duckduckgo',
     baseUrl: process.env['CODEYANG_SEARCH_URL'] || 'http://localhost:8888',
     apiKey: process.env['CODEYANG_SEARCH_KEY'] || '',
+    googleCx: process.env['CODEYANG_SEARCH_CX'] || '',
     fallback: process.env['CODEYANG_SEARCH_FALLBACK'] === 'true',
   };
 }
@@ -80,6 +85,13 @@ async function searchDuckDuckGo(query: string, topK: number): Promise<SearchResu
     if (url.startsWith('//duckduckgo.com') || url.startsWith('/')) continue;
     // Clean DuckDuckGo redirect URLs
     if (url.startsWith('//')) url = 'https:' + url;
+
+    // SECURITY: Validate URL against SSRF before adding to results
+    const validationError = await validateUrl(url);
+    if (validationError) {
+      // Skip URLs that fail SSRF validation (private IPs, metadata endpoints, etc.)
+      continue;
+    }
 
     const title = cleanSnippet(linkMatch[2]);
 
@@ -153,11 +165,20 @@ async function searchBing(query: string, topK: number): Promise<SearchResult[]> 
 
 async function searchGoogle(query: string, topK: number): Promise<SearchResult[]> {
   const cfg = getConfig();
+
+  // SECURITY FIX: Don't expose API key in URL, use proper configuration
+  if (!cfg.apiKey) {
+    throw new Error('Google Custom Search requires CODEYANG_SEARCH_KEY');
+  }
+  if (!cfg.googleCx) {
+    throw new Error('Google Custom Search requires CODEYANG_SEARCH_CX (Custom Search Engine ID)');
+  }
+
   const resp = await axios.get('https://www.googleapis.com/customsearch/v1', {
     params: {
       q: query,
       key: cfg.apiKey,
-      cx: cfg.baseUrl || '017576662512468239146:omuauf_lfve',
+      cx: cfg.googleCx,
       num: Math.min(topK, 10),
     },
     timeout: 10000,

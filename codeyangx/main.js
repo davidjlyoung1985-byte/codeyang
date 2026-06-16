@@ -2,9 +2,11 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { randomUUID } = require('crypto');
 
 const tools = require('./tools.cjs');
 const { getMcpManager } = require('./mcp.cjs');
+const { isDenied, rateLimiter } = require('./security');
 
 let mainWindow = null;
 
@@ -144,10 +146,18 @@ ipcMain.handle('executeTool', async (_event, name, args, cwd) => {
 
   try {
     switch (name) {
-      case 'Bash':
-        return await tools.executeBash(String(args.command || ''), args.cwd || dir);
+      case 'Bash': {
+        // SECURITY: Rate limit and deny list checks
+        rateLimiter.check('bash');
+        const command = String(args.command || '');
+        if (isDenied(command)) {
+          throw new Error('[SECURITY] Command blocked by deny list.');
+        }
+        return await tools.executeBash(command, args.cwd || dir);
+      }
 
       case 'Read': {
+        rateLimiter.check('file');
         const fp = String(args.filePath || '');
         const offset = args.offset !== undefined ? Number(args.offset) : undefined;
         const limit = args.limit !== undefined ? Number(args.limit) : undefined;
@@ -155,12 +165,14 @@ ipcMain.handle('executeTool', async (_event, name, args, cwd) => {
       }
 
       case 'Write': {
+        rateLimiter.check('file');
         const fp = String(args.filePath || '');
         const ct = String(args.content || '');
         return await tools.executeWrite(fp, ct, dir);
       }
 
       case 'Edit': {
+        rateLimiter.check('file');
         const fp = String(args.filePath || '');
         const oldStr = String(args.oldString || '');
         const newStr = String(args.newString || '');

@@ -282,7 +282,7 @@ export const definitions: ToolDefinition[] = [
       },
       required: ['question'],
     },
-    execute: (args) => {
+    execute: async (args) => {
       const q = requiredString(args, 'question');
       const options = args['options'] as Array<{ label: string; description: string }> | undefined;
       if (options && options.length > 0) {

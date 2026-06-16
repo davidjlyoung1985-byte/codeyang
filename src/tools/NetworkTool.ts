@@ -6,6 +6,7 @@ import { isIPv4 } from 'node:net';
 import axios, { AxiosRequestConfig, Method } from 'axios';
 import FormData from 'form-data';
 import { resolveSafePath } from './shared.js';
+import { checkRateLimit } from '../utils/rateLimiter.js';
 
 // ── SSRF / URL validation ────────────────────────────────────────
 
@@ -128,7 +129,7 @@ async function resolveAndCheckHostname(host: string): Promise<string | null> {
  * 3. 危险主机名快速拦截（免 DNS）
  * 4. DNS 解析后检查 IP 是否落入内网范围
  */
-async function validateUrl(url: string): Promise<string | null> {
+export async function validateUrl(url: string): Promise<string | null> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -163,7 +164,33 @@ async function validateUrl(url: string): Promise<string | null> {
   return null;
 }
 
+/**
+ * Verify DNS resolution before making the actual request (DNS rebinding protection).
+ * This double-checks the hostname still resolves to safe IPs at request time.
+ */
+async function verifyDnsBeforeRequest(url: string): Promise<string | null> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return 'Invalid URL';
+  }
+
+  const host = parsed.hostname.toLowerCase();
+
+  // Re-validate DNS to prevent rebinding attacks
+  const dnsError = await resolveAndCheckHostname(host);
+  if (dnsError) {
+    return `DNS rebinding detected: ${dnsError}`;
+  }
+
+  return null;
+}
+
 // ── Network tools ─────────────────────────────────────────────────
+
+const MAX_DOWNLOAD_SIZE = 500 * 1024 * 1024; // 500 MB limit for downloads
+
 export async function executeHttpRequest(
   url: string,
   method: Method = 'GET',
@@ -171,8 +198,15 @@ export async function executeHttpRequest(
   body?: unknown,
   timeout = 30000,
 ): Promise<string> {
+  checkRateLimit('network');
+
   const urlErr = await validateUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
+
+  // DNS rebinding protection: verify DNS again before request
+  const rebindErr = await verifyDnsBeforeRequest(url);
+  if (rebindErr) return `Error: ${rebindErr}`;
+
   try {
     const config: AxiosRequestConfig = {
       method,
@@ -218,8 +252,15 @@ export async function executeHttpRequest(
  * Download file from URL to local path
  */
 export async function executeDownloadFile(url: string, destPath: string, timeout = 60000): Promise<string> {
+  checkRateLimit('network');
+
   const urlErr = await validateUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
+
+  // DNS rebinding protection: verify DNS again before request
+  const rebindErr = await verifyDnsBeforeRequest(url);
+  if (rebindErr) return `Error: ${rebindErr}`;
+
   try {
     const absPath = resolveSafePath(destPath);
     const dir = path.dirname(absPath);
@@ -231,9 +272,28 @@ export async function executeDownloadFile(url: string, destPath: string, timeout
       url,
       responseType: 'stream',
       timeout,
+      maxContentLength: MAX_DOWNLOAD_SIZE,
+      maxBodyLength: MAX_DOWNLOAD_SIZE,
     });
 
+    // Check Content-Length header if available
+    const contentLengthHeader = response.headers['content-length'];
+    const contentLength = parseInt(String(contentLengthHeader || '0'), 10);
+    if (contentLength > MAX_DOWNLOAD_SIZE) {
+      return `Error: File size ${(contentLength / 1024 / 1024).toFixed(1)} MB exceeds maximum ${MAX_DOWNLOAD_SIZE / 1024 / 1024} MB`;
+    }
+
     const writer = createWriteStream(absPath);
+    let downloadedBytes = 0;
+
+    response.data.on('data', (chunk: Buffer) => {
+      downloadedBytes += chunk.length;
+      if (downloadedBytes > MAX_DOWNLOAD_SIZE) {
+        writer.destroy();
+        response.data.destroy();
+        throw new Error(`Download exceeded size limit of ${MAX_DOWNLOAD_SIZE / 1024 / 1024} MB`);
+      }
+    });
 
     response.data.pipe(writer);
 
@@ -264,6 +324,11 @@ export async function executeUploadFile(
 ): Promise<string> {
   const urlErr = await validateUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
+
+  // DNS rebinding protection
+  const rebindErr = await verifyDnsBeforeRequest(url);
+  if (rebindErr) return `Error: ${rebindErr}`;
+
   try {
     const absPath = resolveSafePath(filePath);
 
@@ -321,6 +386,11 @@ export async function executeApiCall(
 ): Promise<string> {
   const urlErr = await validateUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
+
+  // DNS rebinding protection
+  const rebindErr = await verifyDnsBeforeRequest(url);
+  if (rebindErr) return `Error: ${rebindErr}`;
+
   try {
     const config: AxiosRequestConfig = {
       method,
@@ -378,6 +448,11 @@ export async function executeApiCall(
 export async function executeCheckUrl(url: string, timeout = 10000): Promise<string> {
   const urlErr = await validateUrl(url);
   if (urlErr) return `Error: ${urlErr}`;
+
+  // DNS rebinding protection
+  const rebindErr = await verifyDnsBeforeRequest(url);
+  if (rebindErr) return `Error: ${rebindErr}`;
+
   try {
     const startTime = Date.now();
     const response = await axios.head(url, {
