@@ -1,7 +1,7 @@
 {
   "name": "codeyang-vscode",
   "displayName": "CodeYang AI Agent",
-  "version": "0.3.1",
+  "version": "1.0.0",
   "description": "AI coding agent — chat with tool-using CodeYang inside VS Code",
   "publisher": "codeyang",
   "engines": {
