@@ -1,5 +1,6 @@
 ﻿import { VERSION } from '../version.js';
 import { invalidParam, netError, toolError } from './errors.js';
+import { validateUrl } from './NetworkTool.js';
 
 const MAX_REDIRECTS = 5;
 
@@ -62,6 +63,13 @@ async function fetchWithRedirectLimit(url: string, outputFormat: string, redirec
         throw new Error(netError(url, `Redirect ${response.status} without Location header`));
       }
       const nextUrl = new URL(location, url).href;
+
+      // SECURITY: Re-validate URL after redirect to prevent SSRF
+      const validationError = await validateUrl(nextUrl);
+      if (validationError) {
+        throw new Error(netError(url, `Redirect blocked: ${validationError}`));
+      }
+
       return fetchWithRedirectLimit(nextUrl, outputFormat, redirectCount + 1);
     }
 

@@ -6,8 +6,9 @@ import { toolError } from './errors.js';
  * Resolve a user-supplied path to an absolute path.
  * When CODEX_SANDBOX is set, enforces the path stays inside that directory.
  *
+ * SECURITY: Resolves symlinks in both target path and sandbox base to prevent bypass
+ *
  * Bypass options:
- *   CODEYANG_NO_SANDBOX=true  — completely disable sandbox enforcement
  *   CODEYANG_ALLOW_DRIVES=E,F — whitelist Windows drive letters (colon optional)
  */
 export function resolveSafePath(inputPath: string, cwd?: string): string {
@@ -16,13 +17,18 @@ export function resolveSafePath(inputPath: string, cwd?: string): string {
   const sandbox = process.env['CODEX_SANDBOX'];
 
   if (!sandbox) return resolved;
-  if (process.env['CODEYANG_NO_SANDBOX'] === 'true') return resolved;
 
-  const absSandbox = resolve(sandbox);
+  // SECURITY: Resolve symlinks in sandbox base directory
+  let absSandbox = resolve(sandbox);
+  try {
+    absSandbox = realpathSync(absSandbox);
+  } catch {
+    // Sandbox doesn't exist yet, use resolved form
+  }
 
   if (resolved === absSandbox) return resolved;
 
-  // realpath resolves symlinks — use when the path exists
+  // SECURITY: realpath resolves symlinks in target — use when the path exists
   let real = resolved;
   try {
     real = realpathSync(resolved);

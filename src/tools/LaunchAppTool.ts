@@ -5,8 +5,54 @@
  * - Windows: uses Start-Process / start
  * - macOS: uses open
  * - Linux: uses xdg-open
+ *
+ * SECURITY:
+ * - Application whitelist for executable names
+ * - Sandbox path validation for file paths
+ * - URL validation for web links
  */
 import { execa } from 'execa';
+import { resolveSafePath } from './shared.js';
+
+// SECURITY: Whitelist of allowed applications (Windows names)
+const ALLOWED_APPS_WINDOWS = new Set([
+  'notepad',
+  'notepad.exe',
+  'calc',
+  'calc.exe',
+  'mspaint',
+  'mspaint.exe',
+  'explorer',
+  'explorer.exe',
+  'cmd',
+  'cmd.exe',
+  'powershell',
+  'powershell.exe',
+  'code',
+  'code.exe', // VS Code
+  'chrome',
+  'chrome.exe',
+  'firefox',
+  'firefox.exe',
+  'msedge',
+  'msedge.exe',
+]);
+
+// SECURITY: Whitelist of allowed applications (macOS/Linux)
+const ALLOWED_APPS_UNIX = new Set([
+  'TextEdit',
+  'Calculator',
+  'Terminal',
+  'code',
+  'Code', // VS Code
+  'chrome',
+  'Chrome',
+  'Google Chrome',
+  'firefox',
+  'Firefox',
+  'safari',
+  'Safari',
+]);
 
 function detectPlatform(): 'win' | 'mac' | 'linux' {
   if (process.platform === 'win32') return 'win';
@@ -47,22 +93,51 @@ export async function executeLaunchApp(target: string, args?: string): Promise<s
   // Check if it's a URL
   const isUrl = /^https?:\/\//i.test(target);
 
+  // SECURITY: If it's a file path, validate against sandbox
+  if (!isUrl && (target.includes('\\') || target.includes('/') || target.endsWith('.lnk'))) {
+    const safePath = await resolveSafePath(target);
+    if (!safePath) {
+      return `Error: Path outside sandbox or not accessible: ${target}`;
+    }
+    target = safePath;
+  }
+
+  // SECURITY: If it's an app name, check whitelist
+  if (!isUrl && !target.includes('\\') && !target.includes('/')) {
+    const appWhitelist = platform === 'win' ? ALLOWED_APPS_WINDOWS : ALLOWED_APPS_UNIX;
+    const appNameLower = target.toLowerCase();
+
+    if (!appWhitelist.has(appNameLower) && !appWhitelist.has(target)) {
+      return `Error: Application not in whitelist: ${target}. Allowed: ${Array.from(appWhitelist).slice(0, 10).join(', ')}...`;
+    }
+  }
+
   let result: { stdout: string; stderr: string; code: number };
 
   switch (platform) {
     case 'win': {
+      // SECURITY: Use PowerShell Start-Process instead of cmd /c start
       if (isUrl) {
-        result = await exec('cmd', '/c', 'start', '', target);
-      } else if (target.endsWith('.lnk') || target.includes('\\') || target.includes('/')) {
-        // File path — open with default app
-        result = await exec('cmd', '/c', 'start', '', target);
+        result = await exec('powershell', '-Command', `Start-Process "${target}"`);
+      } else if (target.includes('\\') || target.includes('/')) {
+        // File path — already validated by resolveSafePath
+        result = await exec('powershell', '-Command', `Start-Process "${target}"`);
       } else {
-        // App name — use start with the app name
-        result = await exec('cmd', '/c', 'start', '', target, ...extraArgs);
+        // App name — already validated by whitelist
+        if (extraArgs.length > 0) {
+          result = await exec(
+            'powershell',
+            '-Command',
+            `Start-Process "${target}" -ArgumentList "${extraArgs.join('","')}"`,
+          );
+        } else {
+          result = await exec('powershell', '-Command', `Start-Process "${target}"`);
+        }
       }
       break;
     }
     case 'mac': {
+      // SECURITY: macOS uses 'open' command with validated paths
       if (isUrl || extraArgs.length > 0) {
         result = await exec('open', target, ...extraArgs);
       } else {
@@ -71,6 +146,7 @@ export async function executeLaunchApp(target: string, args?: string): Promise<s
       break;
     }
     case 'linux': {
+      // SECURITY: Linux uses 'xdg-open' with validated paths
       result = await exec('xdg-open', target, ...extraArgs);
       break;
     }

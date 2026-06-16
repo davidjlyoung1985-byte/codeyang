@@ -4,6 +4,8 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 const https = require('https');
+const { randomUUID } = require('crypto');
+const { isDenied, rateLimiter } = require('./security');
 
 const {
   executeRead: _executeRead,
@@ -46,8 +48,8 @@ const SUPPORTED_PROVIDERS = {
 };
 
 function getApiKey() {
-  const cfgKey = vscode.workspace.getConfiguration('codeyang').get('apiKey', '');
-  if (cfgKey) return cfgKey;
+  // SECURITY: Do NOT read from VS Code settings (may sync to cloud)
+  // Priority: env vars -> local file
   for (const envVar of ['CODEYANG_API_KEY', 'DEEPSEEK_API_KEY', 'ANTHROPIC_API_KEY']) {
     if (process.env[envVar]) return process.env[envVar];
   }
@@ -62,12 +64,21 @@ function getApiKey() {
 function getProviderType() {
   const baseUrl = getApiBaseUrl();
   const model = getModel();
-  // DeepSeek's Anthropic API endpoint
-  if (baseUrl && baseUrl.includes('api.deepseek.com/anthropic')) return 'anthropic';
-  // Official Anthropic API
-  if (baseUrl && (baseUrl.includes('anthropic') || baseUrl.includes('api.anthropic.com'))) return 'anthropic';
+
+  // SECURITY FIX: Use exact URL matching to prevent substring attacks
+  // DeepSeek's Anthropic API endpoint (exact match)
+  if (baseUrl === 'https://api.deepseek.com/anthropic') return 'anthropic';
+
+  // Official Anthropic API (exact domain check)
+  if (baseUrl && (baseUrl.startsWith('https://api.anthropic.com') || baseUrl.startsWith('http://api.anthropic.com'))) {
+    return 'anthropic';
+  }
+
   // Model-based detection (deepseek-v4-* uses Anthropic format, claude-* also)
-  if (model && (model.startsWith('deepseek-v4-') || model.includes('claude'))) return 'anthropic';
+  if (model && (model.startsWith('deepseek-v4-') || model.startsWith('claude-'))) {
+    return 'anthropic';
+  }
+
   return 'openai';
 }
 
@@ -90,19 +101,22 @@ function getModel() {
 }
 
 async function saveApiKey(key, baseUrl, model) {
-  await vscode.workspace.getConfiguration('codeyang').update('apiKey', key, true);
-  if (baseUrl) {
-    await vscode.workspace.getConfiguration('codeyang').update('apiBaseUrl', baseUrl, true);
-  }
-  if (model) {
-    await vscode.workspace.getConfiguration('codeyang').update('model', model, true);
-  }
+  // SECURITY: Do NOT save API key to VS Code settings (syncs to cloud)
+  // Only save to local file system
   const dir = path.join(os.homedir(), '.codeyang');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const config = { apiKey: key };
   if (baseUrl) config.apiBaseUrl = baseUrl;
   if (model) config.model = model;
   fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify(config, null, 2));
+
+  // Only save non-sensitive settings to VS Code config
+  if (baseUrl) {
+    await vscode.workspace.getConfiguration('codeyang').update('apiBaseUrl', baseUrl, true);
+  }
+  if (model) {
+    await vscode.workspace.getConfiguration('codeyang').update('model', model, true);
+  }
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -120,10 +134,26 @@ async function execRead(filePath, offset, limit) {
 }
 
 function execBash(command, cwd) {
+  // Security: rate limit check
+  rateLimiter.check('bash');
+
+  // Security: deny list check
+  if (isDenied(command)) {
+    throw new Error('[SECURITY] Command blocked by deny list.');
+  }
+
   const workDir = cwd || getWorkspaceRoot();
   const shell = process.platform === 'win32' ? 'powershell.exe' : '/bin/bash';
+
   try {
-    const stdout = execSync(command, { cwd: workDir, shell, timeout: 30000, maxBuffer: 10 * 1024 * 1024, encoding: 'utf-8' });
+    // Reduced buffer size to prevent OOM: 5MB instead of 10MB
+    const stdout = execSync(command, {
+      cwd: workDir,
+      shell,
+      timeout: 30000,
+      maxBuffer: 5 * 1024 * 1024,
+      encoding: 'utf-8'
+    });
     return stdout.trim() || '(no output)';
   } catch (err) {
     const parts = [];
@@ -135,11 +165,13 @@ function execBash(command, cwd) {
 }
 
 async function execWrite(filePath, content) {
+  rateLimiter.check('file');
   const resolved = path.isAbsolute(filePath) ? filePath : path.join(getWorkspaceRoot(), filePath);
   return _executeWrite(resolved, content);
 }
 
 async function execEdit(filePath, oldString, newString, replaceAll) {
+  rateLimiter.check('file');
   const resolved = path.isAbsolute(filePath) ? filePath : path.join(getWorkspaceRoot(), filePath);
   return _executeEdit(resolved, oldString, newString, replaceAll);
 }
@@ -275,14 +307,16 @@ function saveSession(messages) {
     const title = firstUserMsg
       ? String(firstUserMsg.content || '').slice(0, 60).replace(/\n/g, ' ')
       : 'untitled';
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // SECURITY: Use crypto-secure UUID instead of Math.random()
+    const id = `${Date.now()}-${randomUUID().slice(0, 8)}`;
     const session = {
       id, title,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       messages: messages.map(m => ({
         role: m.role,
-        content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
+        // SECURITY FIX: Properly serialize arrays to avoid data corruption
+        content: typeof m.content === 'string' ? m.content : m.content,
       })),
     };
     fs.writeFileSync(path.join(SESSION_DIR, `${id}.json`), JSON.stringify(session, null, 2));
@@ -607,12 +641,25 @@ function createOrShowPanel(context) {
     'codeyangChat',
     'CodeYang',
     vscode.ViewColumn.Beside,
-    { enableScripts: true, retainContextWhenHidden: true }
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+      // SECURITY: Add Content Security Policy
+      localResourceRoots: [vscode.Uri.file(context.extensionPath)],
+    }
   );
 
+  // SECURITY: Set strict CSP for webview
+  const cspSource = panel.webview.cspSource;
   const htmlPath = path.join(context.extensionPath, 'chat.html');
   if (fs.existsSync(htmlPath)) {
-    panel.webview.html = fs.readFileSync(htmlPath, 'utf-8');
+    let html = fs.readFileSync(htmlPath, 'utf-8');
+    // Inject CSP meta tag if not present
+    if (!html.includes('Content-Security-Policy')) {
+      const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource} 'unsafe-inline';">`;
+      html = html.replace('<head>', `<head>\n    ${cspMeta}`);
+    }
+    panel.webview.html = html;
   } else {
     panel.webview.html = '<html><body><p>chat.html not found</p></body></html>';
   }

@@ -13,7 +13,7 @@ import {
   sessionToMarkdown,
   auditLog,
 } from '../utils/sessionStore.js';
-import { rm, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { rm, mkdir, writeFile, readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { Message, Session } from '../types.js';
@@ -35,6 +35,14 @@ describe('sessionStore', () => {
   afterEach(async () => {
     // Cleanup audit log between tests to avoid interference
     await rm(join(homedir(), '.codeyang', 'audit.log'), { force: true }).catch(() => {});
+    // Remove oversized / temporary test JSON files left by importSessionFromFile tests
+    const codeyangDir = join(homedir(), '.codeyang');
+    const entries = await readdir(codeyangDir).catch(() => []);
+    for (const entry of entries) {
+      if (entry.startsWith('test-') && entry.endsWith('.json')) {
+        await rm(join(codeyangDir, entry), { force: true }).catch(() => {});
+      }
+    }
   });
 
   // ── Existing CRUD tests ──
@@ -284,8 +292,14 @@ describe('sessionStore', () => {
 
   // ── importSessionFromFile tests ──
 
-  it('importSessionFromFile: throws for nonexistent file', async () => {
-    await expect(importSessionFromFile('/nonexistent/path.json')).rejects.toThrow('Cannot read session file');
+  it('importSessionFromFile: rejects path outside ~/.codeyang/', async () => {
+    await expect(importSessionFromFile('/nonexistent/path.json')).rejects.toThrow('Cannot access session file');
+  });
+
+  it('importSessionFromFile: throws for nonexistent file inside whitelist', async () => {
+    await expect(importSessionFromFile(join(homedir(), '.codeyang', 'no-such-file.json'))).rejects.toThrow(
+      'Cannot access session file',
+    );
   });
 
   it('importSessionFromFile: throws for invalid JSON', async () => {

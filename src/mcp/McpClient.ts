@@ -4,6 +4,54 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { MCP_QUALIFIED_PREFIX, MCP_TOOL_SEPARATOR, type McpServerConfig, type McpTransportType } from './types.js';
 
+/**
+ * SECURITY: Whitelist of allowed MCP server executables
+ *
+ * Only 'node' is allowed by default to execute trusted MCP servers.
+ * Dangerous commands like 'python', 'docker', 'npx' are excluded to prevent arbitrary code execution.
+ *
+ * To use custom MCP servers with other runtimes, users must:
+ * 1. Wrap them in a Node.js script, OR
+ * 2. Set CODEYANG_MCP_ALLOW_UNSAFE=true (not recommended)
+ */
+const ALLOWED_MCP_COMMANDS = new Set([
+  'node',
+  // 'npx' - REMOVED: can download and execute arbitrary npm packages
+  // 'python', 'python3' - REMOVED: can execute arbitrary Python code
+  // 'docker' - REMOVED: can run arbitrary containers
+  // 'deno' - REMOVED: can execute arbitrary TypeScript/JavaScript
+  // 'uvx' - REMOVED: can execute arbitrary Python packages
+]);
+
+/**
+ * SECURITY: Additional unsafe commands allowed only with explicit opt-in
+ */
+const UNSAFE_MCP_COMMANDS = new Set(['npx', 'python', 'python3', 'docker', 'deno', 'uvx']);
+
+const MCP_ALLOW_UNSAFE = process.env['CODEYANG_MCP_ALLOW_UNSAFE'] === 'true';
+
+if (MCP_ALLOW_UNSAFE) {
+  console.warn('[SECURITY WARNING] MCP unsafe commands enabled. This allows npx, python, docker, etc.');
+  for (const cmd of UNSAFE_MCP_COMMANDS) {
+    ALLOWED_MCP_COMMANDS.add(cmd);
+  }
+}
+
+/**
+ * Validate MCP command against whitelist to prevent arbitrary code execution.
+ */
+function validateMcpCommand(command: string): void {
+  const executable = command.split(/[\\/]/).pop()?.split('.')[0]?.toLowerCase() || '';
+
+  if (!ALLOWED_MCP_COMMANDS.has(executable)) {
+    throw new Error(
+      `[SECURITY] MCP command "${command}" is not in the allowed list. ` +
+        `Allowed commands: ${Array.from(ALLOWED_MCP_COMMANDS).join(', ')}. ` +
+        `To enable unsafe commands (npx, python, docker, etc.), set CODEYANG_MCP_ALLOW_UNSAFE=true`,
+    );
+  }
+}
+
 export interface McpToolDef {
   serverName: string;
   /** Full qualified name: mcp__serverName__toolName */
@@ -51,6 +99,9 @@ export class McpClient {
 
     switch (transportType) {
       case 'stdio':
+        // Validate command against whitelist before launching
+        validateMcpCommand(this.config.command ?? '');
+
         this.transport = new StdioClientTransport({
           command: this.config.command ?? '',
           args: this.config.args ?? [],

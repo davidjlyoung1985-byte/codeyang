@@ -16,10 +16,49 @@ const SUBTASK_TIMEOUT_MS = 120_000; // 单子任务 2 分钟超时
 const MAX_TURNS = 10;
 
 /**
- * 拦截子代理中不允许的工具——Question（需要人类交互）和 Task（递归子代理）。
+ * SECURITY: Whitelist of tools allowed in subagents
+ *
+ * Subagents should only have read-only access to prevent privilege escalation.
+ * Write operations (Bash, Write, Edit, Delete, Git) are restricted to the main agent.
+ */
+const SUBAGENT_ALLOWED_TOOLS = new Set([
+  // Read-only file operations
+  'Read',
+  'Glob',
+  'Grep',
+
+  // Network operations (read-only)
+  'WebFetch',
+  'WebSearch',
+
+  // Information gathering
+  'GitLog',
+  'GitStatus',
+  'GitDiff',
+
+  // Safe utilities
+  'Math',
+  'Memory', // Read/Recall only
+]);
+
+/**
+ * 拦截子代理中不允许的工具
+ *
+ * SECURITY: Subagents cannot use:
+ * - Question (requires human interaction)
+ * - Task/Agent (prevents recursive subagents)
+ * - Write operations (Bash, Write, Edit, Delete, Git commit/push)
+ * - LaunchApp (prevents arbitrary program execution)
+ * - PowerShell (same as Bash)
  */
 function isDisallowedInSubagent(name: string): boolean {
-  return name === 'Question' || name === 'Task';
+  // Explicitly blocked tools
+  if (name === 'Question' || name === 'Task' || name === 'Agent') {
+    return true;
+  }
+
+  // Only allow tools in the whitelist
+  return !SUBAGENT_ALLOWED_TOOLS.has(name);
 }
 
 /**
@@ -190,19 +229,27 @@ async function executeSingleSubtask(
 /**
  * 让一个 Promise 与 AbortSignal 竞争：signal 触发时立即 reject。
  * 用于支持流式请求的取消。
+ *
+ * SECURITY FIX: Properly clean up event listener to prevent memory leak
  */
 async function raceAgainstSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
   if (!signal.aborted) {
     return Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        signal.addEventListener(
-          'abort',
-          () => {
-            reject(new DOMException('Subtask cancelled', 'AbortError'));
-          },
-          { once: true },
-        );
+        const abortHandler = () => {
+          reject(new DOMException('Subtask cancelled', 'AbortError'));
+        };
+        signal.addEventListener('abort', abortHandler, { once: true });
+
+        // SECURITY FIX: Remove listener if promise resolves first
+        promise
+          .finally(() => {
+            signal.removeEventListener('abort', abortHandler);
+          })
+          .catch(() => {
+            // Ignore promise rejection, we only care about cleanup
+          });
       }),
     ]);
   }

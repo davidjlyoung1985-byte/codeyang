@@ -5,6 +5,7 @@ import type { LLMClient } from '../agent/LLMClient.js';
 import { builtinDefinitions } from './definitions/index.js';
 import { resolveAlias, fuzzyFindTools } from './aliases.js';
 import { validateParams } from './schema-validate.js';
+import { claudeCodeTool } from './ClaudeCodeTool.js';
 
 export interface ToolContext {
   anthropicClient: Anthropic | null;
@@ -56,7 +57,7 @@ function validatedExecute(
 }
 
 /** Default built-in tools (all categories except math, which is dynamic). */
-export const tools: ToolDefinition[] = [...builtinDefinitions.map(wrapToolValidation)];
+export const tools: ToolDefinition[] = [...builtinDefinitions.map(wrapToolValidation), claudeCodeTool];
 
 /** Apply schema-validation wrapper to a single tool definition. */
 function wrapToolValidation(t: ToolDefinition): ToolDefinition {
