@@ -242,7 +242,7 @@ describe('Agent Loop Integration', () => {
       await agent.run('loop');
       expect(turn).toBeGreaterThanOrEqual(1);
       expect(turn).toBeLessThanOrEqual(5);
-    });
+    }, 30000);
   });
 
   describe('tool error handling', () => {

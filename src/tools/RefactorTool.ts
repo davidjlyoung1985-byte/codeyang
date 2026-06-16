@@ -60,56 +60,33 @@ function createProgram(filePath: string): ts.Program {
 }
 
 /**
- * Find all references to a symbol in a file
+ * Walk the AST to find all references to a specific identifier name.
+ * This is much faster than using the full LanguageService (which requires
+ * module resolution and can hang on large projects).
  */
-function findSymbolReferences(sourceFile: ts.SourceFile, position: number, program: ts.Program): ts.ReferenceEntry[] {
-  const languageService = createLanguageService(program);
-  const references = languageService.findReferences(sourceFile.fileName, position);
+function findIdentifierReferences(sourceFile: ts.SourceFile, name: string, excludePos?: number): ts.ReferenceEntry[] {
+  const references: ts.ReferenceEntry[] = [];
 
-  if (!references || references.length === 0) {
-    return [];
-  }
-
-  const allReferences: ts.ReferenceEntry[] = [];
-  for (const refSymbol of references) {
-    allReferences.push(...refSymbol.references);
-  }
-
-  return allReferences;
-}
-
-/**
- * Create a language service for advanced operations
- */
-function createLanguageService(program: ts.Program): ts.LanguageService {
-  const files = new Map<string, { version: number; text: string }>();
-
-  for (const sourceFile of program.getSourceFiles()) {
-    if (!sourceFile.isDeclarationFile) {
-      files.set(sourceFile.fileName, {
-        version: 0,
-        text: sourceFile.getFullText(),
-      });
+  function visit(node: ts.Node) {
+    if (ts.isIdentifier(node) && node.text === name) {
+      if (node.pos !== excludePos) {
+        references.push({
+          fileName: sourceFile.fileName,
+          textSpan: { start: node.pos, length: node.end - node.pos },
+          contextSpan: undefined,
+          contextStart: undefined,
+          contextEnd: undefined,
+          isWriteAccess: false,
+          isDefinition: false,
+          isInString: false,
+        });
+      }
     }
+    ts.forEachChild(node, visit);
   }
 
-  const servicesHost: ts.LanguageServiceHost = {
-    getScriptFileNames: () => Array.from(files.keys()),
-    getScriptVersion: (fileName) => files.get(fileName)?.version.toString() ?? '0',
-    getScriptSnapshot: (fileName) => {
-      const file = files.get(fileName);
-      if (!file) return undefined;
-      return ts.ScriptSnapshot.fromString(file.text);
-    },
-    getCurrentDirectory: () => process.cwd(),
-    getCompilationSettings: () => program.getCompilerOptions(),
-    getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
-    fileExists: ts.sys.fileExists,
-    readFile: ts.sys.readFile,
-    readDirectory: ts.sys.readDirectory,
-  };
-
-  return ts.createLanguageService(servicesHost, ts.createDocumentRegistry());
+  visit(sourceFile);
+  return references;
 }
 
 /**
@@ -194,9 +171,9 @@ export async function executeRefactorRename(
       return `Error: Symbol at position is "${identifier.text}", not "${oldName}"`;
     }
 
-    // Create program and find references
-    const program = createProgram(absPath);
-    const references = findSymbolReferences(sourceFile, position, program);
+    // Find all identifier references by walking the AST
+    // (much faster than using full TypeScript LanguageService)
+    const references = findIdentifierReferences(sourceFile, oldName);
 
     if (references.length === 0) {
       return `Warning: No references found for "${oldName}". Nothing to rename.`;
@@ -451,15 +428,12 @@ export async function executeRefactorInline(
 
     const value = declaration.initializer.getText(sourceFile);
 
-    // Find all references
-    const program = createProgram(absPath);
-    const references = findSymbolReferences(sourceFile, position, program);
+    // Find all references by walking AST
+    const allRefs = findIdentifierReferences(sourceFile, variableName, declaration.name.pos);
 
-    // Replace all references (except declaration) with value
+    // Replace all references with value
     let newContent = content;
-    const sortedRefs = references
-      .filter((ref) => ref.textSpan.start !== declaration.name.pos)
-      .sort((a, b) => b.textSpan.start - a.textSpan.start);
+    const sortedRefs = allRefs.sort((a, b) => b.textSpan.start - a.textSpan.start);
 
     for (const ref of sortedRefs) {
       const start = ref.textSpan.start;
