@@ -293,6 +293,10 @@ export class Agent {
     if (messages.length <= Agent.CONTEXT_SOFT_LIMIT) return messages;
 
     let cutIndex = messages.length - Agent.CONTEXT_KEEP_RECENT;
+
+    // Ensure cutIndex is valid
+    if (cutIndex <= 0) return messages;
+
     while (cutIndex < messages.length) {
       const firstRetained = messages[cutIndex];
       const hasOrphanToolUse =
@@ -309,6 +313,9 @@ export class Agent {
         break;
       }
     }
+
+    // Safety: if cutIndex somehow reached the end, return original messages
+    if (cutIndex >= messages.length) return messages;
 
     const toSummarize = messages.slice(0, cutIndex);
     const modifiedFiles = new Set<string>();
@@ -367,6 +374,12 @@ export class Agent {
     const result: LLMMessage[] = [];
     result.push({ role: 'user' as const, content: summaryParts.join('\n') });
     result.push(...recent);
+
+    // Safety check: ensure we always return at least one message
+    if (result.length === 0) {
+      return messages; // Return original if somehow empty
+    }
+
     return result;
   }
 
@@ -498,13 +511,26 @@ export class Agent {
 
     const maxTurns = config.maxTurns;
 
-    // Apply context summarization if history is large
-    const summarized = this.summarizeContext(messages);
-    messages.length = 0;
-    messages.push(...summarized);
+    // Apply context summarization if history is large (only if we have messages)
+    if (messages.length > 0) {
+      const summarized = this.summarizeContext(messages);
+      messages.length = 0;
+      messages.push(...summarized);
+    }
+
+    // Safety check: ensure messages array is never empty
+    if (messages.length === 0) {
+      // This should never happen since we just pushed a user message above
+      messages.push({ role: 'user', content: userMsg });
+    }
 
     for (let turn = 0; turn < maxTurns; turn++) {
       logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
+
+      // Double-check before API call
+      if (messages.length === 0) {
+        throw new Error('[Agent] Internal error: messages array became empty at turn ' + turn);
+      }
 
       const systemPrompt = await this.getSystemPrompt();
 
