@@ -66,7 +66,14 @@ export async function executeGitHub(args: Record<string, unknown>): Promise<stri
         if (!Array.isArray(data) || data.length === 0) {
           return `No open pull requests in ${repo}.`;
         }
-        return data.map((pr: any) => `#${pr.number} ${pr.title} (${pr.user?.login || 'unknown'})`).join('\n');
+        interface PullRequest {
+          number: number;
+          title: string;
+          user?: { login?: string };
+        }
+        return (data as PullRequest[])
+          .map((pr) => `#${pr.number} ${pr.title} (${pr.user?.login || 'unknown'})`)
+          .join('\n');
       }
 
       case 'list-issues': {
@@ -81,11 +88,16 @@ export async function executeGitHub(args: Record<string, unknown>): Promise<stri
         const { data } = await api.get(`/repos/${repo}/issues`, {
           params: { state: 'open', per_page: 10 },
         });
-        const issues = (Array.isArray(data) ? data : []).filter((i: any) => !i.pull_request);
+        interface Issue {
+          number: number;
+          title: string;
+          pull_request?: unknown;
+        }
+        const issues = (Array.isArray(data) ? data : []).filter((i: Issue) => !i.pull_request);
         if (issues.length === 0) {
           return `No open issues in ${repo}.`;
         }
-        return issues.map((i: any) => `#${i.number} ${i.title}`).join('\n');
+        return issues.map((i: Issue) => `#${i.number} ${i.title}`).join('\n');
       }
 
       case 'get-file': {
@@ -134,14 +146,19 @@ export async function executeGitHub(args: Record<string, unknown>): Promise<stri
           '  action=get-file repo=torvalds/linux path=README.md',
         ].join('\n');
     }
-  } catch (err: any) {
-    const status = err.response?.status;
-    const msg = err.response?.data?.message || err.message;
+  } catch (err: unknown) {
+    const error = err as {
+      response?: { status?: number; data?: { message?: string } };
+      message?: string;
+      config?: { url?: string };
+    };
+    const status = error.response?.status;
+    const msg = error.response?.data?.message || error.message;
     if (status === 404) {
       return toolError(
         'GitHub',
         `Resource not found (404). Check that the repository and path exist.`,
-        `Requested: ${err.config?.url || 'unknown'}`,
+        `Requested: ${error.config?.url || 'unknown'}`,
       );
     }
     if (status === 401 || status === 403) {
@@ -151,6 +168,6 @@ export async function executeGitHub(args: Record<string, unknown>): Promise<stri
         'Ensure the token has repo scope for private repos.',
       );
     }
-    return toolError('GitHub', `${err.config?.url || 'request'}: ${msg}`, 'Check the parameters and try again.');
+    return toolError('GitHub', `${error.config?.url || 'request'}: ${msg}`, 'Check the parameters and try again.');
   }
 }

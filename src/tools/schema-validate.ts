@@ -36,8 +36,8 @@ export function validateParams(args: Record<string, unknown>, schema: Record<str
     return errors;
   }
 
-  const props = (schema as Record<string, any>).properties ?? {};
-  const required: string[] = (schema as Record<string, any>).required ?? [];
+  const props = (schema as Record<string, unknown>).properties ?? {};
+  const required: string[] = ((schema as Record<string, unknown>).required as string[]) ?? [];
 
   // ── Required-field checks ──────────────────────────────────────────
   for (const key of required) {
@@ -51,7 +51,7 @@ export function validateParams(args: Record<string, unknown>, schema: Record<str
   for (const [key, value] of Object.entries(args)) {
     if (value === undefined || value === null) continue;
 
-    const propSchema: Record<string, any> | undefined = props[key];
+    const propSchema: Record<string, unknown> | undefined = props[key] as Record<string, unknown> | undefined;
     if (!propSchema) continue; // Unknown param – let the tool handle it
 
     const expectedTypes: string[] = Array.isArray(propSchema.type)
@@ -88,7 +88,7 @@ export function validateParams(args: Record<string, unknown>, schema: Record<str
             errors.push(toolError('Validation', `"${key}" must be an array, got ${typeName(value)}`));
           } else {
             // Element-type check for arrays with `items.type`
-            const itemsSchema = propSchema.items as Record<string, any> | undefined;
+            const itemsSchema = propSchema.items as Record<string, unknown> | undefined;
             if (itemsSchema?.type && value.length > 0) {
               const itemType = itemsSchema.type;
               for (let i = 0; i < value.length; i++) {
