@@ -187,10 +187,18 @@ describe('CliUI', () => {
   });
 
   describe('showToolResult', () => {
-    it('shows success output', () => {
+    it('shows success output (short)', () => {
       ui.showToolResult('output text', false);
       const output = capturedOutput();
       expect(output).toContain('output text');
+    });
+
+    it('shows collapsed output (long)', () => {
+      const longOutput = 'line1\nline2\nline3\nline4\nline5';
+      ui.showToolResult(longOutput, false);
+      const output = capturedOutput();
+      expect(output).toContain('工具输出已折叠');
+      expect(output).toContain('5 行');
     });
 
     it('shows error output', () => {
