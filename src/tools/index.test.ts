@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { matchGlob } from './GlobTool.js';
-import { executeTodoWrite, resetTodos, getTodos, type TodoItem } from './TodoWriteTool.js';
+import { executeTodoWrite, getTodos, type TodoItem } from './TodoWriteTool.js';
 import { executeEdit } from './EditTool.js';
 import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';

@@ -146,27 +146,6 @@ async function handleTask(task: BridgeTask): Promise<void> {
 }
 
 /**
- * Get user input (multiline, terminated by Ctrl+Z on Windows or Ctrl+D on Unix).
- */
-async function getUserInput(): Promise<string> {
-  const lines: string[] = [];
-  const rl = createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: false,
-  });
-
-  return new Promise((resolve) => {
-    rl.on('line', (line) => {
-      lines.push(line);
-    });
-    rl.on('close', () => {
-      resolve(lines.join('\n'));
-    });
-  });
-}
-
-/**
  * Main loop: keep reading input from the user and
  * polling the bridge server for new tasks.
  */
