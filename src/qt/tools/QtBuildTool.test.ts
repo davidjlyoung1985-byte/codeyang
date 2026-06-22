@@ -13,19 +13,14 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  try { await rm(tempDir, { recursive: true, force: true }); } catch {}
-  // Retry once on Windows (EBUSY from anti-virus indexing temp dirs)
-  try { await rm(tempDir, { recursive: true, force: true }); } catch {}
-});
-
-async function createFile(name: string, content: string): Promise<string> {
-  const p = join(tempDir, name);
   try {
-    await mkdir(dirname(p), { recursive: true });
+    await rm(tempDir, { recursive: true, force: true });
   } catch {}
-  await writeFile(p, content, 'utf-8');
-  return p;
-}
+  // Retry once on Windows (EBUSY from anti-virus indexing temp dirs)
+  try {
+    await rm(tempDir, { recursive: true, force: true });
+  } catch {}
+});
 
 // ──────────────────────────────────────────────
 // QtBuild Tool — build system execution
