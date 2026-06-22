@@ -21,7 +21,7 @@ vi.mock('./registry.js', () => ({
     if (name === 'Bash') {
       return {
         name: 'Bash',
-        execute: vi.fn(async (args: Record<string, unknown>) => `executed: ${args['command']}`),
+        execute: vi.fn((args: Record<string, unknown>) => `executed: ${args['command']}`),
         parameters: {},
       };
     }

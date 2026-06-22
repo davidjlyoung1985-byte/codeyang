@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Mock all tool modules that registry imports
 vi.mock('./BashTool.js', () => ({ executeBash: vi.fn() }));
@@ -142,7 +142,7 @@ describe('registry', () => {
         name: 'QtBuild',
         description: 'Qt build tool',
         parameters: { type: 'object', properties: {} },
-        execute: async () => 'ok',
+        execute: () => 'ok',
       };
 
       // Qt tools not in default registry
@@ -160,13 +160,13 @@ describe('registry', () => {
         name: 'QtOld',
         description: 'old',
         parameters: { type: 'object', properties: {} },
-        execute: async () => 'old',
+        execute: () => 'old',
       };
       const newTool: ToolDefinition = {
         name: 'QtNew',
         description: 'new',
         parameters: { type: 'object', properties: {} },
-        execute: async () => 'new',
+        execute: () => 'new',
       };
 
       registerQtTools([oldTool]);
@@ -182,7 +182,7 @@ describe('registry', () => {
         name: 'QtTest',
         description: 'test',
         parameters: { type: 'object', properties: {} },
-        execute: async () => 'ok',
+        execute: () => 'ok',
       };
       registerQtTools([qtDef]);
 
@@ -198,7 +198,7 @@ describe('registry', () => {
         name: 'MathSolve',
         description: 'Solve math',
         parameters: { type: 'object', properties: { problem: { type: 'string' } } },
-        execute: async () => 'solution',
+        execute: () => 'solution',
       };
 
       // Math tools are not in default registry
@@ -213,7 +213,7 @@ describe('registry', () => {
         name: 'MathOld',
         description: 'old',
         parameters: { type: 'object', properties: {} },
-        execute: async () => 'old',
+        execute: () => 'old',
       };
       registerMathTools([oldTool]);
       expect(getTool('MathOld')).toBeDefined();
@@ -227,7 +227,7 @@ describe('registry', () => {
         name: 'MathPlot',
         description: 'plot',
         parameters: { type: 'object', properties: { kind: { type: 'string' } } },
-        execute: async () => 'svg',
+        execute: () => 'svg',
       };
       registerMathTools([mathDef]);
 

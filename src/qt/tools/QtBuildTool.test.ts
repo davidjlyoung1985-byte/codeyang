@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { executeQtBuild } from './QtBuildTool.js';
-import { writeFile, mkdir, rm } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { mkdir, rm } from 'node:fs/promises';
+import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 

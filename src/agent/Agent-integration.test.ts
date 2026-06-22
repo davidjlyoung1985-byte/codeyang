@@ -47,7 +47,7 @@ function usageEvent(inputTokens: number, outputTokens: number): StreamEvent {
 }
 
 function makeStream(...events: StreamEvent[]): AsyncIterable<StreamEvent> {
-  return (async function* () {
+  return (function* () {
     for (const e of events) yield e;
   })();
 }
