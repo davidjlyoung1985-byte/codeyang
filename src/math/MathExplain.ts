@@ -2,7 +2,7 @@
  * MathExplain — Middle school math concept reference with examples.
  * Covers: algebra, geometry, functions, statistics, probability.
  */
-export async function executeMathExplain(topic?: string): Promise<string> {
+export function executeMathExplain(topic?: string): string {
   const lines: string[] = [];
   lines.push('## 初中数学知识库\n');
 

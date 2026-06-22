@@ -2,6 +2,7 @@
  * Qt tool factory — creates ToolDefinition[] for registration into the tool registry.
  * Conditionally called when a Qt project is detected.
  */
+/* eslint-disable @typescript-eslint/require-await -- ToolDefinition interface requires async execute methods */
 import type { ToolDefinition } from '../types.js';
 import type { QtContext } from './detector.js';
 import { executeQtBuild } from './tools/QtBuildTool.js';

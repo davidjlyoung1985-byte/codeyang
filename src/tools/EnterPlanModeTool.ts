@@ -4,7 +4,7 @@
  */
 import { setPlanMode } from './registry.js';
 
-export async function executeEnterPlanMode(goal?: string): Promise<string> {
+export function executeEnterPlanMode(goal?: string): string {
   setPlanMode(true);
   return goal
     ? `Planning mode activated.\n\nGoal: ${goal}\n\nOutline your step-by-step plan. After the user approves, you may execute.`

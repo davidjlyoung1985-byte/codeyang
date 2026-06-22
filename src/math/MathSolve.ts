@@ -2,7 +2,7 @@
  * MathSolve — Solve middle school math problems step by step.
  * Covers: equations (linear, quadratic, systems), geometry, statistics, probability.
  */
-export async function executeMathSolve(problem: string, type?: string): Promise<string> {
+export function executeMathSolve(problem: string, type?: string): string {
   const p = problem.trim();
 
   // ─── Linear equation ───────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await -- ToolDefinition interface requires async execute methods */
 import type { Method } from 'axios';
 import type { ToolDefinition } from '../../types.js';
 import {
