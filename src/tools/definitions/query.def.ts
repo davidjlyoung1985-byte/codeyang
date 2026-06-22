@@ -30,7 +30,8 @@ export const definitions: ToolDefinition[] = [
       },
       required: ['symbol'],
     },
-    execute: async (args) => executeLsp('definition', String(args['inFile'] ?? ''), undefined, String(args['symbol'] ?? '')),
+    execute: async (args) =>
+      executeLsp('definition', String(args['inFile'] ?? ''), undefined, String(args['symbol'] ?? '')),
   },
   {
     name: 'FindReferences',
@@ -45,7 +46,8 @@ export const definitions: ToolDefinition[] = [
       },
       required: ['symbol'],
     },
-    execute: async (args) => executeLsp('references', String(args['inFile'] ?? ''), undefined, String(args['symbol'] ?? '')),
+    execute: async (args) =>
+      executeLsp('references', String(args['inFile'] ?? ''), undefined, String(args['symbol'] ?? '')),
   },
   {
     name: 'SearchProject',
