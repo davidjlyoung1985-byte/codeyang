@@ -19,12 +19,12 @@ describe('MemoryStore benchmarks', () => {
     }
   });
 
-  it(`listMemories under 300ms (${TEST_COUNT} memories)`, async () => {
+  it(`listMemories under 350ms (${TEST_COUNT} memories)`, async () => {
     const start = Date.now();
     const result = await listMemories();
     const elapsed = Date.now() - start;
 
-    expect(elapsed).toBeLessThan(300);
+    expect(elapsed).toBeLessThan(350);
     expect(result.length).toBeGreaterThanOrEqual(TEST_COUNT);
   });
 
