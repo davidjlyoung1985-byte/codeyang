@@ -22,14 +22,14 @@ function hr(label?: string): void {
 function renderInlineMarkdown(text: string): string {
   let out = text;
   out = out.replace(/`([^`]+)`/g, (_m: string, code: string) => c.cyan(code));
-  out = out.replace(/\*\*([^*]+)\*\*/g, (_m: string, t: string) => c.bold(c.blue(t)));
-  out = out.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_m: string, t: string) => c.italic(t));
+  out = out.replace(/\*\*([^*]+)\*\*/g, (_m: string, t: string) => c.bold(c.magenta(t)));
+  out = out.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_m: string, t: string) => c.italic(c.magenta(t)));
   out = out.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_m: string, text: string, url: string) => `${c.blue(text)} ${c.dim(`(${url})`)}`,
+    (_m: string, text: string, url: string) => `${c.magenta(text)} ${c.dim(`(${url})`)}`,
   );
-  // Use blue color for better visibility on both light and dark backgrounds
-  return c.blue(out);
+  // Use bright magenta (visible on both light and dark backgrounds) with ANSI bold
+  return `\x1b[1m\x1b[35m${out}\x1b[0m`;
 }
 
 function renderMarkdown(text: string): string {
