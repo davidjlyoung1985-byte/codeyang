@@ -271,7 +271,7 @@ export class Agent {
         return JSON.parse(JSON.stringify(obj));
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[Agent] jsonClone failed: ${msg}. Returning original object.`);
+        logger.error(`[Agent] jsonClone failed: ${msg}. Returning original object.`);
         return obj;
       }
     }
@@ -290,7 +290,11 @@ export class Agent {
 
   /** If history exceeds the soft limit, replace older messages with a structured summary. */
   private summarizeContext(messages: LLMMessage[]): LLMMessage[] {
-    if (messages.length <= Agent.CONTEXT_SOFT_LIMIT) return messages;
+    logger.debug(`[summarizeContext] input length: ${messages.length}, SOFT_LIMIT: ${Agent.CONTEXT_SOFT_LIMIT}`);
+    if (messages.length <= Agent.CONTEXT_SOFT_LIMIT) {
+      logger.debug(`[summarizeContext] returning ${messages.length} messages unchanged`);
+      return messages;
+    }
 
     let cutIndex = messages.length - Agent.CONTEXT_KEEP_RECENT;
 
@@ -309,6 +313,11 @@ export class Agent {
         firstRetained.content.some((b: { type: string }) => b.type === 'tool_result');
       if (hasOrphanToolUse || hasOrphanToolResult) {
         cutIndex++;
+        // Safety: prevent infinite loop and ensure we keep at least 1 message
+        if (cutIndex >= messages.length) {
+          cutIndex = messages.length - 1;
+          break;
+        }
       } else {
         break;
       }
@@ -511,17 +520,26 @@ export class Agent {
 
     const maxTurns = config.maxTurns;
 
-    // Apply context summarization if history is large (only if we have messages)
-    if (messages.length > 0) {
-      const summarized = this.summarizeContext(messages);
+    // Apply context summarization if history is large
+    logger.debug(`[run] messages before summarization: ${messages.length}`);
+    const summarized = this.summarizeContext(messages);
+    logger.debug(
+      `[run] summarized is array: ${Array.isArray(summarized)}, length: ${summarized?.length ?? 'undefined'}`,
+    );
+    logger.debug(`[run] messages after summarization: ${summarized.length}`);
+
+    // Replace messages array with summarized content
+    // Important: create new array to avoid reference issues
+    if (summarized !== messages) {
       messages.length = 0;
       messages.push(...summarized);
     }
+    logger.debug(`[run] after push, messages.length: ${messages.length}`);
 
-    // Safety check: ensure messages array is never empty
+    // Safety check: ensure messages is not empty before calling API
     if (messages.length === 0) {
-      // This should never happen since we just pushed a user message above
-      messages.push({ role: 'user', content: userMsg });
+      logger.error(`[run] messages is empty! history.length=${this.history.length}, prompt="${prompt}"`);
+      throw new Error('Internal error: messages array is empty after summarization');
     }
 
     for (let turn = 0; turn < maxTurns; turn++) {

@@ -20,12 +20,11 @@
  *   4. 用户完成后输入结果，脚本将结果发送回桥接服务器
  */
 import { writeFile, mkdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import { WebSocket } from 'ws';
-import type { BridgeTask, BridgeMessage, WsEvent, AgentId } from './types.js';
+import type { BridgeTask, BridgeMessage, WsEvent } from './types.js';
 
 // ── Config ────────────────────────────────────────────────────────
 
