@@ -28,7 +28,8 @@ function renderInlineMarkdown(text: string): string {
     /\[([^\]]+)\]\(([^)]+)\)/g,
     (_m: string, text: string, url: string) => `${text} ${c.dim(`(${url})`)}`,
   );
-  return out;
+  // Use ANSI reset to ensure terminal default foreground color is used
+  return `\x1b[39m${out}\x1b[0m`;
 }
 
 function renderMarkdown(text: string): string {
