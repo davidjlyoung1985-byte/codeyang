@@ -45,7 +45,7 @@ describe('taskStore', () => {
   });
 
   it('lists recent first', async () => {
-    const t1 = await createTask({ title: 'A' });
+    await createTask({ title: 'A' });
     await new Promise((r) => setTimeout(r, 10));
     const t2 = await createTask({ title: 'B' });
     const list = await listTasks();

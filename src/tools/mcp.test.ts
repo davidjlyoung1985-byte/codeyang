@@ -117,11 +117,11 @@ describe('registry MCP integration', () => {
       ];
     }
 
-    override async refreshTools(): Promise<McpToolDef[]> {
+    override refreshTools(): Promise<McpToolDef[]> {
       return this.allTools;
     }
 
-    override async callTool(
+    override callTool(
       qualifiedName: string,
       args: Record<string, unknown>,
     ): Promise<{ output: string; isError: boolean }> {

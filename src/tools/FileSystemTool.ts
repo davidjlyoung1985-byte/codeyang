@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, readdir, unlink, stat, rm, access, rename } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir, stat, rm, access, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 import { resolveSafePath } from './shared.js';

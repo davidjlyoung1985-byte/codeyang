@@ -205,14 +205,14 @@ describe('executeWebFetch', () => {
     await expect(executeWebFetch('http:')).rejects.toThrow('[Network]');
   });
 
-  it('accepts valid http and https URLs', async () => {
+  it('accepts valid http and https URLs', () => {
     // These are valid URL shapes but we don't actually fetch
     // Just verify parsing works
     expect(() => new URL('https://example.com')).not.toThrow();
     expect(() => new URL('http://localhost:3000/api/data')).not.toThrow();
   });
 
-  it('supports format parameter for html output', async () => {
+  it('supports format parameter for html output', () => {
     // URL validation should pass for format=html too
     // Actual fetch is not tested here — that would need a mock server
     expect(() => new URL('https://example.com')).not.toThrow();

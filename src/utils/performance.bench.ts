@@ -58,8 +58,8 @@ describe.skip('Performance benchmarks', () => {
 
     const messages = [
       ...session.messages,
-      { role: 'user', content: 'New message' },
-      { role: 'assistant', content: 'New response' },
+      { role: 'user' as const, content: 'New message' },
+      { role: 'assistant' as const, content: 'New response' },
     ];
 
     const start = Date.now();
@@ -105,7 +105,7 @@ describe.skip('Performance benchmarks', () => {
     );
   });
 
-  it('Agent tool cache hit rate simulation', async () => {
+  it('Agent tool cache hit rate simulation', () => {
     // Simulate repeated Read operations
     const cache = new Map<string, { result: string; timestamp: number }>();
     const CACHE_TTL = 30000;
