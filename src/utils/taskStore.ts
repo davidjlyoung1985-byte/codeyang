@@ -85,7 +85,9 @@ export async function getTask(id: string): Promise<Task | null> {
 
 export async function updateTask(
   id: string,
-  updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'progress' | 'tags' | 'dependencies' | 'output'>>,
+  updates: Partial<
+    Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'progress' | 'tags' | 'dependencies' | 'output'>
+  >,
 ): Promise<Task | null> {
   const task = await getTask(id);
   if (!task) return null;
@@ -127,7 +129,9 @@ export async function listTasks(filter?: {
         if (full && full.description.toLowerCase().includes(kw)) {
           contentMatches.push(meta);
         }
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
     entries = [...titleMatches, ...contentMatches];
   }
@@ -140,7 +144,9 @@ export async function listTasks(filter?: {
         if (full && filter.tags!.some((t) => full.tags.includes(t))) {
           filtered.push(meta);
         }
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
     entries = filtered;
   }

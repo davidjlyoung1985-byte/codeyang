@@ -7,8 +7,20 @@ export async function executeTaskCreate(args: {
   tags?: string | string[];
   dependencies?: string | string[];
 }): Promise<string> {
-  const tags = typeof args.tags === 'string' ? args.tags.split(',').map((s) => s.trim()).filter(Boolean) : (args.tags ?? []);
-  const deps = typeof args.dependencies === 'string' ? args.dependencies.split(',').map((s) => s.trim()).filter(Boolean) : (args.dependencies ?? []);
+  const tags =
+    typeof args.tags === 'string'
+      ? args.tags
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : (args.tags ?? []);
+  const deps =
+    typeof args.dependencies === 'string'
+      ? args.dependencies
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : (args.dependencies ?? []);
 
   const task = await createTask({
     title: args.title,

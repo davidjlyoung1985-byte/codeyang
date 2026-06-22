@@ -24,7 +24,10 @@ export const definitions: ToolDefinition[] = [
           description: AGENT_TYPE_DESC,
         },
         prompt: { type: 'string', description: 'The task to accomplish' },
-        memory: { type: 'string', description: 'Context from previous agents (optional). Pass output of one agent as memory to the next.' },
+        memory: {
+          type: 'string',
+          description: 'Context from previous agents (optional). Pass output of one agent as memory to the next.',
+        },
         maxTurns: { type: 'number', description: 'Max execution turns (default: 15)' },
       },
       required: ['type', 'prompt'],

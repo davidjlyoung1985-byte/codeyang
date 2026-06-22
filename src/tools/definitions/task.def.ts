@@ -31,8 +31,20 @@ export const definitions: ToolDefinition[] = [
       const title = String(args['title'] ?? '');
       const description = args['description'] as string | undefined;
       const priority = args['priority'] as 'low' | 'medium' | 'high' | 'critical' | undefined;
-      const tags = typeof args['tags'] === 'string' ? (args['tags'] as string).split(',').map((s: string) => s.trim()).filter(Boolean) : undefined;
-      const dependencies = typeof args['dependencies'] === 'string' ? (args['dependencies'] as string).split(',').map((s: string) => s.trim()).filter(Boolean) : undefined;
+      const tags =
+        typeof args['tags'] === 'string'
+          ? (args['tags'] as string)
+              .split(',')
+              .map((s: string) => s.trim())
+              .filter(Boolean)
+          : undefined;
+      const dependencies =
+        typeof args['dependencies'] === 'string'
+          ? (args['dependencies'] as string)
+              .split(',')
+              .map((s: string) => s.trim())
+              .filter(Boolean)
+          : undefined;
       return executeTaskCreate({ title, description, priority, tags, dependencies });
     },
   },
