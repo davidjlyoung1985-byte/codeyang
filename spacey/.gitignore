@@ -1,0 +1,43 @@
+# Ignore build artifacts
+build/
+*.exe
+*.dll
+*.a
+*.lib
+*.obj
+*.o
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.cmake
+!CMakeLists.txt
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln
+*.vcxproj*
+
+# Qt generated files
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependencies
+third_party/
+vcpkg_installed/
+
+# Config with secrets
+config.json
+.env
