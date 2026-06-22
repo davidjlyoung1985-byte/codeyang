@@ -543,16 +543,28 @@ export class CliUI {
     const elapsed = this.toolStartTimes.get(name);
     const duration = elapsed ? ` ${c.dim('[' + (Date.now() - elapsed) + 'ms]')}` : '';
     this.toolResultsCount++;
+
+    const lines = output.split('\n');
+    const lineCount = lines.length;
+
     if (isError) {
-      const firstLine = output.split('\n')[0] || '(empty)';
+      const firstLine = lines[0] || '(empty)';
       const display = firstLine.slice(0, 120);
-      const lines = output.split('\n').length;
-      const suffix = lines > 1 ? `  (${lines} lines \u2014 see full error above)` : '';
+      const suffix = lineCount > 1 ? ` (${lineCount} lines)` : '';
       console.log(`  ${c.red('\u2717')}${duration} ${c.dim(display)}${suffix}`);
     } else {
-      const firstLine = output.split('\n')[0] || '(empty)';
-      const display = firstLine.slice(0, 150);
-      console.log(`  ${c.dim('\u00b7')}${duration} ${c.dim(display)}`);
+      // Collapse tool output if more than 3 lines
+      if (lineCount > 3) {
+        const preview = lines[0]?.slice(0, 80) || '(empty)';
+        console.log(
+          `  ${c.dim('\u00b7')}${duration} ${c.dim(`[\u5de5\u5177\u8f93\u51fa\u5df2\u6298\u53e0 - ${lineCount} \u884c]`)}`,
+        );
+        console.log(`  ${c.dim(`   \u9884\u89c8: ${preview}...`)}`);
+      } else {
+        const firstLine = lines[0] || '(empty)';
+        const display = firstLine.slice(0, 150);
+        console.log(`  ${c.dim('\u00b7')}${duration} ${c.dim(display)}`);
+      }
     }
   }
 
