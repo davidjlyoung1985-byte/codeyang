@@ -73,45 +73,15 @@ function invalidateASTCache(filePath: string): void {
 // Type Definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface RefactorResult {
-  success: boolean;
-  message: string;
-  filesChanged?: string[];
-  changes?: FileChange[];
-}
-
 interface FileChange {
   filePath: string;
   originalContent: string;
   newContent: string;
 }
 
-interface RenameMatch {
-  filePath: string;
-  line: number;
-  column: number;
-  oldName: string;
-  newName: string;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper Functions
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Create TypeScript program from file path
- */
-function createProgram(filePath: string): ts.Program {
-  const compilerOptions: ts.CompilerOptions = {
-    target: ts.ScriptTarget.ESNext,
-    module: ts.ModuleKind.ESNext,
-    allowJs: true,
-    checkJs: false,
-    noEmit: true,
-  };
-
-  return ts.createProgram([filePath], compilerOptions);
-}
 
 /**
  * Walk the AST to find all references to a specific identifier name.
@@ -386,9 +356,9 @@ export async function executeRefactorExtract(
  */
 function analyzeExtractedCode(
   code: string,
-  sourceFile: ts.SourceFile,
-  startPos: number,
-  endPos: number,
+  _sourceFile: ts.SourceFile,
+  _startPos: number,
+  _endPos: number,
 ): { usedVariables: string[]; returnValue: string | null } {
   // Simple heuristic analysis
   // In a real implementation, we'd use TypeScript's type checker
@@ -467,6 +437,9 @@ export async function executeRefactorInline(
 
     // Read source file with caching
     const sourceFile = await getCachedSourceFile(absPath);
+
+    // Still need content for text manipulation
+    const content = await readFile(absPath, 'utf-8');
 
     const position = getPositionFromLineColumn(sourceFile, line, column);
 

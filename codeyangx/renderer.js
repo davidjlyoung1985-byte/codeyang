@@ -19,10 +19,14 @@ const $currentDir = document.getElementById('currentDir');
 const $welcome = document.getElementById('welcome');
 
 async function init() {
-  apiKey = await codeyangx.getApiKey();
-  providerConfig = await codeyangx.getProviderConfig();
-  currentDir = await codeyangx.getWorkingDir();
-  if (currentDir) $currentDir.textContent = currentDir;
+  try {
+    apiKey = await codeyangx.getApiKey();
+    providerConfig = await codeyangx.getProviderConfig();
+    currentDir = await codeyangx.getWorkingDir();
+    if (currentDir) $currentDir.textContent = currentDir;
+  } catch (err) {
+    console.error('Init error:', err);
+  }
   showApp();
 }
 
@@ -191,18 +195,22 @@ async function sendMessage(userText) {
   if (isProcessing) return;
 
   if (!apiKey) {
-    await codeyangx.saveApiKey(userText.trim());
-    apiKey = userText.trim();
-    $input.placeholder = 'Type your message...';
-    $status.textContent = 'API key saved. Ready.';
-    const welEl = document.getElementById('welcome');
-    if (welEl) {
-      welEl.innerHTML =
-        '<div style="font-size:40px;margin-bottom:12px;">></div>' +
-        '<div style="font-size:16px;color:var(--accent);font-weight:600;">CodeYangX Ready</div>' +
-        '<div style="margin-top:8px;font-size:13px;">Ask me anything about your code.</div>';
+    try {
+      await codeyangx.saveApiKey(userText.trim());
+      apiKey = userText.trim();
+      $input.placeholder = 'Type your message...';
+      $status.textContent = 'API key saved. Ready.';
+      const welEl = document.getElementById('welcome');
+      if (welEl) {
+        welEl.innerHTML =
+          '<div style="font-size:40px;margin-bottom:12px;">></div>' +
+          '<div style="font-size:16px;color:var(--accent);font-weight:600;">CodeYangX Ready</div>' +
+          '<div style="margin-top:8px;font-size:13px;">Ask me anything about your code.</div>';
+      }
+      initMcpServers();
+    } catch (err) {
+      $status.textContent = 'Error saving API key: ' + (err.message || err);
     }
-    initMcpServers();
     return;
   }
 
@@ -695,6 +703,13 @@ $input.addEventListener('keydown', (e) => {
   }
 });
 
+window.onerror = function (msg, url, line) {
+  const s = document.getElementById('status');
+  if (s) s.textContent = 'JS Error: ' + msg + ' (line ' + line + ')';
+};
+
+window.sendMessage = sendMessage;
+
 $sendBtn.addEventListener('click', () => {
   const text = $input.value.trim();
   if (!text) return;
@@ -705,6 +720,7 @@ $sendBtn.addEventListener('click', () => {
     $input.placeholder = 'Type your message...';
     return;
   }
+  $status.textContent = 'apiKey=' + (apiKey ? apiKey.slice(0, 8) + '...' : 'null') + ' isProcessing=' + isProcessing;
   sendMessage(text);
 });
 
