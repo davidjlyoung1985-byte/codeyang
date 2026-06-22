@@ -20,7 +20,9 @@ export async function executeTaskList(args: {
 
   const lines: string[] = [`Tasks (${tasks.length}):`, ''];
   for (const t of tasks) {
-    lines.push(`  ${t.status === 'completed' ? '✓' : t.status === 'in_progress' ? '►' : '○'} ${t.id.slice(0, 16)}  ${t.title.slice(0, 60)}  [${t.status}]  ${t.priority}`);
+    lines.push(
+      `  ${t.status === 'completed' ? '✓' : t.status === 'in_progress' ? '►' : '○'} ${t.id.slice(0, 16)}  ${t.title.slice(0, 60)}  [${t.status}]  ${t.priority}`,
+    );
   }
   return lines.join('\n');
 }
