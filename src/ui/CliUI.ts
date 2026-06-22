@@ -38,9 +38,36 @@ function renderMarkdown(text: string): string {
   let inCodeBlock = false;
   let codeLines: string[] = [];
   let codeLang = '';
+  let inThinking = false;
+  let thinkingLines: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+
+    // Handle thinking blocks
+    if (line.includes('<thinking>') || line.includes('<thinking_mode>')) {
+      inThinking = true;
+      thinkingLines = [];
+      continue;
+    }
+    if (line.includes('</thinking>') || line.includes('</thinking_mode>')) {
+      inThinking = false;
+      if (thinkingLines.length > 0) {
+        // Render collapsed thinking block
+        const lineCount = thinkingLines.length;
+        const preview = thinkingLines[0]?.substring(0, 60) || 'AI reasoning process';
+        result.push('');
+        result.push(c.dim(`  💭 [思考过程已折叠 - ${lineCount} 行]`));
+        result.push(c.dim(`     ${preview}...`));
+        result.push('');
+      }
+      thinkingLines = [];
+      continue;
+    }
+    if (inThinking) {
+      thinkingLines.push(line);
+      continue;
+    }
 
     if (line.startsWith('```')) {
       if (!inCodeBlock) {
