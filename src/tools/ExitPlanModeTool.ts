@@ -3,7 +3,7 @@
  */
 import { setPlanMode } from './registry.js';
 
-export async function executeExitPlanMode(): Promise<string> {
+export function executeExitPlanMode(): string {
   setPlanMode(false);
   return 'Planning mode deactivated. You may now execute changes directly.';
 }
