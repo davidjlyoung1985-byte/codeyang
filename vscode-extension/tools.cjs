@@ -48,7 +48,7 @@ __export(shared_exports, {
 });
 module.exports = __toCommonJS(shared_exports);
 var import_node_path6 = require("path");
-var import_node_fs2 = require("fs");
+var import_node_fs3 = require("fs");
 
 // src/tools/errors.ts
 var HINT_SEPARATOR = "\n  \u{1F4A1} ";
@@ -162,8 +162,54 @@ ${dirs} director${dirs === 1 ? "y" : "ies"}, ${files} file${files === 1 ? "" : "
 // src/tools/WriteTool.ts
 var import_promises2 = require("fs/promises");
 var import_node_path = require("path");
+
+// src/utils/rateLimiter.ts
+var RATE_LIMITS = {
+  file: { maxCalls: 100, windowMs: 6e4 },
+  // 100 file ops/min
+  network: { maxCalls: 50, windowMs: 6e4 },
+  // 50 network requests/min
+  bash: { maxCalls: 30, windowMs: 6e4 },
+  // 30 shell commands/min
+  git: { maxCalls: 50, windowMs: 6e4 },
+  // 50 git ops/min
+  mcp: { maxCalls: 100, windowMs: 6e4 }
+  // 100 MCP calls/min
+};
+var callRecords = /* @__PURE__ */ new Map();
+function checkRateLimit(category) {
+  const config = RATE_LIMITS[category];
+  if (!config) {
+    return;
+  }
+  const now = Date.now();
+  const records = callRecords.get(category) || [];
+  const validRecords = records.filter((r) => now - r.timestamp < config.windowMs);
+  const totalCalls = validRecords.reduce((sum, r) => sum + r.count, 0);
+  if (totalCalls >= config.maxCalls) {
+    throw new Error(
+      `[RATE LIMIT] Too many ${category} operations. Limit: ${config.maxCalls} calls per ${config.windowMs / 1e3} seconds. Current: ${totalCalls} calls. Please wait before retrying.`
+    );
+  }
+  validRecords.push({ timestamp: now, count: 1 });
+  callRecords.set(category, validRecords);
+}
+
+// src/tools/WriteTool.ts
+var MAX_WRITE_SIZE = 100 * 1024 * 1024;
 async function executeWrite(filePath, content) {
+  checkRateLimit("file");
   const resolved = resolveSafePath(filePath);
+  const contentSize = Buffer.byteLength(content, "utf-8");
+  if (contentSize > MAX_WRITE_SIZE) {
+    throw new Error(
+      toolError(
+        "Write",
+        `Content size ${(contentSize / 1024 / 1024).toFixed(1)} MB exceeds maximum ${MAX_WRITE_SIZE / 1024 / 1024} MB`,
+        "Use streaming or split the content into smaller files."
+      )
+    );
+  }
   await (0, import_promises2.mkdir)((0, import_node_path.dirname)(resolved), { recursive: true });
   await (0, import_promises2.writeFile)(resolved, content, "utf-8");
   return `Written ${content.length} bytes to ${filePath}`;
@@ -364,8 +410,8 @@ function globToRegex(pattern) {
 
 // src/tools/GlobTool.ts
 var SKIP_DIRS = /* @__PURE__ */ new Set(["node_modules", ".git", "dist", ".next", "build", ".turbo", "coverage", "__pycache__"]);
-function matchGlob(pattern, path3) {
-  return globToRegex(pattern).test(path3);
+function matchGlob(pattern, path4) {
+  return globToRegex(pattern).test(path4);
 }
 async function executeGlob(pattern, root) {
   try {
@@ -460,8 +506,8 @@ async function grepFileLineStream(filePath, regex, maxMatches, contextLines = 0)
   }
   return matches.length > 0 ? matches : null;
 }
-async function executeGrep(pattern, include, path3, contextLines = 0) {
-  const base = path3 ? (0, import_node_path3.isAbsolute)(path3) ? path3 : (0, import_node_path3.join)(process.cwd(), path3) : process.cwd();
+async function executeGrep(pattern, include, path4, contextLines = 0) {
+  const base = path4 ? (0, import_node_path3.isAbsolute)(path4) ? path4 : (0, import_node_path3.join)(process.cwd(), path4) : process.cwd();
   const includeRegex = include ? globToRegex(include) : null;
   const rgResult = await tryRipgrep(pattern, include ?? null, base, contextLines);
   if (rgResult !== null) return rgResult;
@@ -563,7 +609,131 @@ async function executeTodoWrite(todos) {
 // src/version.ts
 var VERSION = "0.7.0";
 
+// src/tools/NetworkTool.ts
+var fs = __toESM(require("fs/promises"), 1);
+var path = __toESM(require("path"), 1);
+var dns = __toESM(require("dns/promises"), 1);
+var import_node_fs = require("fs");
+var import_node_net = require("net");
+
+var DANGEROUS_IPV4_RANGES = [
+  { prefix: "10.", mask: 8 },
+  // 10.0.0.0/8
+  { prefix: "172.16.", mask: 12 },
+  // 172.16.0.0/12
+  { prefix: "192.168.", mask: 16 },
+  // 192.168.0.0/16
+  { prefix: "127.", mask: 8 },
+  // 127.0.0.0/8 loopback
+  { prefix: "169.254.", mask: 16 },
+  // 169.254.0.0/16 link-local
+  { prefix: "0.", mask: 8 }
+  // 0.0.0.0/8
+];
+var DANGEROUS_IPV6_PREFIXES = [
+  "::1",
+  // loopback
+  "fc00:",
+  // unique local
+  "fd00:",
+  // unique local
+  "fe80:",
+  // link-local
+  "ff00:"
+  // multicast
+];
+var BLOCKED_SCHEMES = /* @__PURE__ */ new Set(["file", "ftp", "telnet", "gopher", "dict", "ssh", "git"]);
+function ipv4ToNumber(ip) {
+  const parts = ip.split(".").map(Number);
+  return (parts[0] ?? 0) << 24 | (parts[1] ?? 0) << 16 | (parts[2] ?? 0) << 8 | (parts[3] ?? 0);
+}
+function isInRange(ip, prefix, maskLen) {
+  const ipNum = ipv4ToNumber(ip);
+  const prefixNum = ipv4ToNumber(prefix);
+  const mask = ~0 << 32 - maskLen;
+  return (ipNum & mask) === (prefixNum & mask);
+}
+function isDangerousIPv4(ip) {
+  if (!(0, import_node_net.isIPv4)(ip)) return false;
+  for (const range of DANGEROUS_IPV4_RANGES) {
+    if (isInRange(ip, range.prefix, range.mask)) return true;
+  }
+  return false;
+}
+function isDangerousIPv6(ip) {
+  const lower = ip.toLowerCase();
+  for (const prefix of DANGEROUS_IPV6_PREFIXES) {
+    if (lower.startsWith(prefix)) return true;
+  }
+  return false;
+}
+async function resolveAndCheckHostname(host) {
+  if ((0, import_node_net.isIPv4)(host) || host.startsWith("[") || host === "::1") return null;
+  const dangerousHosts = /* @__PURE__ */ new Set([
+    "localhost",
+    "metadata.google.internal",
+    "metadata.internal",
+    "100.100.100.200"
+    // 阿里云 metadata
+  ]);
+  if (dangerousHosts.has(host)) {
+    return "Access to internal services is not allowed";
+  }
+  if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+    return "Accessing IP addresses directly is not allowed";
+  }
+  const addresses = [];
+  try {
+    const v4Result = await dns.resolve4(host, { ttl: false });
+    addresses.push(...v4Result.map((r) => typeof r === "string" ? r : r.address));
+  } catch {
+  }
+  try {
+    const v6Result = await dns.resolve6(host, { ttl: false });
+    addresses.push(...v6Result.map((r) => typeof r === "string" ? r : r.address));
+  } catch {
+  }
+  if (addresses.length === 0) {
+    return `DNS resolution failed for "${host}" \u2014 cannot verify destination.`;
+  }
+  for (const addr of addresses) {
+    if ((0, import_node_net.isIPv4)(addr) && isDangerousIPv4(addr)) {
+      return `DNS resolved "${host}" to private IP ${addr} \u2014 access denied.`;
+    }
+    if (!(0, import_node_net.isIPv4)(addr) && isDangerousIPv6(addr)) {
+      return `DNS resolved "${host}" to private IP ${addr} \u2014 access denied.`;
+    }
+  }
+  return null;
+}
+async function validateUrl(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "Invalid URL";
+  }
+  if (BLOCKED_SCHEMES.has(parsed.protocol.replace(":", "").toLowerCase())) {
+    return `Scheme '${parsed.protocol}' is not allowed`;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return `Only http and https schemes are allowed, got '${parsed.protocol}'`;
+  }
+  const host = parsed.hostname.toLowerCase();
+  if ((0, import_node_net.isIPv4)(host)) {
+    return "Accessing IP addresses directly is not allowed";
+  }
+  if (host.startsWith("[") || host === "::1") {
+    return "Accessing IP addresses directly is not allowed";
+  }
+  const dnsError = await resolveAndCheckHostname(host);
+  if (dnsError) return dnsError;
+  return null;
+}
+var MAX_DOWNLOAD_SIZE = 500 * 1024 * 1024;
+
 // src/tools/WebFetchTool.ts
+var MAX_REDIRECTS = 5;
 async function executeWebFetch(url, format) {
   if (!url || typeof url !== "string") {
     throw new Error(invalidParam("url", "a non-empty URL string"));
@@ -578,10 +748,24 @@ async function executeWebFetch(url, format) {
     throw new Error(netError(url, "Invalid URL"));
   }
   const outputFormat = format === "html" ? "html" : "text";
+  return fetchWithRedirectLimit(url, outputFormat, 0);
+}
+async function fetchWithRedirectLimit(url, outputFormat, redirectCount) {
+  if (redirectCount > MAX_REDIRECTS) {
+    throw new Error(
+      toolError(
+        "Network",
+        `Too many redirects (max ${MAX_REDIRECTS}): ${url}`,
+        "The URL may be caught in a redirect loop."
+      )
+    );
+  }
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15e3);
     const response = await fetch(url, {
+      redirect: "manual",
+      // 手动处理重定向，不自动跟随
       signal: controller.signal,
       headers: {
         "User-Agent": `CodeYang/${VERSION} (AI Coding Agent)`,
@@ -589,6 +773,18 @@ async function executeWebFetch(url, format) {
       }
     });
     clearTimeout(timeout);
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get("location");
+      if (!location) {
+        throw new Error(netError(url, `Redirect ${response.status} without Location header`));
+      }
+      const nextUrl = new URL(location, url).href;
+      const validationError = await validateUrl(nextUrl);
+      if (validationError) {
+        throw new Error(netError(url, `Redirect blocked: ${validationError}`));
+      }
+      return fetchWithRedirectLimit(nextUrl, outputFormat, redirectCount + 1);
+    }
     if (!response.ok) {
       throw new Error(netError(url, `HTTP ${response.status}: ${response.statusText}`));
     }
@@ -617,8 +813,8 @@ async function executeWebFetch(url, format) {
 }
 
 // src/tools/SearchTool.ts
-var path = __toESM(require("path"), 1);
-var import_node_fs = require("fs");
+var path2 = __toESM(require("path"), 1);
+var import_node_fs2 = require("fs");
 
 // src/utils/projectIndex.ts
 var import_promises7 = require("fs/promises");
@@ -669,7 +865,7 @@ async function getProjectIndex(root) {
 async function executeSearch(query, rootDir = process.cwd(), options = {}) {
   const { maxResults = 20, includeGlob, searchContent = true, searchNames = true, caseSensitive = false } = options;
   if (!query.trim()) return "Error: query cannot be empty";
-  if (!(0, import_node_fs.existsSync)(rootDir)) return `Error: directory not found: ${rootDir}`;
+  if (!(0, import_node_fs2.existsSync)(rootDir)) return `Error: directory not found: ${rootDir}`;
   const results = [];
   if (searchNames) {
     const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -678,7 +874,7 @@ async function executeSearch(query, rootDir = process.cwd(), options = {}) {
       const idx = await getProjectIndex(rootDir);
       for (const filePath of idx.files) {
         if (!filePath.toLowerCase().includes(query.toLowerCase())) continue;
-        const base = path.basename(filePath);
+        const base = path2.basename(filePath);
         if (re.test(base)) {
           results.push({ type: "name", path: filePath });
           if (results.length >= maxResults) break;
@@ -698,7 +894,7 @@ async function executeSearch(query, rootDir = process.cwd(), options = {}) {
           const rgMatch = line.match(/^(.+?):(\d+):(.*)$/);
           if (rgMatch) {
             const [, filePath, lineNum, snippet] = rgMatch;
-            const absPath = path.isAbsolute(filePath) ? filePath : path.join(rootDir, filePath);
+            const absPath = path2.isAbsolute(filePath) ? filePath : path2.join(rootDir, filePath);
             if (!results.find((r) => r.path === absPath && r.type === "name")) {
               results.push({ type: "content", path: absPath, line: Number(lineNum), snippet: snippet.trim() });
             }
@@ -706,7 +902,7 @@ async function executeSearch(query, rootDir = process.cwd(), options = {}) {
           }
           const lineMatch = line.match(/^(\d+)[: ]\s*(.*)/);
           if (lineMatch && currentFile) {
-            const absPath = path.isAbsolute(currentFile) ? currentFile : path.join(rootDir, currentFile);
+            const absPath = path2.isAbsolute(currentFile) ? currentFile : path2.join(rootDir, currentFile);
             if (!results.find((r) => r.path === absPath && r.type === "name")) {
               results.push({
                 type: "content",
@@ -743,8 +939,8 @@ async function executeSearch(query, rootDir = process.cwd(), options = {}) {
 }
 
 // src/tools/ImageTool.ts
-var fs = __toESM(require("fs/promises"), 1);
-var path2 = __toESM(require("path"), 1);
+var fs2 = __toESM(require("fs/promises"), 1);
+var path3 = __toESM(require("path"), 1);
 var IMAGE_SIGNATURES = [
   { ext: "png", mime: "image/png", magic: Buffer.from([137, 80, 78, 71]) },
   { ext: "jpg", mime: "image/jpeg", magic: Buffer.from([255, 216, 255]) },
@@ -796,8 +992,8 @@ function readDimensions(buf, fmt) {
 async function executeImageInfo(filePath) {
   try {
     const absPath = resolveSafePath(filePath);
-    const stats = await fs.stat(absPath);
-    const fd = await fs.open(absPath, "r");
+    const stats = await fs2.stat(absPath);
+    const fd = await fs2.open(absPath, "r");
     try {
       const header = Buffer.alloc(64);
       await fd.read(header, 0, 64, 0);
@@ -821,11 +1017,11 @@ async function executeImageInfo(filePath) {
 async function executeImageToBase64(filePath, maxBytes = 5242880) {
   try {
     const absPath = resolveSafePath(filePath);
-    const stats = await fs.stat(absPath);
+    const stats = await fs2.stat(absPath);
     if (stats.size > maxBytes) {
       return `Error: file too large (${(stats.size / 1024 / 1024).toFixed(1)} MB > ${maxBytes / 1024 / 1024} MB limit)`;
     }
-    const buf = await fs.readFile(absPath);
+    const buf = await fs2.readFile(absPath);
     const fmt = detectFormat(buf);
     const mime = fmt?.mime ?? "application/octet-stream";
     const b64 = buf.toString("base64");
@@ -838,8 +1034,8 @@ async function executeListImages(dirPath) {
   try {
     const absDir = resolveSafePath(dirPath);
     const IMAGE_EXTS = /* @__PURE__ */ new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".svg", ".tiff", ".tif"]);
-    const entries = await fs.readdir(absDir, { withFileTypes: true });
-    const images = entries.filter((e) => e.isFile() && IMAGE_EXTS.has(path2.extname(e.name).toLowerCase())).map((e) => e.name);
+    const entries = await fs2.readdir(absDir, { withFileTypes: true });
+    const images = entries.filter((e) => e.isFile() && IMAGE_EXTS.has(path3.extname(e.name).toLowerCase())).map((e) => e.name);
     if (images.length === 0) return `No image files found in: ${absDir}`;
     return [`Images in ${absDir} (${images.length}):`, ...images.map((n) => `  ${n}`)].join("\n");
   } catch (err) {
@@ -853,12 +1049,15 @@ function resolveSafePath(inputPath, cwd) {
   const resolved = (0, import_node_path6.resolve)(base, inputPath);
   const sandbox = process.env["CODEX_SANDBOX"];
   if (!sandbox) return resolved;
-  if (process.env["CODEYANG_NO_SANDBOX"] === "true") return resolved;
-  const absSandbox = (0, import_node_path6.resolve)(sandbox);
+  let absSandbox = (0, import_node_path6.resolve)(sandbox);
+  try {
+    absSandbox = (0, import_node_fs3.realpathSync)(absSandbox);
+  } catch {
+  }
   if (resolved === absSandbox) return resolved;
   let real = resolved;
   try {
-    real = (0, import_node_fs2.realpathSync)(resolved);
+    real = (0, import_node_fs3.realpathSync)(resolved);
   } catch {
   }
   const sandboxSep = absSandbox.endsWith(import_node_path6.sep) ? absSandbox : absSandbox + import_node_path6.sep;
