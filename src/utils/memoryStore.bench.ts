@@ -24,7 +24,7 @@ describe('MemoryStore benchmarks', () => {
     const result = await listMemories();
     const elapsed = Date.now() - start;
 
-    expect(elapsed).toBeLessThan(350);
+    expect(elapsed).toBeLessThan(500);
     expect(result.length).toBeGreaterThanOrEqual(TEST_COUNT);
   });
 

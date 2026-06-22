@@ -548,6 +548,7 @@ export async function startBridgeServer(config?: Partial<BridgeConfig>): Promise
           wss.close();
           server.close();
           state.connectedAgents.clear();
+          await Promise.resolve();
         },
       });
     });

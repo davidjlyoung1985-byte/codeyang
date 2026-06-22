@@ -74,7 +74,7 @@ function usageEvent(inputTokens: number, outputTokens: number): StreamEvent {
 
 /** Build an async generator from an array of StreamEvents for mock stream() */
 function makeStream(...events: StreamEvent[]): AsyncIterable<StreamEvent> {
-  return (async function* () {
+  return (function* () {
     for (const e of events) {
       yield e;
     }
@@ -228,7 +228,7 @@ describe('Agent', () => {
   describe('run — tool calls', () => {
     it('executes tool calls from LLM and sends results back', async () => {
       const toolCallsExecuted: string[] = [];
-      mockToolExecute.mockImplementation(async (args: Record<string, unknown>) => {
+      mockToolExecute.mockImplementation((args: Record<string, unknown>) => {
         toolCallsExecuted.push(String(args['command']));
         return 'executed ok';
       });

@@ -36,7 +36,7 @@ export function validateParams(args: Record<string, unknown>, schema: Record<str
     return errors;
   }
 
-  const props = (schema as Record<string, unknown>).properties ?? {};
+  const props = ((schema as Record<string, unknown>).properties ?? {}) as Record<string, unknown>;
   const required: string[] = ((schema as Record<string, unknown>).required as string[]) ?? [];
 
   // ── Required-field checks ──────────────────────────────────────────
@@ -122,7 +122,7 @@ export function validateParams(args: Record<string, unknown>, schema: Record<str
     }
 
     // ── Enum check (applied after type check) ────────────────────────
-    const enumVals: unknown[] | undefined = propSchema.enum;
+    const enumVals = propSchema?.enum as unknown[] | undefined;
     if (enumVals && Array.isArray(enumVals) && enumVals.length > 0) {
       if (!enumVals.some((e) => e === value)) {
         const allowed = enumVals.map((e) => String(e)).join(', ');
