@@ -22,14 +22,14 @@ function hr(label?: string): void {
 function renderInlineMarkdown(text: string): string {
   let out = text;
   out = out.replace(/`([^`]+)`/g, (_m: string, code: string) => c.cyan(code));
-  out = out.replace(/\*\*([^*]+)\*\*/g, (_m: string, t: string) => `\x1b[1m${t}\x1b[22m`);
+  out = out.replace(/\*\*([^*]+)\*\*/g, (_m: string, t: string) => c.bold(c.blue(t)));
   out = out.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, (_m: string, t: string) => c.italic(t));
   out = out.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_m: string, text: string, url: string) => `${text} ${c.dim(`(${url})`)}`,
+    (_m: string, text: string, url: string) => `${c.blue(text)} ${c.dim(`(${url})`)}`,
   );
-  // Use ANSI reset to ensure terminal default foreground color is used
-  return `\x1b[39m${out}\x1b[0m`;
+  // Use blue color for better visibility on both light and dark backgrounds
+  return c.blue(out);
 }
 
 function renderMarkdown(text: string): string {
