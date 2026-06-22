@@ -3,7 +3,7 @@
  * Provides instant reference for QChart types, series configuration,
  * axis setup, and common chart patterns with example code.
  */
-export async function executeQtCharts(chartType?: string): Promise<string> {
+export function executeQtCharts(chartType?: string): string {
   const lines: string[] = [];
   lines.push('## Qt Charts Reference\n');
 

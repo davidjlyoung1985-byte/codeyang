@@ -15,16 +15,19 @@ export const definitions: ToolDefinition[] = [
       },
       required: [],
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- ToolDefinition interface requires async
     execute: async (args) => executeEnterPlanMode(args['goal'] ? String(args['goal']) : undefined),
   },
   {
     name: 'ExitPlanMode',
-    description: 'Exit planning mode and return to normal execution. Call this after the plan is approved and executed.',
+    description:
+      'Exit planning mode and return to normal execution. Call this after the plan is approved and executed.',
     parameters: {
       type: 'object',
       properties: {},
       required: [],
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- ToolDefinition interface requires async
     execute: async () => executeExitPlanMode(),
   },
 ];

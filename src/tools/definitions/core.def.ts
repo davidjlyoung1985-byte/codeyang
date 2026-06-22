@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await -- ToolDefinition interface requires async execute methods */
 import type { ToolDefinition } from '../../types.js';
 import { executeBash } from '../BashTool.js';
 import { executeRead } from '../ReadTool.js';
