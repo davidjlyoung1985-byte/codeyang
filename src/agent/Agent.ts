@@ -43,6 +43,7 @@ export class Agent {
   private static readonly FILE_LIST_TRUNCATE = 300;
   private static readonly TOP_TOOLS_COUNT = 10;
   private static readonly KEY_DECISIONS_COUNT = 5;
+  private static readonly MAX_CHECKPOINTS = 10; // Limit checkpoint memory usage
 
   private client: LLMClient;
   private history: LLMMessage[] = [];
@@ -204,6 +205,13 @@ export class Agent {
   saveCheckpoint(): number {
     const idx = this.checkpoints.length;
     this.checkpoints.push(this.jsonClone(this.history));
+
+    // Limit checkpoint memory: keep only the most recent MAX_CHECKPOINTS
+    if (this.checkpoints.length > Agent.MAX_CHECKPOINTS) {
+      this.checkpoints.shift(); // Remove oldest checkpoint
+      return idx - 1; // Adjust index since we removed one
+    }
+
     return idx;
   }
 

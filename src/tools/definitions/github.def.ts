@@ -1,6 +1,5 @@
 import type { ToolDefinition } from '../../types.js';
 import { executeGitHub } from '../GitHubTool.js';
-import { requiredString, optionalString } from '../validate.js';
 
 export const definitions: ToolDefinition[] = [
   {
