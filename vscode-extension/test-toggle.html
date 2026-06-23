@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeYang Toggle Test</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+#settings-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border: 1px solid #333;
+  background: #252526;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #555;
+  transition: 0.3s;
+  border-radius: 20px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #0e639c;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.settings-label {
+  color: #d4d4d4;
+  user-select: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#status {
+  font-size: 16px;
+  color: #569cd6;
+  padding: 12px 24px;
+  background: #2d2d2d;
+  border-radius: 8px;
+}
+
+.demo-section {
+  padding: 20px;
+  background: #252526;
+  border: 1px solid #333;
+  border-radius: 8px;
+  max-width: 600px;
+}
+
+.tool-section {
+  width: 100%;
+  margin: 8px 0;
+}
+
+.tool-collapse-header {
+  cursor: pointer;
+  padding: 8px 16px;
+  background: #2d2d2d;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #888;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-collapse-header:hover {
+  background: #333;
+}
+
+.tool-collapse-icon {
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.tool-collapse-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.tool-collapse-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  padding: 0 16px;
+}
+
+.tool-collapse-content.expanded {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tool-call {
+  padding: 4px 16px;
+  color: #888;
+  font-size: 12px;
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+<h1 style="color: #569cd6; font-size: 24px;">🔧 CodeYang 工具调用折叠测试</h1>
+
+<div id="settings-bar">
+  <label class="settings-label">
+    <span>🔧 折叠工具调用</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="collapse-tools-toggle" checked onchange="toggleToolCollapse()">
+      <span class="toggle-slider"></span>
+    </label>
+  </label>
+</div>
+
+<div id="status">状态: 折叠已启用</div>
+
+<div class="demo-section">
+  <h3 style="color: #569cd6; margin-bottom: 12px;">演示效果</h3>
+  <div class="tool-section" id="demo-tools">
+    <div class="tool-collapse-header" onclick="toggleDemo()">
+      <span class="tool-collapse-icon">▶</span>
+      <span>🔧 工具调用 (5 个)</span>
+    </div>
+    <div class="tool-collapse-content" id="demo-content">
+      <div class="tool-call">&gt; Bash(npm run lint)</div>
+      <div class="tool-call">  · ESLint 无错误</div>
+      <div class="tool-call">&gt; Bash(npm test)</div>
+      <div class="tool-call">  · 669/674 测试通过</div>
+      <div class="tool-call">&gt; Read(package.json)</div>
+      <div class="tool-call">  · 155 行</div>
+      <div class="tool-call">&gt; Glob(src/**/*.ts)</div>
+      <div class="tool-call">  · 142 个文件</div>
+      <div class="tool-call">&gt; Bash(npm run build)</div>
+      <div class="tool-call">  · 构建成功 5.6秒</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var collapseToolsEnabled = true;
+
+function toggleToolCollapse() {
+  collapseToolsEnabled = document.getElementById('collapse-tools-toggle').checked;
+  localStorage.setItem('collapseTools', collapseToolsEnabled);
+  document.getElementById('status').textContent =
+    '状态: ' + (collapseToolsEnabled ? '折叠已启用 ✅' : '折叠已禁用 ❌');
+  document.getElementById('status').style.color = collapseToolsEnabled ? '#4ec9b0' : '#f48771';
+}
+
+function toggleDemo() {
+  var icon = document.querySelector('.tool-collapse-icon');
+  var content = document.getElementById('demo-content');
+
+  if (content.classList.contains('expanded')) {
+    content.classList.remove('expanded');
+    icon.classList.remove('expanded');
+  } else {
+    content.classList.add('expanded');
+    icon.classList.add('expanded');
+  }
+}
+
+// Load saved setting
+if (localStorage.getItem('collapseTools') !== null) {
+  collapseToolsEnabled = localStorage.getItem('collapseTools') === 'true';
+  document.getElementById('collapse-tools-toggle').checked = collapseToolsEnabled;
+  document.getElementById('status').textContent =
+    '状态: ' + (collapseToolsEnabled ? '折叠已启用 ✅' : '折叠已禁用 ❌');
+  document.getElementById('status').style.color = collapseToolsEnabled ? '#4ec9b0' : '#f48771';
+}
+</script>
+</body>
+</html>

@@ -223,16 +223,19 @@ function cmdModel(line: string, ctx: CommandContext): DispatchResult {
 }
 
 function cmdConfig(ctx: CommandContext): DispatchResult {
-  console.log(`\n  Provider:     ${config.provider}`);
-  console.log(`  Model:        ${config.model}`);
-  console.log(`  Base URL:     ${config.baseURL}`);
-  console.log(`  Max Tokens:   ${config.maxTokens}`);
-  console.log(`  Max Turns:    ${config.maxTurns}`);
-  console.log(`  API Key:      ${config.apiKey ? '********' : '(not set)'}`);
-  console.log(`  CWD:          ${process.cwd()}`);
+  console.log(`\n  Provider:       ${config.provider}`);
+  console.log(`  Model:          ${config.model}`);
+  console.log(`  Base URL:       ${config.baseURL}`);
+  console.log(`  Max Tokens:     ${config.maxTokens}`);
+  console.log(`  Max Turns:      ${config.maxTurns}`);
+  console.log(`  Auto Verify:    ${config.autoVerify ? '✓' : '✗'}`);
+  console.log(`  Auto Fix:       ${config.autoFixOnError ? '✓' : '✗'}`);
+  console.log(`  Watch Mode:     ${config.watchMode ? '✓' : '✗'}`);
+  console.log(`  API Key:        ${config.apiKey ? '********' : '(not set)'}`);
+  console.log(`  CWD:            ${process.cwd()}`);
   const servers = getMcpServers();
   if (Object.keys(servers).length > 0) {
-    console.log(`  MCP Servers:  ${Object.keys(servers).join(', ')}`);
+    console.log(`  MCP Servers:    ${Object.keys(servers).join(', ')}`);
   }
   console.log('');
   ctx.ui.promptUser();

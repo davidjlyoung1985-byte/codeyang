@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import 'dotenv/config';
 import * as readline from 'node:readline';
+import picocolors from 'picocolors';
+const c = picocolors;
 import { CliUI } from './ui/CliUI.js';
 import { Agent } from './agent/Agent.js';
 import {
@@ -28,6 +30,7 @@ import { detectQtProject, createQtTools } from './qt/index.js';
 import { dispatch as dispatchCommand, type CommandContext } from './commands.js';
 import { VERSION } from './version.js';
 import { checkNodeVersion } from './utils/nodeVersionCheck.js';
+import { WatcherSystem, VerificationPipeline } from './closed-loop/index.js';
 
 async function promptForApiKey(): Promise<string> {
   return new Promise((resolve) => {
@@ -137,6 +140,9 @@ Environment Variables:
   CODEYANG_MODEL            Model name (default: deepseek-chat)
   CODEYANG_BASE_URL         Custom API base URL
   CODEYANG_MAX_TOKENS       Max tokens per response (default: 1000000)
+  CODEYANG_AUTO_VERIFY      Auto-run lint/tsc after Write/Edit (true/false, default: false)
+  CODEYANG_AUTO_FIX         Auto-fix lint errors when verified (true/false, default: false)
+  CODEYANG_WATCH            Watch files and auto-trigger verification (true/false, default: false)
   DEEPSEEK_API_KEY          Alternative env var for API key
 
 Interactive Commands:
@@ -266,6 +272,9 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     } catch (err) {
       logger.debug(`[MCP] shutdown error: ${err instanceof Error ? err.message : String(err)}`);
     }
+    if (watcher) {
+      watcher.stop();
+    }
   }
 
   // Detect Qt project and inject Qt-specific knowledge/tools
@@ -274,8 +283,59 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     registerQtTools(createQtTools(qtContext));
   }
 
+  // ── Closed-loop: auto-verify & file watcher ──────────────────
+  const cwd = process.cwd();
+  let watcher: WatcherSystem | null = null;
+  let verificationPipeline: VerificationPipeline | null = null;
+
+  if (config.autoVerify) {
+    verificationPipeline = new VerificationPipeline(cwd);
+    if (config.autoFixOnError) {
+      verificationPipeline.setMaxFixIterations(3);
+    }
+    logger.info('[ClosedLoop] Auto-verify enabled');
+  }
+
+  if (config.watchMode) {
+    watcher = new WatcherSystem((rule, ctx) => {
+      if (rule.action === 'auto-verify' && verificationPipeline && ctx.filePath) {
+        verificationPipeline
+          .run(ctx.filePath)
+          .then((results) => {
+            const failed = results.filter((r) => !r.passed);
+            const summary = verificationPipeline!.formatSummary(results);
+            if (failed.length > 0) {
+              console.log(`\n  ${c.red('!')} ${c.dim(`[Watcher] ${rule.label || ctx.filePath}:`)}`);
+              console.log(`  ${c.dim(summary)}`);
+            }
+          })
+          .catch(() => {});
+      } else if (rule.action === 'notify') {
+        console.log(`\n  ${c.cyan('·')} ${c.dim(`[Watcher] ${rule.label || ctx.filePath}`)}`);
+      }
+    });
+
+    watcher.addRule({
+      id: 'watch-ts-files',
+      source: { type: 'file', pattern: '\\.(ts|tsx)$' },
+      action: 'auto-verify',
+      label: 'TypeScript file changed',
+    });
+
+    watcher.addRule({
+      id: 'auto-verify-after-write',
+      source: { type: 'post-tool', toolNames: ['Write', 'Edit'] },
+      action: 'auto-verify',
+      label: 'After file write/edit',
+    });
+
+    watcher.start(cwd);
+  }
+
   const ui = new CliUI();
   const agent = new Agent(qtContext);
+  agent.setWatcher(watcher);
+  agent.setVerificationPipeline(verificationPipeline);
   let running = false;
   let currentSessionId: string | undefined;
 
@@ -307,8 +367,8 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     onToolStart(name, args) {
       ui.showToolCall(name, args);
     },
-    onToolResult(_name, output, isError) {
-      ui.showToolResult(output, isError);
+    onToolResult(name, output, isError) {
+      ui.showToolResult(name, output, isError);
     },
     onQuestion(q, options) {
       ui.showQuestion(q, options);

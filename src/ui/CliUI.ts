@@ -538,8 +538,7 @@ export class CliUI {
     process.stdout.write(`\n  ${c.dim(`${c.cyan(icon)} ${c.white(name)}${progress}`)} ${c.dim(argStr)}\n`);
   }
 
-  showToolResult(output: string, isError: boolean) {
-    const name = Array.from(this.toolStartTimes.keys()).pop() || '';
+  showToolResult(name: string, output: string, isError: boolean) {
     const elapsed = this.toolStartTimes.get(name);
     const duration = elapsed ? ` ${c.dim('[' + (Date.now() - elapsed) + 'ms]')}` : '';
     this.toolResultsCount++;
