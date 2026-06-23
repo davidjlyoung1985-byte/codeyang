@@ -172,6 +172,9 @@ export const config = {
   },
   maxTokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '1000000'),
   maxTurns: Number(process.env['CODEYANG_MAX_TURNS'] || '40'),
+  autoVerify: (process.env['CODEYANG_AUTO_VERIFY'] || 'false') === 'true',
+  autoFixOnError: (process.env['CODEYANG_AUTO_FIX'] || 'false') === 'true',
+  watchMode: (process.env['CODEYANG_WATCH'] || 'false') === 'true',
   getSystemPrompt(qtContext?: QtContext): string {
     let prompt = BASE_SYSTEM_PROMPT;
     if (qtContext?.isQtProject) {
