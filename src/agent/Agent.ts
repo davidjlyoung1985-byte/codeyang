@@ -5,6 +5,9 @@ import type { QtContext } from '../qt/index.js';
 import { createLLMClient, type LLMClient, type LLMMessage } from './LLMClient.js';
 import { getMemorySummary, getMemoryVersion } from '../utils/memoryStore.js';
 import { logger } from '../utils/logger.js';
+import { VerificationPipeline, type VerificationResult } from '../closed-loop/VerificationPipeline.js';
+import { FeedbackInjector } from '../closed-loop/FeedbackInjector.js';
+import type { WatcherSystem } from '../closed-loop/WatcherSystem.js';
 
 /** A content block emitted by the assistant (text or tool_use). */
 type AssistantContentBlock =
@@ -79,8 +82,25 @@ export class Agent {
   private cachedSystemPrompt: string | null = null;
   private cachedSystemPromptVersion = -1;
 
+  // Closed-loop: verification pipeline & feedback injector
+  private verificationPipeline: VerificationPipeline | null = null;
+  private feedbackInjector = new FeedbackInjector();
+  private watcher: WatcherSystem | null = null;
+
   constructor(private qtContext?: QtContext) {
     this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
+  }
+
+  setWatcher(watcher: WatcherSystem | null): void {
+    this.watcher = watcher;
+  }
+
+  setVerificationPipeline(pipeline: VerificationPipeline | null): void {
+    this.verificationPipeline = pipeline;
+  }
+
+  get pendingFeedback(): boolean {
+    return this.feedbackInjector.hasPending();
   }
 
   private async ensureMemoryLoaded(): Promise<string> {
@@ -121,16 +141,26 @@ export class Agent {
     return `${name}:${JSON.stringify(args)}`;
   }
 
-  /** Invalidate tool cache. If a filePath is provided, only invalidate entries referencing that path. */
+  /** Invalidate tool cache. If a filePath is provided, only invalidate entries referencing that exact path. */
   private invalidateCache(filePath?: string) {
     if (!filePath) {
       this.toolCache.clear();
       return;
     }
-    // Precise invalidation: only clear entries whose key (serialized args) contains the given path
     for (const [key] of this.toolCache) {
-      if (key.includes(filePath)) {
-        this.toolCache.delete(key);
+      try {
+        const colonIdx = key.indexOf(':');
+        if (colonIdx === -1) continue;
+        const argsJson = key.slice(colonIdx + 1);
+        const args = JSON.parse(argsJson) as Record<string, unknown>;
+        const cachedPath = (args.filePath || args.pattern || '') as string;
+        if (cachedPath === filePath) {
+          this.toolCache.delete(key);
+        }
+      } catch {
+        if (key.includes(filePath)) {
+          this.toolCache.delete(key);
+        }
       }
     }
   }
@@ -483,7 +513,10 @@ export class Agent {
               this.toolCache.set(cacheKey, { result: output, timestamp: Date.now() });
               this.pendingReads.delete(cacheKey);
             }
-            if (tc.name === 'Write' || tc.name === 'Edit') this.invalidateCache();
+            if (tc.name === 'Write' || tc.name === 'Edit') {
+              const writtenPath = String((tc.input as Record<string, unknown>)['filePath'] ?? '');
+              this.invalidateCache(writtenPath || undefined);
+            }
           } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err);
             this.recordToolCall(tc.name, Date.now() - t0, true);
@@ -619,7 +652,7 @@ export class Agent {
       if (assistantText) {
         if (assistantText === this.lastAssistantText) {
           this.repeatCount++;
-          if (this.repeatCount >= 1) {
+          if (this.repeatCount >= 2) {
             this.cbs.onError?.('Agent loop detected (exact repeat) — stopping');
             if (toolCalls.length > 0) {
               messages.push({
@@ -691,6 +724,54 @@ export class Agent {
       }));
 
       messages.push({ role: 'user', content: toolResultContent });
+
+      // ── Closed-loop: auto-verify after Write/Edit ─────────────
+      if (config.autoVerify && this.verificationPipeline) {
+        const writtenFiles = toolCalls
+          .filter(
+            (tc) =>
+              (tc.name === 'Write' || tc.name === 'Edit') && tc.input && (tc.input as Record<string, unknown>).filePath,
+          )
+          .map((tc) => String((tc.input as Record<string, unknown>).filePath));
+
+        if (writtenFiles.length > 0) {
+          const allResults: VerificationResult[] = [];
+          await Promise.all(
+            writtenFiles.map(async (fp) => {
+              if (config.autoFixOnError) {
+                const { results } = await this.verificationPipeline!.verifyWithFix(fp);
+                allResults.push(...results);
+              } else {
+                const results = await this.verificationPipeline!.run(fp);
+                allResults.push(...results);
+              }
+            }),
+          );
+
+          const failed = allResults.filter((r) => !r.passed);
+          if (failed.length > 0) {
+            const summary = this.verificationPipeline.formatSummary(allResults);
+            const injectMsg = FeedbackInjector.formatAutoVerify(summary);
+            // Inject as a plain user message so the LLM can act on the errors
+            messages.push({ role: 'user', content: injectMsg });
+            this.cbs.onToolResult?.('Auto-Verify', summary, true);
+          } else {
+            this.cbs.onToolResult?.('Auto-Verify', allResults.map((r) => r.tool).join(', ') + ' passed', false);
+          }
+        }
+      }
+
+      // ── Closed-loop: check post-tool triggers ─────────────────
+      if (this.watcher) {
+        for (const tc of toolCalls) {
+          this.watcher.checkPostTool({
+            filePath: String((tc.input as Record<string, unknown>)?.filePath ?? ''),
+            toolName: tc.name,
+            toolInput: tc.input as Record<string, unknown>,
+          });
+        }
+      }
+
       this.history = messages;
     }
 
