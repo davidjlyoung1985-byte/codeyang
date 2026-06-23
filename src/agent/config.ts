@@ -175,6 +175,24 @@ export const config = {
   autoVerify: (process.env['CODEYANG_AUTO_VERIFY'] || 'false') === 'true',
   autoFixOnError: (process.env['CODEYANG_AUTO_FIX'] || 'false') === 'true',
   watchMode: (process.env['CODEYANG_WATCH'] || 'false') === 'true',
+
+  // Reflexion configuration
+  reflexion: {
+    enabled: (process.env['CODEYANG_REFLEXION'] || 'true') === 'true',
+    failureThreshold: Number(process.env['CODEYANG_REFLEXION_THRESHOLD'] || '2'),
+    maxReflections: Number(process.env['CODEYANG_REFLEXION_MAX'] || '50'),
+    autoInject: (process.env['CODEYANG_REFLEXION_AUTO_INJECT'] || 'true') === 'true',
+  },
+
+  // Planner configuration
+  planner: {
+    enabled: (process.env['CODEYANG_PLANNER'] || 'true') === 'true',
+    autoDetect: (process.env['CODEYANG_PLANNER_AUTO'] || 'true') === 'true',
+    complexityThreshold: Number(process.env['CODEYANG_PLANNER_THRESHOLD'] || '3'),
+    requireApproval: (process.env['CODEYANG_PLANNER_APPROVAL'] || 'true') === 'true',
+    maxRetries: Number(process.env['CODEYANG_PLANNER_RETRIES'] || '2'),
+  },
+
   getSystemPrompt(qtContext?: QtContext): string {
     let prompt = BASE_SYSTEM_PROMPT;
     if (qtContext?.isQtProject) {
@@ -245,4 +263,17 @@ You have file, shell, search, and editing tools. Use them.
 - Use Remember to save important facts, preferences, and decisions
 - Use Recall to retrieve what was saved in previous sessions
 - Use Forget to remove outdated memories
-- Memory persists across sessions — use it to build context over time`;
+- Memory persists across sessions — use it to build context over time
+
+## Reflexion (Self-Improvement)
+- The system automatically learns from execution failures
+- After repeated failures, you'll receive learned patterns to avoid similar mistakes
+- Past reflections are injected into context to improve decision-making
+- Use /reflect to manually trigger reflection on recent failures
+
+## Planning (Plan-and-Solve)
+- For complex multi-step tasks, the system can generate structured plans
+- Plans break down tasks into executable steps with dependencies
+- Each step tracks progress, retries, and results
+- Plans can be adjusted dynamically if steps fail
+- Use /plan to manually create a plan for a task`;
