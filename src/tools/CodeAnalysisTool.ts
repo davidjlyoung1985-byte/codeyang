@@ -1,11 +1,45 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { parse as babelParse, type ParserPlugin } from '@babel/parser';
 import traverse from '@babel/traverse';
 import { parse as acornParse } from 'acorn';
 import * as acornWalk from 'acorn-walk';
 import { ESLint } from 'eslint';
+
+// ── AST Results Cache (mtime-based invalidation) ────────────────────
+// Avoids re-parsing/re-analyzing the same file within a session when unchanged.
+// Each entry expires after CACHE_TTL_MS to prevent stale results.
+const CACHE_TTL_MS = 60_000;
+const resultCache = new Map<string, { result: string; mtimeMs: number; cachedAt: number }>();
+
+function getCached(key: string): string | null {
+  const entry = resultCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.cachedAt < CACHE_TTL_MS) {
+    return entry.result;
+  }
+  resultCache.delete(key);
+  return null;
+}
+
+function setCached(key: string, result: string): void {
+  resultCache.set(key, { result, mtimeMs: 0, cachedAt: Date.now() });
+}
+
+/**
+ * Build a cache key from the resolved file path + current mtime.
+ * Returns null if the file can't be stat'd (e.g. deleted).
+ */
+function cacheKey(filePath: string): string | null {
+  try {
+    const absPath = path.resolve(filePath);
+    const mtimeMs = statSync(absPath).mtimeMs;
+    return `${absPath}@${mtimeMs}`;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * 安全 JSON 序列化 — 处理循环引用、BigInt、undefined 等特殊情况。
@@ -40,6 +74,11 @@ export async function executeParseAst(
     if (!existsSync(absPath)) {
       return `Error: File does not exist: ${filePath}`;
     }
+    const ck = cacheKey(absPath);
+    if (ck) {
+      const cached = getCached(`parseAst:${ck}`);
+      if (cached) return cached;
+    }
 
     const code = await fs.readFile(absPath, 'utf-8');
 
@@ -67,7 +106,9 @@ export async function executeParseAst(
       },
     };
 
-    return safeJsonStringify(info, 2);
+    const result = safeJsonStringify(info, 2);
+    if (ck) setCached(`parseAst:${ck}`, result);
+    return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return `Error parsing AST: ${msg}`;
@@ -85,6 +126,11 @@ export async function executeAnalyzeCode(
     const absPath = path.resolve(filePath);
     if (!existsSync(absPath)) {
       return `Error: File does not exist: ${filePath}`;
+    }
+    const ck = cacheKey(absPath);
+    if (ck) {
+      const cached = getCached(`analyzeCode:${ck}`);
+      if (cached) return cached;
     }
 
     const code = await fs.readFile(absPath, 'utf-8');
@@ -188,7 +234,9 @@ export async function executeAnalyzeCode(
       ...analysis.variables.map((v) => `  - ${v.kind} ${v.name} (line ${v.line})`),
     ];
 
-    return summary.filter((s) => s !== '').join('\n');
+    const result = summary.filter((s) => s !== '').join('\n');
+    if (ck) setCached(`analyzeCode:${ck}`, result);
+    return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return `Error analyzing code: ${msg}`;
@@ -203,6 +251,11 @@ export async function executeComplexity(filePath: string): Promise<string> {
     const absPath = path.resolve(filePath);
     if (!existsSync(absPath)) {
       return `Error: File does not exist: ${filePath}`;
+    }
+    const ck = cacheKey(absPath);
+    if (ck) {
+      const cached = getCached(`complexity:${ck}`);
+      if (cached) return cached;
     }
 
     const code = await fs.readFile(absPath, 'utf-8');
@@ -283,7 +336,7 @@ export async function executeComplexity(filePath: string): Promise<string> {
     const lines = code.split('\n').length;
     const avgComplexity = functions > 0 ? (complexity / functions).toFixed(2) : '0';
 
-    return [
+    const result = [
       `File: ${filePath}`,
       `Lines: ${lines}`,
       `Functions: ${functions}`,
@@ -294,6 +347,8 @@ export async function executeComplexity(filePath: string): Promise<string> {
       ``,
       `Complexity Rating: ${getComplexityRating(complexity, functions)}`,
     ].join('\n');
+    if (ck) setCached(`complexity:${ck}`, result);
+    return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return `Error calculating complexity: ${msg}`;
@@ -400,6 +455,11 @@ export async function executeFindDeps(projectDir: string): Promise<string> {
     if (!existsSync(pkgPath)) {
       return `Error: package.json not found in ${projectDir}`;
     }
+    const ck = cacheKey(pkgPath);
+    if (ck) {
+      const cached = getCached(`findDeps:${ck}`);
+      if (cached) return cached;
+    }
 
     const content = await fs.readFile(pkgPath, 'utf-8');
     const pkg = JSON.parse(content);
@@ -425,7 +485,9 @@ export async function executeFindDeps(projectDir: string): Promise<string> {
       output.push(...Object.entries(peerDeps).map(([name, version]) => `  - ${name}: ${version}`));
     }
 
-    return output.join('\n');
+    const result = output.join('\n');
+    if (ck) setCached(`findDeps:${ck}`, result);
+    return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return `Error finding dependencies: ${msg}`;
@@ -440,6 +502,11 @@ export async function executeCountLines(filePath: string): Promise<string> {
     const absPath = path.resolve(filePath);
     if (!existsSync(absPath)) {
       return `Error: File does not exist: ${filePath}`;
+    }
+    const ck = cacheKey(absPath);
+    if (ck) {
+      const cached = getCached(`countLines:${ck}`);
+      if (cached) return cached;
     }
 
     const content = await fs.readFile(absPath, 'utf-8');
@@ -482,13 +549,15 @@ export async function executeCountLines(filePath: string): Promise<string> {
       codeLines++;
     }
 
-    return [
+    const result = [
       `File: ${filePath}`,
       `Total Lines: ${totalLines}`,
       `Code Lines: ${codeLines} (${((codeLines / totalLines) * 100).toFixed(1)}%)`,
       `Comment Lines: ${commentLines} (${((commentLines / totalLines) * 100).toFixed(1)}%)`,
       `Blank Lines: ${blankLines} (${((blankLines / totalLines) * 100).toFixed(1)}%)`,
     ].join('\n');
+    if (ck) setCached(`countLines:${ck}`, result);
+    return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return `Error counting lines: ${msg}`;
