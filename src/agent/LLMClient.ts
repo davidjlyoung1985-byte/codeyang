@@ -54,6 +54,13 @@ export interface LLMClient {
     messages: LLMMessage[];
     tools: ToolSchema[];
   }): AsyncIterable<StreamEvent>;
+
+  chat?(params: {
+    model: string;
+    maxTokens: number;
+    messages: LLMMessage[];
+    stream: boolean;
+  }): Promise<{ content: string }>;
 }
 
 /**
@@ -123,6 +130,22 @@ class AnthropicClient implements LLMClient {
     const opts: ConstructorParameters<typeof Anthropic>[0] = { apiKey };
     if (baseURL) opts.baseURL = baseURL;
     this.client = new Anthropic(opts);
+  }
+
+  async chat(params: {
+    model: string;
+    maxTokens: number;
+    messages: LLMMessage[];
+    stream: boolean;
+  }): Promise<{ content: string }> {
+    const response = await this.client.messages.create({
+      model: params.model,
+      max_tokens: params.maxTokens,
+      messages: params.messages as Anthropic.MessageParam[],
+    });
+
+    const textBlock = response.content.find((block) => block.type === 'text');
+    return { content: textBlock && 'text' in textBlock ? textBlock.text : '' };
   }
 
   async *stream(params: {
@@ -213,6 +236,22 @@ class OpenAICompatClient implements LLMClient {
   constructor(apiKey: string, baseURL: string) {
     this.client = new OpenAI({ apiKey, baseURL });
     this.baseURL = baseURL;
+  }
+
+  async chat(params: {
+    model: string;
+    maxTokens: number;
+    messages: LLMMessage[];
+    stream: boolean;
+  }): Promise<{ content: string }> {
+    const response = await this.client.chat.completions.create({
+      model: params.model,
+      max_tokens: params.maxTokens,
+      messages: params.messages as OpenAI.Chat.ChatCompletionMessageParam[],
+      stream: false,
+    });
+
+    return { content: response.choices[0]?.message?.content || '' };
   }
 
   async *stream(params: {
