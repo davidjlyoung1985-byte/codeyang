@@ -8,6 +8,9 @@ import FormData from 'form-data';
 import { resolveSafePath } from './shared.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 
+// 设置 axios 默认超时，防止请求卡住
+axios.defaults.timeout = 30000;
+
 // ── SSRF / URL validation ────────────────────────────────────────
 
 /** Private / loopback / dangerous IP ranges (for IPv4) */
@@ -130,6 +133,10 @@ async function resolveAndCheckHostname(host: string): Promise<string | null> {
  * 4. DNS 解析后检查 IP 是否落入内网范围
  */
 export async function validateUrl(url: string): Promise<string | null> {
+  if (url.length > MAX_URL_LENGTH) {
+    return `URL too long (${url.length} chars, max ${MAX_URL_LENGTH})`;
+  }
+
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -187,9 +194,22 @@ async function verifyDnsBeforeRequest(url: string): Promise<string | null> {
   return null;
 }
 
+/**
+ * URL 安全校验 + DNS 抗绑定检查的组合装饰器。
+ * 替代所有网络函数中重复的 validateUrl + verifyDnsBeforeRequest 调用。
+ */
+async function validateUrlWithDnsCheck(url: string): Promise<string | null> {
+  const urlErr = await validateUrl(url);
+  if (urlErr) return urlErr;
+  return verifyDnsBeforeRequest(url);
+}
+
 // ── Network tools ─────────────────────────────────────────────────
 
 const MAX_DOWNLOAD_SIZE = 500 * 1024 * 1024; // 500 MB limit for downloads
+const MAX_URL_LENGTH = 8192; // 防止超长URL攻击
+const MAX_REDIRECTS = 10; // 限制重定向次数
+const USER_AGENT = 'CodeYang-Agent/0.7.0';
 
 export async function executeHttpRequest(
   url: string,
@@ -200,19 +220,20 @@ export async function executeHttpRequest(
 ): Promise<string> {
   checkRateLimit('network');
 
-  const urlErr = await validateUrl(url);
-  if (urlErr) return `Error: ${urlErr}`;
+  if (url.length > MAX_URL_LENGTH) {
+    return `Error: URL too long (${url.length} chars, max ${MAX_URL_LENGTH})`;
+  }
 
-  // DNS rebinding protection: verify DNS again before request
-  const rebindErr = await verifyDnsBeforeRequest(url);
-  if (rebindErr) return `Error: ${rebindErr}`;
+  const urlErr = await validateUrlWithDnsCheck(url);
+  if (urlErr) return `Error: ${urlErr}`;
 
   try {
     const config: AxiosRequestConfig = {
       method,
       url,
-      headers,
+      headers: { 'User-Agent': USER_AGENT, ...headers },
       timeout,
+      maxRedirects: MAX_REDIRECTS,
     };
 
     if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
@@ -230,7 +251,14 @@ export async function executeHttpRequest(
 
     return JSON.stringify(result, null, 2);
   } catch (err) {
-    const axiosErr = err as { response?: { status: number; statusText: string; data: unknown }; message?: string };
+    const axiosErr = err as {
+      response?: { status: number; statusText: string; data: unknown };
+      message?: string;
+      code?: string;
+    };
+    if (axiosErr.code === 'ECONNABORTED') {
+      return `Error: Request timed out after ${timeout}ms`;
+    }
     if (axiosErr.response) {
       return JSON.stringify(
         {
@@ -254,12 +282,8 @@ export async function executeHttpRequest(
 export async function executeDownloadFile(url: string, destPath: string, timeout = 60000): Promise<string> {
   checkRateLimit('network');
 
-  const urlErr = await validateUrl(url);
+  const urlErr = await validateUrlWithDnsCheck(url);
   if (urlErr) return `Error: ${urlErr}`;
-
-  // DNS rebinding protection: verify DNS again before request
-  const rebindErr = await verifyDnsBeforeRequest(url);
-  if (rebindErr) return `Error: ${rebindErr}`;
 
   try {
     const absPath = resolveSafePath(destPath);
@@ -322,12 +346,8 @@ export async function executeUploadFile(
   additionalFields?: Record<string, string>,
   timeout = 60000,
 ): Promise<string> {
-  const urlErr = await validateUrl(url);
+  const urlErr = await validateUrlWithDnsCheck(url);
   if (urlErr) return `Error: ${urlErr}`;
-
-  // DNS rebinding protection
-  const rebindErr = await verifyDnsBeforeRequest(url);
-  if (rebindErr) return `Error: ${rebindErr}`;
 
   try {
     const absPath = resolveSafePath(filePath);
@@ -356,7 +376,14 @@ export async function executeUploadFile(
       2,
     );
   } catch (err) {
-    const axiosErr = err as { response?: { status: number; statusText: string; data: unknown }; message?: string };
+    const axiosErr = err as {
+      response?: { status: number; statusText: string; data: unknown };
+      message?: string;
+      code?: string;
+    };
+    if (axiosErr.code === 'ECONNABORTED') {
+      return `Error: Request timed out after ${timeout}ms`;
+    }
     if (axiosErr.response) {
       return JSON.stringify(
         {
@@ -384,12 +411,8 @@ export async function executeApiCall(
   headers?: Record<string, string>,
   timeout = 30000,
 ): Promise<string> {
-  const urlErr = await validateUrl(url);
+  const urlErr = await validateUrlWithDnsCheck(url);
   if (urlErr) return `Error: ${urlErr}`;
-
-  // DNS rebinding protection
-  const rebindErr = await verifyDnsBeforeRequest(url);
-  if (rebindErr) return `Error: ${rebindErr}`;
 
   try {
     const config: AxiosRequestConfig = {

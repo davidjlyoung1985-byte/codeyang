@@ -10,6 +10,22 @@ vi.mock('./config.js', () => ({
     maxRetries: 3,
     maxTurns: 20,
     temperature: 0.5,
+    autoVerify: true,
+    autoFixOnError: true,
+    watchMode: true,
+    reflexion: {
+      enabled: true,
+      failureThreshold: 2,
+      maxReflections: 50,
+      autoInject: true,
+    },
+    planner: {
+      enabled: true,
+      autoDetect: true,
+      complexityThreshold: 3,
+      requireApproval: true,
+      maxRetries: 2,
+    },
     getSystemPrompt: vi.fn(() => 'You are a test agent.'),
   },
 }));

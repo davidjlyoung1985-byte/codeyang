@@ -174,36 +174,6 @@ export class VerificationPipeline {
     }
   }
 
-  /** 单次 tsc 检查（已弃用，改用 runTscOnce 缓存版本） */
-  private async runTypeCheck(filePath: string): Promise<VerificationResult | null> {
-    if (!existsSync(resolve(this.projectDir, 'tsconfig.json'))) return null;
-    const t0 = Date.now();
-    try {
-      const { stdout, stderr } = await execa('npx', ['tsc', '--noEmit', '--pretty', 'false'], {
-        cwd: this.projectDir,
-        timeout: TYPECHECK_TIMEOUT,
-        reject: false,
-      });
-      const all = stdout || stderr || '';
-      const lines = all.split('\n').filter((l) => l.includes(filePath));
-      return {
-        filePath,
-        passed: lines.length === 0,
-        tool: 'typecheck',
-        output: lines.length > 0 ? lines.join('\n').trim() : '(no type errors)',
-        durationMs: Date.now() - t0,
-      };
-    } catch (err) {
-      return {
-        filePath,
-        passed: false,
-        tool: 'typecheck',
-        output: `tsc failed: ${err instanceof Error ? err.message : String(err)}`,
-        durationMs: Date.now() - t0,
-      };
-    }
-  }
-
   private async autoFix(errors: VerificationResult[]): Promise<void> {
     for (const err of errors) {
       if (err.tool === 'lint') {

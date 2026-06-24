@@ -148,9 +148,24 @@ export class Planner {
    */
   private parsePlanResponse(content: string, task: string): Plan | null {
     try {
-      // Extract JSON from markdown code blocks
-      const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/);
-      const jsonStr = jsonMatch ? jsonMatch[1] : content;
+      // Extract JSON from markdown code blocks (try json, js, then any code block, then raw)
+      let jsonStr = content;
+      const jsonMatch =
+        content.match(/```json\s*(\{[\s\S]*?\})\s*```/) ??
+        content.match(/```js\s*(\{[\s\S]*?\})\s*```/) ??
+        content.match(/```\s*(\{[\s\S]*?\})\s*```/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1];
+      } else {
+        // Try to find a JSON object directly in the text (starts with {)
+        const bareJson = content.match(/\{[\s\S]*"steps"[\s\S]*\}/);
+        if (bareJson) jsonStr = bareJson[0];
+      }
+
+      // Handle trailing commas before parsing (common LLM output issue)
+      jsonStr = jsonStr
+        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas before } or ]
+        .replace(/,\s*,/g, ','); // Remove double commas
 
       const data = JSON.parse(jsonStr);
 

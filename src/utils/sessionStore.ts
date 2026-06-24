@@ -171,8 +171,18 @@ function sanitizeMessages(messages: Message[]): Message[] {
     let content = msg.content;
 
     // Redact API keys and tokens
-    content = content.replace(/\b(sk-[a-zA-Z0-9]{20,})/g, '[REDACTED_API_KEY]');
-    content = content.replace(/\b([a-f0-9]{32,64})\b/g, '[REDACTED_TOKEN]');
+    content = content.replace(/\b(sk-[a-zA-Z0-9]{20,})\b/g, '[REDACTED_API_KEY]');
+
+    // Redact hex tokens (>=32 chars) — but NOT git commit SHAs (40 hex chars, lowercase only).
+    // Token hex strings typically include uppercase letters or appear in credential context.
+    // Git SHAs are exactly 40 lowercase hex chars, so require mixed case or length != 40.
+    content = content.replace(/\b([a-fA-F0-9]{32,63})\b/g, (match) => {
+      // Git commit SHAs are 40 lowercase hex characters — don't redact
+      if (match.length === 40 && /^[a-f0-9]{40}$/.test(match)) return match;
+      // npm tarball integrity hashes (sha512-...) — don't redact
+      if (match.startsWith('sha')) return match;
+      return '[REDACTED_TOKEN]';
+    });
 
     // Redact Bearer tokens
     content = content.replace(/\b(Bearer\s+)[^\s]+/gi, '$1[REDACTED]');

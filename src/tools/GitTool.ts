@@ -9,12 +9,15 @@ async function executeGitCommand(
   cwd?: string,
   timeoutSecs = 30,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  // 忽略管道输出中的分页器配置，避免 git 卡住
+  const env = { ...process.env, GIT_PAGER: 'cat', PAGER: 'cat' };
   try {
     const workDir = cwd ? path.resolve(cwd) : process.cwd();
     const result = await execa('git', args, {
       cwd: workDir,
       timeout: timeoutSecs * 1000,
       reject: false,
+      env,
     });
 
     return {
@@ -30,6 +33,26 @@ async function executeGitCommand(
       exitCode: 1,
     };
   }
+}
+
+/**
+ * 检查当前目录是否是 git 仓库
+ */
+async function ensureGitRepo(cwd?: string): Promise<string | null> {
+  const dir = cwd || process.cwd();
+  try {
+    const { exitCode } = await execa('git', ['rev-parse', '--git-dir'], {
+      cwd: dir,
+      timeout: 5000,
+      reject: false,
+    });
+    if (exitCode !== 0) {
+      return `Not a git repository (or any of the parent directories): ${dir}`;
+    }
+  } catch {
+    return `Git command not available`;
+  }
+  return null;
 }
 
 /**
@@ -76,6 +99,19 @@ export async function executeGitCommit(message: string, cwd?: string, addAll = f
   // catches attempts to trick the LLM into passing "--no-verify" as message)
   if (message.startsWith('-')) {
     return `Error: Commit message cannot start with '-' (looks like a git flag). Please provide a proper commit message.`;
+  }
+
+  if (!message.trim()) {
+    return 'Error: Commit message cannot be empty.';
+  }
+
+  const notRepo = await ensureGitRepo(cwd);
+  if (notRepo) return `Error: ${notRepo}`;
+
+  // Check for changes
+  const statusCheck = await executeGitCommand(['status', '--porcelain'], cwd);
+  if (!statusCheck.stdout.trim()) {
+    return 'Nothing to commit — working tree clean. Make changes first.';
   }
 
   // Stage files if requested
@@ -212,6 +248,9 @@ export async function executeGitLog(cwd?: string, maxCount = 10, oneline = false
  * Push to remote
  */
 export async function executeGitPush(cwd?: string, remote = 'origin', branch?: string, force = false): Promise<string> {
+  const notRepo = await ensureGitRepo(cwd);
+  if (notRepo) return `Error: ${notRepo}`;
+
   const args = ['push'];
   if (force) {
     args.push('--force');
@@ -234,11 +273,11 @@ export async function executeGitPush(cwd?: string, remote = 'origin', branch?: s
  * Pull from remote
  */
 export async function executeGitPull(cwd?: string, remote = 'origin', branch?: string): Promise<string> {
-  const args = ['pull'];
-  args.push(remote);
-  if (branch) {
-    args.push(branch);
-  }
+  const notRepo = await ensureGitRepo(cwd);
+  if (notRepo) return `Error: ${notRepo}`;
+
+  const args = ['pull', remote];
+  if (branch) args.push(branch);
 
   const result = await executeGitCommand(args, cwd, 60); // Longer timeout for pull
 
@@ -323,9 +362,17 @@ export async function executeGitStash(
   message?: string,
   cwd?: string,
 ): Promise<string> {
+  const notRepo = await ensureGitRepo(cwd);
+  if (notRepo) return `Error: ${notRepo}`;
+
   const args = ['stash'];
 
   if (action === 'save') {
+    // 检查是否有更改可 stash
+    const statusCheck = await executeGitCommand(['status', '--porcelain'], cwd);
+    if (!statusCheck.stdout.trim()) {
+      return 'Nothing to stash — working tree clean.';
+    }
     args.push('push');
     if (message) {
       args.push('-m', message);
@@ -347,6 +394,9 @@ export async function executeGitStash(
  * Merge branches
  */
 export async function executeGitMerge(branch: string, cwd?: string, noFf = false): Promise<string> {
+  const notRepo = await ensureGitRepo(cwd);
+  if (notRepo) return `Error: ${notRepo}`;
+
   const args = ['merge'];
   if (noFf) {
     args.push('--no-ff');
