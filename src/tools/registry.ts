@@ -3,7 +3,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import type { McpManager } from '../mcp/McpManager.js';
 import type { LLMClient } from '../agent/LLMClient.js';
 import { builtinDefinitions } from './definitions/index.js';
-import { resolveAlias, fuzzyFindTools } from './aliases.js';
+import { resolveAlias, fuzzyFindTools, rebuildSemanticIndex } from './aliases.js';
 import { validateParams } from './schema-validate.js';
 import { claudeCodeTool } from './ClaudeCodeTool.js';
 
@@ -29,6 +29,28 @@ let allToolsCache: ToolDefinition[] | null = null;
 
 function invalidateAllToolsCache(): void {
   allToolsCache = null;
+  scheduleSemanticRebuild();
+}
+
+/** Debounced semantic index rebuild */
+let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleSemanticRebuild(): void {
+  if (rebuildTimer) clearTimeout(rebuildTimer);
+  rebuildTimer = setTimeout(() => {
+    rebuildTimer = null;
+    try {
+      const all = buildAllTools();
+      rebuildSemanticIndex(
+        all.map((t) => ({
+          name: t.name,
+          description: t.description,
+          parameters: t.parameters as Record<string, unknown> | undefined,
+        })),
+      );
+    } catch {
+      // Non-critical — semantic search falls back to simple matching
+    }
+  }, 200);
 }
 
 function buildAllTools(): ToolDefinition[] {
