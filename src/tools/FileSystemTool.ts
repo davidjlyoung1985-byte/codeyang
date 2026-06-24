@@ -62,6 +62,11 @@ export async function executeCopy(sourcePath: string, destPath: string, overwrit
 }
 
 async function copyFile(source: string, dest: string, overwrite: boolean): Promise<string> {
+  // SECURITY: 防止复制到受保护的系统路径
+  if (isProtectedPath(dest)) {
+    throw new Error(`[SECURITY] Cannot copy to protected system path: ${dest}`);
+  }
+
   if (existsSync(dest) && !overwrite) {
     throw new Error(`Destination already exists (use overwrite=true): ${dest}`);
   }
@@ -73,6 +78,11 @@ async function copyFile(source: string, dest: string, overwrite: boolean): Promi
 }
 
 async function copyDirectory(source: string, dest: string, overwrite: boolean): Promise<string> {
+  // SECURITY: 防止复制到受保护的系统路径
+  if (isProtectedPath(dest)) {
+    throw new Error(`[SECURITY] Cannot copy to protected system path: ${dest}`);
+  }
+
   if (existsSync(dest) && !overwrite) {
     throw new Error(`Destination directory already exists (use overwrite=true): ${dest}`);
   }
@@ -108,6 +118,11 @@ export async function executeMove(sourcePath: string, destPath: string, overwrit
 
   if (absSource === absDest) {
     throw new Error(`Source and destination are the same: ${sourcePath}`);
+  }
+
+  // SECURITY: 防止移动到受保护的系统路径
+  if (isProtectedPath(absDest)) {
+    throw new Error(`[SECURITY] Cannot move to protected system path: ${destPath}`);
   }
 
   if (existsSync(absDest) && !overwrite) {

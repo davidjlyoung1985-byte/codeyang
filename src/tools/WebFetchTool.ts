@@ -3,6 +3,7 @@ import { invalidParam, netError, toolError } from './errors.js';
 import { validateUrl } from './NetworkTool.js';
 
 const MAX_REDIRECTS = 5;
+const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB — 防止OOM
 
 export async function executeWebFetch(url: string, format?: string): Promise<string> {
   if (!url || typeof url !== 'string') {
@@ -78,7 +79,49 @@ async function fetchWithRedirectLimit(url: string, outputFormat: string, redirec
     }
 
     const contentType = response.headers.get('content-type') || '';
-    const html = await response.text();
+
+    // SECURITY: 预检 Content-Length 头部，防止 OOM
+    const contentLengthHeader = response.headers.get('content-length');
+    if (contentLengthHeader) {
+      const contentLength = parseInt(contentLengthHeader, 10);
+      if (!isNaN(contentLength) && contentLength > MAX_BODY_SIZE) {
+        throw new Error(
+          toolError(
+            'Network',
+            `Response too large: ${contentLength} bytes (max ${MAX_BODY_SIZE} bytes)`,
+            'The server returned a response exceeding the size limit.',
+          ),
+        );
+      }
+    }
+
+    // 流式读取响应体，限制最大大小以防止 OOM（即使没有 Content-Length 头）
+    let html = '';
+    if (response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let totalBytes = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.length;
+        if (totalBytes > MAX_BODY_SIZE) {
+          reader.cancel();
+          throw new Error(
+            toolError(
+              'Network',
+              `Response exceeded maximum size of ${MAX_BODY_SIZE} bytes during streaming`,
+              'The response was truncated because it exceeded the size limit.',
+            ),
+          );
+        }
+        html += decoder.decode(value, { stream: true });
+      }
+      html += decoder.decode(); // flush remaining bytes
+    } else {
+      // fallback: body is null (should not normally happen)
+      html = await response.text();
+    }
 
     // Detect HTML even when Content-Type is wrong (e.g. text/plain for HTML pages)
     const isHtml = contentType.includes('text/html') || /<html[\s>]/i.test(html) || /<!doctype\s+html/i.test(html);

@@ -40,3 +40,9 @@ dist-electron/
 
 # Test output
 test-output.txt
+
+# Local undo history
+.codeyang/
+
+# Temp fix scripts
+fix_*.mjs

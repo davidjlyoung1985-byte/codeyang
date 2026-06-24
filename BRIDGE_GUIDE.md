@@ -195,3 +195,162 @@ start-claude-agent.bat # Claude Code 代理启动脚本
 3. **持久化**：任务和消息存储在 `~/.codeyang/bridge/` 目录
 4. **超时**：任务默认 5 分钟超时，可通过 `timeout` 参数调整
 5. **实时性**：通过 WebSocket 实时推送，无需轮询
+
+## 数据清理
+
+桥接服务器运行过程中会产生持久化数据（任务记录、消息记录、共享文件），存储在 `~/.codeyang/bridge/` 目录下。定期清理可以释放磁盘空间并提高启动速度。
+
+### 清理方法
+
+**完全清理（删除所有桥接数据）：**
+
+```bash
+# 先停止桥接服务器
+# 然后删除整个桥接数据目录
+rm -rf ~/.codeyang/bridge/
+
+# Windows PowerShell
+Remove-Item -Recurse -Force "$env:USERPROFILE\.codeyang\bridge\"
+
+# Windows CMD
+rmdir /s /q "%USERPROFILE%\.codeyang\bridge\"
+```
+
+**选择性清理：**
+
+| 数据 | 路径 | 说明 |
+|------|------|------|
+| 任务记录 | `~/.codeyang/bridge/tasks.json` | 删除后任务历史丢失 |
+| 消息记录 | `~/.codeyang/bridge/messages.json` | 删除后消息历史丢失 |
+| 共享文件 | `~/.codeyang/bridge/shared/` | 按需删除具体文件 |
+| 认证 Token | `~/.codeyang/bridge/.token` | 删除后下次启动会生成新 Token |
+
+**注意：** 删除 `~/.codeyang/bridge/` 目录或 `.token` 文件后，重新启动桥接服务器时会自动生成新的 Token，所有已连接的客户端需要重新认证。
+
+### 保留策略建议
+
+1. **日常使用**：无需手动清理，数据量通常较小（千条级别约数百 KB）
+2. **定期清理**：建议每月清理一次消息和任务记录，保留最近 500 条即可
+3. **共享文件**：任务完成后及时清理不再需要的共享文件
+4. **Token 文件**：除非 Token 泄露或需要重置，否则不建议删除
+5. **自动化脚本**：可创建定时任务（cron / Task Scheduler）定期清理过期数据
+
+## 故障排查 (Troubleshooting)
+
+### 连接失败
+
+**现象：** curl 请求 `/api/health` 无响应或返回连接拒绝。
+
+**可能原因及解决方案：**
+
+1. **端口被占用**
+   ```bash
+   # 检查端口 9876 占用情况
+   netstat -ano | findstr :9876
+   
+   # 找到 PID 后终止进程（Windows）
+   taskkill /PID <PID> /F
+   
+   # 或更换端口启动
+   set BRIDGE_PORT=9877
+   npx tsx src/bridge/server.ts
+   ```
+
+2. **服务未启动**
+   - 确认已执行 `npx tsx src/bridge/server.ts` 或双击 `start-bridge.bat`
+   - 检查终端是否显示了启动 Banner（含 Token 信息）
+   - 查看启动日志中是否有错误信息
+
+3. **主机绑定错误**
+   - 确认服务器绑定 `127.0.0.1` 而非 `0.0.0.0`
+   - 如果使用远程连接，需修改配置为 `0.0.0.0`（注意安全风险）
+
+### Token 认证错误
+
+**现象：** 请求返回 `401 Unauthorized`。
+
+**可能原因及解决方案：**
+
+1. **Token 未设置**
+   ```bash
+   # 确保请求头包含 Authorization
+   curl http://127.0.0.1:9876/api/health -H "Authorization: Bearer <TOKEN>"
+   ```
+
+2. **Token 不匹配**
+   - 启动桥接服务器时，终端会显示 Token（前 16 位）
+   - 完整 Token 存储在 `~/.codeyang/bridge/.token` 文件中
+   - 可以用以下命令查看：`type "%USERPROFILE%\.codeyang\bridge\.token"`
+   - 确认客户端使用的 Token 与该文件内容一致
+
+3. **Token 已更改**
+   - 删除 `~/.codeyang/bridge/.token` 文件后重启服务器会生成新 Token
+   - 所有旧 Token 立即失效，客户端需要更新
+
+### WebSocket 断线排查
+
+**现象：** 客户端连接后频繁断开或无法建立 WebSocket 连接。
+
+**排查步骤：**
+
+1. **检查服务端日志**
+   - 查看桥接服务器终端输出，是否有 `disconnected` 或错误信息
+   - WebSocket 认证超时默认 10 秒，超时未认证会断开
+
+2. **检查 Token 认证**
+   - WebSocket 连接建立后需发送 `auth` 消息进行认证
+   - 认证消息格式：`{"type":"auth","payload":{"token":"<TOKEN>"}}`
+   - Token 错误会被立即断开（错误码 4001）
+
+3. **网络问题**
+   - 确认客户端和服务器在同一台机器上（都使用 `127.0.0.1`）
+   - 检查防火墙是否阻止 WebSocket 连接
+   - 代理软件可能干扰 WebSocket 协议
+
+4. **日志级别**
+   - 设置环境变量 `CODEX_DEBUG=1` 可输出更详细的调试日志
+
+### 任务挂起如何处理
+
+**现象：** 任务提交后长时间处于 `pending` 状态，状态不更新。
+
+**排查步骤：**
+
+1. **检查 Claude Code 是否在线**
+   ```bash
+   curl http://127.0.0.1:9876/api/health -H "Authorization: Bearer <TOKEN>"
+   # 查看 agents.claude-code 是否为 true
+   ```
+
+2. **手动查询任务状态**
+   ```bash
+   curl http://127.0.0.1:9876/api/tasks -H "Authorization: Bearer <TOKEN>"
+   ```
+
+3. **强制更新任务状态**
+   ```bash
+   # 将任务标记为失败，以便重新提交
+   curl -X PUT http://127.0.0.1:9876/api/tasks/<TASK_ID> \
+     -H "Authorization: Bearer <TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d "{\"status\":\"failed\",\"result\":\"手动取消 - 任务超时\"}"
+   ```
+
+4. **重启桥接**
+   - 停止桥接服务器（Ctrl+C）
+   - 删除 `~/.codeyang/bridge/tasks.json` 中的卡住任务（可选）
+   - 重新启动桥接服务器
+
+### 常见错误码说明
+
+| 状态码 | 含义 | 说明 |
+|--------|------|------|
+| `200` | OK | 请求成功 |
+| `201` | Created | 资源创建成功（任务/消息/文件） |
+| `400` | Bad Request | 请求体 JSON 格式错误或参数缺失 |
+| `401` | Unauthorized | Token 无效或缺失 |
+| `404` | Not Found | 请求的资源不存在 |
+| `413` | Payload Too Large | 请求体超过 10MB 限制 |
+| `500` | Internal Server Error | 服务器内部错误 |
+| `4001` | WS Auth Failed | WebSocket 认证失败（Token 错误） |
+| `4001` | WS Auth Timeout | WebSocket 认证超时（10 秒内未认证） |

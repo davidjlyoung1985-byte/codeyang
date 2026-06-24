@@ -11,7 +11,7 @@ const DENY_LIST = (process.env['CODEYANG_DENY_COMMANDS'] || '')
 
 /** Permission cache: avoids redundant async checkPermission calls within TTL. */
 const permissionCache = new Map<string, { level: string; timestamp: number }>();
-const PERMISSION_CACHE_TTL = 60_000; // 60 seconds
+const PERMISSION_CACHE_TTL = 5_000; // 5 seconds (short TTL to avoid stale cached permissions)
 
 /**
  * Check if a command matches any deny-listed word.

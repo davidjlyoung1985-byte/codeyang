@@ -1,5 +1,6 @@
 import { execa } from 'execa';
 import * as path from 'node:path';
+import { auditLog } from '../utils/sessionStore.js';
 
 /**
  * Execute a git command
@@ -266,6 +267,16 @@ export async function executeGitPush(cwd?: string, remote = 'origin', branch?: s
     return `Error: ${result.stderr || result.stdout}`;
   }
 
+  if (force) {
+    void auditLog({
+      action: 'git_push_force',
+      command: `git push --force ${remote} ${branch || ''}`,
+      cwd: cwd || process.cwd(),
+      result: result.stdout?.slice(0, 200) || 'success',
+      details: `Force push to ${remote}/${branch || 'current branch'}`,
+    });
+  }
+
   return result.stdout || result.stderr || 'Push completed';
 }
 
@@ -349,6 +360,17 @@ export async function executeGitReset(files?: string[], cwd?: string, hard = fal
 
   if (result.exitCode !== 0) {
     return `Error: ${result.stderr || result.stdout}`;
+  }
+
+  // 审计日志：记录危险操作
+  if (hard) {
+    void auditLog({
+      action: 'git_reset_hard',
+      command: `git reset --hard ${(files || []).join(' ')}`,
+      cwd: cwd || process.cwd(),
+      result: result.stdout?.slice(0, 200) || 'success',
+      details: `Hard reset dropped uncommitted changes${files && files.length > 0 ? ` for ${files.length} file(s)` : ''}`,
+    });
   }
 
   return result.stdout || 'Reset completed';

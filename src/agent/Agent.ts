@@ -49,19 +49,24 @@ export class Agent {
   private static readonly TOP_TOOLS_COUNT = 10;
   private static readonly KEY_DECISIONS_COUNT = 5;
   private static readonly MAX_CHECKPOINTS = 10;
-  private static readonly TOOL_TIMEOUT_MS = Number(process.env['CODEYANG_TOOL_TIMEOUT']) || 30_000; // 单个工具超时
+  private static readonly TOOL_TIMEOUT_MS = (() => {
+    const raw = process.env['CODEYANG_TOOL_TIMEOUT'];
+    if (raw === undefined) return 30_000;
+    const val = Number(raw);
+    return Number.isNaN(val) ? 30_000 : val;
+  })(); // 单个工具超时
 
   private client: LLMClient;
   private history: LLMMessage[] = [];
   private cbs: AgentCallbacks = {};
   private checkpoints: LLMMessage[][] = [];
   private questionResolve: ((answer: string) => void) | null = null;
-  private maxRetries = 3;
+  private maxRetries: number;
 
-  // Tool result cache — avoid re-reading unchanged files within a session
+  // Tool result cache �?avoid re-reading unchanged files within a session
   private toolCache = new Map<string, { result: string; timestamp: number }>();
 
-  // Pending reads — deduplicate concurrent Read/Glob calls for the same key
+  // Pending reads �?deduplicate concurrent Read/Glob calls for the same key
   private pendingReads = new Map<string, Promise<string>>();
 
   // Anti-repetition: track previous assistant texts (fuzzy dedup)
@@ -69,9 +74,8 @@ export class Agent {
   private recentAssistantTexts: string[] = [];
   private repeatCount = 0;
 
-  // 流式响应超时保护 —— 防止 LLM 卡住
-  private static readonly STREAM_TIMEOUT_MS = 120_000; // 2分钟无新事件则超时
-
+  // 流式响应超时保护 —�?防止 LLM 卡住
+  private static readonly STREAM_TIMEOUT_MS = 120_000; // 2分钟无新事件则超�?
   // Cancellation support for running tool batches
   private abortController: AbortController | null = null;
 
@@ -103,6 +107,7 @@ export class Agent {
     this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
     this.reflexionEngine = new ReflexionEngine(config.reflexion);
     this.planner = new Planner(config.planner);
+    this.maxRetries = config.maxRetries ?? 3;
   }
 
   setWatcher(watcher: WatcherSystem | null): void {
@@ -120,6 +125,11 @@ export class Agent {
   /** Get the LLM client (for reflexion / planner to call directly). */
   getLLMClient(): LLMClient {
     return this.client;
+  }
+
+  /** Sanitize error messages to prevent API key leaks */
+  private sanitizeErrorMessage(msg: string): string {
+    return msg.replace(/\b(sk-|deepseek-r-|anthropic-)[a-zA-Z0-9_-]{10,}\b/gi, '[API_KEY_REDACTED]');
   }
 
   /** Get the reflexion engine (for status / manual reflection). */
@@ -166,7 +176,7 @@ export class Agent {
       this.memoryLoadFailure = true;
       return '';
     }
-    // Re-read only when version changes — avoids defeating LLM prompt caching
+    // Re-read only when version changes �?avoids defeating LLM prompt caching
     if (this.memorySummary !== null && currentVersion === this.lastMemoryVersion) {
       return this.memorySummary;
     }
@@ -274,7 +284,7 @@ export class Agent {
           const errMsg = err instanceof Error ? err.message : String(err);
           throw new Error(
             `🔴 ${label} failed after ${this.maxRetries} attempts\n` +
-              `  💡 Last error: ${errMsg}\n` +
+              `  💡 Last error: ${this.sanitizeErrorMessage(errMsg)}\n` +
               `  📝 Try:\n` +
               `    1) Check your network connection\n` +
               `    2) Verify API endpoint is accessible\n` +
@@ -373,11 +383,11 @@ export class Agent {
     // Primitive types: return as-is (no cloning needed)
     if (obj === null || typeof obj !== 'object') return obj;
 
-    // Node >= 18 has structuredClone natively — use it as primary method
+    // Node >= 18 has structuredClone natively �?use it as primary method
     try {
       return structuredClone(obj);
     } catch {
-      // structuredClone 失败（如循环引用），回退到 JSON round-trip
+      // structuredClone 失败（如循环引用），回退�?JSON round-trip
     }
 
     // Fallback: JSON round-trip
@@ -385,31 +395,22 @@ export class Agent {
       return JSON.parse(JSON.stringify(obj));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      logger.warn(`[Agent] jsonClone deep copy failed: ${msg}. Using shallow copy fallback.`);
+      throw new Error(`[Agent] jsonClone failed: ${msg}. Cannot deep copy object.`);
     }
-
-    // Last resort: shallow copy to avoid returning original reference
-    if (Array.isArray(obj)) {
-      return [...obj] as T;
-    }
-    if (obj && typeof obj === 'object') {
-      return Object.assign({}, obj) as T;
-    }
-    return obj;
   }
 
   /** Check if text is near-duplicate of any recent response (simple prefix match). */
   private computeSimilarity(text: string): number {
     if (this.recentAssistantTexts.length === 0) return 0;
     const prefix = text.slice(0, Agent.SIMILARITY_PREFIX_LEN).toLowerCase();
-    // Exact prefix match with any of the last 4 responses → treat as repeat
+    // Exact prefix match with any of the last 4 responses �?treat as repeat
     for (const prev of this.recentAssistantTexts) {
       if (prev.slice(0, Agent.SIMILARITY_PREFIX_LEN).toLowerCase() === prefix) return 1.0;
     }
     return 0;
   }
 
-  /** 粗略估算消息数组的 token 数（4 chars ≈ 1 token） */
+  /** 粗略估算消息数组�?token 数（4 chars �?1 token�?*/
   private estimateMessageTokens(messages: LLMMessage[]): number {
     let total = 0;
     for (const m of messages) {
@@ -739,14 +740,14 @@ export class Agent {
 
       // 上下文窗口保护：估算消息 token 数，超过 90% 最大值时截断
       const estimatedTokens = this.estimateMessageTokens(messages);
-      const maxCtxTokens = config.maxTokens * 2; // 粗略估计上下文 = maxTokens * 2
+      const maxCtxTokens = config.maxTokens * 2; // 粗略估计上下�?= maxTokens * 2
       if (estimatedTokens > maxCtxTokens * 0.9) {
         this.cbs.onError?.(
           `⚠️ Context approaching limit (~${Math.round(estimatedTokens / 1000)}k tokens). Truncating history.`,
         );
         // 保留最近一半消息
         const keepCount = Math.max(10, Math.floor(messages.length / 2));
-        messages.splice(0, messages.length - keepCount);
+        if (messages.length > keepCount) messages.splice(0, messages.length - keepCount);
       }
 
       const systemPrompt = await this.getSystemPrompt();
@@ -811,7 +812,7 @@ export class Agent {
         if (assistantText === this.lastAssistantText) {
           this.repeatCount++;
           if (this.repeatCount >= 2) {
-            this.cbs.onError?.('Agent loop detected (exact repeat) — stopping');
+            this.cbs.onError?.('Agent loop detected (exact repeat) �?stopping');
             if (toolCalls.length > 0) {
               messages.push({
                 role: 'user',
@@ -823,14 +824,15 @@ export class Agent {
                 })),
               });
             }
-            this.history = messages;
+            this.history.length = 0;
+            this.history.push(...messages);
             break;
           }
         } else if (
           this.computeSimilarity(assistantText) > 0 &&
           this.recentAssistantTexts.length >= Agent.MIN_REPEAT_TEXTS_FOR_FUZZY
         ) {
-          this.cbs.onError?.('Agent loop detected (similar repeat) — stopping');
+          this.cbs.onError?.('Agent loop detected (similar repeat) �?stopping');
           if (toolCalls.length > 0) {
             messages.push({
               role: 'user',
@@ -842,7 +844,8 @@ export class Agent {
               })),
             });
           }
-          this.history = messages;
+          this.history.length = 0;
+          this.history.push(...messages);
           break;
         } else {
           this.repeatCount = 0;
@@ -855,12 +858,13 @@ export class Agent {
       }
 
       if (toolCalls.length === 0) {
-        this.history = messages;
+        this.history.length = 0;
+        this.history.push(...messages);
         break;
       }
 
+      this.abortController = this.abortController ?? new AbortController();
       // Execute tools
-      this.abortController = new AbortController();
       const signal = this.abortController.signal;
       setToolContext({
         anthropicClient: null,
@@ -970,7 +974,8 @@ export class Agent {
         }
       }
 
-      this.history = messages;
+      this.history.length = 0;
+      this.history.push(...messages);
     }
 
     setToolContext(null);
@@ -1048,7 +1053,7 @@ export class Agent {
           args: b.input as Record<string, unknown>,
         }));
 
-      // Extract tool_result parts — critical for session resumption
+      // Extract tool_result parts �?critical for session resumption
       const toolResultParts = blocks
         .filter((b): b is ToolResultBlock => b.type === 'tool_result')
         .map((b) => ({

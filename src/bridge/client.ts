@@ -1,5 +1,5 @@
 /**
- * Bridge Client — used by CodeYang to communicate with Claude Code.
+ * Bridge Client �?used by CodeYang to communicate with Claude Code.
  *
  * Provides functions to:
  * - Send tasks to Claude Code
@@ -65,6 +65,7 @@ async function apiFetch<T>(method: string, path: string, body?: unknown): Promis
   const res = await fetch(url, {
     method,
     headers,
+    signal: AbortSignal.timeout(10000),
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -96,10 +97,22 @@ export async function checkBridgeHealth(): Promise<{
     const config = await loadConfig();
     const res = await fetch(`${config.serverUrl}/api/health`, {
       headers: { Authorization: `Bearer ${config.token}` },
+      signal: AbortSignal.timeout(10000),
     });
+    if (res.status === 401) {
+      throw new Error('Authentication failed: invalid bridge token');
+    }
     if (!res.ok) return null;
     return await res.json();
-  } catch {
+  } catch (err) {
+    if (err instanceof TypeError && err.message.includes('fetch')) {
+      // 网络错误（服务未启动、连接拒绝等）�?返回 null 表示不可�?      return null;
+    }
+    if (err instanceof Error && err.message.includes('Authentication failed')) {
+      // 认证错误 �?重新抛出让调用方知晓配置问题
+      throw err;
+    }
+    // 其他网络错误
     return null;
   }
 }

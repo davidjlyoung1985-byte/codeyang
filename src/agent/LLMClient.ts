@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import { convertToAnthropicMessages, convertToAnthropicTools, convertToOpenAIMessages } from './conversion-fns.js';
 
 export interface StreamEvent {
   type: 'text_delta' | 'tool_call_start' | 'tool_call_delta' | 'tool_call_end' | 'usage';
@@ -141,7 +142,7 @@ class AnthropicClient implements LLMClient {
     const response = await this.client.messages.create({
       model: params.model,
       max_tokens: params.maxTokens,
-      messages: params.messages as Anthropic.MessageParam[],
+      messages: convertToAnthropicMessages(params.messages),
     });
 
     const textBlock = response.content.find((block) => block.type === 'text');
@@ -161,8 +162,8 @@ class AnthropicClient implements LLMClient {
       max_tokens: params.maxTokens,
       temperature: params.temperature,
       system: params.system,
-      messages: params.messages as Anthropic.MessageParam[],
-      tools: params.tools as Anthropic.Tool[],
+      messages: convertToAnthropicMessages(params.messages),
+      tools: convertToAnthropicTools(params.tools),
     });
 
     let blockIdx = -1;
@@ -247,7 +248,7 @@ class OpenAICompatClient implements LLMClient {
     const response = await this.client.chat.completions.create({
       model: params.model,
       max_tokens: params.maxTokens,
-      messages: params.messages as OpenAI.Chat.ChatCompletionMessageParam[],
+      messages: convertToOpenAIMessages(params.messages),
       stream: false,
     });
 
