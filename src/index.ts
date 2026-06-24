@@ -31,6 +31,8 @@ import { dispatch as dispatchCommand, type CommandContext } from './commands.js'
 import { VERSION } from './version.js';
 import { checkNodeVersion } from './utils/nodeVersionCheck.js';
 import { WatcherSystem, VerificationPipeline } from './closed-loop/index.js';
+import { Gateway } from './gateway/index.js';
+import { Tracer } from './tracing/index.js';
 
 async function promptForApiKey(): Promise<string> {
   return new Promise((resolve) => {
@@ -153,6 +155,7 @@ Interactive Commands:
   /tools           List all available tools
   /stats           Show tool usage statistics for this session
   /status          Show closed-loop system status (verify/fix/watch/reflexion/planner)
+  /harness         Show harness system status (tracing/circuit-breakers/gateway)
   /reflect         Manually trigger reflexion on recent execution failures
   /model           Show current model
   /model <name>    Switch model
@@ -235,6 +238,21 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
   }
 
   await loadLocalConfig();
+
+  // ── Harness 初始化 ──
+  const gateway = Gateway.getInstance();
+  const tracer = Tracer.getInstance();
+  // Gateway: 将当前 API key 加入认证白名单
+  {
+    const authProvider = gateway.getAuthProvider() as { addKey?: (key: string) => void };
+    if (typeof authProvider.addKey === 'function') {
+      authProvider.addKey(config.apiKey);
+    }
+  }
+  // Tracer: 根据环境变量控制
+  if (process.env['CODEYANG_TRACING'] === '0') {
+    tracer.setEnabled(false);
+  }
 
   const configErrors = validateConfig();
   if (configErrors.length > 0) {

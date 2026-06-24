@@ -15,6 +15,9 @@ import { TreeOfThoughts } from '../tot/TreeOfThoughts.js';
 import { recordToolOutcome } from '../tools/rl-weighter.js';
 import { runConsolidation } from '../continual-learning/MemoryManager.js';
 import { A2AProtocol, globalAgentRegistry, buildA2AMessage } from '../a2a/A2AProtocol.js';
+import { Tracer } from '../tracing/index.js';
+import { CircuitBreakerManager, type CircuitBreakerStats } from '../circuit-breaker/index.js';
+import { Gateway } from '../gateway/index.js';
 
 /** A content block emitted by the assistant (text or tool_use). */
 type AssistantContentBlock =
@@ -123,6 +126,16 @@ export class Agent {
   // Continual Learning: auto-consolidation counter
   private consolidationCounter = 0;
 
+  // ── Harness: Tracer (L5 全链路追踪) ──
+  private tracer: Tracer;
+  private currentTraceId = '';
+
+  // ── Harness: CircuitBreaker (L6 熔断器) ──
+  private circuitBreakerManager: CircuitBreakerManager;
+
+  // ── Harness: Gateway (L1 API 网关) ──
+  private gateway: Gateway;
+
   constructor(private qtContext?: QtContext) {
     this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
     this.reflexionEngine = new ReflexionEngine(config.reflexion);
@@ -131,6 +144,31 @@ export class Agent {
     this.treeOfThoughts = new TreeOfThoughts();
     this.a2aProtocol = new A2AProtocol({}, globalAgentRegistry);
     this.maxRetries = config.maxRetries ?? 3;
+
+    // Harness 组件
+    this.tracer = Tracer.getInstance();
+    this.circuitBreakerManager = new CircuitBreakerManager();
+    this.circuitBreakerManager.setDefaultConfig({
+      failureThreshold: Number(process.env['CODEYANG_CB_THRESHOLD'] || '5'),
+      resetTimeoutMs: Number(process.env['CODEYANG_CB_RESET_MS'] || '30000'),
+      slowCallThresholdMs: Number(process.env['CODEYANG_CB_SLOW_MS'] || '30000'),
+      windowSize: Number(process.env['CODEYANG_CB_WINDOW'] || '50'),
+      failureRateThreshold: Number(process.env['CODEYANG_CB_RATE'] || '0.5'),
+      minRequestCount: Number(process.env['CODEYANG_CB_MIN_REQ'] || '10'),
+    });
+    // 注册 LLM 熔断器
+    this.circuitBreakerManager.create('llm-api', {
+      failureThreshold: 5,
+      resetTimeoutMs: 30_000,
+      slowCallThresholdMs: 30_000,
+    });
+    // 注册工具执行熔断器
+    this.circuitBreakerManager.create('tool-execute', {
+      failureThreshold: 10,
+      resetTimeoutMs: 15_000,
+      slowCallThresholdMs: 60_000,
+    });
+    this.gateway = Gateway.getInstance();
 
     // Register with A2A protocol
     globalAgentRegistry.register(this.a2aProtocol.getMyCard());
@@ -167,6 +205,65 @@ export class Agent {
   /** Get the planner (for status / plan listing). */
   getPlanner(): Planner {
     return this.planner;
+  }
+
+  // ── Harness 组件访问器 ──
+
+  getTracer(): Tracer {
+    return this.tracer;
+  }
+
+  getCircuitBreakerManager(): CircuitBreakerManager {
+    return this.circuitBreakerManager;
+  }
+
+  getGateway(): Gateway {
+    return this.gateway;
+  }
+
+  /** 获取当前 trace ID（用于外部 span 关联） */
+  getCurrentTraceId(): string {
+    return this.currentTraceId;
+  }
+
+  /** 获取 Harness 系统整体状态摘要 */
+  getHarnessStatus(): Record<string, unknown> {
+    const cbStats = this.circuitBreakerManager.getAllStats();
+    const traces = this.tracer.getTraces(5);
+    // AuditLogger.getStats() 只在 ConsoleAuditLogger 上存在
+    let auditOps = 0;
+    let auditReqs = 0;
+    try {
+      const auditLogger = this.gateway.getAuditLogger() as unknown as {
+        getStats: () => Record<string, { total: number; failed: number; avgMs: number }>;
+      };
+      if (typeof auditLogger.getStats === 'function') {
+        const auditStats = auditLogger.getStats();
+        auditOps = Object.keys(auditStats).length;
+        auditReqs = Object.values(auditStats).reduce((sum, s) => sum + s.total, 0);
+      }
+    } catch {
+      // best-effort
+    }
+    return {
+      tracing: {
+        enabled: this.tracer.isEnabled(),
+        recentTraces: traces.length,
+        totalSpans: traces.reduce((s, t) => s + t.spanCount, 0),
+      },
+      circuitBreakers: (cbStats as CircuitBreakerStats[]).map((s) => ({
+        name: s.name,
+        state: s.state,
+        failureRate: s.failureRate,
+        totalCalls: s.totalCalls,
+        openCount: s.openCount,
+        isDegraded: s.isDegraded,
+      })),
+      gateway: {
+        operations: auditOps,
+        totalRequests: auditReqs,
+      },
+    };
   }
 
   /** Get closed-loop system status summary. */
@@ -890,40 +987,48 @@ export class Agent {
           }
 
           const t0 = Date.now();
-          try {
-            const executePromise = tool.execute(tc.input);
-            if (cacheKey) this.pendingReads.set(cacheKey, executePromise);
-            const output = await executePromise;
-            this.recordToolCall(tc.name, Date.now() - t0, false);
-            toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
-            this.cbs.onToolResult?.(tc.name, output, false);
-            if (cacheKey) {
-              this.toolCache.set(cacheKey, { result: output, timestamp: Date.now() });
-              this.pendingReads.delete(cacheKey);
-              this.evictStaleCacheEntries();
-            }
-            if (tc.name === 'Write' || tc.name === 'Edit') {
-              const writtenPath = String((tc.input as Record<string, unknown>)['filePath'] ?? '');
-              this.invalidateCache(writtenPath || undefined);
-            }
-          } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : String(err);
-            this.recordToolCall(tc.name, Date.now() - t0, true);
-            toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
-            this.cbs.onToolResult?.(tc.name, errorMsg, true);
-            if (cacheKey) this.pendingReads.delete(cacheKey);
+          await this.tracer.traceAsync(this.currentTraceId, `tool.${tc.name}`, 'tool', async (span) => {
+            span.tags.toolName = tc.name;
+            span.tags.relatedId = JSON.stringify(tc.input).slice(0, 100);
 
-            // ── Reflexion: record tool execution failure ──────────
-            this.reflexionEngine.recordExecution({
-              task: tc.name,
-              toolCalls: [{ id: tc.id, name: tc.name, args: tc.input }],
-              results: [{ tool: tc.name, input: tc.input, output: errorMsg, isError: true }],
-              success: false,
-              errorMessage: errorMsg.slice(0, 200),
-              durationMs: Date.now() - t0,
-              timestamp: Date.now(),
-            });
-          }
+            try {
+              const executePromise = tool.execute(tc.input);
+              if (cacheKey) this.pendingReads.set(cacheKey, executePromise);
+              const output = await executePromise;
+              this.recordToolCall(tc.name, Date.now() - t0, false);
+              toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
+              this.cbs.onToolResult?.(tc.name, output, false);
+              if (cacheKey) {
+                this.toolCache.set(cacheKey, { result: output, timestamp: Date.now() });
+                this.pendingReads.delete(cacheKey);
+                this.evictStaleCacheEntries();
+              }
+              if (tc.name === 'Write' || tc.name === 'Edit') {
+                const writtenPath = String((tc.input as Record<string, unknown>)['filePath'] ?? '');
+                this.invalidateCache(writtenPath || undefined);
+              }
+              span.status = 'ok';
+            } catch (err) {
+              const errorMsg = err instanceof Error ? err.message : String(err);
+              this.recordToolCall(tc.name, Date.now() - t0, true);
+              toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
+              this.cbs.onToolResult?.(tc.name, errorMsg, true);
+              if (cacheKey) this.pendingReads.delete(cacheKey);
+              span.status = 'error';
+              span.error = errorMsg.slice(0, 200);
+
+              // ── Reflexion: record tool execution failure ──────────
+              this.reflexionEngine.recordExecution({
+                task: tc.name,
+                toolCalls: [{ id: tc.id, name: tc.name, args: tc.input }],
+                results: [{ tool: tc.name, input: tc.input, output: errorMsg, isError: true }],
+                success: false,
+                errorMessage: errorMsg.slice(0, 200),
+                durationMs: Date.now() - t0,
+                timestamp: Date.now(),
+              });
+            }
+          });
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : String(err);
           toolResults[i] = {
@@ -951,6 +1056,15 @@ export class Agent {
   }
 
   async run(prompt: string): Promise<void> {
+    // ── Tracer (L5): 创建 Trace ──
+    this.currentTraceId = this.tracer.startTrace({
+      name: prompt.slice(0, 60),
+      source: 'cli',
+      rootOperation: 'agent.run',
+    });
+
+    const traceId = this.currentTraceId;
+
     // Create a fresh abort controller at the start of each run().
     // Previously it was lazily created at the tool batch section (line 925),
     // which meant Ctrl+C pressed during planning or LLM streaming would be a no-op.
@@ -1067,73 +1181,88 @@ export class Agent {
 
       const systemPrompt = await this.getSystemPrompt();
 
-      const streamResult = await this.withRetry(async () => {
-        const textParts: string[] = [];
-        const toolCallsInner: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
-        const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
+      // ── CircuitBreaker (L6): 保护 LLM 调用 + Tracer (L5): 追踪 LLM 流 ──
+      const streamResult = await this.tracer.traceAsync(traceId, 'llm.stream', 'llm', async (span) => {
+        span.tags.model = config.model;
+        span.tags.maxTokens = config.maxTokens;
 
-        // ── Stream consumption with timeout protection ─────────
-        // Prevents the agent from hanging indefinitely if the LLM stream stalls.
-        const consumeStream = async () => {
-          for await (const event of this.client.stream({
-            model: config.model,
-            maxTokens: config.maxTokens,
-            temperature: 0.5,
-            system: systemPrompt,
-            messages,
-            tools: toolSchemas(),
-          })) {
-            if (event.type === 'text_delta' && event.text) {
-              this.cbs.onAgentDelta?.(event.text);
-              textParts.push(event.text);
-            } else if (event.type === 'tool_call_start') {
-              toolCallsAccum.set(event.toolCallIndex!, {
-                id: event.toolCallId,
-                name: event.toolCallName,
-                args: '',
-              });
-            } else if (event.type === 'tool_call_delta') {
-              const accum = toolCallsAccum.get(event.toolCallIndex!);
-              if (accum) accum.args += event.toolCallArgs || '';
-            } else if (event.type === 'tool_call_end') {
-              const accum = toolCallsAccum.get(event.toolCallIndex!);
-              if (accum) {
-                try {
-                  toolCallsInner.push({
-                    id: accum.id!,
-                    name: accum.name!,
-                    input: JSON.parse(accum.args || '{}'),
+        const cbResult = await this.circuitBreakerManager.get('llm-api').call(async () => {
+          return await this.withRetry(async () => {
+            const textParts: string[] = [];
+            const toolCallsInner: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
+            const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
+
+            // ── Stream consumption with timeout protection ─────────
+            const consumeStream = async () => {
+              for await (const event of this.client.stream({
+                model: config.model,
+                maxTokens: config.maxTokens,
+                temperature: 0.5,
+                system: systemPrompt,
+                messages,
+                tools: toolSchemas(),
+              })) {
+                if (event.type === 'text_delta' && event.text) {
+                  this.cbs.onAgentDelta?.(event.text);
+                  textParts.push(event.text);
+                } else if (event.type === 'tool_call_start') {
+                  toolCallsAccum.set(event.toolCallIndex!, {
+                    id: event.toolCallId,
+                    name: event.toolCallName,
+                    args: '',
                   });
-                } catch {
-                  toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
+                } else if (event.type === 'tool_call_delta') {
+                  const accum = toolCallsAccum.get(event.toolCallIndex!);
+                  if (accum) accum.args += event.toolCallArgs || '';
+                } else if (event.type === 'tool_call_end') {
+                  const accum = toolCallsAccum.get(event.toolCallIndex!);
+                  if (accum) {
+                    try {
+                      toolCallsInner.push({
+                        id: accum.id!,
+                        name: accum.name!,
+                        input: JSON.parse(accum.args || '{}'),
+                      });
+                    } catch {
+                      toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
+                    }
+                  }
+                } else if (event.type === 'usage') {
+                  if (event.inputTokens !== undefined) this.tokenUsage.inputTokens += event.inputTokens;
+                  if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
                 }
               }
-            } else if (event.type === 'usage') {
-              if (event.inputTokens !== undefined) this.tokenUsage.inputTokens += event.inputTokens;
-              if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
-            }
-          }
-          return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
-        };
+              return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
+            };
 
-        // Race between stream completion and timeout
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(
-            () =>
-              reject(
-                new Error(
-                  `Stream timed out after ${Agent.STREAM_TIMEOUT_MS / 1000}s. ` +
-                    `The model may be stuck or the connection was interrupted.`,
-                ),
-              ),
-            Agent.STREAM_TIMEOUT_MS,
-          );
+            // Race between stream completion and timeout
+            const timeoutPromise = new Promise<never>((_, reject) => {
+              setTimeout(
+                () =>
+                  reject(
+                    new Error(
+                      `Stream timed out after ${Agent.STREAM_TIMEOUT_MS / 1000}s. ` +
+                        `The model may be stuck or the connection was interrupted.`,
+                    ),
+                  ),
+                Agent.STREAM_TIMEOUT_MS,
+              );
+            });
+
+            return Promise.race([consumeStream(), timeoutPromise]);
+          }, 'LLM streaming API call');
         });
 
-        return Promise.race([consumeStream(), timeoutPromise]);
-      }, 'LLM streaming API call');
+        if (!cbResult.success) {
+          throw new Error(`LLM API circuit breaker: ${cbResult.error}`);
+        }
+        return cbResult.data!;
+      });
 
-      const { toolCalls, assistantText } = streamResult;
+      const { toolCalls, assistantText } = streamResult as {
+        toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>;
+        assistantText: string;
+      };
       const assistantContent: AssistantContentBlock[] = [];
 
       if (assistantText) assistantContent.push({ type: 'text', text: assistantText });
@@ -1382,6 +1511,12 @@ export class Agent {
     }
 
     setToolContext(null);
+
+    // ── Tracer (L5): 结束 Trace ──
+    if (this.currentTraceId) {
+      this.tracer.endTrace(this.currentTraceId);
+      this.currentTraceId = '';
+    }
   }
 
   /** Record a tool call for usage statistics and RL weighting. */
