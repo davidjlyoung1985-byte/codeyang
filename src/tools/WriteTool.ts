@@ -1,5 +1,5 @@
-import { writeFile, mkdir } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { writeFile, mkdir, rename } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { resolveSafePath } from './shared.js';
 import { toolError } from './errors.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
@@ -38,8 +38,24 @@ export async function executeWrite(filePath: string, content: string): Promise<s
     );
   }
 
-  await mkdir(dirname(resolved), { recursive: true });
-  await writeFile(resolved, content, 'utf-8');
+  const dir = dirname(resolved);
+  await mkdir(dir, { recursive: true });
+
+  // Atomic write: write to a temporary file first, then rename to target path.
+  // This prevents data loss if the write is interrupted (crash, power loss, etc.).
+  const tmpPath = resolve(dir, `.tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  try {
+    await writeFile(tmpPath, content, 'utf-8');
+    await rename(tmpPath, resolved);
+  } catch (err) {
+    // Clean up temp file on failure
+    try {
+      await import('node:fs/promises').then((m) => m.unlink(tmpPath));
+    } catch {
+      // ignore cleanup errors
+    }
+    throw err;
+  }
 
   return `Written ${content.length} bytes to ${filePath}`;
 }

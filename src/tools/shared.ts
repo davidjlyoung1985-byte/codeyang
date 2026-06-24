@@ -1,5 +1,6 @@
 import { resolve, sep } from 'node:path';
 import { realpathSync } from 'node:fs';
+import { realpath } from 'node:fs/promises';
 import { toolError } from './errors.js';
 
 /**
@@ -32,6 +33,71 @@ export function resolveSafePath(inputPath: string, cwd?: string): string {
   let real = resolved;
   try {
     real = realpathSync(resolved);
+  } catch {
+    // path doesn't exist yet (write) — use the resolved form
+  }
+
+  // Sandbox check: path must be inside sandbox directory
+  const sandboxSep = absSandbox.endsWith(sep) ? absSandbox : absSandbox + sep;
+  const isInsideSandbox = real.startsWith(sandboxSep) || real === absSandbox;
+
+  // Drive whitelist: allows specific drives BUT still requires sandbox check
+  const allowDrives = (process.env['CODEYANG_ALLOW_DRIVES'] || '')
+    .split(',')
+    .map((d) => d.trim().replace(/:?$/, '').toUpperCase())
+    .filter(Boolean);
+
+  if (allowDrives.length > 0) {
+    const drive = resolved.charAt(0).toUpperCase();
+    if (allowDrives.includes(drive)) {
+      // Drive is whitelisted, but path must STILL be inside sandbox
+      if (!isInsideSandbox) {
+        throw new Error(
+          toolError(
+            'Security',
+            `Path traversal blocked: "${inputPath}" is on whitelisted drive ${drive}: but outside sandbox (${absSandbox})`,
+            `Whitelisted drives still enforce sandbox boundaries.`,
+          ),
+        );
+      }
+      return resolved;
+    }
+  }
+
+  // Default: enforce sandbox
+  if (!isInsideSandbox) {
+    throw new Error(
+      toolError(
+        'Security',
+        `Path traversal blocked: "${inputPath}" resolves outside sandbox (${absSandbox})`,
+        `To allow: set CODEYANG_NO_SANDBOX=true or CODEYANG_ALLOW_DRIVES=E,F,... (Windows) to whitelist drives.`,
+      ),
+    );
+  }
+  return resolved;
+}
+
+export async function resolveSafePathAsync(inputPath: string, cwd?: string): Promise<string> {
+  const base = cwd || process.cwd();
+  const resolved = resolve(base, inputPath);
+  const sandbox = process.env['CODEX_SANDBOX'];
+
+  if (!sandbox) return resolved;
+
+  // SECURITY: Resolve symlinks in sandbox base directory
+  let absSandbox = resolve(sandbox);
+  try {
+    absSandbox = await realpath(absSandbox);
+  } catch {
+    // Sandbox doesn't exist yet, use resolved form
+  }
+
+  if (resolved === absSandbox) return resolved;
+
+  // SECURITY: realpath resolves symlinks in target — use when the path exists
+  let real = resolved;
+  try {
+    real = await realpath(resolved);
   } catch {
     // path doesn't exist yet (write) — use the resolved form
   }

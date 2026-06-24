@@ -46,6 +46,8 @@ interface LocalConfig {
   apiBaseURL?: string;
   apiProvider?: string;
   mcpServers?: Record<string, McpServerConfig>;
+  cwd?: string;
+  maxRetries?: number;
 }
 
 let localConfig: LocalConfig = {};
@@ -89,6 +91,7 @@ export async function loadLocalConfig(): Promise<void> {
   try {
     const data = await readFile(CONFIG_FILE, 'utf-8');
     localConfig = JSON.parse(data);
+    validateConfig();
   } catch {
     localConfig = {};
   }
@@ -187,11 +190,26 @@ export const config = {
   get provider() {
     return localConfig.apiProvider || 'deepseek';
   },
-  maxTokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '1000000'),
+  get maxTokens() {
+    const rawTokens = process.env['CODEYANG_MAX_TOKENS'];
+    let val = rawTokens ? Number(rawTokens) : 1000000;
+    if (Number.isNaN(val)) val = 1000000;
+    return val;
+  },
   maxTurns: Number(process.env['CODEYANG_MAX_TURNS'] || '40'),
   autoVerify: (process.env['CODEYANG_AUTO_VERIFY'] || 'true') === 'true',
   autoFixOnError: (process.env['CODEYANG_AUTO_FIX'] || 'true') === 'true',
   watchMode: (process.env['CODEYANG_WATCH'] || 'true') === 'true',
+
+  get cwd(): string {
+    return process.env['CODEYANG_CWD'] || localConfig.cwd || process.cwd();
+  },
+  get maxRetries(): number {
+    const raw = process.env['CODEYANG_MAX_RETRIES'];
+    let val = raw ? Number(raw) : (localConfig.maxRetries ?? 3);
+    if (Number.isNaN(val)) val = 3;
+    return val;
+  },
 
   // Reflexion configuration
   reflexion: {

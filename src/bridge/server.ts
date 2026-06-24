@@ -1,5 +1,5 @@
 /**
- * Bridge Server — HTTP + WebSocket server for CodeYang ↔ Claude Code communication.
+ * Bridge Server �?HTTP + WebSocket server for CodeYang �?Claude Code communication.
  *
  * Usage (standalone):
  *   npx tsx src/bridge/server.ts
@@ -13,9 +13,10 @@ import { readFile, writeFile, mkdir, stat, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { randomUUID, randomBytes } from 'node:crypto';
+import { randomUUID, randomBytes, createCipheriv, createDecipheriv, createHash } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import type { BridgeTask, BridgeMessage, BridgeConfig, AgentId, WsEvent } from './types.js';
+import { logger } from '../utils/logger.js';
 
 // ── Defaults ─────────────────────────────────────────────────────
 
@@ -110,7 +111,7 @@ function createTask(params: {
     updatedAt: now,
   };
   state.tasks.push(task);
-  saveTasks().catch(() => {});
+  saveTasks().catch((err) => console.error('Failed to persist tasks:', err));
   return task;
 }
 
@@ -118,7 +119,7 @@ function updateTask(id: string, updates: Partial<BridgeTask>): BridgeTask | null
   const task = state.tasks.find((t) => t.id === id);
   if (!task) return null;
   Object.assign(task, updates, { updatedAt: new Date().toISOString() });
-  saveTasks().catch(() => {});
+  saveTasks().catch((err) => console.error('Failed to persist tasks:', err));
   return task;
 }
 
@@ -139,7 +140,7 @@ function addMessage(msg: Omit<BridgeMessage, 'id' | 'timestamp'>): BridgeMessage
   if (state.messages.length > 1000) {
     state.messages = state.messages.slice(-500);
   }
-  saveMessages().catch(() => {});
+  saveMessages().catch((err) => console.error('Failed to persist messages:', err));
   return full;
 }
 
@@ -172,10 +173,21 @@ function notifyNewTask(task: BridgeTask): void {
 
 // ── HTTP request handler ─────────────────────────────────────────
 
+const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB limit
+
 function parseBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', (chunk: string) => (body += chunk));
+    let size = 0;
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > MAX_BODY_SIZE) {
+        req.destroy();
+        reject(new Error('Request body too large'));
+        return;
+      }
+      body += chunk.toString();
+    });
     req.on('end', () => {
       try {
         resolve(JSON.parse(body));
@@ -379,7 +391,6 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     if (path === '/api/info') {
       sendJson(res, 200, {
         version: '1.0.0',
-        token: state.authToken,
         agents: Object.fromEntries(
           Array.from(state.connectedAgents.entries()).map(([id, sockets]) => [id, sockets.size > 0]),
         ),
@@ -391,7 +402,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     sendJson(res, 404, { error: 'Not found' });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    sendJson(res, 400, { error: msg });
+    if (msg === 'Request body too large') {
+      sendJson(res, 413, { error: 'Request body too large (max 10MB)' });
+    } else {
+      sendJson(res, 400, { error: msg });
+    }
   }
 }
 
@@ -400,43 +415,37 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 function handleWebSocket(ws: WebSocket, req: IncomingMessage): void {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const agentParam = url.searchParams.get('agent') as AgentId | null;
-  const token = url.searchParams.get('token');
+  // 等待客户端发送认证消息，Token 不在 URL 中传递
+  let authenticated = false;
+  let agent: AgentId = agentParam === 'claude-code' ? 'claude-code' : 'codeyang';
 
-  // Authenticate WebSocket connection
-  if (token !== state.authToken) {
-    ws.close(4001, 'Unauthorized');
-    return;
-  }
-
-  const agent: AgentId = agentParam === 'claude-code' ? 'claude-code' : 'codeyang';
-  const sockets = state.connectedAgents.get(agent) || new Set();
-  sockets.add(ws);
-  state.connectedAgents.set(agent, sockets);
-
-  console.log(`[Bridge] ${agent} connected via WebSocket (${sockets.size} connection(s))`);
-
-  // Notify both agents
-  broadcastAll({
-    type: 'agent_connected',
-    payload: { agent, connections: sockets.size },
-    timestamp: new Date().toISOString(),
-  });
-
-  // Send any pending tasks immediately
-  const pending = getPendingTasksFor(agent);
-  for (const task of pending) {
-    ws.send(
-      JSON.stringify({
-        type: 'new_task',
-        payload: task,
-        timestamp: new Date().toISOString(),
-      }),
-    );
-  }
+  // 先发送一�?ping 等待认证
+  const authTimer = setTimeout(() => {
+    if (!authenticated) {
+      ws.close(4001, 'Authentication timeout');
+    }
+  }, 10_000); // 10 秒内未认证则断开
 
   ws.on('message', (raw) => {
     try {
       const event: WsEvent = JSON.parse(raw.toString());
+
+      // ── 认证消息 ──────────────────────────────────────────────
+      if (event.type === 'auth') {
+        const payload = event.payload as { token?: string };
+        if (payload.token === state.authToken) {
+          authenticated = true;
+          clearTimeout(authTimer);
+          onAuthenticated(ws, agent);
+        } else {
+          ws.close(4001, 'Unauthorized');
+        }
+        return;
+      }
+
+      // ── 未认证的消息全部忽略 ─────────────────────────────────
+      if (!authenticated) return;
+
       event.timestamp = new Date().toISOString();
 
       switch (event.type) {
@@ -471,26 +480,58 @@ function handleWebSocket(ws: WebSocket, req: IncomingMessage): void {
           break;
       }
     } catch {
-      // Ignore malformed messages
+      logger.warn('Malformed WS message:', raw.toString().slice(0, 200));
     }
   });
 
   ws.on('close', () => {
-    sockets.delete(ws);
-    if (sockets.size === 0) {
-      state.connectedAgents.delete(agent);
+    clearTimeout(authTimer);
+    if (authenticated) {
+      const sockets = state.connectedAgents.get(agent);
+      if (sockets) {
+        sockets.delete(ws);
+        if (sockets.size === 0) state.connectedAgents.delete(agent);
+      }
+      logger.info(`[Bridge] ${agent} disconnected`);
+      broadcastAll({
+        type: 'agent_disconnected',
+        payload: { agent, connections: 0 },
+        timestamp: new Date().toISOString(),
+      });
     }
-    console.log(`[Bridge] ${agent} disconnected`);
-    broadcastAll({
-      type: 'agent_disconnected',
-      payload: { agent, connections: sockets.size },
-      timestamp: new Date().toISOString(),
-    });
   });
 
   ws.on('error', () => {
-    sockets.delete(ws);
+    clearTimeout(authTimer);
   });
+}
+
+/** Called after WebSocket authentication succeeds */
+function onAuthenticated(ws: WebSocket, agent: AgentId): void {
+  const sockets = state.connectedAgents.get(agent) || new Set();
+  sockets.add(ws);
+  state.connectedAgents.set(agent, sockets);
+
+  logger.info(`[Bridge] ${agent} connected via WebSocket (${sockets.size} connection(s))`);
+
+  // Notify both agents
+  broadcastAll({
+    type: 'agent_connected',
+    payload: { agent, connections: sockets.size },
+    timestamp: new Date().toISOString(),
+  });
+
+  // Send any pending tasks immediately
+  const pending = getPendingTasksFor(agent);
+  for (const task of pending) {
+    ws.send(
+      JSON.stringify({
+        type: 'new_task',
+        payload: task,
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  }
 }
 
 // ── Start server ──────────────────────────────────────────────────
@@ -521,6 +562,7 @@ export async function startBridgeServer(config?: Partial<BridgeConfig>): Promise
   await loadState();
 
   const server = createServer(handleRequest);
+  server.timeout = 120000; // 2 minutes
   const wss = new WebSocketServer({ server });
 
   wss.on('connection', handleWebSocket);
@@ -531,12 +573,12 @@ export async function startBridgeServer(config?: Partial<BridgeConfig>): Promise
     server.listen(port, state.config.host, () => {
       console.log('');
       console.log('  ╔══════════════════════════════════════════╗');
-      console.log('  ║     CodeYang ↔ Claude Code Bridge       ║');
+      console.log('  �U     CodeYang ? Claude Code Bridge       �U');
       console.log('  ╠══════════════════════════════════════════╣');
-      console.log(`  ║  Server:  http://${state.config.host}:${port}      ║`);
-      console.log(`  ║  WS:      ws://${state.config.host}:${port}        ║`);
-      console.log(`  ║  Token:   ${state.authToken.slice(0, 16)}...        ║`);
-      console.log(`  ║  Shared:  ${SHARED_DIR}  ║`);
+      console.log(`  �? Server:  http://${state.config.host}:${port}      ║`);
+      console.log(`  �? WS:      ws://${state.config.host}:${port}        ║`);
+      console.log(`  �? Token:   ${state.authToken.slice(0, 16)}...        ║`);
+      console.log(`  �? Shared:  ${SHARED_DIR}  ║`);
       console.log('  ╚══════════════════════════════════════════╝');
       console.log('');
 
