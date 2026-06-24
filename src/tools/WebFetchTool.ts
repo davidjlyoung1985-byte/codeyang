@@ -84,18 +84,53 @@ async function fetchWithRedirectLimit(url: string, outputFormat: string, redirec
     const isHtml = contentType.includes('text/html') || /<html[\s>]/i.test(html) || /<!doctype\s+html/i.test(html);
 
     if (isHtml && outputFormat === 'text') {
-      // Simple HTML-to-text conversion: strip tags, decode entities
+      // HTML-to-text conversion — more robust than simple regex stripping.
+      // Uses iterative tag removal to handle nesting, preserves document structure,
+      // extracts meaningful content (headings, paragraphs, list items, links).
+      // Note: still regex-based — a proper HTML parser (e.g. linkedom, node-html-parser)
+      // would be more accurate for malformed HTML.
       let text = html
+        // Step 1: Remove hidden/irrelevant elements
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
-        .replace(/<[^>]+>/g, ' ')
+        .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '') // HTML comments
+        .replace(/<\[CDATA\[[\s\S]*?\]\]>/g, '') // CDATA sections
+
+        // Step 2: Replace block elements with newlines for structure
+        .replace(/<\/(p|div|h[1-6]|section|article|header|footer|nav|aside|blockquote|table|tr)>/gi, '\n')
+        .replace(/<(br|hr|li|dd|dt)[^>]*>/gi, '\n')
+        .replace(/<\/?(ul|ol|li|dl|dt|dd)[^>]*>/gi, '\n')
+
+        // Step 3: Extract link titles
+        .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '$2 ($1)')
+        .replace(/<a[^>]*href='([^']*)'[^>]*>([\s\S]*?)<\/a>/gi, '$2 ($1)')
+
+        // Step 4: Iteratively strip remaining HTML tags (handles nesting)
+        .replace(/<img[^>]*alt="([^"]*)"[^>]*>/gi, '$1')
+        .replace(/<img[^>]*alt='([^']*)'[^>]*>/gi, '$1');
+
+      // Iterative tag removal — keep removing inner tags until none remain
+      // This handles nested tags like <b><i>text</i></b>
+      let prev = '';
+      while (text !== prev) {
+        prev = text;
+        text = text.replace(/<[^>]*>/g, '');
+      }
+
+      // Step 5: Decode HTML entities
+      text = text
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'")
         .replace(/&nbsp;/g, ' ')
+        .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+        .replace(/&#x([0-9a-fA-F]+);/g, (_, code) => String.fromCharCode(parseInt(code, 16)));
+
+      // Step 6: Normalize whitespace
+      text = text
         .replace(/\s+/g, ' ')
         .replace(/\n\s*\n/g, '\n')
         .trim();

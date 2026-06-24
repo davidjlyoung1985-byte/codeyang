@@ -67,44 +67,58 @@ export class PlanValidator {
   }
 
   /**
-   * Find circular dependencies using DFS
+   * Find circular dependencies using Kahn's algorithm (iterative, no stack overflow risk).
    */
   private findCircularDependencies(steps: PlanStep[]): string[] {
     const stepMap = new Map(steps.map((s) => [s.id, s]));
-    const visited = new Set<string>();
-    const recursionStack = new Set<string>();
-    const circular: string[] = [];
+    const inDegree = new Map<string, number>();
+    const adjList = new Map<string, string[]>(); // dep → list of steps that depend on it
 
-    const dfs = (stepId: string): boolean => {
-      visited.add(stepId);
-      recursionStack.add(stepId);
-
-      const step = stepMap.get(stepId);
-      if (!step) return false;
-
-      for (const dep of step.dependencies) {
-        if (!visited.has(dep)) {
-          if (dfs(dep)) {
-            circular.push(`${stepId} -> ${dep}`);
-            return true;
-          }
-        } else if (recursionStack.has(dep)) {
-          circular.push(`${stepId} -> ${dep}`);
-          return true;
-        }
-      }
-
-      recursionStack.delete(stepId);
-      return false;
-    };
-
+    // Initialize
     for (const step of steps) {
-      if (!visited.has(step.id)) {
-        dfs(step.id);
+      inDegree.set(step.id, 0);
+      adjList.set(step.id, []);
+    }
+
+    // Build adjacency list and compute in-degrees
+    for (const step of steps) {
+      for (const dep of step.dependencies) {
+        // dep must exist — validated elsewhere
+        if (!adjList.has(dep)) continue;
+        adjList.get(dep)!.push(step.id);
+        inDegree.set(step.id, (inDegree.get(step.id) || 0) + 1);
       }
     }
 
-    return circular;
+    // Start with zero in-degree nodes
+    const queue: string[] = [];
+    for (const [id, degree] of inDegree) {
+      if (degree === 0) queue.push(id);
+    }
+
+    const processed = new Set<string>();
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      processed.add(node);
+      for (const dependent of adjList.get(node) || []) {
+        const newDegree = (inDegree.get(dependent) || 1) - 1;
+        inDegree.set(dependent, newDegree);
+        if (newDegree === 0) queue.push(dependent);
+      }
+    }
+
+    // Nodes not processed = part of a cycle
+    const circular: string[] = [];
+    for (const step of steps) {
+      if (!processed.has(step.id)) {
+        circular.push(step.id);
+      }
+    }
+
+    if (circular.length > 0) {
+      return [`Circular dependency involving: ${circular.join(', ')}`];
+    }
+    return [];
   }
 
   /**
@@ -115,31 +129,48 @@ export class PlanValidator {
   }
 
   /**
-   * Get execution order (topological sort)
+   * Get execution order (topological sort via Kahn's algorithm, iterative, no stack overflow risk).
    */
   getExecutionOrder(steps: PlanStep[]): PlanStep[] {
     const stepMap = new Map(steps.map((s) => [s.id, s]));
-    const visited = new Set<string>();
-    const order: PlanStep[] = [];
+    const inDegree = new Map<string, number>();
 
-    const visit = (stepId: string): void => {
-      if (visited.has(stepId)) return;
-
-      const step = stepMap.get(stepId);
-      if (!step) return;
-
-      visited.add(stepId);
-
-      // Visit dependencies first
-      for (const dep of step.dependencies) {
-        visit(dep);
-      }
-
-      order.push(step);
-    };
-
+    // Initialize in-degrees
     for (const step of steps) {
-      visit(step.id);
+      inDegree.set(step.id, 0);
+    }
+    for (const step of steps) {
+      for (const dep of step.dependencies) {
+        inDegree.set(step.id, (inDegree.get(step.id) || 0) + 1);
+      }
+    }
+
+    // Start with zero in-degree nodes
+    const queue: string[] = [];
+    for (const [id, degree] of inDegree) {
+      if (degree === 0) queue.push(id);
+    }
+
+    const order: PlanStep[] = [];
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      const step = stepMap.get(id);
+      if (step) order.push(step);
+
+      // Decrement in-degree of dependents
+      for (const s of steps) {
+        if (s.dependencies.includes(id)) {
+          const newDegree = (inDegree.get(s.id) || 1) - 1;
+          inDegree.set(s.id, newDegree);
+          if (newDegree === 0) queue.push(s.id);
+        }
+      }
+    }
+
+    // Append any remaining steps (in case of circular deps, include them anyway)
+    const orderedIds = new Set(order.map((s) => s.id));
+    for (const step of steps) {
+      if (!orderedIds.has(step.id)) order.push(step);
     }
 
     return order;

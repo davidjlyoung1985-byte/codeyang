@@ -59,6 +59,8 @@ export class McpManager {
         const msg = err instanceof Error ? err.message : String(err);
         this._connectionErrors.set(name, msg);
         onStatus?.(name, 'error', msg);
+        // Remove the client so it doesn't appear as available
+        this.clients.delete(name);
       }
     }
 

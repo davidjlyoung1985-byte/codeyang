@@ -1,5 +1,25 @@
 import { WatcherSystem, VerificationPipeline } from './src/closed-loop/index.js';
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+
+// 加载 .env 文件（如果存在），确保环境变量生效
+try {
+  const envPath = resolve(process.cwd(), '.env');
+  const envContent = readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    if (key && !process.env[key]) {
+      process.env[key] = value.replace(/^["']|["']$/g, '');
+    }
+  }
+} catch {
+  // .env 文件不存在，忽略
+}
 
 // 项目根目录
 const projectDir = process.cwd();

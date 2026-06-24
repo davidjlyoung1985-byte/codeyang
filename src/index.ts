@@ -140,9 +140,9 @@ Environment Variables:
   CODEYANG_MODEL            Model name (default: deepseek-chat)
   CODEYANG_BASE_URL         Custom API base URL
   CODEYANG_MAX_TOKENS       Max tokens per response (default: 1000000)
-  CODEYANG_AUTO_VERIFY      Auto-run lint/tsc after Write/Edit (true/false, default: false)
-  CODEYANG_AUTO_FIX         Auto-fix lint errors when verified (true/false, default: false)
-  CODEYANG_WATCH            Watch files and auto-trigger verification (true/false, default: false)
+  CODEYANG_AUTO_VERIFY      Auto-run lint/tsc after Write/Edit (true/false, default: true)
+  CODEYANG_AUTO_FIX         Auto-fix lint errors when verified (true/false, default: true)
+  CODEYANG_WATCH            Watch files and auto-trigger verification (true/false, default: true)
   DEEPSEEK_API_KEY          Alternative env var for API key
 
 Interactive Commands:
@@ -152,6 +152,8 @@ Interactive Commands:
   /tasks --search <keyword>  Search tasks
   /tools           List all available tools
   /stats           Show tool usage statistics for this session
+  /status          Show closed-loop system status (verify/fix/watch/reflexion/planner)
+  /reflect         Manually trigger reflexion on recent execution failures
   /model           Show current model
   /model <name>    Switch model
   /mcp             Show MCP server status

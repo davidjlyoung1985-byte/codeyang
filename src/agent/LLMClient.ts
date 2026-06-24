@@ -219,8 +219,8 @@ class AnthropicClient implements LLMClient {
           if (event.usage) {
             yield {
               type: 'usage',
-              inputTokens: 0,
-              outputTokens: event.usage.output_tokens,
+              inputTokens: event.usage.input_tokens ?? 0,
+              outputTokens: event.usage.output_tokens ?? 0,
             };
           }
           break;

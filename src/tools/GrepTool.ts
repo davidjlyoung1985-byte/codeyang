@@ -5,6 +5,22 @@ import { globToRegex } from '../utils/globMatch.js';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.next', 'build', '.turbo', 'coverage', '__pycache__']);
 
+/** 最大正则模式长度，防止 ReDoS 攻击 */
+const MAX_REGEX_LENGTH = 500;
+
+/** 验证正则模式是否安全（防止 ReDoS） */
+function validateRegexPattern(pattern: string): string | null {
+  if (pattern.length > MAX_REGEX_LENGTH) {
+    return `Pattern too long (${pattern.length} chars, max ${MAX_REGEX_LENGTH})`;
+  }
+  // 检测嵌套量词（如 (a+)+、(a*)*、(a+)* 等），这些是 ReDoS 常见模式
+  const nestedQuantifiers = /\([^()]*[+*][^()]*\)[+*]/g;
+  if (nestedQuantifiers.test(pattern)) {
+    return `Pattern contains potentially unsafe nested quantifiers`;
+  }
+  return null;
+}
+
 /** Fast: try ripgrep if available. Returns null if rg not found or fails. */
 async function tryRipgrep(
   pattern: string,
@@ -80,6 +96,12 @@ async function grepFileLineStream(
 export async function executeGrep(pattern: string, include?: string, path?: string, contextLines = 0): Promise<string> {
   const base = path ? (isAbsolute(path) ? path : join(process.cwd(), path)) : process.cwd();
   const includeRegex = include ? globToRegex(include) : null;
+
+  // Validate pattern to prevent ReDoS
+  const validationError = validateRegexPattern(pattern);
+  if (validationError) {
+    return `Error: Invalid pattern — ${validationError}`;
+  }
 
   // Try ripgrep first — 10-50x faster
   const rgResult = await tryRipgrep(pattern, include ?? null, base, contextLines);

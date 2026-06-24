@@ -1,6 +1,50 @@
 import { watch } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, relative } from 'node:path';
 import { logger } from '../utils/logger.js';
+
+/** Directories that should always be excluded from file watching. */
+const DEFAULT_EXCLUDE_DIRS = [
+  'node_modules',
+  'dist',
+  '.git',
+  '.svn',
+  '.hg',
+  '.idea',
+  '.vscode',
+  '.next',
+  '.nuxt',
+  'build',
+  'coverage',
+  '.nyc_output',
+  '__pycache__',
+  '.cache',
+  'tmp',
+  'temp',
+  '.turbo',
+  '.storybook',
+  'out',
+  'target', // Rust/C++ build output
+];
+
+/** File extensions to exclude from watching. */
+const DEFAULT_EXCLUDE_EXTENSIONS = [
+  '.log',
+  '.bak',
+  '.swp',
+  '.swo',
+  '.DS_Store',
+  'Thumbs.db',
+  '.pyc',
+  '.pyo',
+  '.class',
+  '.exe',
+  '.dll',
+  '.so',
+  '.dylib',
+  '.min.js',
+  '.min.css',
+  '.map',
+];
 
 export type TriggerSource =
   | { type: 'file'; pattern: string }
@@ -96,6 +140,33 @@ export class WatcherSystem {
     }
   }
 
+  /**
+   * Check if a path should be excluded based on default exclude lists.
+   * Normalizes path separators for cross-platform compatibility (Windows uses \).
+   * This runs in addition to any user-supplied condition.
+   */
+  private isExcludedPath(filePath: string): boolean {
+    // Normalize to forward slashes for consistent pattern matching (Windows uses \)
+    const rel = relative(process.cwd(), filePath).replace(/[\\]/g, '/');
+
+    // Check directory exclusions
+    for (const dir of DEFAULT_EXCLUDE_DIRS) {
+      if (rel === dir || rel.startsWith(dir + '/') || rel.includes('/' + dir + '/')) {
+        return true;
+      }
+    }
+
+    // Check file extension exclusions (case-insensitive for cross-platform)
+    const lowerPath = filePath.toLowerCase();
+    for (const ext of DEFAULT_EXCLUDE_EXTENSIONS) {
+      if (lowerPath.endsWith(ext)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private startFileWatcher(projectDir: string, rule: TriggerRule): void {
     if (rule.source.type !== 'file') return;
     const ac = new AbortController();
@@ -109,7 +180,9 @@ export class WatcherSystem {
         for await (const event of watcher) {
           if (!event.filename || !pattern.test(event.filename)) continue;
           const fullPath = resolve(projectDir, event.filename);
-          // 检查 condition 过滤（排除 node_modules、dist 等）
+          // Built-in path exclusion (node_modules, dist, .git, etc.)
+          if (this.isExcludedPath(fullPath)) continue;
+          // User-supplied condition filter
           if (rule.condition && !rule.condition({ filePath: fullPath })) continue;
           const existing = debounceTimers.get(fullPath);
           if (existing) clearTimeout(existing);

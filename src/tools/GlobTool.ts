@@ -4,6 +4,15 @@ import { type Dirent } from 'node:fs';
 import { globToRegex } from '../utils/globMatch.js';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.next', 'build', '.turbo', 'coverage', '__pycache__']);
+const MAX_GLOB_PATTERN_LENGTH = 500;
+
+/** 验证 glob 模式长度，防止过度资源消耗 */
+function validateGlobPattern(pattern: string): string | null {
+  if (pattern.length > MAX_GLOB_PATTERN_LENGTH) {
+    return `Glob pattern too long (${pattern.length} chars, max ${MAX_GLOB_PATTERN_LENGTH})`;
+  }
+  return null;
+}
 
 export function matchGlob(pattern: string, path: string): boolean {
   return globToRegex(pattern).test(path);
@@ -11,6 +20,11 @@ export function matchGlob(pattern: string, path: string): boolean {
 
 export async function executeGlob(pattern: string, root?: string): Promise<string> {
   try {
+    const validationError = validateGlobPattern(pattern);
+    if (validationError) {
+      return `Error: ${validationError}`;
+    }
+
     const base = root ? (isAbsolute(root) ? root : join(process.cwd(), root)) : process.cwd();
     const results: string[] = [];
     const regex = globToRegex(pattern);
