@@ -1,12 +1,14 @@
 /**
- * Tool name aliases and fuzzy search support.
+ * Tool name aliases and semantic search support.
  *
  * Aliases map common shorthand names (like `ls`, `cp`, `sh`) to canonical
  * PascalCase tool names (like `List`, `Copy`, `Bash`).
  *
- * fuzzyFindTools provides simple prefix/substring/CamelCase-part scoring to
- * help users discover tools when they don't know the exact name.
+ * fuzzyFindTools delegates to semantic-index.ts for TF-IDF based retrieval,
+ * which is more accurate than simple prefix/substring matching.
  */
+
+import { semanticFindTools, getSemanticIndexVersion } from './semantic-index.js';
 
 export const TOOL_ALIASES: Record<string, string> = {
   // Core
@@ -125,11 +127,15 @@ export function resolveAlias(name: string): string | undefined {
 /**
  * Fuzzy-find tool names that match a query.
  *
+ * Uses semantic TF-IDF scoring as primary method.
+ * Falls back to simple substring matching if semantic index is not built.
+ *
  * Scoring (higher first):
  * - 100: exact match (case-insensitive)
- * - 80:  starts-with match
- * - 50:  substring match anywhere
- * - 30:  any CamelCase-part contains the query
+ * - 95:  alias match
+ * - 80:  prefix match
+ * - 40-99: semantic TF-IDF match (based on cosine similarity)
+ * - 25:  CamelCase part match
  *
  * Results are sorted by score descending, then alphabetically.
  */
@@ -137,6 +143,17 @@ export function fuzzyFindTools(query: string, names: string[]): string[] {
   const q = query.toLowerCase().trim();
   if (!q) return [];
 
+  // Try semantic search first (TF-IDF based)
+  try {
+    const semanticResults = semanticFindTools(q, names, TOOL_ALIASES, 20);
+    if (semanticResults.length > 0) {
+      return semanticResults;
+    }
+  } catch {
+    // Semantic index not available — fall through to simple matching
+  }
+
+  // Fallback: simple prefix/substring/CamelCase matching
   const scored = names.map((n) => {
     const l = n.toLowerCase();
     let score = 0;
@@ -150,7 +167,6 @@ export function fuzzyFindTools(query: string, names: string[]): string[] {
     } else {
       // Split CamelCase into parts: "GitStatus" → ["git", "status"]
       const parts = n.split(/(?<=[a-z])(?=[A-Z])/).map((p) => p.toLowerCase());
-      // Also include the full lowercase name joined without separators
       const joined = parts.join('');
       if (parts.some((p) => p.includes(q)) || joined.includes(q)) {
         score = 30;
@@ -165,3 +181,6 @@ export function fuzzyFindTools(query: string, names: string[]): string[] {
     .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
     .map((s) => s.name);
 }
+
+/** Rebuild the semantic index from the current tool registry. Call after tools change. */
+export { rebuildSemanticIndex } from './semantic-index.js';

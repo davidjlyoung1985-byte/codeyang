@@ -91,6 +91,68 @@ function sanitizeForLogging(command: string): string {
 }
 
 /**
+ * Maximum output size in bytes before truncation.
+ * Prevents a single command from filling the LLM context window.
+ * Configurable via CODEYANG_BASH_MAX_OUTPUT env var (default: 100 KB).
+ */
+const MAX_OUTPUT_BYTES = (() => {
+  const raw = process.env['CODEYANG_BASH_MAX_OUTPUT'];
+  if (raw === undefined) return 100 * 1024; // 100 KB
+  const val = Number(raw);
+  return Number.isNaN(val) || val < 1024 ? 100 * 1024 : val;
+})();
+
+/** Maximum lines to include before truncation (safety for line-oriented output). */
+const MAX_OUTPUT_LINES = 1000;
+
+/**
+ * Truncate output if it exceeds limits, appending a summary of what was omitted.
+ */
+function truncateOutput(output: string, label: string): string {
+  const totalBytes = Buffer.byteLength(output, 'utf-8');
+  const lines = output.split('\n');
+  const totalLines = lines.length;
+
+  // Fast path: within limits
+  if (totalBytes <= MAX_OUTPUT_BYTES && totalLines <= MAX_OUTPUT_LINES) {
+    return output;
+  }
+
+  let truncated = false;
+
+  // Truncate by lines first (preserves line integrity)
+  if (totalLines > MAX_OUTPUT_LINES) {
+    const keepHead = Math.floor(MAX_OUTPUT_LINES * 0.7); // 700 lines from start
+    const keepTail = MAX_OUTPUT_LINES - keepHead; // 300 lines from end
+    const head = lines.slice(0, keepHead);
+    const tail = lines.slice(totalLines - keepTail);
+    output = [...head, `... [${totalLines - keepHead - keepTail} lines omitted]`, ...tail].join('\n');
+    truncated = true;
+  }
+
+  // Truncate by byte size (after line truncation, in case lines are very long)
+  const newBytes = Buffer.byteLength(output, 'utf-8');
+  if (newBytes > MAX_OUTPUT_BYTES) {
+    const keepBytes = Math.floor(MAX_OUTPUT_BYTES * 0.8); // keep 80% at start
+    const keepHead = output.slice(0, keepBytes);
+    const omittedBytes = newBytes - keepBytes;
+    output =
+      keepHead +
+      `\n... [${(omittedBytes / 1024).toFixed(1)} KB of ${label} omitted — ` +
+      `output exceeds ${(MAX_OUTPUT_BYTES / 1024).toFixed(0)} KB limit]`;
+    truncated = true;
+  }
+
+  if (truncated) {
+    const finalBytes = Buffer.byteLength(output, 'utf-8');
+    output +=
+      `\n[${label}: ${(totalBytes / 1024).toFixed(1)} KB total, ` + `returned ${(finalBytes / 1024).toFixed(1)} KB]`;
+  }
+
+  return output;
+}
+
+/**
  * Execute a shell command with permission checks.
  */
 export async function executeBash(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
@@ -151,8 +213,16 @@ export async function executeBash(command: string, cwd?: string, timeoutSecs = 3
     env: { ...process.env, CI: undefined },
   });
 
-  const stdout = result.stdout?.trim() || '';
-  const stderr = result.stderr?.trim() || '';
+  const rawStdout = result.stdout?.trim() || '';
+  const rawStderr = result.stderr?.trim() || '';
+  const label = `stdout of \`${command.slice(0, 80)}${command.length > 80 ? '…' : ''}\``;
+
+  // Apply truncation to both stdout and stderr separately.
+  // This way, error messages from stderr are preserved even if stdout is huge.
+  const stdout = rawStdout ? truncateOutput(rawStdout, label) : '';
+  const stderr = rawStderr
+    ? truncateOutput(rawStderr, `stderr of \`${command.slice(0, 80)}${command.length > 80 ? '…' : ''}\``)
+    : '';
 
   if (result.exitCode === 0) {
     const output = stdout || '(no output)';

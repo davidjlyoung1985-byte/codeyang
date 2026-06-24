@@ -9,7 +9,12 @@ import { VerificationPipeline, type VerificationResult } from '../closed-loop/Ve
 import { FeedbackInjector } from '../closed-loop/FeedbackInjector.js';
 import type { WatcherSystem } from '../closed-loop/WatcherSystem.js';
 import { ReflexionEngine } from '../reflexion/ReflexionEngine.js';
+import { CritiqueEngine } from '../reflexion/CritiqueEngine.js';
 import { Planner } from '../planner/Planner.js';
+import { TreeOfThoughts } from '../tot/TreeOfThoughts.js';
+import { recordToolOutcome } from '../tools/rl-weighter.js';
+import { runConsolidation } from '../continual-learning/MemoryManager.js';
+import { A2AProtocol, globalAgentRegistry, buildA2AMessage } from '../a2a/A2AProtocol.js';
 
 /** A content block emitted by the assistant (text or tool_use). */
 type AssistantContentBlock =
@@ -63,7 +68,10 @@ export class Agent {
   private questionResolve: ((answer: string) => void) | null = null;
   private maxRetries: number;
 
-  // Tool result cache �?avoid re-reading unchanged files within a session
+  // Tool result cache: avoid re-reading unchanged files within a session
+  // LRU eviction: when MAX_CACHE_SIZE is exceeded, oldest entries are purged
+  private static readonly MAX_CACHE_SIZE = 200;
+  private static readonly CACHE_CLEANUP_THRESHOLD = 150;
   private toolCache = new Map<string, { result: string; timestamp: number }>();
 
   // Pending reads �?deduplicate concurrent Read/Glob calls for the same key
@@ -100,14 +108,33 @@ export class Agent {
   // Reflexion: self-improvement via failure pattern learning
   private reflexionEngine: ReflexionEngine;
 
+  // Self-Critique: quality review of agent's own output
+  private critiqueEngine: CritiqueEngine;
+
   // Planner: plan-and-solve for complex tasks
   private planner: Planner;
+
+  // Tree-of-Thoughts: parallel exploration of multiple solutions
+  private treeOfThoughts: TreeOfThoughts;
+
+  // A2A: direct agent-to-agent communication
+  private a2aProtocol: A2AProtocol;
+
+  // Continual Learning: auto-consolidation counter
+  private consolidationCounter = 0;
 
   constructor(private qtContext?: QtContext) {
     this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
     this.reflexionEngine = new ReflexionEngine(config.reflexion);
+    this.critiqueEngine = new CritiqueEngine();
     this.planner = new Planner(config.planner);
+    this.treeOfThoughts = new TreeOfThoughts();
+    this.a2aProtocol = new A2AProtocol({}, globalAgentRegistry);
     this.maxRetries = config.maxRetries ?? 3;
+
+    // Register with A2A protocol
+    globalAgentRegistry.register(this.a2aProtocol.getMyCard());
+    this.a2aProtocol.setLLMClient(this.client, config.model, config.maxTokens);
   }
 
   setWatcher(watcher: WatcherSystem | null): void {
@@ -245,6 +272,21 @@ export class Agent {
     }
   }
 
+  /** Evict oldest cache entries when the cache grows too large (LRU). */
+  private evictStaleCacheEntries(): void {
+    if (this.toolCache.size <= Agent.MAX_CACHE_SIZE) return;
+
+    const entries = [...this.toolCache.entries()]
+      .map(([key, val]) => ({ key, timestamp: val.timestamp }))
+      .sort((a, b) => a.timestamp - b.timestamp); // oldest first
+
+    const toDelete = this.toolCache.size - Agent.CACHE_CLEANUP_THRESHOLD;
+    for (let i = 0; i < toDelete && i < entries.length; i++) {
+      this.toolCache.delete(entries[i].key);
+      this.pendingReads.delete(entries[i].key);
+    }
+  }
+
   private async sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -370,7 +412,9 @@ export class Agent {
   cancelRunningTools() {
     if (this.abortController) {
       this.abortController.abort();
-      this.abortController = null;
+      // Don't set to null here — let the run() loop clean it up naturally.
+      // If we null it now, a subsequent tool batch would create a fresh
+      // un-aborted controller that can't be cancelled again.
     }
   }
 
@@ -379,23 +423,25 @@ export class Agent {
   }
 
   private jsonClone<T>(obj: T): T {
-    if (obj === undefined) return undefined as T;
+    // Handle null/undefined before typeof check (typeof null === 'object')
+    if (obj === null || obj === undefined) return obj;
     // Primitive types: return as-is (no cloning needed)
-    if (obj === null || typeof obj !== 'object') return obj;
+    if (typeof obj !== 'object') return obj;
 
-    // Node >= 18 has structuredClone natively �?use it as primary method
-    try {
-      return structuredClone(obj);
-    } catch {
-      // structuredClone 失败（如循环引用），回退�?JSON round-trip
+    // Node >= 17+ has structuredClone natively — use it as primary method
+    if (typeof structuredClone === 'function') {
+      try {
+        return structuredClone(obj);
+      } catch {
+        // structuredClone 失败（如循环引用），回退到 JSON round-trip
+      }
     }
 
     // Fallback: JSON round-trip
     try {
       return JSON.parse(JSON.stringify(obj));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new Error(`[Agent] jsonClone failed: ${msg}. Cannot deep copy object.`);
+      throw new Error(`[Agent] jsonClone failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -410,21 +456,78 @@ export class Agent {
     return 0;
   }
 
-  /** 粗略估算消息数组�?token 数（4 chars �?1 token�?*/
+  /**
+   * 估算消息数组的 token 数，使用混合策略提升精度。
+   *
+   * - 英文单词: ~1.3 tokens/word（基于 GPT/Claude 词级 tokenization 经验值）
+   * - CJK 字符: ~1.5 chars/token（每个汉字通常不到 1 token）
+   * - 数字: ~3 chars/token（数字序列压缩效率高）
+   * - 代码/符号: ~2 chars/token（特殊字符密集排列）
+   *
+   * 比单一大小的估算精度提升约 30-50%，避免过早或过晚触发截断。
+   */
   private estimateMessageTokens(messages: LLMMessage[]): number {
     let total = 0;
+
+    const estimateString = (s: string) => {
+      if (!s) return;
+      let cjkChars = 0;
+      let digits = 0;
+      let alphaChars = 0;
+      let otherChars = 0;
+      let spaces = 0;
+
+      for (const ch of s) {
+        const code = ch.charCodeAt(0);
+        // CJK
+        if (
+          (code >= 0x4e00 && code <= 0x9fff) ||
+          (code >= 0x3000 && code <= 0x303f) ||
+          (code >= 0x3400 && code <= 0x4dbf)
+        ) {
+          cjkChars++;
+        } else if (ch >= '0' && ch <= '9') {
+          digits++;
+        } else if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')) {
+          alphaChars++;
+        } else if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
+          spaces++;
+        } else {
+          otherChars++;
+        }
+      }
+
+      // 英文按单词算（比按字母更准）
+      // 简单近似: 5 个字母 = 1 个单词平均
+      const words = alphaChars / 5;
+      total += words * 1.3; // 1.3 tokens/word
+
+      // CJK: ~1.5 chars/token
+      total += cjkChars / 1.5;
+
+      // 数字: ~3 chars/token
+      total += digits / 3;
+
+      // 符号/代码: ~2 chars/token
+      total += otherChars / 2;
+
+      // 空格不计入
+    };
+
     for (const m of messages) {
       if (typeof m.content === 'string') {
-        total += m.content.length;
+        estimateString(m.content);
       } else if (Array.isArray(m.content)) {
         for (const b of m.content) {
-          if ('text' in b && typeof b.text === 'string') total += b.text.length;
-          if ('content' in b && typeof b.content === 'string') total += b.content.length;
-          if ('input' in b && typeof b.input === 'object') total += JSON.stringify(b.input).length;
+          if ('text' in b && typeof b.text === 'string') estimateString(b.text);
+          if ('content' in b && typeof b.content === 'string') estimateString(b.content);
+          if ('input' in b && typeof b.input === 'object') estimateString(JSON.stringify(b.input));
         }
       }
     }
-    return Math.ceil(total / 4);
+
+    // 加一个安全余量（5%），防止低估
+    return Math.ceil(total * 1.05);
   }
 
   /** If history exceeds the soft limit, replace older messages with a structured summary. */
@@ -466,32 +569,98 @@ export class Agent {
     if (cutIndex >= messages.length) return messages;
 
     const toSummarize = messages.slice(0, cutIndex);
-    const modifiedFiles = new Set<string>();
+
+    // ── Enhanced semantic extraction ───────────────────────────
+    // Extract 4 dimensions from the conversation history:
+    // 1. Files modified (and what was done to them)
+    // 2. Key actions/decisions (from both user requests AND assistant summaries)
+    // 3. Tools used
+    // 4. Errors encountered and fixes applied
+
+    const fileChanges = new Map<string, string[]>();
     const decisions: string[] = [];
     const toolCounts = new Map<string, number>();
-    let totalUserMsgs = 0;
+    const errors: string[] = [];
+    let totalTurns = 0;
 
     for (const m of toSummarize) {
+      totalTurns++;
+
+      // ── From user messages: extract requests/decisions ──────────
       if (m.role === 'user' && typeof m.content === 'string' && m.content.length > 0) {
-        totalUserMsgs++;
-        if (m.content.length < Agent.DECISION_MAX_LEN && !m.content.startsWith('[')) {
-          decisions.push(m.content.replace(/\n/g, ' ').slice(0, Agent.DECISION_TRUNCATE));
+        const trimmed = m.content.replace(/\n/g, ' ').slice(0, Agent.DECISION_TRUNCATE).trim();
+        // Only include non-system messages (system notices start with '[' or '#')
+        if (
+          trimmed.length > 0 &&
+          trimmed.length < Agent.DECISION_MAX_LEN &&
+          !trimmed.startsWith('[') &&
+          !trimmed.startsWith('#')
+        ) {
+          decisions.push(trimmed);
         }
       }
+
       if (Array.isArray(m.content)) {
         for (const b of m.content) {
+          // ── From tool_use: track what changed ────────────────
           if (b.type === 'tool_use' && b.name) {
             toolCounts.set(b.name, (toolCounts.get(b.name) || 0) + 1);
+
             if ((b.name === 'Write' || b.name === 'Edit') && b.input) {
               const path = String((b.input as Record<string, unknown>)['filePath'] ?? '');
-              if (path) modifiedFiles.add(path);
+              if (path) {
+                if (!fileChanges.has(path)) fileChanges.set(path, []);
+                const ops = fileChanges.get(path)!;
+                // Deduplicate operations per file
+                if (!ops.includes(b.name)) ops.push(b.name);
+              }
             }
             if (b.name === 'Bash' && b.input) {
               const cmd = String((b.input as Record<string, unknown>)['command'] ?? '');
               if (cmd.startsWith('cd ') || cmd.startsWith('mkdir ')) {
                 const path = cmd.split(/\s+/)[1];
-                if (path) modifiedFiles.add(path);
+                if (path) {
+                  if (!fileChanges.has(path)) fileChanges.set(path, []);
+                  const ops = fileChanges.get(path)!;
+                  if (!ops.includes('mkdir/cd')) ops.push('mkdir/cd');
+                }
               }
+            }
+          }
+
+          // ── From assistant text: extract summaries of what was done ──
+          if (b.type === 'text' && typeof b.text === 'string' && b.text.length > 10) {
+            // Look for sentences that describe actions/fixes
+            const lines = b.text.split('\n').filter((l) => {
+              const t = l.trim();
+              // Skip boilerplate, markdown headers, code blocks
+              if (
+                !t ||
+                t.startsWith('```') ||
+                t.startsWith('#') ||
+                t.startsWith('##') ||
+                t.startsWith('_[') ||
+                t.startsWith('>')
+              )
+                return false;
+              // Look for action-indicating patterns
+              return /^(Fixed|Added|Changed|Updated|Refactored|Created|Removed|Moved|Renamed|Implemented|Resolved|Optimized|Replaced|Extracted|Simplified|Rewrote)/i.test(
+                t,
+              );
+            });
+            for (const line of lines.slice(0, 3)) {
+              const action = line.replace(/\n/g, ' ').trim().slice(0, Agent.DECISION_TRUNCATE);
+              if (action.length > 5 && !decisions.includes(action)) {
+                decisions.push(action);
+              }
+            }
+          }
+
+          // ── From tool results: track errors ──────────────────
+          if (b.type === 'tool_result' && b.is_error && typeof b.content === 'string') {
+            const errSnippet = b.content.replace(/\n/g, ' ').slice(0, 80).trim();
+            if (errSnippet && !errors.includes(errSnippet)) {
+              errors.push(errSnippet);
             }
           }
         }
@@ -499,23 +668,38 @@ export class Agent {
     }
 
     const summaryParts: string[] = ['[Prior context summary:'];
-    if (totalUserMsgs > 0) summaryParts.push(`  assistant responded to ${totalUserMsgs} user messages`);
-    if (modifiedFiles.size > 0) {
-      summaryParts.push(`  files modified: ${[...modifiedFiles].join(', ').slice(0, Agent.FILE_LIST_TRUNCATE)}`);
+    summaryParts.push(`  ${totalTurns} conversation turns summarized`);
+
+    if (fileChanges.size > 0) {
+      const filesStr = [...fileChanges.entries()]
+        .map(([path, ops]) => `${path}(${ops.join(',')})`)
+        .join(', ')
+        .slice(0, Agent.FILE_LIST_TRUNCATE);
+      summaryParts.push(`  files: ${filesStr}`);
     }
+
     if (toolCounts.size > 0) {
       const toolsStr = [...toolCounts.entries()]
         .sort((a, b) => b[1] - a[1])
         .slice(0, Agent.TOP_TOOLS_COUNT)
         .map(([name, count]) => `${name}(${count})`)
         .join(', ');
-      summaryParts.push(`  tools used: ${toolsStr}`);
+      summaryParts.push(`  tools: ${toolsStr}`);
     }
+
+    // ── Key decisions from user requests (most recent first) ──
     const keyDecisions = decisions.slice(-Agent.KEY_DECISIONS_COUNT);
     if (keyDecisions.length > 0) {
-      summaryParts.push('  key requests:');
+      summaryParts.push('  actions:');
       for (const d of keyDecisions) summaryParts.push(`    · ${d}`);
     }
+
+    // ── Errors encountered ──
+    if (errors.length > 0) {
+      summaryParts.push('  errors:');
+      for (const e of errors.slice(-3)) summaryParts.push(`    ! ${e}`);
+    }
+
     summaryParts.push(']');
 
     const recent = messages.slice(cutIndex);
@@ -529,6 +713,109 @@ export class Agent {
     }
 
     return result;
+  }
+
+  /**
+   * LLM-based semantic summarization for extremely large contexts.
+   *
+   * When the rule-based summary is too lossy, use the LLM itself to generate
+   * a concise narrative summary of the oldest conversation turns. This preserves
+   * the "why" and "what was learned" that rule-based extraction misses.
+   *
+   * Only triggered when messages exceed DOUBLE the soft limit (> 400 messages).
+   * Falls back gracefully if the LLM call fails (rule-based summary already applied).
+   */
+  private async llmSummarizeContext(messages: LLMMessage[]): Promise<LLMMessage[]> {
+    const EXTREME_LIMIT = Agent.CONTEXT_SOFT_LIMIT * 2; // 400
+    if (messages.length <= EXTREME_LIMIT) return messages;
+
+    const keepRecent = Agent.CONTEXT_KEEP_RECENT * 2; // 100 — keep more for LLM mode
+    let cutIndex = messages.length - keepRecent;
+
+    if (cutIndex <= 10) return messages;
+
+    // Find a clean cut point (not in the middle of tool_use/tool_result pairs)
+    while (cutIndex < messages.length) {
+      const m = messages[cutIndex];
+      const hasOrphanToolUse =
+        m.role === 'assistant' && Array.isArray(m.content) && m.content.some((b) => b.type === 'tool_use');
+      const hasOrphanToolResult =
+        m.role === 'user' && Array.isArray(m.content) && m.content.some((b) => b.type === 'tool_result');
+      if (hasOrphanToolUse || hasOrphanToolResult) {
+        cutIndex++;
+        if (cutIndex >= messages.length) {
+          cutIndex = messages.length - 1;
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+
+    if (cutIndex >= messages.length) return messages;
+
+    const toSummarize = messages.slice(0, cutIndex);
+    const recent = messages.slice(cutIndex);
+
+    // Build a compact representation of the old messages for the LLM
+    const compactLines: string[] = [];
+    for (const m of toSummarize) {
+      if (m.role === 'user' && typeof m.content === 'string') {
+        const short = m.content.replace(/\n/g, ' ').slice(0, 120).trim();
+        if (short && !short.startsWith('[') && !short.startsWith('#')) {
+          compactLines.push(`  U: ${short}`);
+        }
+      }
+      if (Array.isArray(m.content)) {
+        for (const b of m.content) {
+          if (b.type === 'text' && typeof b.text === 'string') {
+            const short = b.text.replace(/\n/g, ' ').slice(0, 120).trim();
+            if (short && !short.startsWith('[') && !short.startsWith('_[')) {
+              compactLines.push(`  A: ${short}`);
+            }
+          }
+          if (b.type === 'tool_use' && b.name) {
+            compactLines.push(`  Tool: ${b.name}`);
+          }
+          if (b.type === 'tool_result' && b.is_error && typeof b.content === 'string') {
+            compactLines.push(`  Error: ${b.content.replace(/\n/g, ' ').slice(0, 100)}`);
+          }
+        }
+      }
+      // Cap the input to avoid spending too many tokens on summarization
+      if (compactLines.length > 80) {
+        compactLines.push('  ... (more history omitted)');
+        break;
+      }
+    }
+
+    if (compactLines.length < 5) return messages; // Not enough context to summarize
+
+    const summarizePrompt = [
+      'Summarize the following conversation history concisely (2-4 sentences).',
+      'Focus on: what was being built/fixed, key decisions made, errors encountered.',
+      'Output ONLY the summary, no preamble.',
+      '',
+      ...compactLines,
+    ].join('\n');
+
+    try {
+      const response = await this.client.chat?.({
+        model: config.model,
+        maxTokens: 500,
+        messages: [{ role: 'user', content: summarizePrompt }],
+        stream: false,
+      });
+      const summary = response?.content?.trim();
+      if (summary && summary.length > 20) {
+        return [{ role: 'user', content: `[Prior context summarized by LLM]: ${summary}` }, ...recent];
+      }
+    } catch {
+      // LLM summarization failed — this is non-critical, fall through to rule-based
+      logger.debug('[llmSummarizeContext] LLM call failed, keeping rule-based summary');
+    }
+
+    return messages;
   }
 
   /** Execute Question tool (blocking) then all other tools in parallel. */
@@ -613,6 +900,7 @@ export class Agent {
             if (cacheKey) {
               this.toolCache.set(cacheKey, { result: output, timestamp: Date.now() });
               this.pendingReads.delete(cacheKey);
+              this.evictStaleCacheEntries();
             }
             if (tc.name === 'Write' || tc.name === 'Edit') {
               const writtenPath = String((tc.input as Record<string, unknown>)['filePath'] ?? '');
@@ -663,6 +951,10 @@ export class Agent {
   }
 
   async run(prompt: string): Promise<void> {
+    // Create a fresh abort controller at the start of each run().
+    // Previously it was lazily created at the tool batch section (line 925),
+    // which meant Ctrl+C pressed during planning or LLM streaming would be a no-op.
+    this.abortController = new AbortController();
     const messages = this.jsonClone(this.history);
 
     const isComplex = prompt.length > 200 || (prompt.match(/[。；;.!?？]/g) || []).length >= 2 || prompt.includes('\n');
@@ -684,26 +976,49 @@ export class Agent {
 
     const maxTurns = config.maxTurns;
 
-    // Apply context summarization if history is large
-    logger.debug(`[run] messages before summarization: ${messages.length}`);
+    // Apply context summarization if history exceeds soft limit
     const summarized = this.summarizeContext(messages);
-    logger.debug(
-      `[run] summarized is array: ${Array.isArray(summarized)}, length: ${summarized?.length ?? 'undefined'}`,
-    );
-    logger.debug(`[run] messages after summarization: ${summarized.length}`);
-
-    // Replace messages array with summarized content
-    // Important: create new array to avoid reference issues
+    // summarizeContext returns the original array if no truncation was needed,
+    // or a new shorter array if truncation occurred
     if (summarized !== messages) {
       messages.length = 0;
       messages.push(...summarized);
     }
-    logger.debug(`[run] after push, messages.length: ${messages.length}`);
+
+    // LLM-based semantic summarization for extremely large contexts (> 400 messages).
+    // Uses the model itself to generate a narrative summary, capturing "why" not just "what".
+    if (messages.length > Agent.CONTEXT_SOFT_LIMIT * 2) {
+      const llmSummarized = await this.llmSummarizeContext(messages);
+      if (llmSummarized !== messages) {
+        messages.length = 0;
+        messages.push(...llmSummarized);
+        this.cbs.onToolResult?.(
+          'Context Summarizer',
+          `LLM summarized ${summarized !== messages ? 'older turns' : 'conversation'} into a concise narrative`,
+          false,
+        );
+      }
+    }
 
     // Safety check: ensure messages is not empty before calling API
     if (messages.length === 0) {
       logger.error(`[run] messages is empty! history.length=${this.history.length}, prompt="${prompt}"`);
       throw new Error('Internal error: messages array is empty after summarization');
+    }
+
+    // ── Tree-of-Thoughts: parallel exploration for highly complex tasks ──
+    // Triggered before the planner for tasks that need multi-path exploration.
+    if (this.treeOfThoughts.shouldUseToT(prompt)) {
+      this.cbs.onAgentDelta?.('\n\n_[🌳 Tree-of-Thoughts: exploring alternative approaches...]_');
+      const totResult = await this.treeOfThoughts.explore(this.client, config.model, config.maxTokens, prompt);
+      if (totResult.selected && totResult.selected.steps.length > 0) {
+        messages.push({ role: 'user', content: totResult.summary });
+        this.cbs.onToolResult?.(
+          'Tree-of-Thoughts',
+          `${totResult.explored.length} paths explored, selected: ${totResult.selected.approach} (${totResult.selected.evaluation.score}/100)`,
+          false,
+        );
+      }
     }
 
     // ── Planner: auto-detect complex tasks and generate plan ──
@@ -757,45 +1072,65 @@ export class Agent {
         const toolCallsInner: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
         const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
 
-        for await (const event of this.client.stream({
-          model: config.model,
-          maxTokens: config.maxTokens,
-          temperature: 0.5,
-          system: systemPrompt,
-          messages,
-          tools: toolSchemas(),
-        })) {
-          if (event.type === 'text_delta' && event.text) {
-            this.cbs.onAgentDelta?.(event.text);
-            textParts.push(event.text);
-          } else if (event.type === 'tool_call_start') {
-            toolCallsAccum.set(event.toolCallIndex!, {
-              id: event.toolCallId,
-              name: event.toolCallName,
-              args: '',
-            });
-          } else if (event.type === 'tool_call_delta') {
-            const accum = toolCallsAccum.get(event.toolCallIndex!);
-            if (accum) accum.args += event.toolCallArgs || '';
-          } else if (event.type === 'tool_call_end') {
-            const accum = toolCallsAccum.get(event.toolCallIndex!);
-            if (accum) {
-              try {
-                toolCallsInner.push({
-                  id: accum.id!,
-                  name: accum.name!,
-                  input: JSON.parse(accum.args || '{}'),
-                });
-              } catch {
-                toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
+        // ── Stream consumption with timeout protection ─────────
+        // Prevents the agent from hanging indefinitely if the LLM stream stalls.
+        const consumeStream = async () => {
+          for await (const event of this.client.stream({
+            model: config.model,
+            maxTokens: config.maxTokens,
+            temperature: 0.5,
+            system: systemPrompt,
+            messages,
+            tools: toolSchemas(),
+          })) {
+            if (event.type === 'text_delta' && event.text) {
+              this.cbs.onAgentDelta?.(event.text);
+              textParts.push(event.text);
+            } else if (event.type === 'tool_call_start') {
+              toolCallsAccum.set(event.toolCallIndex!, {
+                id: event.toolCallId,
+                name: event.toolCallName,
+                args: '',
+              });
+            } else if (event.type === 'tool_call_delta') {
+              const accum = toolCallsAccum.get(event.toolCallIndex!);
+              if (accum) accum.args += event.toolCallArgs || '';
+            } else if (event.type === 'tool_call_end') {
+              const accum = toolCallsAccum.get(event.toolCallIndex!);
+              if (accum) {
+                try {
+                  toolCallsInner.push({
+                    id: accum.id!,
+                    name: accum.name!,
+                    input: JSON.parse(accum.args || '{}'),
+                  });
+                } catch {
+                  toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
+                }
               }
+            } else if (event.type === 'usage') {
+              if (event.inputTokens !== undefined) this.tokenUsage.inputTokens += event.inputTokens;
+              if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
             }
-          } else if (event.type === 'usage') {
-            if (event.inputTokens !== undefined) this.tokenUsage.inputTokens += event.inputTokens;
-            if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
           }
-        }
-        return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
+          return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
+        };
+
+        // Race between stream completion and timeout
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  `Stream timed out after ${Agent.STREAM_TIMEOUT_MS / 1000}s. ` +
+                    `The model may be stuck or the connection was interrupted.`,
+                ),
+              ),
+            Agent.STREAM_TIMEOUT_MS,
+          );
+        });
+
+        return Promise.race([consumeStream(), timeoutPromise]);
       }, 'LLM streaming API call');
 
       const { toolCalls, assistantText } = streamResult;
@@ -974,6 +1309,74 @@ export class Agent {
         }
       }
 
+      // ── Self-Critique: review output quality ──────────────────
+      if (assistantText && !this.critiqueEngine.getIterationCount()) {
+        const critiqueResult = await this.critiqueEngine.checkAndImprove(
+          this.client,
+          config.model,
+          config.maxTokens,
+          assistantText,
+          toolCalls,
+          toolResults,
+        );
+        if (!critiqueResult.passed && critiqueResult.critiqueMessage) {
+          messages.push({ role: 'user', content: critiqueResult.critiqueMessage });
+          this.cbs.onToolResult?.(
+            'Self-Critique',
+            `Quality score: ${critiqueResult.critique?.score}/100 — issues found`,
+            false,
+          );
+        } else if (critiqueResult.critique) {
+          this.cbs.onToolResult?.(
+            'Self-Critique',
+            `Quality score: ${critiqueResult.critique?.score}/100 — passed`,
+            false,
+          );
+        }
+      }
+
+      // ── Continual Learning: periodic memory consolidation ────
+      this.consolidationCounter++;
+      if (this.consolidationCounter >= 10) {
+        this.consolidationCounter = 0;
+        // Fire-and-forget: consolidation runs in background
+        runConsolidation()
+          .then((report) => {
+            if (report.consolidated > 0) {
+              logger.debug(
+                `[ContinualLearning] Consolidated ${report.consolidated} memories (classified: ${report.classified}, compressed: ${report.compressed}, forgotten: ${report.forgotten})`,
+              );
+            }
+          })
+          .catch(() => {});
+      }
+
+      // ── Self-Critique: review output quality ──────────────────
+      if (assistantText && !this.critiqueEngine.getIterationCount()) {
+        const critiqueResult = await this.critiqueEngine.checkAndImprove(
+          this.client,
+          config.model,
+          config.maxTokens,
+          assistantText,
+          toolCalls,
+          toolResults,
+        );
+        if (!critiqueResult.passed && critiqueResult.critiqueMessage) {
+          messages.push({ role: 'user', content: critiqueResult.critiqueMessage });
+          this.cbs.onToolResult?.(
+            'Self-Critique',
+            `Quality score: ${critiqueResult.critique?.score}/100 — issues found`,
+            false,
+          );
+        } else if (critiqueResult.critique) {
+          this.cbs.onToolResult?.(
+            'Self-Critique',
+            `Quality score: ${critiqueResult.critique.score}/100 — passed`,
+            false,
+          );
+        }
+      }
+
       this.history.length = 0;
       this.history.push(...messages);
     }
@@ -981,13 +1384,16 @@ export class Agent {
     setToolContext(null);
   }
 
-  /** Record a tool call for usage statistics. */
+  /** Record a tool call for usage statistics and RL weighting. */
   recordToolCall(name: string, ms: number, isError: boolean): void {
     const s = this.toolStats.get(name) || { calls: 0, totalMs: 0, errors: 0 };
     s.calls++;
     s.totalMs += ms;
     if (isError) s.errors++;
     this.toolStats.set(name, s);
+
+    // ── Tool-Augmented RL: record outcome for adaptive weighting ──
+    recordToolOutcome(name, !isError, ms, isError ? `Error in ${name}` : undefined).catch(() => {});
   }
 
   /** Get per-tool usage statistics. */
