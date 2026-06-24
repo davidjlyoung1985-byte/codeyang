@@ -14,6 +14,7 @@ const TASK_SYSTEM_PROMPT = `You are a sub-agent of CodeYang, an AI coding agent.
 
 const SUBTASK_TIMEOUT_MS = 120_000; // 单子任务 2 分钟超时
 const MAX_TURNS = 10;
+const MAX_SUBTASKS = 3; // 每层最多 3 个子任务
 
 /**
  * SECURITY: Whitelist of tools allowed in subagents
@@ -75,17 +76,19 @@ export async function executeTask(
   cwd: string,
   signal?: AbortSignal,
 ): Promise<string> {
+  // Cap subtasks to MAX_SUBTASKS to maintain 3-layer × 3-agent structure
+  const cappedSubtasks = subtasks.slice(0, MAX_SUBTASKS);
   const header = [
     `## Task Sub-Agent: ${description}`,
     `Working directory: ${cwd}`,
-    `Executing ${subtasks.length} subtask(s):`,
-    ...subtasks.map((s, i) => `  ${i + 1}. ${s}`),
+    `Executing ${cappedSubtasks.length} subtask(s):`,
+    ...cappedSubtasks.map((s, i) => `  ${i + 1}. ${s}`),
     '',
   ].join('\n');
 
   const subtaskOutputs = await Promise.all(
-    subtasks.map(async (subtask, si) => {
-      return executeSingleSubtask(client, model, maxTokens, subtask, si, subtasks.length, cwd, signal);
+    cappedSubtasks.map(async (subtask, si) => {
+      return executeSingleSubtask(client, model, maxTokens, subtask, si, cappedSubtasks.length, cwd, signal);
     }),
   );
 

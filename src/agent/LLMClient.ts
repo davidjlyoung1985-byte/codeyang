@@ -1,6 +1,42 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { convertToAnthropicMessages, convertToAnthropicTools, convertToOpenAIMessages } from './conversion-fns.js';
+import { logger } from '../utils/logger.js';
+
+/** Shared retry wrapper for LLM API calls (handles rate limits and transient errors). */
+async function withLLMRetry<T>(fn: () => Promise<T>, label: string, maxRetries = 3): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isRetryable =
+        err instanceof Error &&
+        (err.message.includes('rate_limit') ||
+          err.message.includes('Rate exceeded') ||
+          err.message.includes('429') ||
+          err.message.includes('529') ||
+          err.message.includes('server error') ||
+          err.message.includes('503') ||
+          err.message.includes('timeout') ||
+          err.message.includes('network') ||
+          err.message.includes('ECONNRESET') ||
+          err.message.includes('ETIMEDOUT') ||
+          err.message.includes('Internal server error') ||
+          err.message.includes('upstream_error'));
+
+      if (attempt < maxRetries && isRetryable) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 15_000);
+        logger.warn(
+          `[LLMRetry] ${label} attempt ${attempt}/${maxRetries} failed: ${err.message}. Retrying in ${delay}ms...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error(`${label} failed after ${maxRetries} attempts`);
+}
 
 export interface StreamEvent {
   type: 'text_delta' | 'tool_call_start' | 'tool_call_delta' | 'tool_call_end' | 'usage';
@@ -139,11 +175,15 @@ class AnthropicClient implements LLMClient {
     messages: LLMMessage[];
     stream: boolean;
   }): Promise<{ content: string }> {
-    const response = await this.client.messages.create({
-      model: params.model,
-      max_tokens: params.maxTokens,
-      messages: convertToAnthropicMessages(params.messages),
-    });
+    const response = await withLLMRetry(
+      () =>
+        this.client.messages.create({
+          model: params.model,
+          max_tokens: params.maxTokens,
+          messages: convertToAnthropicMessages(params.messages),
+        }),
+      'Anthropic chat',
+    );
 
     const textBlock = response.content.find((block) => block.type === 'text');
     return { content: textBlock && 'text' in textBlock ? textBlock.text : '' };
@@ -157,6 +197,9 @@ class AnthropicClient implements LLMClient {
     messages: LLMMessage[];
     tools: ToolSchema[];
   }): AsyncIterable<StreamEvent> {
+    // Note: client.messages.stream() is synchronous (returns MessageStream, not a Promise),
+    // so withLLMRetry is not applicable here. Transient errors during streaming
+    // are caught by the caller's outer withRetry in Agent.ts.
     const stream = this.client.messages.stream({
       model: params.model,
       max_tokens: params.maxTokens,
@@ -220,7 +263,7 @@ class AnthropicClient implements LLMClient {
           if (event.usage) {
             yield {
               type: 'usage',
-              inputTokens: event.usage.input_tokens ?? 0,
+              // message_delta only has output_tokens, not input_tokens
               outputTokens: event.usage.output_tokens ?? 0,
             };
           }
@@ -245,12 +288,16 @@ class OpenAICompatClient implements LLMClient {
     messages: LLMMessage[];
     stream: boolean;
   }): Promise<{ content: string }> {
-    const response = await this.client.chat.completions.create({
-      model: params.model,
-      max_tokens: params.maxTokens,
-      messages: convertToOpenAIMessages(params.messages),
-      stream: false,
-    });
+    const response = await withLLMRetry(
+      () =>
+        this.client.chat.completions.create({
+          model: params.model,
+          max_tokens: params.maxTokens,
+          messages: convertToOpenAIMessages(params.messages),
+          stream: false,
+        }),
+      'OpenAI chat',
+    );
 
     return { content: response.choices[0]?.message?.content || '' };
   }
@@ -318,21 +365,25 @@ class OpenAICompatClient implements LLMClient {
       }
     }
 
-    const stream = await this.client.chat.completions.create({
-      model: params.model,
-      max_tokens: params.maxTokens,
-      temperature: params.temperature,
-      messages: openaiMessages,
-      tools: params.tools.map((t) => ({
-        type: 'function' as const,
-        function: {
-          name: t.name,
-          description: t.description,
-          parameters: t.input_schema,
-        },
-      })),
-      stream: true,
-    });
+    const stream = await withLLMRetry(
+      () =>
+        this.client.chat.completions.create({
+          model: params.model,
+          max_tokens: params.maxTokens,
+          temperature: params.temperature,
+          messages: openaiMessages,
+          tools: params.tools.map((t) => ({
+            type: 'function' as const,
+            function: {
+              name: t.name,
+              description: t.description,
+              parameters: t.input_schema,
+            },
+          })),
+          stream: true,
+        }),
+      'OpenAI stream',
+    );
 
     const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
 
