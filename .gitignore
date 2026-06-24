@@ -46,3 +46,10 @@ test-output.txt
 
 # Temp fix scripts
 fix_*.mjs
+
+# Unrelated embedded projects
+codeyangx/
+codegraph/
+.opencode/
+.codegraph/
+claude-plugins-official/
