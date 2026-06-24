@@ -50,6 +50,7 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
   if (lower === '/status') return await cmdStatus(ctx);
   if (lower === '/reflect') return await cmdReflect(ctx);
   if (lower === '/matlab') return await cmdMatlab(ctx);
+  if (lower === '/harness') return await cmdHarness(ctx);
 
   if (lower.startsWith('/')) {
     const validCommands = [
@@ -376,6 +377,43 @@ async function cmdReflect(ctx: CommandContext): Promise<DispatchResult> {
     }
   }
   console.log('');
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+async function cmdHarness(ctx: CommandContext): Promise<DispatchResult> {
+  const harness = ctx.agent.getHarnessStatus();
+  const cbStats = harness.circuitBreakers as Array<{
+    name: string;
+    state: string;
+    failureRate: number;
+    totalCalls: number;
+    openCount: number;
+    isDegraded: boolean;
+  }>;
+
+  console.log(`\n  ┌─ Harness System Status ───────────────────────────`);
+  console.log(`  │`);
+  console.log(`  │ Tracing:`);
+  console.log(`  │   Enabled:              ${(harness.tracing as Record<string, unknown>).enabled ? '✓' : '✗'}`);
+  console.log(`  │   Recent Traces:        ${(harness.tracing as Record<string, unknown>).recentTraces}`);
+  console.log(`  │   Total Spans:          ${(harness.tracing as Record<string, unknown>).totalSpans}`);
+  console.log(`  │`);
+  console.log(`  │ Circuit Breakers:`);
+  for (const cb of cbStats) {
+    const stateIcon = cb.state === 'CLOSED' ? '✓' : cb.state === 'OPEN' ? '✗' : '⚠';
+    const degradeStr = cb.isDegraded ? ' [DEGRADED]' : '';
+    console.log(
+      `  │   ${stateIcon} ${cb.name.padEnd(16)} ${cb.state.padEnd(10)} calls:${String(cb.totalCalls).padEnd(6)} failRate:${(cb.failureRate * 100).toFixed(0)}% open:${cb.openCount}${degradeStr}`,
+    );
+  }
+  console.log(`  │`);
+  console.log(`  │ Gateway Operations:`);
+  const ops = harness.gateway as Record<string, unknown>;
+  console.log(`  │   Total Requests:      ${ops.totalRequests}`);
+  console.log(`  │   Unique Operations:   ${ops.operations}`);
+  console.log(`  │`);
+  console.log(`  └──────────────────────────────────────────────────┘\n`);
   ctx.ui.promptUser();
   return { handled: true };
 }
