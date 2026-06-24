@@ -8,6 +8,8 @@ import { logger } from '../utils/logger.js';
 import { VerificationPipeline, type VerificationResult } from '../closed-loop/VerificationPipeline.js';
 import { FeedbackInjector } from '../closed-loop/FeedbackInjector.js';
 import type { WatcherSystem } from '../closed-loop/WatcherSystem.js';
+import { ReflexionEngine } from '../reflexion/ReflexionEngine.js';
+import { Planner } from '../planner/Planner.js';
 
 /** A content block emitted by the assistant (text or tool_use). */
 type AssistantContentBlock =
@@ -46,7 +48,8 @@ export class Agent {
   private static readonly FILE_LIST_TRUNCATE = 300;
   private static readonly TOP_TOOLS_COUNT = 10;
   private static readonly KEY_DECISIONS_COUNT = 5;
-  private static readonly MAX_CHECKPOINTS = 10; // Limit checkpoint memory usage
+  private static readonly MAX_CHECKPOINTS = 10;
+  private static readonly TOOL_TIMEOUT_MS = Number(process.env['CODEYANG_TOOL_TIMEOUT']) || 30_000; // 单个工具超时
 
   private client: LLMClient;
   private history: LLMMessage[] = [];
@@ -65,6 +68,9 @@ export class Agent {
   private lastAssistantText = '';
   private recentAssistantTexts: string[] = [];
   private repeatCount = 0;
+
+  // 流式响应超时保护 —— 防止 LLM 卡住
+  private static readonly STREAM_TIMEOUT_MS = 120_000; // 2分钟无新事件则超时
 
   // Cancellation support for running tool batches
   private abortController: AbortController | null = null;
@@ -87,8 +93,16 @@ export class Agent {
   private feedbackInjector = new FeedbackInjector();
   private watcher: WatcherSystem | null = null;
 
+  // Reflexion: self-improvement via failure pattern learning
+  private reflexionEngine: ReflexionEngine;
+
+  // Planner: plan-and-solve for complex tasks
+  private planner: Planner;
+
   constructor(private qtContext?: QtContext) {
     this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
+    this.reflexionEngine = new ReflexionEngine(config.reflexion);
+    this.planner = new Planner(config.planner);
   }
 
   setWatcher(watcher: WatcherSystem | null): void {
@@ -103,8 +117,55 @@ export class Agent {
     return this.feedbackInjector.hasPending();
   }
 
+  /** Get the LLM client (for reflexion / planner to call directly). */
+  getLLMClient(): LLMClient {
+    return this.client;
+  }
+
+  /** Get the reflexion engine (for status / manual reflection). */
+  getReflexionEngine(): ReflexionEngine {
+    return this.reflexionEngine;
+  }
+
+  /** Get the planner (for status / plan listing). */
+  getPlanner(): Planner {
+    return this.planner;
+  }
+
+  /** Get closed-loop system status summary. */
+  getClosedLoopStatus(): Record<string, unknown> {
+    const reflexionStats = this.reflexionEngine.getStats();
+    const recentExecs = this.reflexionEngine.getRecentExecutions(3);
+    const consecutiveFails =
+      recentExecs.length >= 2 && recentExecs.every((r) => !r.success)
+        ? recentExecs.filter((r) => !r.success).length
+        : 0;
+    return {
+      autoVerify: config.autoVerify && !!this.verificationPipeline,
+      autoFixOnError: config.autoFixOnError,
+      watchMode: config.watchMode && !!this.watcher,
+      reflexion: {
+        enabled: config.reflexion.enabled,
+        consecutiveFailures: consecutiveFails,
+        totalReflections: 0, // ReflexionEngine doesn't expose this directly
+        recentErrors: reflexionStats.failed,
+      },
+      planner: {
+        enabled: config.planner.enabled,
+        activePlans: this.planner.getActivePlans().length,
+        totalPlans: this.planner.getAllPlans().length,
+      },
+    };
+  }
+
   private async ensureMemoryLoaded(): Promise<string> {
-    const currentVersion = getMemoryVersion();
+    let currentVersion = -1;
+    try {
+      currentVersion = getMemoryVersion();
+    } catch {
+      this.memoryLoadFailure = true;
+      return '';
+    }
     // Re-read only when version changes — avoids defeating LLM prompt caching
     if (this.memorySummary !== null && currentVersion === this.lastMemoryVersion) {
       return this.memorySummary;
@@ -129,9 +190,18 @@ export class Agent {
       return this.cachedSystemPrompt;
     }
     const memoryContext = await this.ensureMemoryLoaded();
-    const prompt = memoryContext
+    let prompt = memoryContext
       ? config.getSystemPrompt(this.qtContext) + '\n\n## Your Memory\n' + memoryContext
       : config.getSystemPrompt(this.qtContext);
+
+    // Inject reflexion-learned patterns (auto-improvement from past failures)
+    if (config.reflexion.autoInject) {
+      const learnedPatterns = await this.reflexionEngine.getLearnedPatterns(3);
+      if (learnedPatterns) {
+        prompt += '\n\n## Learned Patterns (from past failures)\n' + learnedPatterns;
+      }
+    }
+
     this.cachedSystemPrompt = prompt;
     this.cachedSystemPromptVersion = memVersion;
     return prompt;
@@ -300,19 +370,32 @@ export class Agent {
 
   private jsonClone<T>(obj: T): T {
     if (obj === undefined) return undefined as T;
+    // Primitive types: return as-is (no cloning needed)
+    if (obj === null || typeof obj !== 'object') return obj;
+
+    // Node >= 18 has structuredClone natively — use it as primary method
     try {
       return structuredClone(obj);
     } catch {
-      // Fallback: if structuredClone fails (non-serializable objects),
-      // use JSON round-trip as fallback.
-      try {
-        return JSON.parse(JSON.stringify(obj));
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        logger.error(`[Agent] jsonClone failed: ${msg}. Returning original object.`);
-        return obj;
-      }
+      // structuredClone 失败（如循环引用），回退到 JSON round-trip
     }
+
+    // Fallback: JSON round-trip
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn(`[Agent] jsonClone deep copy failed: ${msg}. Using shallow copy fallback.`);
+    }
+
+    // Last resort: shallow copy to avoid returning original reference
+    if (Array.isArray(obj)) {
+      return [...obj] as T;
+    }
+    if (obj && typeof obj === 'object') {
+      return Object.assign({}, obj) as T;
+    }
+    return obj;
   }
 
   /** Check if text is near-duplicate of any recent response (simple prefix match). */
@@ -324,6 +407,23 @@ export class Agent {
       if (prev.slice(0, Agent.SIMILARITY_PREFIX_LEN).toLowerCase() === prefix) return 1.0;
     }
     return 0;
+  }
+
+  /** 粗略估算消息数组的 token 数（4 chars ≈ 1 token） */
+  private estimateMessageTokens(messages: LLMMessage[]): number {
+    let total = 0;
+    for (const m of messages) {
+      if (typeof m.content === 'string') {
+        total += m.content.length;
+      } else if (Array.isArray(m.content)) {
+        for (const b of m.content) {
+          if ('text' in b && typeof b.text === 'string') total += b.text.length;
+          if ('content' in b && typeof b.content === 'string') total += b.content.length;
+          if ('input' in b && typeof b.input === 'object') total += JSON.stringify(b.input).length;
+        }
+      }
+    }
+    return Math.ceil(total / 4);
   }
 
   /** If history exceeds the soft limit, replace older messages with a structured summary. */
@@ -523,6 +623,17 @@ export class Agent {
             toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
             this.cbs.onToolResult?.(tc.name, errorMsg, true);
             if (cacheKey) this.pendingReads.delete(cacheKey);
+
+            // ── Reflexion: record tool execution failure ──────────
+            this.reflexionEngine.recordExecution({
+              task: tc.name,
+              toolCalls: [{ id: tc.id, name: tc.name, args: tc.input }],
+              results: [{ tool: tc.name, input: tc.input, output: errorMsg, isError: true }],
+              success: false,
+              errorMessage: errorMsg.slice(0, 200),
+              durationMs: Date.now() - t0,
+              timestamp: Date.now(),
+            });
           }
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : String(err);
@@ -532,6 +643,17 @@ export class Agent {
             output: `Unexpected error in tool executor: ${errMsg}`,
             isError: true,
           };
+
+          // ── Reflexion: record unexpected executor errors ────────
+          this.reflexionEngine.recordExecution({
+            task: tc.name,
+            toolCalls: [{ id: tc.id, name: tc.name, args: tc.input }],
+            results: [{ tool: tc.name, input: tc.input, output: errMsg, isError: true }],
+            success: false,
+            errorMessage: errMsg.slice(0, 200),
+            durationMs: 0,
+            timestamp: Date.now(),
+          });
         }
       }),
     );
@@ -583,12 +705,48 @@ export class Agent {
       throw new Error('Internal error: messages array is empty after summarization');
     }
 
+    // ── Planner: auto-detect complex tasks and generate plan ──
+    if (config.planner.enabled && this.planner.shouldPlan(prompt)) {
+      this.cbs.onAgentDelta?.('\n\n_[Planning: breaking down complex task...]_');
+      const plan = await this.planner.generatePlan(this.client, config.model, config.maxTokens, prompt);
+      if (plan && plan.steps.length > 0) {
+        const planNotice = [
+          '## Generated Plan',
+          '',
+          `Task: **${plan.task}**`,
+          `Total steps: ${plan.steps.length}`,
+          '',
+          ...plan.steps.map((s, i) => {
+            const deps = s.dependencies.length > 0 ? ` (depends on: ${s.dependencies.join(', ')})` : '';
+            return `**Step ${i + 1}:** ${s.description}${deps}`;
+          }),
+          '',
+          'Execute this plan step by step. Complete each step before moving to the next.',
+        ].join('\n');
+
+        messages.push({ role: 'user', content: planNotice });
+        this.cbs.onToolResult?.('Planner', `${plan.steps.length} steps generated`, false);
+      }
+    }
+
     for (let turn = 0; turn < maxTurns; turn++) {
       logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
 
       // Double-check before API call
       if (messages.length === 0) {
         throw new Error('[Agent] Internal error: messages array became empty at turn ' + turn);
+      }
+
+      // 上下文窗口保护：估算消息 token 数，超过 90% 最大值时截断
+      const estimatedTokens = this.estimateMessageTokens(messages);
+      const maxCtxTokens = config.maxTokens * 2; // 粗略估计上下文 = maxTokens * 2
+      if (estimatedTokens > maxCtxTokens * 0.9) {
+        this.cbs.onError?.(
+          `⚠️ Context approaching limit (~${Math.round(estimatedTokens / 1000)}k tokens). Truncating history.`,
+        );
+        // 保留最近一半消息
+        const keepCount = Math.max(10, Math.floor(messages.length / 2));
+        messages.splice(0, messages.length - keepCount);
       }
 
       const systemPrompt = await this.getSystemPrompt();
@@ -749,8 +907,17 @@ export class Agent {
           );
 
           const failed = allResults.filter((r) => !r.passed);
+          const summary = this.verificationPipeline.formatSummary(allResults);
+
+          // Always push feedback into the injector for other consumers
+          this.feedbackInjector.push({
+            summary,
+            source: 'auto-verify',
+            passed: failed.length === 0,
+            results: allResults,
+          });
+
           if (failed.length > 0) {
-            const summary = this.verificationPipeline.formatSummary(allResults);
             const injectMsg = FeedbackInjector.formatAutoVerify(summary);
             // Inject as a plain user message so the LLM can act on the errors
             messages.push({ role: 'user', content: injectMsg });
@@ -769,6 +936,37 @@ export class Agent {
             toolName: tc.name,
             toolInput: tc.input as Record<string, unknown>,
           });
+        }
+      }
+
+      // ── Reflexion: auto-trigger after repeated failures ──────
+      if (config.reflexion.enabled && this.reflexionEngine.shouldReflect()) {
+        this.cbs.onAgentDelta?.('\n\n_[Self-reflection triggered: analyzing recent failures...]_');
+        const reflection = await this.reflexionEngine.reflect(this.client, config.model, config.maxTokens);
+        if (reflection) {
+          // Inject reflection result into next turn's context
+          const injectMsg = [
+            '## Self-Reflection Notice',
+            '',
+            'The system detected a pattern of repeated failures and performed self-reflection.',
+            '',
+            `**Analysis:** ${reflection.analysis}`,
+            '',
+            reflection.patterns.length > 0
+              ? `**Identified patterns:**\n${reflection.patterns.map((p: string) => `- ${p}`).join('\n')}`
+              : '',
+            '',
+            reflection.recommendations.length > 0
+              ? `**Recommendations:**\n${reflection.recommendations.map((r: string) => `- ${r}`).join('\n')}`
+              : '',
+            '',
+            'Please apply these learnings to avoid repeating the same mistakes.',
+          ]
+            .filter(Boolean)
+            .join('\n');
+
+          messages.push({ role: 'user', content: injectMsg });
+          this.cbs.onToolResult?.('Reflexion', reflection.analysis, false);
         }
       }
 

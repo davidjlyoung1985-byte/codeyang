@@ -1,7 +1,7 @@
-import { readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir, unlink, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import crypto from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 const MEMORY_DIR = join(homedir(), '.codeyang', 'memory');
 
@@ -10,8 +10,9 @@ const MEMORY_DIR = join(homedir(), '.codeyang', 'memory');
 // Invalidated on write (save/delete) and periodically refreshed via TTL.
 let memoryCache: Memory[] | null = null;
 let cacheTimestamp = 0;
-const CACHE_TTL_MS = 30_000; // 30-second cache TTL
-const MAX_CACHE_ENTRIES = 500; // Prevent unbounded memory growth
+// 可配置的缓存 TTL（通过环境变量覆盖）
+const CACHE_TTL_MS = Number(process.env['CODEYANG_MEMORY_CACHE_TTL']) || 30_000;
+const MAX_CACHE_ENTRIES = Number(process.env['CODEYANG_MEMORY_MAX_ENTRIES']) || 500;
 
 /** Monotonic version counter — incremented on every write. Used by Agent to detect changes without re-reading. */
 let memoryVersion = 0;
@@ -165,26 +166,42 @@ export async function saveMemory(
 ): Promise<Memory> {
   await ensureDir();
   const now = new Date().toISOString();
-  const id = existingId ?? `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
+
   const skey = sanitizeKey(key);
 
-  // Check if key already exists to preserve createdAt
+  // Determine ID and createdAt: if key already exists, reuse its ID and creation date
+  let id = existingId;
   let createdAt = now;
-  if (!existingId) {
-    const existing = await getMemoryByKey(skey);
-    if (existing) {
-      createdAt = existing.createdAt;
-      return saveMemory(key, value, type, existing.id);
-    }
-  } else {
+  if (id) {
+    // 指定了 existingId — 尝试加载已有记录以保留 createdAt
     try {
       const data = JSON.parse(await readFile(join(MEMORY_DIR, `${id}.json`), 'utf-8')) as Memory;
       createdAt = data.createdAt;
     } catch {}
+  } else {
+    // 未指定 ID — 检查 key 是否已存在
+    const existing = await getMemoryByKey(skey);
+    if (existing) {
+      id = existing.id;
+      createdAt = existing.createdAt;
+    } else {
+      id = `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
+    }
   }
 
   const memory: Memory = { id, key: skey, value, type, createdAt, updatedAt: now };
-  await writeFile(join(MEMORY_DIR, `${id}.json`), JSON.stringify(memory, null, 2));
+  const filePath = join(MEMORY_DIR, `${id}.json`);
+
+  // Atomic write: write to temp file first, then rename to prevent corruption on crash
+  const tmpFile = join(MEMORY_DIR, `.tmp.${randomUUID()}.json`);
+  try {
+    await writeFile(tmpFile, JSON.stringify(memory, null, 2));
+    await rename(tmpFile, filePath);
+  } catch (err) {
+    // Clean up temp file on failure
+    await unlink(tmpFile).catch(() => {});
+    throw err;
+  }
 
   // Invalidate cache so next read picks up the change
   invalidateCache();
@@ -242,6 +259,31 @@ export async function deleteMemoryByKey(key: string): Promise<boolean> {
   const mem = await getMemoryByKey(key);
   if (!mem) return false;
   return deleteMemory(mem.id);
+}
+
+// Memory management utilities
+
+export async function getMemoryCount(): Promise<number> {
+  const all = await getCachedMemories();
+  return all.length;
+}
+
+export async function clearAllMemories(): Promise<number> {
+  const all = await getCachedMemories();
+  for (const m of all) {
+    await unlink(join(MEMORY_DIR, `${m.id}.json`)).catch(() => {});
+  }
+  invalidateCache();
+  return all.length;
+}
+
+export async function getMemoryStats(): Promise<{ total: number; byType: Record<string, number> }> {
+  const all = await getCachedMemories();
+  const byType: Record<string, number> = {};
+  for (const m of all) {
+    byType[m.type] = (byType[m.type] || 0) + 1;
+  }
+  return { total: all.length, byType };
 }
 
 export async function getMemorySummary(): Promise<string> {

@@ -38,9 +38,7 @@ const DEFAULT_CONFIG: PermissionConfig = {
   rules: [
     // Bash dangerous operations — default: ask
     { pattern: 'rm -rf*', level: 'ask', category: 'bash', reason: 'Recursive force delete' },
-    { pattern: 'rm -rf *', level: 'ask', category: 'bash', reason: 'Recursive force delete' },
     { pattern: 'sudo*', level: 'ask', category: 'bash', reason: 'Sudo requires confirmation' },
-    { pattern: 'sudo *', level: 'ask', category: 'bash', reason: 'Sudo requires confirmation' },
     { pattern: 'git push --force*', level: 'ask', category: 'bash', reason: 'Force push is destructive' },
     { pattern: 'git push -f*', level: 'ask', category: 'bash', reason: 'Force push is destructive' },
     { pattern: 'curl*|*sh', level: 'deny', category: 'bash', reason: 'Piping curl to shell is dangerous' },

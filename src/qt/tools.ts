@@ -21,6 +21,17 @@ import { executeQtModelView } from './tools/QtModelViewTool.js';
 import { executeQtThread } from './tools/QtThreadTool.js';
 
 export function createQtTools(ctx: QtContext): ToolDefinition[] {
+  // 参数验证辅助函数：提取字符串参数，如缺失或类型错误则返回默认值
+  const strParam = (args: Record<string, unknown>, key: string, defaultVal = ''): string => {
+    const val = args[key];
+    return val !== undefined && val !== null ? String(val) : defaultVal;
+  };
+  // 可选字符串参数：缺失时返回 undefined（与 required 参数区分）
+  const optStrParam = (args: Record<string, unknown>, key: string): string | undefined => {
+    const val = args[key];
+    return val !== undefined && val !== null && String(val).trim() !== '' ? String(val) : undefined;
+  };
+
   const tools: ToolDefinition[] = [
     {
       name: 'QtBuild',
@@ -45,9 +56,9 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const target = args['target'] ? String(args['target']) : '';
-        const buildSystem = (args['buildSystem'] as string) || ctx.buildSystem || 'auto';
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const target = strParam(args, 'target');
+        const buildSystem = strParam(args, 'buildSystem') || ctx.buildSystem || 'auto';
+        const cwd = optStrParam(args, 'cwd');
         return executeQtBuild(buildSystem as 'qmake' | 'cmake' | 'auto', target, cwd);
       },
     },
@@ -66,7 +77,7 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const cwd = optStrParam(args, 'cwd');
         return executeQtSignals(cwd);
       },
     },
@@ -87,8 +98,8 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const proPath = args['proPath'] ? String(args['proPath']) : undefined;
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const proPath = optStrParam(args, 'proPath');
+        const cwd = optStrParam(args, 'cwd');
         return executeQtProFile(proPath, cwd);
       },
     },
@@ -107,7 +118,7 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const cwd = optStrParam(args, 'cwd');
         return executeQtMigration(cwd);
       },
     },
@@ -129,8 +140,8 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const uiPath = args['uiPath'] ? String(args['uiPath']) : undefined;
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const uiPath = optStrParam(args, 'uiPath');
+        const cwd = optStrParam(args, 'cwd');
         return executeQtUi(uiPath, cwd);
       },
     },
@@ -149,7 +160,7 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const cwd = optStrParam(args, 'cwd');
         return executeQtQml(cwd);
       },
     },
@@ -171,8 +182,8 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const headerPath = args['headerPath'] ? String(args['headerPath']) : undefined;
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const headerPath = optStrParam(args, 'headerPath');
+        const cwd = optStrParam(args, 'cwd');
         return executeQtTestGen(headerPath, cwd);
       },
     },
@@ -194,8 +205,11 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: ['testPath'],
       },
       execute: async (args) => {
-        const testPath = String(args['testPath'] ?? '');
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const testPath = strParam(args, 'testPath');
+        const cwd = optStrParam(args, 'cwd');
+        if (!testPath) {
+          return 'Error: QtTestRunner requires "testPath" parameter.';
+        }
         return executeQtTestRunner(testPath, cwd);
       },
     },
@@ -213,7 +227,7 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const cwd = optStrParam(args, 'cwd');
         return executeQtCoverage(cwd);
       },
     },
@@ -231,7 +245,7 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const cwd = optStrParam(args, 'cwd');
         return executeQtGraphics(cwd);
       },
     },
@@ -254,7 +268,7 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const chartType = args['chartType'] ? String(args['chartType']) : undefined;
+        const chartType = optStrParam(args, 'chartType');
         return executeQtCharts(chartType);
       },
     },
@@ -280,8 +294,8 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const action = args['action'] ? String(args['action']) : undefined;
-        const expression = args['expression'] ? String(args['expression']) : undefined;
+        const action = optStrParam(args, 'action');
+        const expression = optStrParam(args, 'expression');
         return executeQtMath(action, expression);
       },
     },
@@ -301,7 +315,7 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const cwd = optStrParam(args, 'cwd');
         return executeQtModelView(cwd);
       },
     },
@@ -320,7 +334,7 @@ export function createQtTools(ctx: QtContext): ToolDefinition[] {
         required: [],
       },
       execute: async (args) => {
-        const cwd = args['cwd'] ? String(args['cwd']) : undefined;
+        const cwd = optStrParam(args, 'cwd');
         return executeQtThread(cwd);
       },
     },

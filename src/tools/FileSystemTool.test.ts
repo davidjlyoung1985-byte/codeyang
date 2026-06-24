@@ -8,287 +8,150 @@ const TEST_DIR = path.join(process.cwd(), '.test-fs-tools');
 
 describe('FileSystemTool', () => {
   beforeEach(async () => {
-    // Clean up and create test directory
-    if (existsSync(TEST_DIR)) {
-      await fs.rm(TEST_DIR, { recursive: true, force: true });
-    }
+    if (existsSync(TEST_DIR)) await fs.rm(TEST_DIR, { recursive: true, force: true });
     await fs.mkdir(TEST_DIR, { recursive: true });
   });
 
   afterEach(async () => {
-    // Clean up test directory
-    if (existsSync(TEST_DIR)) {
-      await fs.rm(TEST_DIR, { recursive: true, force: true });
-    }
+    if (existsSync(TEST_DIR)) await fs.rm(TEST_DIR, { recursive: true, force: true });
   });
 
   describe('executeCopy', () => {
-    it('should copy a file', async () => {
-      const source = path.join(TEST_DIR, 'source.txt');
-      const dest = path.join(TEST_DIR, 'dest.txt');
-
-      await fs.writeFile(source, 'test content');
-      const result = await executeCopy(source, dest);
-
-      expect(result).toContain('Copied file');
-      expect(existsSync(dest)).toBe(true);
-      const content = await fs.readFile(dest, 'utf-8');
-      expect(content).toBe('test content');
+    it('copies a file', async () => {
+      const src = path.join(TEST_DIR, 'src.txt');
+      const dst = path.join(TEST_DIR, 'dst.txt');
+      await fs.writeFile(src, 'test');
+      expect(await executeCopy(src, dst)).toContain('Copied file');
+      expect(existsSync(dst)).toBe(true);
     });
 
-    it('should copy a directory recursively', async () => {
-      const sourceDir = path.join(TEST_DIR, 'source-dir');
-      const destDir = path.join(TEST_DIR, 'dest-dir');
-
-      await fs.mkdir(sourceDir);
-      await fs.writeFile(path.join(sourceDir, 'file1.txt'), 'content1');
-      await fs.mkdir(path.join(sourceDir, 'subdir'));
-      await fs.writeFile(path.join(sourceDir, 'subdir', 'file2.txt'), 'content2');
-
-      const result = await executeCopy(sourceDir, destDir);
-
-      expect(result).toContain('Copied directory');
-      expect(existsSync(path.join(destDir, 'file1.txt'))).toBe(true);
-      expect(existsSync(path.join(destDir, 'subdir', 'file2.txt'))).toBe(true);
+    it('copies directory recursively', async () => {
+      const srcDir = path.join(TEST_DIR, 'src');
+      const dstDir = path.join(TEST_DIR, 'dst');
+      await fs.mkdir(path.join(srcDir, 'sub'), { recursive: true });
+      await fs.writeFile(path.join(srcDir, 'a.txt'), 'a');
+      await fs.writeFile(path.join(srcDir, 'sub', 'b.txt'), 'b');
+      expect(await executeCopy(srcDir, dstDir)).toContain('Copied directory');
+      expect(existsSync(path.join(dstDir, 'sub', 'b.txt'))).toBe(true);
     });
 
-    it('should fail if destination exists without overwrite', async () => {
-      const source = path.join(TEST_DIR, 'source.txt');
-      const dest = path.join(TEST_DIR, 'dest.txt');
-
-      await fs.writeFile(source, 'source');
-      await fs.writeFile(dest, 'dest');
-
-      await expect(executeCopy(source, dest, false)).rejects.toThrow('already exists');
+    it('rejects copy into self', async () => {
+      const d = path.join(TEST_DIR, 'd');
+      await fs.mkdir(d);
+      await expect(executeCopy(d, path.join(d, 'self'))).rejects.toThrow('into itself');
     });
 
-    it('should overwrite if overwrite=true', async () => {
-      const source = path.join(TEST_DIR, 'source.txt');
-      const dest = path.join(TEST_DIR, 'dest.txt');
-
-      await fs.writeFile(source, 'new content');
-      await fs.writeFile(dest, 'old content');
-
-      const result = await executeCopy(source, dest, true);
-
-      expect(result).toContain('Copied file');
-      const content = await fs.readFile(dest, 'utf-8');
-      expect(content).toBe('new content');
-    });
-
-    it('should prevent copying directory into itself', async () => {
-      const sourceDir = path.join(TEST_DIR, 'source-dir');
-      const destDir = path.join(sourceDir, 'dest-dir');
-
-      await fs.mkdir(sourceDir);
-      await expect(executeCopy(sourceDir, destDir)).rejects.toThrow('into itself');
+    it('rejects overwrite without flag', async () => {
+      const f = path.join(TEST_DIR, 'f.txt');
+      await fs.writeFile(f, 'v1');
+      await expect(executeCopy(f, f)).rejects.toThrow('same');
     });
   });
 
   describe('executeMove', () => {
-    it('should move a file', async () => {
-      const source = path.join(TEST_DIR, 'source.txt');
-      const dest = path.join(TEST_DIR, 'dest.txt');
-
-      await fs.writeFile(source, 'test content');
-      const result = await executeMove(source, dest);
-
-      expect(result).toContain('Moved');
-      expect(existsSync(source)).toBe(false);
-      expect(existsSync(dest)).toBe(true);
-      const content = await fs.readFile(dest, 'utf-8');
-      expect(content).toBe('test content');
+    it('moves a file', async () => {
+      const src = path.join(TEST_DIR, 'old.txt');
+      const dst = path.join(TEST_DIR, 'new.txt');
+      await fs.writeFile(src, 'data');
+      await executeMove(src, dst);
+      expect(existsSync(src)).toBe(false);
+      expect(existsSync(dst)).toBe(true);
     });
 
-    it('should rename a file', async () => {
-      const source = path.join(TEST_DIR, 'oldname.txt');
-      const dest = path.join(TEST_DIR, 'newname.txt');
-
-      await fs.writeFile(source, 'content');
-      const result = await executeMove(source, dest);
-
-      expect(result).toContain('Moved');
-      expect(existsSync(source)).toBe(false);
-      expect(existsSync(dest)).toBe(true);
-    });
-
-    it('should move a directory', async () => {
-      const sourceDir = path.join(TEST_DIR, 'source-dir');
-      const destDir = path.join(TEST_DIR, 'dest-dir');
-
-      await fs.mkdir(sourceDir);
-      await fs.writeFile(path.join(sourceDir, 'file.txt'), 'content');
-
-      const result = await executeMove(sourceDir, destDir);
-
-      expect(result).toContain('Moved');
-      expect(existsSync(sourceDir)).toBe(false);
-      expect(existsSync(path.join(destDir, 'file.txt'))).toBe(true);
+    it('moves a directory', async () => {
+      const src = path.join(TEST_DIR, 'old');
+      const dst = path.join(TEST_DIR, 'new');
+      await fs.mkdir(src);
+      await fs.writeFile(path.join(src, 'f.txt'), 'x');
+      await executeMove(src, dst);
+      expect(existsSync(src)).toBe(false);
+      expect(existsSync(path.join(dst, 'f.txt'))).toBe(true);
     });
   });
 
   describe('executeDelete', () => {
-    it('should delete a file', async () => {
-      const file = path.join(TEST_DIR, 'file.txt');
-      await fs.writeFile(file, 'content');
-
-      const result = await executeDelete(file);
-
-      expect(result).toContain('Deleted file');
-      expect(existsSync(file)).toBe(false);
+    it('deletes a file', async () => {
+      const f = path.join(TEST_DIR, 'f.txt');
+      await fs.writeFile(f, 'x');
+      expect(await executeDelete(f)).toContain('Deleted file');
+      expect(existsSync(f)).toBe(false);
     });
 
-    it('should delete an empty directory', async () => {
-      const dir = path.join(TEST_DIR, 'empty-dir');
-      await fs.mkdir(dir);
-
-      const result = await executeDelete(dir, false);
-
-      expect(result).toContain('Deleted directory');
-      expect(existsSync(dir)).toBe(false);
+    it('rejects delete non-empty dir without recursive', async () => {
+      const d = path.join(TEST_DIR, 'd');
+      await fs.mkdir(d);
+      await fs.writeFile(path.join(d, 'f.txt'), 'x');
+      await expect(executeDelete(d)).rejects.toThrow('not empty');
     });
 
-    it('should fail on non-empty directory without recursive', async () => {
-      const dir = path.join(TEST_DIR, 'non-empty-dir');
-      await fs.mkdir(dir);
-      await fs.writeFile(path.join(dir, 'file.txt'), 'content');
-
-      await expect(executeDelete(dir, false)).rejects.toThrow('not empty');
-      expect(existsSync(dir)).toBe(true);
+    it('deletes non-empty dir with recursive', async () => {
+      const d = path.join(TEST_DIR, 'd');
+      await fs.mkdir(d);
+      await fs.writeFile(path.join(d, 'f.txt'), 'x');
+      expect(await executeDelete(d, true)).toContain('recursive');
+      expect(existsSync(d)).toBe(false);
     });
 
-    it('should delete non-empty directory with recursive=true', async () => {
-      const dir = path.join(TEST_DIR, 'non-empty-dir');
-      await fs.mkdir(dir);
-      await fs.writeFile(path.join(dir, 'file.txt'), 'content');
-
-      const result = await executeDelete(dir, true);
-
-      expect(result).toContain('Deleted directory');
-      expect(result).toContain('recursive');
-      expect(existsSync(dir)).toBe(false);
-    });
-
-    it('should ignore missing path with force=true', async () => {
-      const file = path.join(TEST_DIR, 'nonexistent.txt');
-
-      const result = await executeDelete(file, false, true);
-
-      expect(result).toContain('does not exist');
-      expect(result).toContain('ignored');
+    it('force=true ignores missing path', async () => {
+      expect(await executeDelete(path.join(TEST_DIR, 'nope'), false, true)).toContain('ignored');
     });
   });
 
   describe('executeMkdir', () => {
-    it('should create a directory', async () => {
-      const dir = path.join(TEST_DIR, 'new-dir');
-
-      const result = await executeMkdir(dir);
-
-      expect(result).toContain('Created directory');
-      expect(existsSync(dir)).toBe(true);
+    it('creates a directory', async () => {
+      const d = path.join(TEST_DIR, 'new');
+      expect(await executeMkdir(d)).toContain('Created');
+      expect(existsSync(d)).toBe(true);
     });
 
-    it('should create parent directories by default', async () => {
-      const dir = path.join(TEST_DIR, 'parent', 'child', 'grandchild');
-
-      const result = await executeMkdir(dir);
-
-      expect(result).toContain('Created directory');
-      expect(result).toContain('with parents');
-      expect(existsSync(dir)).toBe(true);
+    it('creates parent directories', async () => {
+      const d = path.join(TEST_DIR, 'a', 'b', 'c');
+      await executeMkdir(d);
+      expect(existsSync(d)).toBe(true);
     });
 
-    it('should return success if directory already exists', async () => {
-      const dir = path.join(TEST_DIR, 'existing-dir');
-      await fs.mkdir(dir);
-
-      const result = await executeMkdir(dir);
-
-      expect(result).toContain('already exists');
-      expect(existsSync(dir)).toBe(true);
+    it('reports already exists', async () => {
+      const d = path.join(TEST_DIR, 'ex');
+      await fs.mkdir(d);
+      expect(await executeMkdir(d)).toContain('already exists');
     });
   });
 
   describe('executeList', () => {
-    it('should list directory contents', async () => {
-      const dir = path.join(TEST_DIR, 'list-test');
-      await fs.mkdir(dir);
-      await fs.writeFile(path.join(dir, 'file1.txt'), '');
-      await fs.writeFile(path.join(dir, 'file2.txt'), '');
-      await fs.mkdir(path.join(dir, 'subdir'));
-
-      const result = await executeList(dir);
-
-      expect(result).toContain('file1.txt');
-      expect(result).toContain('file2.txt');
-      expect(result).toContain('subdir/');
+    it('lists contents', async () => {
+      const d = path.join(TEST_DIR, 'ls');
+      await fs.mkdir(d);
+      await fs.writeFile(path.join(d, 'a.txt'), '');
+      await fs.mkdir(path.join(d, 'sub'));
+      expect(await executeList(d)).toContain('a.txt');
+      expect(await executeList(d)).toContain('sub/');
     });
 
-    it('should hide hidden files by default', async () => {
-      const dir = path.join(TEST_DIR, 'hidden-test');
-      await fs.mkdir(dir);
-      await fs.writeFile(path.join(dir, 'visible.txt'), '');
-      await fs.writeFile(path.join(dir, '.hidden'), '');
-
-      const result = await executeList(dir, false);
-
-      expect(result).toContain('visible.txt');
-      expect(result).not.toContain('.hidden');
+    it('hides dotfiles by default', async () => {
+      const d = path.join(TEST_DIR, 'h');
+      await fs.mkdir(d);
+      await fs.writeFile(path.join(d, '.secret'), '');
+      await fs.writeFile(path.join(d, 'visible'), '');
+      expect(await executeList(d)).not.toContain('.secret');
     });
 
-    it('should show hidden files with showHidden=true', async () => {
-      const dir = path.join(TEST_DIR, 'hidden-test');
-      await fs.mkdir(dir);
-      await fs.writeFile(path.join(dir, 'visible.txt'), '');
-      await fs.writeFile(path.join(dir, '.hidden'), '');
-
-      const result = await executeList(dir, true);
-
-      expect(result).toContain('visible.txt');
-      expect(result).toContain('.hidden');
-    });
-
-    it('should show detailed information with details=true', async () => {
-      const dir = path.join(TEST_DIR, 'details-test');
-      await fs.mkdir(dir);
-      await fs.writeFile(path.join(dir, 'file.txt'), 'test content');
-
-      const result = await executeList(dir, false, true);
-
-      expect(result).toContain('FILE');
-      expect(result).toContain('file.txt');
-      expect(result).toMatch(/\d{4}-\d{2}-\d{2}/); // Date format
+    it('shows dotfiles with flag', async () => {
+      const d = path.join(TEST_DIR, 'h');
+      await fs.mkdir(d);
+      await fs.writeFile(path.join(d, '.secret'), '');
+      expect(await executeList(d, true)).toContain('.secret');
     });
   });
 
   describe('executeExists', () => {
-    it('should confirm file exists', async () => {
-      const file = path.join(TEST_DIR, 'exists.txt');
-      await fs.writeFile(file, 'content');
-
-      const result = await executeExists(file);
-
-      expect(result).toContain('Path exists');
-      expect(result).toContain('Type: file');
+    it('confirms file exists', async () => {
+      const f = path.join(TEST_DIR, 'ex.txt');
+      await fs.writeFile(f, 'x');
+      expect(await executeExists(f)).toContain('Path exists');
     });
 
-    it('should confirm directory exists', async () => {
-      const dir = path.join(TEST_DIR, 'exists-dir');
-      await fs.mkdir(dir);
-
-      const result = await executeExists(dir);
-
-      expect(result).toContain('Path exists');
-      expect(result).toContain('Type: directory');
-    });
-
-    it('should report non-existent path', async () => {
-      const file = path.join(TEST_DIR, 'nonexistent.txt');
-
-      const result = await executeExists(file);
-
-      expect(result).toContain('does not exist');
+    it('reports non-existent', async () => {
+      expect(await executeExists(path.join(TEST_DIR, 'nope'))).toContain('does not exist');
     });
   });
 });

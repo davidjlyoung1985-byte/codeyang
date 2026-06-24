@@ -5,6 +5,11 @@ import { execa } from 'execa';
 
 export type QtBuildSystem = 'qmake' | 'cmake' | 'auto';
 
+// Build 阶段超时：qmake/cmake 配置阶段默认 2 分钟，实际编译阶段 5 分钟
+// 可通过环境变量覆盖
+const QT_BUILD_CONFIG_TIMEOUT = Number(process.env['QT_BUILD_CONFIG_TIMEOUT']) || 120_000; // 2 min
+const QT_BUILD_COMPILE_TIMEOUT = Number(process.env['QT_BUILD_COMPILE_TIMEOUT']) || 300_000; // 5 min
+
 const KNOWN_QT_ERRORS: Array<{ pattern: RegExp; explanation: string }> = [
   {
     pattern: /undefined reference to `vtable for (\w+)/,
@@ -35,6 +40,19 @@ const KNOWN_QT_ERRORS: Array<{ pattern: RegExp; explanation: string }> = [
     pattern: /cannot find -l(\w+)/,
     explanation: 'Linker can\'t find library "$1". Add it to LIBS (qmake) or target_link_libraries (cmake).',
   },
+  // 新增：常见 Qt6 迁移警告
+  {
+    pattern: /warning:.*QT_DEPRECATED_WARNINGS.*true/,
+    explanation: 'Qt6 deprecated API usage detected. Check for removed modules (QtScript, QtWebKit, etc.).',
+  },
+  {
+    pattern: /error:.*QT_VERSION.*QT_VERSION_CHECK/,
+    explanation: 'Version check issue — use #if QT_VERSION >= QT_VERSION_CHECK(6,0,0) for conditional code.',
+  },
+  {
+    pattern: /'QString\s*\(\)'/,
+    explanation: 'Qt6: QString() with implicit conversion removed. Use QStringLiteral() or u""_qs.',
+  },
 ];
 
 export async function executeQtBuild(buildSystem: QtBuildSystem, target: string, cwd?: string): Promise<string> {
@@ -47,7 +65,7 @@ export async function executeQtBuild(buildSystem: QtBuildSystem, target: string,
     try {
       const qmake = await execa('qmake', target ? [target] : [], {
         cwd: workDir,
-        timeout: 10_000, // 降低超时，测试时更快失败
+        timeout: QT_BUILD_CONFIG_TIMEOUT,
         reject: false,
         shell: process.platform === 'win32' ? 'powershell.exe' : true,
       });
@@ -60,7 +78,7 @@ export async function executeQtBuild(buildSystem: QtBuildSystem, target: string,
       const makeCmd = process.platform === 'win32' ? 'nmake' : 'make';
       const make = await execa(makeCmd, [], {
         cwd: workDir,
-        timeout: 300_000,
+        timeout: QT_BUILD_COMPILE_TIMEOUT,
         reject: false,
         shell: process.platform === 'win32' ? 'powershell.exe' : true,
       });
@@ -73,7 +91,7 @@ export async function executeQtBuild(buildSystem: QtBuildSystem, target: string,
     try {
       const cmake = await execa('cmake', ['--build', '.', '--target', target || 'all'], {
         cwd: workDir,
-        timeout: 10_000, // 降低超时，测试时更快失败
+        timeout: QT_BUILD_COMPILE_TIMEOUT,
         reject: false,
         shell: process.platform === 'win32' ? 'powershell.exe' : true,
       });

@@ -408,9 +408,33 @@ export async function executeQtMigration(cwd?: string): Promise<string> {
 
         const match = lines[i].match(rule.pattern);
         if (match) {
-          // Filter false positives for common patterns
-          if (rule.old === 'QMediaPlayer' && lines[i].includes('#include')) continue;
-          if (rule.old === 'QRegExp' && lines[i].includes('QRegularExpression')) continue;
+          // ── 假阳性过滤器 ─────────────────────────────────────
+          // 防止以下场景的误报：
+          //   1. #include <QMediaPlayer> 只是引用头文件，并非使用 API
+          //   2. 行中有 QRegularExpression 说明已经迁移了 QRegExp
+          //   3. 行中有 deprecated/removed/__Q... 宏或条件编译
+          //   4. 已在注释或 TODO 中标记为待处理的
+          const lineText = lines[i];
+          const isFalsePositive =
+            // 头文件引用不等于 API 使用
+            (lineText.includes('#include') &&
+              (rule.old === 'QMediaPlayer' ||
+                rule.old === 'QRegExp' ||
+                rule.old === 'QTextCodec' ||
+                rule.old === 'QDesktopWidget' ||
+                rule.old === 'QLinkedList')) ||
+            // 已经存在替代 API 的引用（已迁移）
+            (rule.old === 'QRegExp' && lineText.includes('QRegularExpression')) ||
+            (rule.old === 'QDesktopWidget' && lineText.includes('QScreen')) ||
+            (rule.old === 'qrand' && lineText.includes('QRandomGenerator')) ||
+            // 条件编译块 #if QT_VERSION 中的代码
+            /#\s*(if|ifdef|ifndef|else|endif)/.test(lineText) ||
+            // 注释或 TODO 中的引用
+            /\/\/\s*(TODO|FIXME|HACK|XXX|deprecated|removed)/i.test(lineText);
+
+          if (isFalsePositive) {
+            continue;
+          }
 
           findings.push({
             file: relative(base, file).replace(/\\/g, '/'),

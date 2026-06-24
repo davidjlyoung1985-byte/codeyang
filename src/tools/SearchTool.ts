@@ -32,10 +32,8 @@ export async function executeSearch(
     try {
       const idx = await getProjectIndex(rootDir);
       for (const filePath of idx.files) {
-        // Quick path reject before calling .test()
-        if (!filePath.toLowerCase().includes(query.toLowerCase())) continue;
-
         const base = path.basename(filePath);
+        // 直接用正则匹配 basename，避免 includes 和 test 两轮不一致的过滤
         if (re.test(base)) {
           results.push({ type: 'name', path: filePath });
           if (results.length >= maxResults) break;

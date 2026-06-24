@@ -112,6 +112,11 @@ export class ReflexionEngine {
       };
     } catch {
       // Fallback: treat entire content as analysis
+      console.warn(
+        '[Reflexion] LLM reflection response was not valid JSON. Using raw text as analysis.\n',
+        `  Trigger: ${trigger}\n`,
+        `  Response preview: ${content.slice(0, 200)}...`,
+      );
       return {
         id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
         timestamp: Date.now(),

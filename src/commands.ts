@@ -47,10 +47,24 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
   if (lower === '/mcp') return cmdMcp(ctx);
   if (lower === '/undo') return await cmdUndo(ctx);
   if (lower === '/redo') return await cmdRedo(ctx);
+  if (lower === '/status') return await cmdStatus(ctx);
+  if (lower === '/reflect') return await cmdReflect(ctx);
   if (lower === '/matlab') return await cmdMatlab(ctx);
 
   if (lower.startsWith('/')) {
-    const validCommands = ['/clear', '/sessions', '/tasks', '/tools', '/model', '/mcp', '/stats', '/exit', '/quit'];
+    const validCommands = [
+      '/clear',
+      '/sessions',
+      '/tasks',
+      '/tools',
+      '/model',
+      '/mcp',
+      '/stats',
+      '/status',
+      '/reflect',
+      '/exit',
+      '/quit',
+    ];
     if (!validCommands.includes(lower)) {
       const suggestions = validCommands.filter((v) => v.startsWith(lower) || v.includes(lower.slice(1)));
       if (suggestions.length > 0) {
@@ -292,6 +306,76 @@ async function cmdRedo(ctx: CommandContext): Promise<DispatchResult> {
     await writeFile(entry.filePath, entry.previousContent, 'utf-8');
     console.log(`  Redone edit to ${entry.filePath}`);
   }
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+function cmdStatus(ctx: CommandContext): DispatchResult {
+  const status = ctx.agent.getClosedLoopStatus();
+  const usage = ctx.agent.getTokenUsage();
+
+  console.log(`\n  ┌─ Closed-Loop System Status ───────────────────────`);
+  console.log(`  │`);
+  console.log(`  │ Auto-Verify:         ${(status.autoVerify as boolean) ? '✓ ON' : '✗ OFF'}`);
+  console.log(`  │ Auto-Fix:            ${(status.autoFixOnError as boolean) ? '✓ ON' : '✗ OFF'}`);
+  console.log(`  │ Watch Mode:          ${(status.watchMode as boolean) ? '✓ ON' : '✗ OFF'}`);
+  console.log(`  │`);
+  const reflexion = status.reflexion as Record<string, unknown>;
+  console.log(`  │ Reflexion:`);
+  console.log(`  │   Enabled:           ${reflexion.enabled ? '✓' : '✗'}`);
+  console.log(`  │   Consecutive Errors: ${reflexion.consecutiveFailures}`);
+  console.log(`  │   Total Reflections: ${reflexion.totalReflections}`);
+  console.log(`  │   Recent Errors:     ${reflexion.recentErrors}`);
+  console.log(`  │`);
+  const planner = status.planner as Record<string, unknown>;
+  console.log(`  │ Planner:`);
+  console.log(`  │   Enabled:           ${planner.enabled ? '✓' : '✗'}`);
+  console.log(`  │   Active Plans:      ${planner.activePlans}`);
+  console.log(`  │   Total Plans:       ${planner.totalPlans}`);
+  console.log(`  │`);
+  console.log(
+    `  │ Token Usage: Input ${usage.inputTokens.toLocaleString()} / Output ${usage.outputTokens.toLocaleString()}`,
+  );
+  console.log(`  │`);
+  console.log(`  └──────────────────────────────────────────────────┘\n`);
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+async function cmdReflect(ctx: CommandContext): Promise<DispatchResult> {
+  const engine = ctx.agent.getReflexionEngine();
+  const recent = engine.getRecentExecutions(5);
+
+  if (recent.length === 0) {
+    console.log('  No recent executions to reflect on.');
+  } else {
+    console.log(`\n  Recent executions (${recent.length}):`);
+    for (const r of recent) {
+      const icon = r.success ? '✓' : '✗';
+      const errorInfo = r.errorMessage ? r.errorMessage.slice(0, 60) : 'OK';
+      const toolName = r.toolCalls.map((tc) => tc.name).join(', ');
+      console.log(`  ${icon} ${toolName || r.task} (${r.durationMs}ms) — ${errorInfo}`);
+    }
+
+    if (engine.shouldReflect()) {
+      console.log(`\n  ⚠️  Consecutive failures detected — triggering reflection...`);
+      const reflection = await engine.reflect(ctx.agent.getLLMClient(), config.model, config.maxTokens);
+      if (reflection) {
+        console.log(`\n  Analysis: ${reflection.analysis.slice(0, 200)}`);
+        if (reflection.patterns.length > 0) {
+          console.log(`  Patterns:`);
+          for (const p of reflection.patterns) console.log(`    · ${p}`);
+        }
+        if (reflection.recommendations.length > 0) {
+          console.log(`  Recommendations:`);
+          for (const r of reflection.recommendations) console.log(`    · ${r}`);
+        }
+      }
+    } else {
+      console.log('\n  No consecutive failure threshold reached yet.');
+    }
+  }
+  console.log('');
   ctx.ui.promptUser();
   return { handled: true };
 }

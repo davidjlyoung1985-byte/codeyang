@@ -44,19 +44,18 @@ function isDenied(command: string): boolean {
     }
   }
 
-  // Additional checks for dangerous patterns
-  const dangerousPatterns = [
-    /rm\s*-\s*rf/i, // rm -rf variations
-    /curl.*\|\s*(sh|bash)/i, // curl | sh
-    /wget.*\|\s*(sh|bash)/i, // wget | sh
-    />\s*\/dev\/sd/i, // write to disk
-    /mkfs/i, // format disk
-    /\$\([^)]*\)/i, // SECURITY: Command substitution $(...)
-    /`[^`]*`/i, // SECURITY: Command substitution with backticks
-    /\{\s*[^}]*;\s*\}/i, // SECURITY: Command grouping { cmd; }
+  // Additional checks for suspicious command injection patterns
+  // Note: rm -rf, $(), backticks, and { } are NOT blocked here because
+  // they are legitimate shell syntax used in normal development.
+  // The DENY_LIST above handles user-configured blocks.
+  const suspiciousPatterns = [
+    /curl.*\|\s*(sh|bash)/i, // curl | sh — remote code execution
+    /wget.*\|\s*(sh|bash)/i, // wget | sh — remote code execution
+    />\s*\/dev\/sd/i, // write to raw disk device
+    /mkfs/i, // format filesystem
   ];
 
-  for (const pattern of dangerousPatterns) {
+  for (const pattern of suspiciousPatterns) {
     if (pattern.test(command)) {
       return true;
     }
@@ -110,9 +109,19 @@ export async function executeBash(command: string, cwd?: string, timeoutSecs = 3
   }
 
   // Check permission system for all commands
-  const segments = command.split(/[\s;|&]+/).filter(Boolean);
-  for (const segment of segments) {
-    const firstWord = segment.split(' ')[0];
+  // SECURITY: Also extract commands from backtick `cmd` and $() subshells
+  // to prevent permission bypass via command substitution
+  const baseCommands = command
+    .replace(/`([^`]+)`/g, (_, inner) => inner) // backtick substitution
+    .replace(/\$\(([^)]+)\)/g, (_, inner) => inner) // $() substitution
+    .replace(/[;&|`$()<>{}[\]]+/g, ' ') // replace metacharacters with spaces
+    .split(/\s+/)
+    .filter(Boolean);
+  const seenCommands = new Set<string>();
+  for (const segment of baseCommands) {
+    const firstWord = segment.split(' ')[0].trim();
+    if (!firstWord || seenCommands.has(firstWord)) continue;
+    seenCommands.add(firstWord);
     // Check permission cache first
     const cached = permissionCache.get(firstWord);
     if (cached && Date.now() - cached.timestamp < PERMISSION_CACHE_TTL) {

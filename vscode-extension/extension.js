@@ -240,6 +240,135 @@ const toolDefinitions = [
   { name: 'ListImages', description: 'List image files in a directory.', input_schema: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] } },
 ];
 
+// ─── Sub-agent Support (CLI-compatible) ────────────────────────────
+
+const SUBAGENT_BLOCKED_TOOLS = new Set([
+  'Question', // Requires user interaction
+  'Task',     // Prevent recursive sub-agents
+]);
+
+const TASK_SYSTEM_PROMPT = `You are a sub-agent of CodeYang, an AI coding agent. Your job is to execute a specific task and return a concise result.
+- Use the available tools to read files, search code, run commands, etc.
+- Stay focused on your assigned task. Do not go off on tangents.
+- Once you have completed your task, provide a clear, structured summary of your findings.
+- Be efficient. You have a maximum of 10 turns.`;
+
+const SUBTASK_TIMEOUT_MS = 120000; // 2 minutes per subtask
+const MAX_TURNS = 10;
+
+/**
+ * Execute multiple subtasks in parallel (CLI-compatible)
+ */
+async function executeTask(description, subtasks, panel) {
+  const header = [
+    `## Task Sub-Agent: ${description}`,
+    `Working directory: ${process.cwd()}`,
+    `Executing ${subtasks.length} subtask(s):`,
+    ...subtasks.map((s, i) => `  ${i + 1}. ${s}`),
+    '',
+  ].join('\n');
+
+  panel.webview.postMessage({ type: 'system', message: `🤖 Launching ${subtasks.length} sub-agent(s): ${description}` });
+
+  // Execute all subtasks in parallel
+  const subtaskOutputs = await Promise.all(
+    subtasks.map((subtask, index) =>
+      executeSingleSubtask(subtask, index, subtasks.length, panel)
+    )
+  );
+
+  return [header, ...subtaskOutputs, '---', 'All subtasks completed. Returning control to main agent.'].join('\n');
+}
+
+/**
+ * Execute a single subtask with timeout and turn limit
+ */
+async function executeSingleSubtask(subtask, index, total, panel) {
+  const lines = [];
+  lines.push(`### Subtask ${index + 1}/${total}: ${subtask}`);
+
+  const messages = [{
+    role: 'user',
+    content: `Execute the following task: ${subtask}\n\nWorking directory: ${process.cwd()}\n\nUse the available tools to complete this task. When done, provide your findings clearly.`
+  }];
+
+  // Timeout control
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Subtask timed out')), SUBTASK_TIMEOUT_MS);
+  });
+
+  try {
+    const result = await Promise.race([
+      executeSubtaskLoop(messages, panel),
+      timeoutPromise
+    ]);
+    lines.push(result);
+  } catch (err) {
+    lines.push(`\n**Error: ${err.message}**`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Main subtask execution loop
+ */
+async function executeSubtaskLoop(messages, panel) {
+  const results = [];
+
+  for (let turn = 0; turn < MAX_TURNS; turn++) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      throw new Error('API key not configured');
+    }
+
+    const providerType = getProviderType();
+    const model = getModel();
+    const baseURL = getApiBaseUrl();
+
+    // Filter out only blocked tools (Question, Task)
+    const subagentTools = toolDefinitions.filter(t => !SUBAGENT_BLOCKED_TOOLS.has(t.name));
+
+    let response;
+    if (providerType === 'anthropic') {
+      response = await anthropicStreamRequest(apiKey, baseURL, model, TASK_SYSTEM_PROMPT, messages, subagentTools);
+    } else {
+      response = await openaiStreamRequest(apiKey, baseURL, model, TASK_SYSTEM_PROMPT, messages, subagentTools);
+    }
+
+    if (response.assistantText) {
+      results.push(response.assistantText);
+    }
+
+    if (!response.toolCalls || response.toolCalls.length === 0) {
+      break; // Sub-agent finished
+    }
+
+    const assistantContent = [];
+    if (response.assistantText) {
+      assistantContent.push({ type: 'text', text: response.assistantText });
+    }
+    for (const tc of response.toolCalls) {
+      assistantContent.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input });
+    }
+    messages.push({ role: 'assistant', content: assistantContent });
+
+    const toolResults = [];
+    for (const tc of response.toolCalls) {
+      try {
+        const output = await executeTool(tc.name, tc.input, panel);
+        toolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: String(output), is_error: false });
+      } catch (err) {
+        const msg = err.message || String(err);
+        toolResults.push({ type: 'tool_result', tool_use_id: tc.id, content: msg, is_error: true });
+      }
+    }
+    messages.push({ role: 'user', content: toolResults });
+  }
+
+  return results.join('\n');
+}
+
 async function executeTool(name, args, panel) {
   switch (name) {
     case 'Bash': return execBash(String(args.command || ''), args.cwd ? String(args.cwd) : undefined);
@@ -250,7 +379,19 @@ async function executeTool(name, args, panel) {
     case 'Grep': return await execGrep(String(args.pattern || ''), args.include ? String(args.include) : undefined, args.path ? String(args.path) : undefined);
     case 'WebFetch': return await execWebFetch(String(args.url || ''), args.format ? String(args.format) : undefined);
     case 'TodoWrite': return await execTodoWrite(Array.isArray(args.todos) ? args.todos : []);
-    case 'Task': return 'Sub-agent tasks are available in the CLI. Please execute directly using available tools.';
+    case 'Task': {
+      const desc = String(args.description || 'Sub-task');
+      // Support both single prompt and multiple subtasks (CLI-compatible)
+      let subtasks;
+      if (args.subtasks && Array.isArray(args.subtasks)) {
+        subtasks = args.subtasks.map(s => String(s));
+      } else if (args.prompt) {
+        subtasks = [String(args.prompt)];
+      } else {
+        return 'Error: Task requires either "prompt" or "subtasks" parameter';
+      }
+      return await executeTask(desc, subtasks, panel);
+    }
     case 'Search': return await execSearch(String(args.query || ''), args.rootDir ? String(args.rootDir) : undefined, { maxResults: args.maxResults, includeGlob: args.includeGlob, searchContent: args.searchContent, searchNames: args.searchNames });
     case 'ImageInfo': return await execImageInfo(String(args.filePath || ''));
     case 'ImageToBase64': return await execImageToBase64(String(args.filePath || ''), args.maxBytes);

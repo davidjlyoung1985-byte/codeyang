@@ -3,6 +3,35 @@ import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 import { resolveSafePath } from './shared.js';
 
+// 防止误删项目根目录或关键系统路径
+const PROTECTED_PATHS = [
+  '/', // 根目录
+  '/etc',
+  '/bin',
+  '/boot',
+  '/dev',
+  '/lib',
+  '/sys',
+  '/usr',
+  '/var',
+  '/proc',
+  'C:\\', // Windows 根
+  'C:\\Windows',
+  'C:\\Program Files',
+  'C:\\Program Files (x86)',
+  'C:\\System32',
+];
+
+function isProtectedPath(absPath: string): boolean {
+  const normalized = absPath.replace(/\\/g, '/').toLowerCase();
+  for (const p of PROTECTED_PATHS) {
+    if (normalized === p.replace(/\\/g, '/').toLowerCase()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Copy a file or directory recursively
  */
@@ -121,6 +150,11 @@ export async function executeDelete(targetPath: string, recursive = false, force
     throw new Error(`Path does not exist: ${targetPath}`);
   }
 
+  // SECURITY: 保护系统关键路径，防止误删
+  if (isProtectedPath(absPath)) {
+    throw new Error(`[SECURITY] Cannot delete protected system path: ${targetPath}`);
+  }
+
   const stats = await stat(absPath);
 
   if (stats.isDirectory()) {
@@ -178,13 +212,14 @@ export async function executeList(dirPath: string, showHidden = false, details =
   const filtered = showHidden ? entries : entries.filter((e) => !e.name.startsWith('.'));
 
   if (filtered.length === 0) {
-    return `Directory is empty: ${dirPath}`;
+    return `(empty directory) ${dirPath}`;
   }
 
   if (!details) {
     const dirs = filtered.filter((e) => e.isDirectory()).map((e) => e.name + '/');
     const files = filtered.filter((e) => !e.isDirectory()).map((e) => e.name);
-    return `${dirPath}:\n${[...dirs, ...files].join('\n')}`;
+    const summary = `\n${dirs.length} director${dirs.length === 1 ? 'y' : 'ies'}, ${files.length} file${files.length === 1 ? '' : 's'}`;
+    return `${dirPath}:\n${[...dirs, ...files].join('\n')}${summary}`;
   }
 
   // Detailed listing

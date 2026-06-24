@@ -24,7 +24,7 @@ export interface Task {
   updatedAt: string;
 }
 
-type TaskMeta = Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'updatedAt'>;
+type TaskMeta = Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'tags' | 'updatedAt'>;
 
 async function ensureDir() {
   await mkdir(TASKS_DIR, { recursive: true });
@@ -69,7 +69,14 @@ export async function createTask(params: {
   await writeFile(join(TASKS_DIR, `${task.id}.json`), JSON.stringify(task, null, 2));
 
   const index = await readIndex();
-  index[task.id] = { id: task.id, title: task.title, status: task.status, priority: task.priority, updatedAt: now };
+  index[task.id] = {
+    id: task.id,
+    title: task.title,
+    status: task.status,
+    priority: task.priority,
+    tags: task.tags,
+    updatedAt: now,
+  };
   await writeIndex(index);
 
   return task;
@@ -98,7 +105,14 @@ export async function updateTask(
   await writeFile(join(TASKS_DIR, `${id}.json`), JSON.stringify(task, null, 2));
 
   const index = await readIndex();
-  index[id] = { id: task.id, title: task.title, status: task.status, priority: task.priority, updatedAt: now };
+  index[id] = {
+    id: task.id,
+    title: task.title,
+    status: task.status,
+    priority: task.priority,
+    tags: task.tags,
+    updatedAt: now,
+  };
   await writeIndex(index);
 
   return task;
@@ -137,18 +151,8 @@ export async function listTasks(filter?: {
   }
 
   if (filter?.tags && filter.tags.length > 0) {
-    const filtered: TaskMeta[] = [];
-    for (const meta of entries) {
-      try {
-        const full = await getTask(meta.id);
-        if (full && filter.tags!.some((t) => full.tags.includes(t))) {
-          filtered.push(meta);
-        }
-      } catch {
-        /* skip */
-      }
-    }
-    entries = filtered;
+    // Tags 已在索引中，无需加载完整任务文件
+    entries = entries.filter((meta) => meta.tags && filter.tags!.some((t) => meta.tags!.includes(t)));
   }
 
   return entries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
