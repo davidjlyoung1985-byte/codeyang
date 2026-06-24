@@ -1,0 +1,383 @@
+openapi: "3.0.3"
+info:
+  title: CodeYang Bridge API
+  description: HTTP API for CodeYang ↔ Claude Code inter-agent communication
+  version: "1.0.0"
+servers:
+  - url: http://127.0.0.1:9876
+    description: Local bridge server (default port)
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Server health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  agents:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+                    example: { "claude-code": true, "codeyang": false }
+                  taskCount:
+                    type: integer
+                    example: 3
+                  messageCount:
+                    type: integer
+                    example: 12
+
+  /api/info:
+    get:
+      summary: Bridge server info
+      responses:
+        "200":
+          description: Server information (no token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  agents:
+                    type: object
+                    additionalProperties:
+                      type: boolean
+                  sharedDir:
+                    type: string
+
+  /api/tasks:
+    get:
+      summary: List tasks
+      parameters:
+        - name: agent
+          in: query
+          schema:
+            type: string
+            enum: [codeyang, claude-code]
+          description: Filter by target agent
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed, cancelled]
+          description: Filter by status
+      responses:
+        "200":
+          description: Task list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BridgeTask"
+
+    post:
+      summary: Create a new task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description]
+              properties:
+                from:
+                  type: string
+                  default: codeyang
+                to:
+                  type: string
+                  default: claude-code
+                title:
+                  type: string
+                description:
+                  type: string
+                priority:
+                  type: string
+                  enum: [low, medium, high, critical]
+                  default: medium
+                files:
+                  type: array
+                  items:
+                    type: string
+                parentId:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "201":
+          description: Created task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BridgeTask"
+        "413":
+          description: Request body too large
+
+  /api/tasks/{taskId}:
+    get:
+      summary: Get task by ID
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BridgeTask"
+        "404":
+          description: Task not found
+
+    put:
+      summary: Update task
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, running, completed, failed, cancelled]
+                result:
+                  type: string
+                assignedTo:
+                  type: string
+      responses:
+        "200":
+          description: Updated task
+        "404":
+          description: Task not found
+
+  /api/messages:
+    get:
+      summary: List messages
+      parameters:
+        - name: agent
+          in: query
+          schema:
+            type: string
+          description: Filter by recipient agent
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Only messages after this timestamp
+      responses:
+        "200":
+          description: Message list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BridgeMessage"
+
+    post:
+      summary: Send a message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, to]
+              properties:
+                from:
+                  type: string
+                  default: codeyang
+                to:
+                  type: string
+                type:
+                  type: string
+                  default: text
+                content:
+                  type: string
+                inReplyTo:
+                  type: string
+                taskId:
+                  type: string
+                filePath:
+                  type: string
+      responses:
+        "201":
+          description: Created message
+
+  /api/shared:
+    get:
+      summary: List shared files
+      responses:
+        "200":
+          description: File list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    size:
+                      type: integer
+                    modified:
+                      type: string
+                      format: date-time
+
+    post:
+      summary: Write a shared file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, content]
+              properties:
+                name:
+                  type: string
+                content:
+                  type: string
+                from:
+                  type: string
+                to:
+                  type: string
+      responses:
+        "201":
+          description: File created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  path:
+                    type: string
+                  size:
+                    type: integer
+
+  /api/shared/{fileName}:
+    get:
+      summary: Read a shared file
+      parameters:
+        - name: fileName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  content:
+                    type: string
+        "404":
+          description: File not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: hex
+
+  schemas:
+    BridgeTask:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "task_abc123_def456"
+        from:
+          type: string
+          example: "codeyang"
+        to:
+          type: string
+          example: "claude-code"
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        files:
+          type: array
+          items:
+            type: string
+        parentId:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        result:
+          type: string
+        assignedTo:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BridgeMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        type:
+          type: string
+        content:
+          type: string
+        inReplyTo:
+          type: string
+        taskId:
+          type: string
+        filePath:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+security:
+  - BearerAuth: []

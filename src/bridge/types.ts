@@ -74,7 +74,8 @@ export type WsEventType =
   | 'agent_connected'
   | 'agent_disconnected'
   | 'ping'
-  | 'pong';
+  | 'pong'
+  | 'auth';
 
 export interface WsEvent {
   type: WsEventType;

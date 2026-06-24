@@ -10,10 +10,28 @@ const HINT_SEPARATOR = '\n  \u{1F4A1} '; // 💡
 const ACTION_SEPARATOR = '\n  \u{1F4DD} '; // 📝
 
 /** Error severity levels */
+
+/** Error codes for programmatic error handling */
+export enum ErrorCode {
+  FILE_NOT_FOUND = 'ERR_FILE_NOT_FOUND',
+  FILE_TOO_LARGE = 'ERR_FILE_TOO_LARGE',
+  INVALID_PARAM = 'ERR_INVALID_PARAM',
+  PERMISSION_DENIED = 'ERR_PERMISSION_DENIED',
+  NETWORK_ERROR = 'ERR_NETWORK_ERROR',
+  NETWORK_TIMEOUT = 'ERR_NETWORK_TIMEOUT',
+  COMMAND_FAILED = 'ERR_COMMAND_FAILED',
+  GIT_ERROR = 'ERR_GIT_ERROR',
+  PARSE_ERROR = 'ERR_PARSE_ERROR',
+  INTERNAL_ERROR = 'ERR_INTERNAL_ERROR',
+  VALIDATION_ERROR = 'ERR_VALIDATION_ERROR',
+  UNKNOWN = 'ERR_UNKNOWN',
+}
+
 export type ErrorSeverity = 'critical' | 'error' | 'warning' | 'info';
 
 /** Extended error with severity and actionable steps */
 export interface ToolErrorDetails {
+  code?: ErrorCode;
   severity: ErrorSeverity;
   context: string;
   message: string;

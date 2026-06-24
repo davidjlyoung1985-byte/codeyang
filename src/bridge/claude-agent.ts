@@ -61,6 +61,7 @@ async function apiFetch<T>(method: string, path: string, body?: unknown, token?:
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token || config.token}`,
     },
+    signal: AbortSignal.timeout(10000),
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -160,7 +161,9 @@ async function mainLoop(token: string): Promise<void> {
 
   // Current task being worked on
   let currentTask: BridgeTask | null = null;
-  const lastPollTime = '';
+  let lastPollTime = '';
+  let wsReconnectAttempts = 0;
+  const WS_MAX_RECONNECT_ATTEMPTS = 10;
 
   // Health check
   try {
@@ -179,45 +182,63 @@ async function mainLoop(token: string): Promise<void> {
     print('Will continue trying...');
   }
 
-  // Connect WebSocket for real-time updates
+  // ── WebSocket with auto-reconnect ────────────────────────────────
   let ws: WebSocket | null = null;
-  try {
-    const wsUrl = config.url.replace(/^http/, 'ws') + `?agent=claude-code&token=${token}`;
-    ws = new WebSocket(wsUrl);
 
-    ws.on('open', () => {
-      print('WebSocket connected (real-time mode)');
-    });
+  function connectWebSocket(): void {
+    try {
+      const wsUrl = config.url.replace(/^http/, 'ws') + `?agent=claude-code`;
+      ws = new WebSocket(wsUrl);
 
-    ws.on('message', (raw) => {
-      try {
-        const event: WsEvent = JSON.parse(raw.toString());
-        if (event.type === 'new_task') {
-          const task = event.payload as BridgeTask;
-          print(`Received new task via WebSocket: ${task.title}`);
-          void handleTask(task).then(() => {
-            currentTask = task;
-          });
-        } else if (event.type === 'new_message') {
-          const msg = event.payload as BridgeMessage;
-          print(`📨 Message from CodeYang: ${msg.content.slice(0, 200)}`);
+      ws.on('open', () => {
+        wsReconnectAttempts = 0;
+        print('WebSocket connected (real-time mode)');
+        // 连接建立后立即发送认证消息，避免 Token 泄露在 URL 中
+        ws!.send(JSON.stringify({ type: 'auth', payload: { token } }));
+      });
+
+      ws.on('message', (raw) => {
+        try {
+          const event: WsEvent = JSON.parse(raw.toString());
+          if (event.type === 'new_task') {
+            const task = event.payload as BridgeTask;
+            print(`Received new task via WebSocket: ${task.title}`);
+            void handleTask(task).then(() => {
+              currentTask = task;
+            });
+          } else if (event.type === 'new_message') {
+            const msg = event.payload as BridgeMessage;
+            print(`📨 Message from CodeYang: ${msg.content.slice(0, 200)}`);
+          }
+        } catch {
+          // ignore
         }
-      } catch {
-        // ignore
-      }
-    });
+      });
 
-    ws.on('close', () => {
-      print('WebSocket disconnected (falling back to polling)');
-      ws = null;
-    });
+      ws.on('close', () => {
+        print('WebSocket disconnected (attempting reconnect...)');
+        ws = null;
+        // Exponential backoff reconnect
+        if (wsReconnectAttempts < WS_MAX_RECONNECT_ATTEMPTS) {
+          const delay = Math.min(1000 * Math.pow(2, wsReconnectAttempts), 30_000);
+          wsReconnectAttempts++;
+          print(`Reconnecting in ${delay}ms (attempt ${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS})...`);
+          setTimeout(connectWebSocket, delay);
+        } else {
+          print('WebSocket max reconnect attempts reached, falling back to polling');
+        }
+      });
 
-    ws.on('error', () => {
-      ws = null;
-    });
-  } catch {
-    print('WebSocket connection failed, using polling mode');
+      ws.on('error', () => {
+        // 'close' event will fire after 'error', so reconnection is handled there
+      });
+    } catch {
+      print('WebSocket connection failed, using polling mode');
+    }
   }
+
+  // Initial WebSocket connection
+  connectWebSocket();
 
   // Polling loop (as a fallback or primary if WS fails)
   const pollInterval = 5000; // 5 seconds
@@ -226,9 +247,10 @@ async function mainLoop(token: string): Promise<void> {
     // If we have a current task that's still pending, check its status
     // Or fetch new tasks
     try {
+      const since = lastPollTime ? `&since=${lastPollTime}` : '';
       const tasks = await apiFetch<BridgeTask[]>(
         'GET',
-        `/api/tasks?agent=claude-code&status=pending&since=${lastPollTime}`,
+        `/api/tasks?agent=claude-code&status=pending${since}`,
         undefined,
         token,
       );
@@ -238,6 +260,9 @@ async function mainLoop(token: string): Promise<void> {
           await handleTask(task);
           currentTask = task;
         }
+      }
+      if (tasks.length > 0) {
+        lastPollTime = new Date().toISOString();
       }
     } catch {
       // Bridge might not be ready yet
