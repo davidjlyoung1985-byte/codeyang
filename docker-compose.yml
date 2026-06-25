@@ -1,0 +1,42 @@
+# CodeYang Service
+version: '3.8'
+
+services:
+  codeyang:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codeyang
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CODEYANG_LOG_LEVEL=${CODEYANG_LOG_LEVEL:-info}
+      - CODEYANG_TRACE_ENABLED=${CODEYANG_TRACE_ENABLED:-false}
+      - NODE_ENV=production
+    volumes:
+      # Mount workspace (read-write)
+      - ./workspace:/workspace
+      # Mount config (read-only)
+      - ./.env:/app/.env:ro
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - codeyang-net
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp:noexec,nosuid,nodev,size=100m
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('healthy')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  codeyang-net:
+    driver: bridge
+
+volumes:
+  workspace:
