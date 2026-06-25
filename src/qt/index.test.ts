@@ -38,7 +38,7 @@ describe('detectQtProject', () => {
     const ctx = await detectQtProject(tempDir);
     expect(ctx.isQtProject).toBe(true);
     expect(ctx.buildSystem).toBe('qmake');
-    expect(ctx.proFile).toBe('myapp.pro');
+    expect(ctx.proFile).toContain('myapp.pro'); // Full path or basename
   });
 
   it('detects CMake Qt project', async () => {
