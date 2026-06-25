@@ -1,33 +1,35 @@
 {
   "name": "codeyang-vscode",
-  "displayName": "CodeYang AI Agent",
-  "version": "1.0.0",
-  "description": "AI coding agent — chat with tool-using CodeYang inside VS Code",
+  "displayName": "CodeYang",
+  "description": "AI coding agent with inline completion",
+  "version": "0.1.0",
   "publisher": "codeyang",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.80.0"
   },
-  "categories": [
-    "Chat",
-    "Other"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
-  "main": "./extension.js",
+  "categories": ["Programming Languages", "Machine Learning"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "codeyang.startChat",
-        "title": "CodeYang: Start Chat",
-        "category": "CodeYang"
+        "command": "codeyang.inlineCompletion",
+        "title": "CodeYang: Trigger Inline Completion"
+      },
+      {
+        "command": "codeyang.refactor",
+        "title": "CodeYang: Refactor Selection"
+      },
+      {
+        "command": "codeyang.generateTests",
+        "title": "CodeYang: Generate Tests"
       }
     ],
     "keybindings": [
       {
-        "command": "codeyang.startChat",
-        "key": "ctrl+shift+y",
-        "mac": "cmd+shift+y"
+        "command": "codeyang.inlineCompletion",
+        "key": "ctrl+shift+space",
+        "when": "editorTextFocus"
       }
     ],
     "configuration": {
@@ -35,21 +37,40 @@
       "properties": {
         "codeyang.apiKey": {
           "type": "string",
-          "description": "API Key for CodeYang AI agent (supports DeepSeek, Anthropic)",
-          "default": ""
+          "default": "",
+          "description": "Claude API Key"
         },
-        "codeyang.apiBaseUrl": {
-          "type": "string",
-          "description": "API Base URL (DeepSeek Anthropic-compatible: https://api.deepseek.com/anthropic, OpenAI-compatible: https://api.deepseek.com/v1)",
-          "default": "https://api.deepseek.com/anthropic"
+        "codeyang.enableInlineCompletion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable inline completion"
         },
-        "codeyang.model": {
-          "type": "string",
-          "description": "Model to use (deepseek-v4-pro for best quality, deepseek-v4-flash for speed, or claude model names for auto-mapping)",
-          "default": "deepseek-v4-pro"
+        "codeyang.completionDelay": {
+          "type": "number",
+          "default": 300,
+          "description": "Delay before triggering completion (ms)"
+        },
+        "codeyang.maxCompletionLength": {
+          "type": "number",
+          "default": 500,
+          "description": "Maximum completion length in characters"
         }
       }
     }
   },
-  "dependencies": {}
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^18.0.0",
+    "typescript": "^5.0.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
 }
