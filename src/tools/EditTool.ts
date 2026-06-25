@@ -1,5 +1,5 @@
 import { readFile, writeFile, stat, mkdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { resolveSafePath } from './shared.js';
 import { fileNotFound, toolError } from './errors.js';
 import { editHistory } from '../utils/editHistory.js';

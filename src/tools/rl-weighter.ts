@@ -14,7 +14,7 @@
  * (use what works) with exploration (try what hasn't been tried much).
  */
 
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+import { writeFile, mkdir, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';

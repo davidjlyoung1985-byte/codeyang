@@ -10,8 +10,7 @@
  * This is triggered automatically for complex tasks detected by the planner.
  */
 
-import { consumeStream, type LLMClient, type LLMMessage } from '../agent/LLMClient.js';
-import { config } from '../agent/config.js';
+import { consumeStream, type LLMClient } from '../agent/LLMClient.js';
 
 // ── Types ─────────────────────────────────────────────────────────────
 

@@ -30,8 +30,6 @@
  *   - 网络请求
  */
 
-import { randomUUID } from 'node:crypto';
-
 // ===================== 类型定义 =====================
 
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
@@ -536,9 +534,9 @@ export function emptyResultDegradeStrategy<T>(defaultValue: T): DegradeStrategy<
 
 /** 返回缓存旧值的降级策略 */
 export function cachedResultDegradeStrategy<T>(getCached: () => T | null): DegradeStrategy<T | null> {
-  return async (_name: string, error: string) => {
+  return (_name: string, error: string) => {
     const cached = getCached();
-    if (cached !== null) return cached;
+    if (cached !== null) return Promise.resolve(cached);
     throw new Error(`Circuit open and no cached data available: ${error}`);
   };
 }
