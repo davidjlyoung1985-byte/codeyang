@@ -253,7 +253,13 @@ export async function listSessions(): Promise<SessionMeta[]> {
           await readFile(join(SESSIONS_DIR, f), 'utf-8'),
         );
         sessions.push({ id, title, createdAt, updatedAt, messageCount: messages?.length ?? 0 });
-      } catch {}
+      } catch (err) {
+        // Skip corrupted session files - they'll be cleaned up by garbage collection
+        // Log only in debug mode to avoid noise
+        if (process.env.CODEYANG_DEBUG) {
+          console.error(`Failed to parse session file ${f}:`, err);
+        }
+      }
     }
     return sessions;
   }

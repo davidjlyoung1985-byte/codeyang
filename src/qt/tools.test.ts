@@ -25,7 +25,9 @@ async function createFile(name: string, content: string): Promise<string> {
   const d = join(tempDir, name).split('/').slice(0, -1).join('/');
   try {
     await mkdir(d, { recursive: true });
-  } catch {}
+  } catch {
+    // Directory may already exist - ignore
+  }
   await writeFile(p, content, 'utf-8');
   return p;
 }

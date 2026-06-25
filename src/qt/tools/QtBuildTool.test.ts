@@ -15,11 +15,15 @@ beforeEach(async () => {
 afterEach(async () => {
   try {
     await rm(tempDir, { recursive: true, force: true });
-  } catch {}
+  } catch {
+    // Ignore first attempt failure
+  }
   // Retry once on Windows (EBUSY from anti-virus indexing temp dirs)
   try {
     await rm(tempDir, { recursive: true, force: true });
-  } catch {}
+  } catch {
+    // Ignore cleanup failures - temp dir will be cleaned by OS eventually
+  }
 });
 
 // ──────────────────────────────────────────────
