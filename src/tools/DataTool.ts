@@ -257,7 +257,7 @@ export async function executeCsvParse(
   isFile = true,
   hasHeader = true,
   delimiter = ',',
-  encoding: BufferEncoding = 'utf-8',
+  _encoding: BufferEncoding = 'utf-8',
 ): Promise<string> {
   try {
     let csvText: string;

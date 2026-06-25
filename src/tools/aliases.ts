@@ -8,7 +8,7 @@
  * which is more accurate than simple prefix/substring matching.
  */
 
-import { semanticFindTools, getSemanticIndexVersion } from './semantic-index.js';
+import { semanticFindTools } from './semantic-index.js';
 
 export const TOOL_ALIASES: Record<string, string> = {
   // Core
