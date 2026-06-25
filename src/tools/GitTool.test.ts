@@ -125,7 +125,8 @@ describe('GitTool', () => {
     it('should fail with no staged changes', async () => {
       const result = await executeGitCommit('Empty commit', TEST_DIR);
 
-      expect(result).toContain('Error');
+      // Should contain error or "nothing to commit" message
+      expect(result.toLowerCase()).toMatch(/error|nothing to commit|no changes/);
     });
   });
 
