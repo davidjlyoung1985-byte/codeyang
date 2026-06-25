@@ -116,7 +116,7 @@ export class InProcessChannel implements A2AChannel {
   private resolvers: Array<(msg: A2AMessage) => void> = [];
   private _closed = false;
 
-  async send(message: A2AMessage): Promise<void> {
+  send(message: A2AMessage): void {
     if (this._closed) throw new Error('Channel closed');
     this.inbox.push(message);
 

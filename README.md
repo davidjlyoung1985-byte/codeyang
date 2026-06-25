@@ -1,5 +1,10 @@
 # CodeYang — AI Coding Agent
 
+[![CI](https://github.com/davidjlyoung1985-byte/codeyang/actions/workflows/ci.yml/badge.svg)](https://github.com/davidjlyoung1985-byte/codeyang/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/davidjlyoung1985-byte/codeyang/branch/master/graph/badge.svg)](https://codecov.io/gh/davidjlyoung1985-byte/codeyang)
+[![npm version](https://badge.fury.io/js/codeyang.svg)](https://www.npmjs.com/package/codeyang)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A terminal-based AI coding agent powered by OpenAI-compatible LLMs (DeepSeek default, with Anthropic fallback). Describe what you want in natural language — CodeYang reads files, writes code, runs shell commands, searches code, manages git, analyzes code structure, and tracks tasks.
 
 Also includes a **VS Code extension** for in-editor AI chat with the same tool-using capabilities.

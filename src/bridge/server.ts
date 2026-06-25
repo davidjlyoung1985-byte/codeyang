@@ -13,7 +13,7 @@ import { readFile, writeFile, mkdir, stat, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { randomUUID, randomBytes, createCipheriv, createDecipheriv, createHash } from 'node:crypto';
+import { randomUUID, randomBytes } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import type { BridgeTask, BridgeMessage, BridgeConfig, AgentId, WsEvent } from './types.js';
 import { logger } from '../utils/logger.js';
@@ -417,7 +417,7 @@ function handleWebSocket(ws: WebSocket, req: IncomingMessage): void {
   const agentParam = url.searchParams.get('agent') as AgentId | null;
   // 等待客户端发送认证消息，Token 不在 URL 中传递
   let authenticated = false;
-  let agent: AgentId = agentParam === 'claude-code' ? 'claude-code' : 'codeyang';
+  const agent: AgentId = agentParam === 'claude-code' ? 'claude-code' : 'codeyang';
 
   // 先发送一�?ping 等待认证
   const authTimer = setTimeout(() => {

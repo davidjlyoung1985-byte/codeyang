@@ -8,18 +8,28 @@ export function convertToAnthropicMessages(messages: LLMMessage[]): Anthropic.Me
     if (typeof m.content === 'string') {
       return { role: m.role, content: m.content };
     }
-    const blocks = m.content.map((b: any) => {
-      if (b.type === 'text') return { type: 'text' as const, text: b.text ?? '' };
-      if (b.type === 'tool_use') return { type: 'tool_use' as const, id: b.id!, name: b.name!, input: b.input ?? {} };
-      if (b.type === 'tool_result') {
-        return {
-          type: 'tool_result' as const,
-          tool_use_id: b.tool_use_id!,
-          content: b.content ?? '',
-        };
-      }
-      return { type: 'text' as const, text: '' };
-    });
+    const blocks = m.content.map(
+      (b: {
+        type: string;
+        text?: string;
+        id?: string;
+        name?: string;
+        input?: unknown;
+        tool_use_id?: string;
+        content?: string;
+      }) => {
+        if (b.type === 'text') return { type: 'text' as const, text: b.text ?? '' };
+        if (b.type === 'tool_use') return { type: 'tool_use' as const, id: b.id!, name: b.name!, input: b.input ?? {} };
+        if (b.type === 'tool_result') {
+          return {
+            type: 'tool_result' as const,
+            tool_use_id: b.tool_use_id!,
+            content: b.content ?? '',
+          };
+        }
+        return { type: 'text' as const, text: '' };
+      },
+    );
     return { role: m.role, content: blocks };
   }) as Anthropic.MessageParam[];
 }
