@@ -136,6 +136,43 @@ export class Agent {
   // ── Harness: Gateway (L1 API 网关) ──
   private gateway: Gateway;
 
+  /**
+   * Run self-critique on assistant output.
+   *
+   * Reviews the quality of the agent's response and provides feedback
+   * if improvements are needed.
+   */
+  private async runSelfCritique(
+    assistantText: string,
+    toolCalls: ToolCall[],
+    toolResults: ToolResult[],
+    messages: LLMMessage[],
+  ): Promise<void> {
+    if (!assistantText || this.critiqueEngine.getIterationCount()) {
+      return;
+    }
+
+    const critiqueResult = await this.critiqueEngine.checkAndImprove(
+      this.client,
+      config.model,
+      config.maxTokens,
+      assistantText,
+      toolCalls,
+      toolResults,
+    );
+
+    if (!critiqueResult.passed && critiqueResult.critiqueMessage) {
+      messages.push({ role: 'user', content: critiqueResult.critiqueMessage });
+      this.cbs.onToolResult?.(
+        'Self-Critique',
+        `Quality score: ${critiqueResult.critique?.score}/100 — issues found`,
+        false,
+      );
+    } else if (critiqueResult.critique) {
+      this.cbs.onToolResult?.('Self-Critique', `Quality score: ${critiqueResult.critique?.score}/100 — passed`, false);
+    }
+  }
+
   constructor(private qtContext?: QtContext) {
     this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
     this.reflexionEngine = new ReflexionEngine(config.reflexion);
@@ -525,21 +562,64 @@ export class Agent {
     // Primitive types: return as-is (no cloning needed)
     if (typeof obj !== 'object') return obj;
 
+    // Estimate object size to avoid OOM on large objects
+    const estimatedSize = this.estimateObjectSize(obj);
+    const MAX_SAFE_SIZE = 100 * 1024 * 1024; // 100MB
+
+    if (estimatedSize > MAX_SAFE_SIZE) {
+      // For very large objects, use shallow copy to avoid OOM
+      // This is acceptable because we mainly clone LLM messages which are not deeply nested
+      if (Array.isArray(obj)) {
+        return [...obj] as T;
+      }
+      return { ...obj } as T;
+    }
+
     // Node >= 17+ has structuredClone natively — use it as primary method
     if (typeof structuredClone === 'function') {
       try {
         return structuredClone(obj);
-      } catch {
-        // structuredClone 失败（如循环引用），回退到 JSON round-trip
+      } catch (err) {
+        // structuredClone failed (e.g., circular reference, unsupported type)
+        // Fallback to JSON round-trip
+        if (process.env.CODEYANG_DEBUG) {
+          console.warn(`[Agent] structuredClone failed, using JSON fallback:`, err);
+        }
       }
     }
 
-    // Fallback: JSON round-trip
+    // Fallback: JSON round-trip (safe for serializable objects)
     try {
       return JSON.parse(JSON.stringify(obj));
     } catch (err) {
       throw new Error(`[Agent] jsonClone failed: ${err instanceof Error ? err.message : String(err)}`);
     }
+  }
+
+  /**
+   * Estimate object size in bytes (rough approximation).
+   * Used to prevent OOM when cloning very large objects.
+   */
+  private estimateObjectSize(obj: unknown): number {
+    if (obj === null || obj === undefined) return 0;
+    if (typeof obj === 'string') return obj.length * 2; // UTF-16 chars
+    if (typeof obj === 'number') return 8; // 64-bit number
+    if (typeof obj === 'boolean') return 4;
+    if (typeof obj !== 'object') return 0;
+
+    let size = 0;
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        size += this.estimateObjectSize(item);
+        if (size > 100 * 1024 * 1024) return size; // Early exit
+      }
+    } else {
+      for (const value of Object.values(obj as Record<string, unknown>)) {
+        size += this.estimateObjectSize(value);
+        if (size > 100 * 1024 * 1024) return size; // Early exit
+      }
+    }
+    return size;
   }
 
   /** Check if text is near-duplicate of any recent response (simple prefix match). */
@@ -1438,30 +1518,7 @@ export class Agent {
       }
 
       // ── Self-Critique: review output quality ──────────────────
-      if (assistantText && !this.critiqueEngine.getIterationCount()) {
-        const critiqueResult = await this.critiqueEngine.checkAndImprove(
-          this.client,
-          config.model,
-          config.maxTokens,
-          assistantText,
-          toolCalls,
-          toolResults,
-        );
-        if (!critiqueResult.passed && critiqueResult.critiqueMessage) {
-          messages.push({ role: 'user', content: critiqueResult.critiqueMessage });
-          this.cbs.onToolResult?.(
-            'Self-Critique',
-            `Quality score: ${critiqueResult.critique?.score}/100 — issues found`,
-            false,
-          );
-        } else if (critiqueResult.critique) {
-          this.cbs.onToolResult?.(
-            'Self-Critique',
-            `Quality score: ${critiqueResult.critique?.score}/100 — passed`,
-            false,
-          );
-        }
-      }
+      await this.runSelfCritique(assistantText, toolCalls, toolResults, messages);
 
       // ── Continual Learning: periodic memory consolidation ────
       this.consolidationCounter++;

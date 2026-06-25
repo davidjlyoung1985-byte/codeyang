@@ -20,7 +20,9 @@ async function createFile(name: string, content: string): Promise<string> {
   const p = join(tempDir, name);
   try {
     await mkdir(dirname(p), { recursive: true });
-  } catch {}
+  } catch {
+    // Directory may already exist - ignore
+  }
   await writeFile(p, content, 'utf-8');
   return p;
 }
