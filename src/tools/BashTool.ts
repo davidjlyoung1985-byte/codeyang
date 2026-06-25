@@ -236,3 +236,8 @@ export async function executeBash(command: string, cwd?: string, timeoutSecs = 3
 
   return parts.join('\n\n');
 }
+
+/** Clear permission cache (for testing) */
+export function clearPermissionCache(): void {
+  permissionCache.clear();
+}

@@ -9,7 +9,9 @@ import { resolveSafePath } from './shared.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 
 // 设置 axios 默认超时，防止请求卡住
-axios.defaults.timeout = 30000;
+if (axios.defaults) {
+  axios.defaults.timeout = 30000;
+}
 
 // ── SSRF / URL validation ────────────────────────────────────────
 
