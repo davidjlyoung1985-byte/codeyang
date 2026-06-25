@@ -2,7 +2,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'vscode-extension/**', 'src/sandbox/sandbox-runner.js'],
+    ignores: ['dist/**', 'node_modules/**', 'vscode-extension/**', 'src/sandbox/sandbox-runner.js', 'scripts/**', 'docs/**', '*.bench.ts'],
   },
   ...tseslint.configs.recommended,
   {
