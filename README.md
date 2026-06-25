@@ -4,28 +4,34 @@
 [![codecov](https://codecov.io/gh/davidjlyoung1985-byte/codeyang/branch/master/graph/badge.svg)](https://codecov.io/gh/davidjlyoung1985-byte/codeyang)
 [![npm version](https://badge.fury.io/js/codeyang.svg)](https://www.npmjs.com/package/codeyang)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/r/codeyang/codeyang)
 
-A terminal-based AI coding agent powered by OpenAI-compatible LLMs (DeepSeek default, with Anthropic fallback). Describe what you want in natural language — CodeYang reads files, writes code, runs shell commands, searches code, manages git, analyzes code structure, and tracks tasks.
+A production-ready AI coding agent powered by Claude, with enterprise-grade architecture. Describe what you want in natural language — CodeYang autonomously reads files, writes code, runs commands, manages Git, and more.
 
 Also includes a **VS Code extension** for in-editor AI chat with the same tool-using capabilities.
 
 ## Features
 
+### Core Capabilities
 - **Natural language coding** — describe what you want and CodeYang figures out how to do it
-- **64+ built-in tools** — File ops (Bash, Read, Write, Edit, Copy, Move, Delete, Mkdir, List, Exists), Search (Glob, Grep, Search), Code analysis (AST parsing, dependency analysis, complexity, lint), Git (16 operations), Data (JSON/YAML/CSV/XML parse/write/query/convert), Network (HTTP requests, download, upload, URL tools), Memory (persistent key-value across sessions), Image (info, base64, listing), Math (solver, plotter, concept explainer), Refactoring (rename, extract function, inline, organize imports), Task management (TodoWrite), Delegation (Task sub-agent), Web (WebFetch), Interactive (Question)
+- **64+ built-in tools** — File ops, Git (16 operations), Code analysis, Data transforms, Network requests, and more
 - **Streaming responses** — see output in real-time as it generates
-- **Multi-provider support** — DeepSeek (default), any OpenAI-compatible API, or Anthropic Claude
-- **MCP (Model Context Protocol) support** — connect external tool servers for extended capabilities
-- **Sub-agent delegation** — Task tool launches autonomous mini-agents for complex parallel work
-- **Session persistence** — saves and resumes coding sessions automatically with indexed metadata
-- **Memory system** — persistent key-value memory across sessions (facts, preferences, project context)
-- **Retry with backoff** — handles rate limits and transient errors gracefully
-- **Qt project specialization** — auto-detects Qt projects and injects tailored tools (QML, UI, build, migration)
-- **Parallel tool execution** — multiple independent tool calls run concurrently for speed
-- **Tool caching** — read results cached 5s to avoid redundant file reads
-- **Anti-repetition** — loop detection prevents agent infinite loops
-- **VS Code extension** — chat panel with the same tool-using capabilities inside the editor
-- **Electron desktop app** (CodeYangX) — standalone desktop client
+- **Multi-provider support** — Claude (recommended), DeepSeek, or any OpenAI-compatible API
+- **MCP (Model Context Protocol)** — connect external tool servers for extended capabilities
+
+### Advanced Features
+- **Harness Architecture** — 6-layer design with Gateway, Circuit Breakers, Sandbox, and Tracing
+- **LRU Caching** — tool results cached to avoid redundant operations
+- **Streaming File I/O** — efficient handling of large files (>10MB)
+- **Performance Metrics** — track tool execution time, error rates, and system health
+- **Debug Mode** — detailed logging with category filtering (`CODEYANG_DEBUG=true`)
+
+### Enterprise Ready
+- **Docker Support** — multi-stage builds, health checks, non-root user
+- **CI/CD Pipeline** — matrix testing (3 Node × 3 OS), Codecov, auto-release
+- **Security Hardening** — SSRF protection, sandbox isolation, permission system
+- **Comprehensive Docs** — Architecture, API reference, deployment guides, security policy
 
 ## Installation
 
