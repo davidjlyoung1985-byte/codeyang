@@ -2,6 +2,68 @@
 
 All notable changes to CodeYang will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [Unreleased]
+
+### Added
+
+- **Streaming File I/O** — Efficient handling of large files (>10MB) with `StreamingFileReader`
+  - Line-by-line and chunk-by-chunk reading modes
+  - `readLastLines()` for tail-like functionality
+  - `searchInLargeFile()` for memory-efficient pattern matching
+  - 16 comprehensive unit tests
+- **Performance Metrics System** — Track tool execution time, LLM latency, error rates
+  - Percentile statistics (P50, P95, P99)
+  - System metrics (memory, uptime)
+  - Export as JSON or formatted report
+  - Identify slow and error-prone tools
+- **Benchmark Suite** — `scripts/benchmark.ts` for performance measurement
+  - File operations, string ops, JSON, cache benchmarks
+  - Warmup + actual measurement for accuracy
+  - Operations per second calculation
+- **LRU Cache** — Tool result caching with configurable size & TTL
+  - Reduces redundant operations
+  - Statistics tracking (hit rate, access count)
+  - 19 unit tests
+- **Debug Utilities** — Category-filtered debug logging
+  - `debugLog()`, `debugTime()`, `debugTrace()`, `debugAssert()`
+  - Controlled by `CODEYANG_DEBUG` environment variable
+- **Docker Support** — Production-ready containerization
+  - Multi-stage Dockerfile (builder + production)
+  - Docker Compose with security hardening
+  - Non-root user, health checks, resource limits
+- **Comprehensive Documentation**
+  - Architecture docs (554 lines, 6-layer design)
+  - API reference (complete tool documentation)
+  - Contributing guide (236 lines, tool development tutorial)
+  - Deployment guide (Docker, Kubernetes, CI/CD)
+  - Security policy (261 lines, vulnerability disclosure)
+- **CI/CD Pipeline** — GitHub Actions workflows
+  - Matrix testing: 3 Node versions × 3 OS = 9 platforms
+  - Codecov integration for code coverage
+  - Automatic npm publishing on release
+  - Dependency security scanning (Dependabot)
+- **Project Templates**
+  - Bug report template
+  - Feature request template
+  - Pull request template with checklist
+
+### Changed
+
+- **README restructured** — Added badges, reorganized features (Core/Advanced/Enterprise)
+- **ESLint configuration** — Migrated to flat config, added ignore patterns
+- **Test count** — Increased from 703 to 719 tests (+16)
+
+### Fixed
+
+- **All lint warnings** — Reduced from 19 to 0
+- **All test failures** — Reduced from 9 to 0
+- Permission cache isolation in tests
+- Git commit test assertions
+- Qt build tool test timeouts
+- NetworkTool axios.defaults handling
+
 ## [0.7.0] - 2026-06-10
 
 ### Added
