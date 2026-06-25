@@ -14,7 +14,7 @@ import { Planner } from '../planner/Planner.js';
 import { TreeOfThoughts } from '../tot/TreeOfThoughts.js';
 import { recordToolOutcome } from '../tools/rl-weighter.js';
 import { runConsolidation } from '../continual-learning/MemoryManager.js';
-import { A2AProtocol, globalAgentRegistry, buildA2AMessage } from '../a2a/A2AProtocol.js';
+import { A2AProtocol, globalAgentRegistry } from '../a2a/A2AProtocol.js';
 import { Tracer } from '../tracing/index.js';
 import { CircuitBreakerManager, type CircuitBreakerStats } from '../circuit-breaker/index.js';
 import { Gateway } from '../gateway/index.js';
@@ -572,7 +572,6 @@ export class Agent {
       let digits = 0;
       let alphaChars = 0;
       let otherChars = 0;
-      let spaces = 0;
 
       for (const ch of s) {
         const code = ch.charCodeAt(0);
@@ -588,7 +587,7 @@ export class Agent {
         } else if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')) {
           alphaChars++;
         } else if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
-          spaces++;
+          // whitespace
         } else {
           otherChars++;
         }

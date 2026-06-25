@@ -106,7 +106,7 @@ async function fetchWithRedirectLimit(url: string, outputFormat: string, redirec
         if (done) break;
         totalBytes += value.length;
         if (totalBytes > MAX_BODY_SIZE) {
-          reader.cancel();
+          await reader.cancel();
           throw new Error(
             toolError(
               'Network',
