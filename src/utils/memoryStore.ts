@@ -173,11 +173,14 @@ export async function saveMemory(
   let id = existingId;
   let createdAt = now;
   if (id) {
-    // 指定了 existingId — 尝试加载已有记录以保留 createdAt
+    // Load existing record to preserve createdAt
     try {
       const data = JSON.parse(await readFile(join(MEMORY_DIR, `${id}.json`), 'utf-8')) as Memory;
       createdAt = data.createdAt;
-    } catch {}
+    } catch (err) {
+      // File doesn't exist or is corrupted - will create new with current timestamp
+      // This is expected for new memories, so we don't log as error
+    }
   } else {
     // 未指定 ID — 检查 key 是否已存在
     const existing = await getMemoryByKey(skey);
