@@ -33,8 +33,8 @@
 
 import { randomUUID } from 'node:crypto';
 import { fork, type ChildProcess } from 'node:child_process';
-import { writeFile, unlink, mkdir, rm } from 'node:fs/promises';
-import { join, resolve, relative, normalize } from 'node:path';
+import { writeFile, mkdir, rm } from 'node:fs/promises';
+import { join, resolve, normalize } from 'node:path';
 import { tmpdir, platform } from 'node:os';
 
 // ===================== 类型定义 =====================

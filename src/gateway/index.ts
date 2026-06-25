@@ -117,7 +117,7 @@ export class ApiKeyAuthProvider implements AuthProvider {
     this.validApiKeys = new Set(keys.filter(Boolean));
   }
 
-  async authenticate(req: Request): Promise<AuthResult> {
+  authenticate(req: Request): AuthResult {
     // 内部请求免认证
     if (req.source === 'internal') {
       return { allowed: true, userId: 'internal' };
@@ -154,7 +154,7 @@ export class TokenBucketRateLimiter implements RateLimiter {
     private burstSize = 30,
   ) {}
 
-  async check(key: string): Promise<RateLimitResult> {
+  check(key: string): RateLimitResult {
     const now = Date.now();
     let bucket = this.buckets.get(key);
 
@@ -351,12 +351,12 @@ export class Gateway {
     ];
 
     // 洋葱模型执行
-    const finalHandler = async (req: Request): Promise<Response> => {
-      return {
+    const finalHandler = (req: Request): Promise<Response> => {
+      return Promise.resolve({
         success: true,
         requestId: req.id,
         durationMs: Date.now() - t0,
-      };
+      });
     };
 
     const compose = (

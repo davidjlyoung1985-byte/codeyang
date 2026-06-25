@@ -70,7 +70,6 @@ export class PlanValidator {
    * Find circular dependencies using Kahn's algorithm (iterative, no stack overflow risk).
    */
   private findCircularDependencies(steps: PlanStep[]): string[] {
-    const stepMap = new Map(steps.map((s) => [s.id, s]));
     const inDegree = new Map<string, number>();
     const adjList = new Map<string, string[]>(); // dep → list of steps that depend on it
 
@@ -140,9 +139,9 @@ export class PlanValidator {
       inDegree.set(step.id, 0);
     }
     for (const step of steps) {
-      for (const dep of step.dependencies) {
+      step.dependencies.forEach(() => {
         inDegree.set(step.id, (inDegree.get(step.id) || 0) + 1);
-      }
+      });
     }
 
     // Start with zero in-degree nodes

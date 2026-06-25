@@ -381,7 +381,7 @@ async function cmdReflect(ctx: CommandContext): Promise<DispatchResult> {
   return { handled: true };
 }
 
-async function cmdHarness(ctx: CommandContext): Promise<DispatchResult> {
+function cmdHarness(ctx: CommandContext): DispatchResult {
   const harness = ctx.agent.getHarnessStatus();
   const cbStats = harness.circuitBreakers as Array<{
     name: string;
