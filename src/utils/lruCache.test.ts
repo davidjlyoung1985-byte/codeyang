@@ -94,7 +94,7 @@ describe('LRUCache', () => {
   });
 
   describe('TTL expiration', () => {
-    it('should expire entries after TTL', async () => {
+    it('should expire entries after TTL', () => {
       vi.useFakeTimers();
       cache.set('key1', 'value1');
 
@@ -105,7 +105,7 @@ describe('LRUCache', () => {
       vi.useRealTimers();
     });
 
-    it('should not expire entries before TTL', async () => {
+    it('should not expire entries before TTL', () => {
       vi.useFakeTimers();
       cache.set('key1', 'value1');
 
@@ -116,7 +116,7 @@ describe('LRUCache', () => {
       vi.useRealTimers();
     });
 
-    it('should prune expired entries', async () => {
+    it('should prune expired entries', () => {
       vi.useFakeTimers();
       cache.set('key1', 'value1');
       cache.set('key2', 'value2');
@@ -129,7 +129,7 @@ describe('LRUCache', () => {
       vi.useRealTimers();
     });
 
-    it('should prune only expired entries', async () => {
+    it('should prune only expired entries', () => {
       vi.useFakeTimers();
       cache.set('key1', 'value1');
 
