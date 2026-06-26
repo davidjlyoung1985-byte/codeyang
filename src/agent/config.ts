@@ -26,7 +26,7 @@ async function safeRename(src: string, dest: string): Promise<void> {
     if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EXDEV') {
       // 跨设备：copy + unlink
       await copyFile(src, dest);
-      await unlink(src).catch(() => {}); // 尽力清理临时文件
+      await unlink(src).catch(() => console.warn('⚠️ Failed to clean up temp file during atomic write'));
     } else {
       throw err;
     }

@@ -45,6 +45,7 @@
         "format:check": "prettier --check \"src/**/*.ts\"",
         "generate-docs": "npx tsx src/tools/auto-docs.ts",
         "check": "npx tsc --noEmit",
+        "audit": "npm audit --audit-level=high",
         "prepare": "husky"
     },
     "dependencies": {
