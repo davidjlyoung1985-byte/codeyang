@@ -111,7 +111,7 @@ async function main() {
       )
     : createHttpServer(handleRequest);
 
-  function handleRequest(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) {
+  async function handleRequest(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) {
     // SECURITY: Add HSTS header if HTTPS is active
     if (USE_HTTPS) {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');

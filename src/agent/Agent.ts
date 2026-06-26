@@ -1135,6 +1135,18 @@ export class Agent {
   }
 
   async run(prompt: string): Promise<void> {
+    // ── Harness L1: Gateway — 认证/限速/审计 ──
+    const gatewayRequest = this.gateway.createRequest({
+      source: 'cli',
+      operation: 'agent.run',
+      payload: { prompt: prompt.slice(0, 200) },
+      auth: { apiKey: config.apiKey },
+    });
+    const gatewayResponse = await this.gateway.handle(gatewayRequest);
+    if (!gatewayResponse.success) {
+      throw new Error(`[Gateway] ${gatewayResponse.error || 'Request rejected by gateway'}`);
+    }
+
     // ── Tracer (L5): 创建 Trace ──
     this.currentTraceId = this.tracer.startTrace({
       name: prompt.slice(0, 60),
