@@ -6,6 +6,8 @@ import type { CliUI } from './ui/CliUI.js';
 import type { Agent } from './agent/Agent.js';
 import type { McpManager } from './mcp/McpManager.js';
 import { config, getMcpServers, reloadConfig } from './agent/config.js';
+import { getPonytailPrompt } from './agent/ponytail-prompt.js';
+import type { PonytailLevel } from './agent/ponytail-prompt.js';
 import { saveSession, searchSessions } from './utils/sessionStore.js';
 import { editHistory } from './utils/editHistory.js';
 import { writeFile } from 'node:fs/promises';
@@ -42,6 +44,7 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
   if (lower === '/tools') return await cmdTools(ctx);
   if (lower === '/stats') return cmdStats(ctx);
   if (lower.startsWith('/model')) return cmdModel(line, ctx);
+  if (lower.startsWith('/ponytail')) return cmdPonytail(line, ctx);
   if (lower === '/config') return cmdConfig(ctx);
   if (lower === '/reload') return await cmdReload(ctx);
   if (lower === '/mcp') return cmdMcp(ctx);
@@ -59,6 +62,7 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
       '/tasks',
       '/tools',
       '/model',
+      '/ponytail',
       '/mcp',
       '/stats',
       '/status',
@@ -414,6 +418,37 @@ function cmdHarness(ctx: CommandContext): DispatchResult {
   console.log(`  │   Unique Operations:   ${ops.operations}`);
   console.log(`  │`);
   console.log(`  └──────────────────────────────────────────────────┘\n`);
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+function cmdPonytail(line: string, ctx: CommandContext): DispatchResult {
+  const arg = line.slice(10).trim().toLowerCase();
+  const current = config.ponytailLevel;
+
+  if (!arg || arg === 'status') {
+    const modeLabels: Record<string, string> = { off: '✗ OFF', lite: '◇ LITE', full: '● FULL', ultra: '◆ ULTRA' };
+    console.log(`\n  Ponytail Mode: ${modeLabels[current] || current}`);
+    console.log(`  Toggle with: /ponytail lite | full | ultra | off`);
+    console.log(`  Or set PONYTAIL_MODE env var permanently.\n`);
+    ctx.ui.promptUser();
+    return { handled: true };
+  }
+
+  if (arg === 'lite' || arg === 'full' || arg === 'ultra' || arg === 'off') {
+    // Persist to env so next getSystemPrompt() picks it up
+    process.env['PONYTAIL_MODE'] = arg;
+    // Invalidate cached system prompt so it rebuilds with new mode
+    ctx.agent.reset();
+    ctx.agent.saveCheckpoint();
+    const labels: Record<string, string> = { off: '✗ OFF', lite: '◇ LITE', full: '● FULL', ultra: '◆ ULTRA' };
+    ctx.ui.showSystemMessage(`Ponytail mode → ${labels[arg]} (resets on restart)`);
+    console.log(
+      `  ${arg === 'off' ? 'Ponytail disabled.' : getPonytailPrompt(arg as PonytailLevel).slice(0, 120) + '...'}`,
+    );
+  } else {
+    console.log(`  Usage: /ponytail [lite | full | ultra | off]\n  Current: ${current}`);
+  }
   ctx.ui.promptUser();
   return { handled: true };
 }
