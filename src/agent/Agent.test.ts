@@ -102,13 +102,31 @@ const mockStream = vi.fn();
 const mockClient: LLMClient = { stream: mockStream };
 
 // Mock only createLLMClient — keep rest of module real.
-// Use doMock + dontMock to avoid TS import confusion: inline the mock.
 vi.mock('./LLMClient.js', async (importOriginal) => {
   const mod = await importOriginal<typeof import('./LLMClient.js')>();
   return {
     ...mod,
     createLLMClient: vi.fn(() => mockClient),
   };
+});
+
+// Mock Gateway to bypass authentication in tests
+vi.mock('../gateway/index.js', () => {
+  const mockGateway = {
+    createRequest: vi.fn((opts: Record<string, unknown>) => ({ ...opts, source: 'internal' })),
+    handle: vi.fn().mockResolvedValue({ success: true, data: null }),
+    getAuditLogger: vi.fn(() => ({
+      log: vi.fn(),
+      getEntries: vi.fn(() => []),
+      clear: vi.fn(),
+    })),
+    getCircuitBreaker: vi.fn(() => ({
+      isOpen: vi.fn(() => false),
+      recordSuccess: vi.fn(),
+      recordFailure: vi.fn(),
+    })),
+  };
+  return { Gateway: { getInstance: vi.fn(() => mockGateway) } };
 });
 
 // Now we can import Agent

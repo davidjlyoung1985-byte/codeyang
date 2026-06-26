@@ -40,6 +40,25 @@ vi.mock('./LLMClient.js', async (importOriginal) => {
   return { ...mod, createLLMClient: vi.fn(() => ({ stream: mockStream })) };
 });
 
+// Mock Gateway to bypass authentication in tests
+vi.mock('../gateway/index.js', () => {
+  const mockGateway = {
+    createRequest: vi.fn((opts: Record<string, unknown>) => ({ ...opts, source: 'internal' })),
+    handle: vi.fn().mockResolvedValue({ success: true, data: null }),
+    getAuditLogger: vi.fn(() => ({
+      log: vi.fn(),
+      getEntries: vi.fn(() => []),
+      clear: vi.fn(),
+    })),
+    getCircuitBreaker: vi.fn(() => ({
+      isOpen: vi.fn(() => false),
+      recordSuccess: vi.fn(),
+      recordFailure: vi.fn(),
+    })),
+  };
+  return { Gateway: { getInstance: vi.fn(() => mockGateway) } };
+});
+
 vi.mock('../permission/index.js', () => ({
   checkPermission: vi.fn().mockResolvedValue({ level: 'allow' }),
 }));

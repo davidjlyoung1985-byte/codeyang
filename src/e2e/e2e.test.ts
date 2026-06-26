@@ -1,273 +1,300 @@
 /**
  * End-to-End Tests for CodeYang
  *
- * Tests real-world workflows from user input to tool execution.
- * These tests verify the complete agent loop, not just individual tools.
- *
- * NOTE: These tests are currently skipped as they require a full agent setup
- * with LLM integration. They serve as documentation for future E2E testing.
+ * Tests real-world workflows: multi-turn agent loops with real tool execution.
+ * Uses mocked LLM stream (same pattern as Agent-integration tests) so no API key required.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import { existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 
-describe.skip('E2E: Basic File Operations', () => {
-  let agent: Agent;
-  let testDir: string;
+vi.mock('../agent/config.js', () => ({
+  config: {
+    model: 'test-model',
+    apiKey: 'test-e2e-key',
+    maxTokens: 8192,
+    maxRetries: 3,
+    maxTurns: 10,
+    temperature: 0.5,
+    autoVerify: true,
+    autoFixOnError: true,
+    watchMode: true,
+    reflexion: { enabled: true, failureThreshold: 2, maxReflections: 50, autoInject: true },
+    planner: { enabled: true, autoDetect: true, complexityThreshold: 3, requireApproval: true, maxRetries: 2 },
+    getSystemPrompt: vi.fn(() => 'You are an E2E test agent.'),
+  },
+}));
 
-  beforeAll(async () => {
-    testDir = join(tmpdir(), `codeyang-e2e-${randomUUID()}`);
-    await mkdir(testDir, { recursive: true });
-    process.chdir(testDir);
+const mockStream = vi.fn();
+vi.mock('../agent/LLMClient.js', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('../agent/LLMClient.js')>();
+  return { ...mod, createLLMClient: vi.fn(() => ({ stream: mockStream })) };
+});
 
-    agent = new Agent({
-      workingDirectory: testDir,
-      provider: 'mock', // Use mock LLM for testing
+vi.mock('../permission/index.js', () => ({
+  checkPermission: vi.fn().mockResolvedValue({ level: 'allow' }),
+}));
+
+vi.mock('../gateway/index.js', () => {
+  const mockGateway = {
+    createRequest: vi.fn((opts: Record<string, unknown>) => ({ ...opts, source: 'internal' })),
+    handle: vi.fn().mockResolvedValue({ success: true, data: null }),
+    getAuditLogger: vi.fn(() => ({ log: vi.fn(), getEntries: vi.fn(() => []), clear: vi.fn() })),
+    getCircuitBreaker: vi.fn(() => ({ isOpen: vi.fn(() => false), recordSuccess: vi.fn(), recordFailure: vi.fn() })),
+  };
+  return { Gateway: { getInstance: vi.fn(() => mockGateway) } };
+});
+
+import type { StreamEvent } from '../agent/LLMClient.js';
+import { Agent } from '../agent/Agent.js';
+
+function textDelta(text: string): StreamEvent {
+  return { type: 'text_delta', text };
+}
+function toolCallStart(index: number, id: string, name: string): StreamEvent {
+  return { type: 'tool_call_start', toolCallIndex: index, toolCallId: id, toolCallName: name };
+}
+function toolCallDelta(index: number, args: string): StreamEvent {
+  return { type: 'tool_call_delta', toolCallIndex: index, toolCallArgs: args };
+}
+function toolCallEnd(index: number, id: string, args: string): StreamEvent {
+  return { type: 'tool_call_end', toolCallIndex: index, toolCallId: id, toolCallArgs: args };
+}
+function usageEvent(inputTokens: number, outputTokens: number): StreamEvent {
+  return { type: 'usage', inputTokens, outputTokens };
+}
+
+function makeStream(...events: StreamEvent[]): AsyncIterable<StreamEvent> {
+  return (function* () {
+    for (const e of events) yield e;
+  })();
+}
+
+let testDir: string;
+
+beforeAll(async () => {
+  testDir = path.join(tmpdir(), `codeyang-e2e-${randomUUID()}`);
+  await fs.mkdir(testDir, { recursive: true });
+});
+
+afterAll(async () => {
+  await fs.rm(testDir, { recursive: true, force: true }).catch(() => {});
+});
+
+describe('E2E: Multi-turn File Workflow', () => {
+  it('should create, read, and edit a file across multiple turns', async () => {
+    const agent = new Agent();
+    let turn = 0;
+
+    // Turn 1: Write file
+    // Turn 2: Read file
+    // Turn 3: Edit file
+    // Turn 4: Final text response
+    mockStream.mockImplementation(() => {
+      turn++;
+      switch (turn) {
+        case 1:
+          return makeStream(
+            toolCallStart(0, 'tc_w1', 'Write'),
+            toolCallDelta(0, JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), content: 'Hello World' })),
+            toolCallEnd(0, 'tc_w1', JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), content: 'Hello World' })),
+          );
+        case 2:
+          return makeStream(
+            toolCallStart(0, 'tc_r1', 'Read'),
+            toolCallDelta(0, JSON.stringify({ filePath: path.join(testDir, 'hello.txt') })),
+            toolCallEnd(0, 'tc_r1', JSON.stringify({ filePath: path.join(testDir, 'hello.txt') })),
+          );
+        case 3:
+          return makeStream(
+            toolCallStart(0, 'tc_e1', 'Edit'),
+            toolCallDelta(0, JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), oldString: 'World', newString: 'CodeYang' })),
+            toolCallEnd(0, 'tc_e1', JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), oldString: 'World', newString: 'CodeYang' })),
+            textDelta('All done.'),
+            usageEvent(100, 50),
+          );
+        default:
+          return makeStream(textDelta('Done.'));
+      }
     });
-  });
 
-  afterAll(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
+    const onToolResult = vi.fn();
+    agent.setCallbacks({ onToolResult });
+    await agent.run('create, read, and edit hello.txt');
 
-  it('should create, read, and edit a file', async () => {
-    // User: "Create a file called hello.txt with content 'Hello World'"
-    await agent.chat('Create a file called hello.txt with content Hello World');
+    // Verify file operations
+    expect(existsSync(path.join(testDir, 'hello.txt'))).toBe(true);
+    const content = await fs.readFile(path.join(testDir, 'hello.txt'), 'utf-8');
+    expect(content).toBe('Hello CodeYang');
 
-    // Verify file was created
-    const readResult = await agent.chat('Read hello.txt');
-    expect(readResult).toContain('Hello World');
-
-    // User: "Change 'World' to 'CodeYang' in hello.txt"
-    await agent.chat('Change World to CodeYang in hello.txt');
-
-    // Verify edit was made
-    const editedResult = await agent.chat('Read hello.txt');
-    expect(editedResult).toContain('Hello CodeYang');
-    expect(editedResult).not.toContain('Hello World');
+    // Verify tool calls were made
+    expect(onToolResult.mock.calls.filter((c) => c[0] === 'Write').length).toBe(1);
+    expect(onToolResult.mock.calls.filter((c) => c[0] === 'Read').length).toBe(1);
+    expect(onToolResult.mock.calls.filter((c) => c[0] === 'Edit').length).toBe(1);
+    expect(agent.getTokenUsage().inputTokens).toBe(100);
   }, 30000);
 
   it('should search across multiple files', async () => {
-    // Setup: Create multiple files
-    await writeFile(join(testDir, 'file1.txt'), 'TODO: Implement feature A');
-    await writeFile(join(testDir, 'file2.txt'), 'Regular content');
-    await writeFile(join(testDir, 'file3.txt'), 'TODO: Fix bug B');
+    const agent = new Agent();
+    const f1 = path.join(testDir, 'file1.txt');
+    const f2 = path.join(testDir, 'file2.txt');
+    const f3 = path.join(testDir, 'file3.txt');
+    await fs.writeFile(f1, 'TODO: Implement feature A');
+    await fs.writeFile(f2, 'Regular content');
+    await fs.writeFile(f3, 'TODO: Fix bug B');
 
-    // User: "Find all TODO comments"
-    const result = await agent.chat('Find all TODO comments in the current directory');
+    mockStream.mockImplementation(() =>
+      makeStream(
+        toolCallStart(0, 'tc_s1', 'Grep'),
+        toolCallDelta(0, JSON.stringify({ pattern: 'TODO', path: testDir })),
+        toolCallEnd(0, 'tc_s1', JSON.stringify({ pattern: 'TODO', path: testDir })),
+        textDelta('Search results:'),
+        usageEvent(30, 20),
+      ),
+    );
 
-    expect(result).toContain('file1.txt');
-    expect(result).toContain('feature A');
-    expect(result).toContain('file3.txt');
-    expect(result).toContain('bug B');
-    expect(result).not.toContain('file2.txt');
+    const onToolResult = vi.fn();
+    agent.setCallbacks({ onToolResult });
+    await agent.run('find TODOs');
+
+    const grepCalls = onToolResult.mock.calls.filter((c) => c[0] === 'Grep');
+    expect(grepCalls.length).toBeGreaterThanOrEqual(1);
+    expect(grepCalls[0][1]).toContain('TODO');
   }, 30000);
 });
 
-describe.skip('E2E: Git Workflow', () => {
-  let agent: Agent;
-  let testDir: string;
+describe('E2E: Git Workflow', () => {
+  let gitDir: string;
 
   beforeAll(async () => {
-    testDir = join(tmpdir(), `codeyang-e2e-git-${randomUUID()}`);
-    await mkdir(testDir, { recursive: true });
-    process.chdir(testDir);
-
-    // Initialize git repo
+    gitDir = path.join(tmpdir(), `codeyang-e2e-git-${randomUUID()}`);
+    await fs.mkdir(gitDir, { recursive: true });
     const { execa } = await import('execa');
-    await execa('git', ['init'], { cwd: testDir });
-    await execa('git', ['config', 'user.name', 'Test User'], { cwd: testDir });
-    await execa('git', ['config', 'user.email', 'test@example.com'], { cwd: testDir });
+    await execa('git', ['init'], { cwd: gitDir });
+    await execa('git', ['config', 'user.name', 'Test User'], { cwd: gitDir });
+    await execa('git', ['config', 'user.email', 'test@example.com'], { cwd: gitDir });
 
-    agent = new Agent({
-      workingDirectory: testDir,
-      provider: 'mock',
-    });
+    // Create initial commit so we have a baseline
+    await fs.writeFile(path.join(gitDir, 'README.md'), '# Test');
+    await execa('git', ['add', '-A'], { cwd: gitDir });
+    await execa('git', ['commit', '-m', 'Initial commit'], { cwd: gitDir });
   });
 
   afterAll(async () => {
-    await rm(testDir, { recursive: true, force: true });
+    await fs.rm(gitDir, { recursive: true, force: true }).catch(() => {});
   });
 
-  it('should create branch, make changes, and commit', async () => {
-    // Initial commit
-    await writeFile(join(testDir, 'README.md'), '# Test Project');
-    await agent.chat('Stage all files and commit with message "Initial commit"');
+  it('should create branch, make changes, and verify commit', async () => {
+    const agent = new Agent();
+    let turn = 0;
 
-    // User: "Create a new branch called feature-test"
-    await agent.chat('Create a new branch called feature-test');
-
-    // User: "Add a new file called feature.txt with content Test Feature"
-    await agent.chat('Add a new file called feature.txt with content Test Feature');
-
-    // User: "Commit this change"
-    await agent.chat('Commit with message "Add feature.txt"');
-
-    // Verify commit was made
-    const logResult = await agent.chat('Show git log');
-    expect(logResult).toContain('Add feature.txt');
-    expect(logResult).toContain('Initial commit');
-  }, 30000);
-});
-
-describe.skip('E2E: Code Analysis', () => {
-  let agent: Agent;
-  let testDir: string;
-
-  beforeAll(async () => {
-    testDir = join(tmpdir(), `codeyang-e2e-analysis-${randomUUID()}`);
-    await mkdir(testDir, { recursive: true });
-    process.chdir(testDir);
-
-    agent = new Agent({
-      workingDirectory: testDir,
-      provider: 'mock',
-    });
-  });
-
-  afterAll(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
-
-  it('should analyze TypeScript code', async () => {
-    // Create a TypeScript file with issues
-    const codeWithIssues = `
-function complexFunction(a, b, c, d, e) {
-  if (a > 0) {
-    if (b > 0) {
-      if (c > 0) {
-        if (d > 0) {
-          if (e > 0) {
-            return a + b + c + d + e;
-          }
-        }
+    mockStream.mockImplementation(() => {
+      turn++;
+      switch (turn) {
+        case 1:
+          return makeStream(
+            toolCallStart(0, 'tc_b1', 'GitCheckout'),
+            toolCallDelta(0, JSON.stringify({ branch: 'feature-test', create: true, cwd: gitDir })),
+            toolCallEnd(0, 'tc_b1', JSON.stringify({ branch: 'feature-test', create: true, cwd: gitDir })),
+          );
+        case 2:
+          return makeStream(
+            toolCallStart(0, 'tc_w1', 'Write'),
+            toolCallDelta(0, JSON.stringify({ filePath: path.join(gitDir, 'feature.txt'), content: 'Test Feature' })),
+            toolCallEnd(0, 'tc_w1', JSON.stringify({ filePath: path.join(gitDir, 'feature.txt'), content: 'Test Feature' })),
+          );
+        case 3:
+          return makeStream(
+            toolCallStart(0, 'tc_a1', 'GitAdd'),
+            toolCallDelta(0, JSON.stringify({ files: ['feature.txt'], cwd: gitDir })),
+            toolCallEnd(0, 'tc_a1', JSON.stringify({ files: ['feature.txt'], cwd: gitDir })),
+          );
+        case 4:
+          return makeStream(
+            toolCallStart(0, 'tc_c1', 'GitCommit'),
+            toolCallDelta(0, JSON.stringify({ message: 'Add feature.txt', cwd: gitDir })),
+            toolCallEnd(0, 'tc_c1', JSON.stringify({ message: 'Add feature.txt', cwd: gitDir })),
+            textDelta('Done.'),
+            usageEvent(80, 40),
+          );
+        default:
+          return makeStream(textDelta('Done.'));
       }
-    }
-  }
-  return 0;
-}
+    });
 
-const unused = 42;
-console.log("test");
-`;
+    const onToolResult = vi.fn();
+    agent.setCallbacks({ onToolResult });
+    await agent.run('create feature branch with a new file');
 
-    await writeFile(join(testDir, 'code.ts'), codeWithIssues);
+    const branchCalls = onToolResult.mock.calls.filter((c) => c[0] === 'GitCheckout');
+    expect(branchCalls.length).toBe(1);
+    expect(branchCalls[0][1]).toContain('feature-test');
 
-    // User: "Analyze code.ts for quality issues"
-    const result = await agent.chat('Analyze code.ts for quality issues');
+    expect(existsSync(path.join(gitDir, 'feature.txt'))).toBe(true);
 
-    // Should detect high complexity
-    expect(result.toLowerCase()).toMatch(/complex|nested/);
+    // Verify git log shows the commit
+    const { execa } = await import('execa');
+    const log = await execa('git', ['log', '--oneline'], { cwd: gitDir });
+    expect(log.stdout).toContain('Add feature.txt');
   }, 30000);
 });
 
-describe.skip('E2E: Multi-step Tasks', () => {
-  let agent: Agent;
-  let testDir: string;
-
-  beforeAll(async () => {
-    testDir = join(tmpdir(), `codeyang-e2e-multistep-${randomUUID()}`);
-    await mkdir(testDir, { recursive: true });
-    process.chdir(testDir);
-
-    agent = new Agent({
-      workingDirectory: testDir,
-      provider: 'mock',
-    });
-  });
-
-  afterAll(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
-
-  it('should complete complex multi-step task', async () => {
-    // User: "Create a TypeScript project with index.ts, package.json, and tsconfig.json"
-    await agent.chat(`
-      Create a TypeScript project with:
-      1. index.ts with a simple hello world function
-      2. package.json with name "test-project"
-      3. tsconfig.json with strict mode
-    `);
-
-    // Verify all files were created
-    const files = await agent.chat('List all files in current directory');
-    expect(files).toContain('index.ts');
-    expect(files).toContain('package.json');
-    expect(files).toContain('tsconfig.json');
-
-    // Verify content is correct
-    const packageJson = await agent.chat('Read package.json');
-    expect(packageJson).toContain('test-project');
-
-    const tsconfig = await agent.chat('Read tsconfig.json');
-    expect(tsconfig).toContain('strict');
-  }, 60000);
-});
-
-describe.skip('E2E: Error Handling', () => {
-  let agent: Agent;
-  let testDir: string;
-
-  beforeAll(async () => {
-    testDir = join(tmpdir(), `codeyang-e2e-errors-${randomUUID()}`);
-    await mkdir(testDir, { recursive: true });
-    process.chdir(testDir);
-
-    agent = new Agent({
-      workingDirectory: testDir,
-      provider: 'mock',
-    });
-  });
-
-  afterAll(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
-
+describe('E2E: Error Recovery', () => {
   it('should handle file not found gracefully', async () => {
-    // User: "Read nonexistent.txt"
-    const result = await agent.chat('Read nonexistent.txt');
+    const agent = new Agent();
 
-    expect(result.toLowerCase()).toMatch(/not found|does not exist/);
+    mockStream.mockImplementation(() =>
+      makeStream(
+        toolCallStart(0, 'tc_r1', 'Read'),
+        toolCallDelta(0, JSON.stringify({ filePath: path.join(testDir, 'nonexistent.txt') })),
+        toolCallEnd(0, 'tc_r1', JSON.stringify({ filePath: path.join(testDir, 'nonexistent.txt') })),
+        textDelta('File was not found.'),
+        usageEvent(10, 15),
+      ),
+    );
+
+    const onToolResult = vi.fn();
+    agent.setCallbacks({ onToolResult });
+    await agent.run('read missing file');
+
+    const readCalls = onToolResult.mock.calls.filter((c) => c[0] === 'Read');
+    expect(readCalls.length).toBeGreaterThanOrEqual(1);
+    // Read tool should return an error for nonexistent file
+    const hasError = readCalls.some((c) => c[2] === true);
+    expect(hasError).toBe(true);
   });
 
-  it('should recover from failed operations', async () => {
-    // User: "Delete a file that doesn't exist, then create it"
-    await agent.chat(`
-      Try to delete missing.txt (it might not exist).
-      Then create missing.txt with content "Now it exists".
-    `);
+  it('should recover from a failed operation and continue', async () => {
+    const agent = new Agent();
+    let turn = 0;
 
-    // Should succeed despite initial failure
-    const readResult = await agent.chat('Read missing.txt');
-    expect(readResult).toContain('Now it exists');
-  }, 30000);
-});
-
-describe.skip('E2E: Permission System', () => {
-  let agent: Agent;
-  let testDir: string;
-
-  beforeAll(async () => {
-    testDir = join(tmpdir(), `codeyang-e2e-perms-${randomUUID()}`);
-    await mkdir(testDir, { recursive: true });
-    process.chdir(testDir);
-
-    agent = new Agent({
-      workingDirectory: testDir,
-      provider: 'mock',
-      permissionLevel: 'ask', // Require confirmation
+    mockStream.mockImplementation(() => {
+      turn++;
+      if (turn === 1) {
+        // Delete a non-existent file (will fail)
+        return makeStream(
+          toolCallStart(0, 'tc_d1', 'Delete'),
+          toolCallDelta(0, JSON.stringify({ path: path.join(testDir, 'missing.txt') })),
+          toolCallEnd(0, 'tc_d1', JSON.stringify({ path: path.join(testDir, 'missing.txt') })),
+        );
+      }
+      // Then create it (succeeds)
+      return makeStream(
+        toolCallStart(0, 'tc_c1', 'Write'),
+        toolCallDelta(0, JSON.stringify({ filePath: path.join(testDir, 'missing.txt'), content: 'Now it exists' })),
+        toolCallEnd(0, 'tc_c1', JSON.stringify({ filePath: path.join(testDir, 'missing.txt'), content: 'Now it exists' })),
+        textDelta('Recovered.'),
+        usageEvent(20, 25),
+      );
     });
-  });
 
-  afterAll(async () => {
-    await rm(testDir, { recursive: true, force: true });
-  });
-
-  it('should request permission for dangerous operations', async () => {
-    // User: "Delete all files"
-    // Should ask for confirmation before proceeding
-    const result = await agent.chat('Delete all files');
-
-    // In test mode, permission is denied by default
-    expect(result.toLowerCase()).toMatch(/permission|confirm|denied/);
-  });
+    await agent.run('delete then create');
+    expect(existsSync(path.join(testDir, 'missing.txt'))).toBe(true);
+    const content = await fs.readFile(path.join(testDir, 'missing.txt'), 'utf-8');
+    expect(content).toBe('Now it exists');
+  }, 30000);
 });
