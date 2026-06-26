@@ -181,7 +181,7 @@ describe.skip('E2E: Multi-step Tasks', () => {
 
   it('should complete complex multi-step task', async () => {
     // User: "Create a TypeScript project with index.ts, package.json, and tsconfig.json"
-    const result = await agent.chat(`
+    await agent.chat(`
       Create a TypeScript project with:
       1. index.ts with a simple hello world function
       2. package.json with name "test-project"
@@ -231,7 +231,7 @@ describe.skip('E2E: Error Handling', () => {
 
   it('should recover from failed operations', async () => {
     // User: "Delete a file that doesn't exist, then create it"
-    const result = await agent.chat(`
+    await agent.chat(`
       Try to delete missing.txt (it might not exist).
       Then create missing.txt with content "Now it exists".
     `);
