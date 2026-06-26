@@ -177,7 +177,7 @@ export async function saveMemory(
     try {
       const data = JSON.parse(await readFile(join(MEMORY_DIR, `${id}.json`), 'utf-8')) as Memory;
       createdAt = data.createdAt;
-    } catch (err) {
+    } catch {
       // File doesn't exist or is corrupted - will create new with current timestamp
       // This is expected for new memories, so we don't log as error
     }

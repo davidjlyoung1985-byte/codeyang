@@ -5,8 +5,13 @@
  * Usage:
  *   node dist/web-server.js
  *   # then open http://localhost:3456
+ *
+ * HTTPS:
+ *   Set CODEYANG_TLS_CERT and CODEYANG_TLS_KEY to enable HTTPS.
+ *   When HTTPS is enabled, HSTS header is automatically added.
  */
-import { createServer } from 'node:http';
+import { createServer as createHttpServer } from 'node:http';
+import { createServer as createHttpsServer } from 'node:https';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +26,11 @@ import { saveSession } from './utils/sessionStore.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env['CODEYANG_PORT'] || 3456);
+
+// ── HTTPS/TLS configuration ────────────────────
+const TLS_CERT_PATH = process.env['CODEYANG_TLS_CERT'] || '';
+const TLS_KEY_PATH = process.env['CODEYANG_TLS_KEY'] || '';
+const USE_HTTPS = !!(TLS_CERT_PATH && TLS_KEY_PATH);
 
 // ── Static files ──────────────────────────────
 // web-ui is at project root; resolve via package location or CWD
@@ -87,9 +97,26 @@ async function main() {
     console.log(`\n  🔐 Web API Key (save to CODEYANG_WEB_API_KEY): ${API_KEY}\n`);
   }
 
-  console.log(`\n  🌐 CodeYang Web UI: http://localhost:${PORT}\n`);
+  const protocol = USE_HTTPS ? 'https' : 'http';
+  console.log(`\n  🌐 CodeYang Web UI: ${protocol}://localhost:${PORT}\n`);
 
-  const server = createServer(async (req, res) => {
+  // SECURITY: Create HTTPS server if TLS certs provided, otherwise HTTP
+  const server = USE_HTTPS
+    ? createHttpsServer(
+        {
+          key: readFileSync(TLS_KEY_PATH, 'utf-8'),
+          cert: readFileSync(TLS_CERT_PATH, 'utf-8'),
+        },
+        handleRequest,
+      )
+    : createHttpServer(handleRequest);
+
+  function handleRequest(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) {
+    // SECURITY: Add HSTS header if HTTPS is active
+    if (USE_HTTPS) {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+
     // SECURITY: Restrict CORS to localhost only
     const origin = req.headers.origin || '';
     if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
@@ -327,7 +354,7 @@ s.remove();loading=false;sendBtn.disabled=false;statusEl.textContent='就绪';in
 
     res.writeHead(404);
     res.end('Not found');
-  });
+  }
 
   server.listen(PORT);
 }
