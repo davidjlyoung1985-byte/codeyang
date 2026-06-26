@@ -2,6 +2,7 @@ import { execa } from 'execa';
 import { checkPermission } from '../permission/index.js';
 import { auditLog } from '../utils/sessionStore.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
+import { Sandbox } from '../sandbox/index.js';
 
 // User-customizable deny list from env var (comma-separated words)
 const DENY_LIST = (process.env['CODEYANG_DENY_COMMANDS'] || '')
@@ -205,6 +206,118 @@ export async function executeBash(command: string, cwd?: string, timeoutSecs = 3
     }
   }
 
+  // ── Sandbox (L3)分流: 高危命令走沙箱隔离 ──
+  // 检查是否需要沙箱执行
+  const lastPermLevel = seenCommands.size > 0 ? permissionCache.get([...seenCommands][0])?.level || 'allow' : 'allow';
+
+  if (shouldUseSandbox(command, lastPermLevel)) {
+    void auditLog({
+      action: 'bash_sandboxed',
+      command: sanitizeForLogging(command),
+      cwd: cwd || process.cwd(),
+      result: 'routed_to_sandbox',
+    });
+    return executeInSandbox(command, cwd, timeoutSecs);
+  }
+
+  return executeDirect(command, cwd, timeoutSecs);
+}
+
+/**
+ * Check if a command should be executed in the sandbox (isolated process).
+ *
+ * Sandbox is used for commands that could be destructive or require isolation:
+ *   - sudo, rm -rf (destructive system commands)
+ *   - curl | sh, wget | sh (remote code execution)
+ *   - docker, systemctl (system-level operations)
+ *   - scripts (python, node) when run with user-provided input
+ */
+function shouldUseSandbox(command: string, permissionLevel: string): boolean {
+  if (permissionLevel === 'deny') return false; // Already blocked, no need for sandbox
+
+  const cmd = command.toLowerCase().trim();
+
+  // Always sandbox permission='ask' commands
+  if (permissionLevel === 'ask') return true;
+
+  // Sandbox destructive patterns
+  const sandboxPatterns = [
+    /^sudo /,
+    /\brm\s+-rf\b/,
+    /\bcurl\b.*\|\s*(sh|bash)\b/,
+    /\bwget\b.*\|\s*(sh|bash)\b/,
+    /^docker\s/,
+    /^systemctl\s/,
+    /^service\s/,
+    /^systemctl/,
+    /^pkexec/,
+    /^chmod\s+777/,
+    /^chown\s/,
+    /^dd\s/,
+    /^mkfs/,
+    /^fdisk/,
+    /^parted/,
+    /^kill\s+-9/,
+    /:(\\|\/)rm\s+-rf/i, // npm/pip style :rm -rf
+    /\| sudo /,
+  ];
+
+  for (const pattern of sandboxPatterns) {
+    if (pattern.test(cmd)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Execute a command in a sandboxed process for isolation.
+ * Falls back to direct execa if sandbox fails to initialize.
+ */
+async function executeInSandbox(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
+  try {
+    const sandbox = new Sandbox({
+      timeoutMs: timeoutSecs * 1000,
+      cleanupTempDir: true,
+      blockNetwork: process.env['CODEYANG_SANDBOX_BLOCK_NETWORK'] === 'true',
+    });
+
+    const result = await sandbox.run('bash', ['-c', command], {
+      cwd: cwd || process.cwd(),
+      timeoutMs: timeoutSecs * 1000,
+      env: process.env as Record<string, string>,
+    });
+
+    // Sandbox ran successfully
+    if (result.success) {
+      return result.stdout || '(sandbox: no output)';
+    }
+
+    // Sandbox timed out or had an error
+    let output = '';
+    if (result.stdout) output += result.stdout + '\n';
+    if (result.stderr) output += result.stderr + '\n';
+    if (result.timedOut) output += '\n[Command timed out in sandbox]\n';
+    output += `exit code: ${result.exitCode}`;
+    return output;
+  } catch (err) {
+    // Sandbox unavailable — fall back to direct execa
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    void auditLog({
+      action: 'sandbox_fallback',
+      command: sanitizeForLogging(command),
+      cwd: cwd || process.cwd(),
+      result: `Sandbox failed: ${errorMsg}`,
+    });
+    return executeDirect(command, cwd, timeoutSecs);
+  }
+}
+
+/**
+ * Execute a command directly via execa (non-sandboxed).
+ */
+async function executeDirect(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
   const result = await execa(command, {
     shell: process.platform === 'win32' ? 'powershell.exe' : 'bash',
     cwd: cwd || process.cwd(),
@@ -217,8 +330,6 @@ export async function executeBash(command: string, cwd?: string, timeoutSecs = 3
   const rawStderr = result.stderr?.trim() || '';
   const label = `stdout of \`${command.slice(0, 80)}${command.length > 80 ? '…' : ''}\``;
 
-  // Apply truncation to both stdout and stderr separately.
-  // This way, error messages from stderr are preserved even if stdout is huge.
   const stdout = rawStdout ? truncateOutput(rawStdout, label) : '';
   const stderr = rawStderr
     ? truncateOutput(rawStderr, `stderr of \`${command.slice(0, 80)}${command.length > 80 ? '…' : ''}\``)
