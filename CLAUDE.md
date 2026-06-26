@@ -1,14 +1,14 @@
-# CodeYang v0.6.0 — Terminal AI Coding Agent
+# CodeYang v0.7.0 — Terminal AI Coding Agent
 
 ## Purpose
-Terminal-based AI coding agent with 60+ tools, MCP server support, session persistence, and Qt project specialization.
+Terminal-based AI coding agent with 64+ tools, MCP server support, session persistence, and Qt project specialization.
 
 ## Tech Stack
 - **Runtime**: Node >=18, ESM (`"type": "module"`)
 - **Language**: TypeScript
 - **Key deps**: `openai` (primary provider driver), `@anthropic-ai/sdk` (Anthropic fallback), `@modelcontextprotocol/sdk` (MCP), `execa` (shell), `picocolors` (UI), `axios` (HTTP)
 - **Build**: tsup (`src/index.ts` → `dist/index.js`, ESM, sourcemap, dts)
-- **Test**: vitest v4.1.7 — 290+ tests
+- **Test**: vitest ^3.2.6 — 290+ tests
 - **Lint**: eslint v10.4.1 (flat config) + typescript-eslint
 - **Format**: prettier v3.8.3
 - **License**: MIT
