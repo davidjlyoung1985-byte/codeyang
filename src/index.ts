@@ -329,7 +329,7 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
               console.log(`  ${c.dim(summary)}`);
             }
           })
-          .catch(() => {});
+          .catch((err) => console.warn('⚠️ [Watcher] Verification failed:', err instanceof Error ? err.message : err));
       } else if (rule.action === 'notify') {
         console.log(`\n  ${c.cyan('·')} ${c.dim(`[Watcher] ${rule.label || ctx.filePath}`)}`);
       }

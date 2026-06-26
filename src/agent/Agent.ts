@@ -1624,7 +1624,7 @@ export class Agent {
               );
             }
           })
-          .catch(() => {});
+          .catch((err) => logger.warn('[ContinualLearning] Consolidation failed:', err instanceof Error ? err.message : err));
       }
 
       this.history.length = 0;
@@ -1649,7 +1649,10 @@ export class Agent {
     this.toolStats.set(name, s);
 
     // ── Tool-Augmented RL: record outcome for adaptive weighting ──
-    recordToolOutcome(name, !isError, ms, isError ? `Error in ${name}` : undefined).catch(() => {});
+    // Fire-and-forget: failure to record RL outcome is non-critical
+    recordToolOutcome(name, !isError, ms, isError ? `Error in ${name}` : undefined).catch(
+      (err) => logger.warn('[RL] Failed to record tool outcome:', err instanceof Error ? err.message : err),
+    );
   }
 
   /** Get per-tool usage statistics. */

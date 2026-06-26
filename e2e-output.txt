@@ -1,0 +1,76 @@
+﻿
+> codeyang@0.7.0 test
+> vitest run src/e2e/e2e.test.ts
+
+
+[1m[46m RUN [49m[22m [36mv3.2.6 [39m[90mE:/Qt/ai-code-agent[39m
+
+node.exe : [90mstderr[2m | src/e2e/e2e.test.ts[2m > [22m[2mE2E: Error Recovery[2m > [22m[2mshould handle file n
+ot found gracefully
+所在位置 行:1 字符: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([90mstderr[2m...ound gracefully:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[22m[39mLLM client does not support chat method
+
+ [31m鉂?[39m src/e2e/e2e.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 2376[2mms[22m[39m
+   [32m鉁?[39m E2E: Multi-turn File Workflow[2m > [22mshould create, read, and edit a file across multiple turns[32m 50[2mms[22m[39m
+[31m   [31m脳[31m E2E: Multi-turn File Workflow[2m > [22mshould search across multiple files[39m[32m 283[2mms[22m[39m
+[31m     鈫?expected 2 to be 1 // Object.is equality[39m
+   [33m[2m鉁?[22m[39m E2E: Git Workflow[2m > [22mshould create branch, make changes, and verify commit [33m 1078[2mms[22m[39m
+[31m   [31m脳[31m E2E: Error Recovery[2m > [22mshould handle file not found gracefully[39m[32m 10[2mms[22m[39m
+[31m     鈫?expected 2 to be 1 // Object.is equality[39m
+   [32m鉁?[39m E2E: Error Recovery[2m > [22mshould recover from a failed operation and continue[32m 12[2mms[22m[39m
+
+[31m鈳幆鈳幆鈳幆鈳?[39m[1m[41m Failed Tests 2 [49m[22m[31m鈳幆鈳幆鈳幆鈳?[39m
+
+[41m[1m FAIL [22m[49m src/e2e/e2e.test.ts[2m > [22mE2E: Multi-turn File Workflow[2m > [22mshould search across 
+multiple files
+[31m[1mAssertionError[22m: expected 2 to be 1 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 2[39m
+
+[36m [2m鉂?[22m src/e2e/e2e.test.ts:[2m165:30[22m[39m
+    [90m163| [39m
+    [90m164| [39m    const grepCalls = onToolResult.mock.calls.filter((c) => c[0] === '鈥?    [90m165| [39m    [34m
+expect[39m(grepCalls[33m.[39mlength)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m   | [39m                             [31m^[39m
+    [90m166| [39m    [34mexpect[39m(grepCalls[[34m0[39m][[34m1[39m])[33m.[39m[34mtoContain[39m([32m'TODO'
+[39m)[33m;[39m
+    [90m167| [39m  }[33m,[39m [34m30000[39m)[33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[1/2]鈳?[22m[39m
+
+[41m[1m FAIL [22m[49m src/e2e/e2e.test.ts[2m > [22mE2E: Error Recovery[2m > [22mshould handle file not found gr
+acefully
+[31m[1mAssertionError[22m: expected 2 to be 1 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 2[39m
+
+[36m [2m鉂?[22m src/e2e/e2e.test.ts:[2m266:30[22m[39m
+    [90m264| [39m
+    [90m265| [39m    const readCalls = onToolResult.mock.calls.filter((c) => c[0] === '鈥?    [90m266| [39m    [34m
+expect[39m(readCalls[33m.[39mlength)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m   | [39m                             [31m^[39m
+    [90m267| [39m    [90m// Read tool should return an error for nonexistent file[39m
+    [90m268| [39m    [34mexpect[39m(readCalls[[34m0[39m][[34m2[39m])[33m.[39m[34mtoBe[39m([35mtrue[39m)[
+33m;[39m
+
+[31m[2m鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[2/2]鈳?[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m3 passed[39m[22m[90m (5)[39m
+[2m   Start at [22m 22:42:51
+[2m   Duration [22m 7.33s[2m (transform 1.15s, setup 0ms, collect 3.59s, tests 2.38s, environment 0ms, prepare 444ms)[22m
+

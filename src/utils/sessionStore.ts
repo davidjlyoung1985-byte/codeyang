@@ -480,7 +480,7 @@ export async function auditLog(entry: {
       const stats = await stat(AUDIT_LOG);
       if (stats.size >= 10 * 1024 * 1024) {
         const rotated = `${AUDIT_LOG}.1`;
-        await rename(AUDIT_LOG, rotated).catch(() => {});
+        await rename(AUDIT_LOG, rotated).catch(() => console.warn('⚠️ [SessionStore] Failed to rotate audit log'));
       }
     } catch {
       // File doesn't exist yet — first write, nothing to rotate
