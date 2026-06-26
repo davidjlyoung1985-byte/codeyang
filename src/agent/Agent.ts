@@ -144,7 +144,7 @@ export class Agent {
    */
   private async runSelfCritique(
     assistantText: string,
-    toolCalls: ToolCall[],
+    toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>,
     toolResults: ToolResult[],
     messages: LLMMessage[],
   ): Promise<void> {
