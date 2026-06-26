@@ -6,6 +6,7 @@ import type { McpServerConfig } from '../mcp/types.js';
 import type { QtContext } from '../qt/index.js';
 import { buildQtPrompt } from '../qt/index.js';
 import { BASE_SYSTEM_PROMPT } from './system-prompt.js';
+import { getPonytailPrompt, getPonytailLevel, type PonytailLevel } from './ponytail-prompt.js';
 import { atomicRename } from '../utils/fileSystem.js';
 
 const CONFIG_DIR = join(homedir(), '.codeyang');
@@ -212,6 +213,11 @@ export const config = {
     return val;
   },
 
+  // Ponytail mode (lazy senior dev)
+  get ponytailLevel(): PonytailLevel {
+    return getPonytailLevel();
+  },
+
   // Reflexion configuration
   reflexion: {
     enabled: (process.env['CODEYANG_REFLEXION'] || 'true') === 'true',
@@ -231,6 +237,13 @@ export const config = {
 
   getSystemPrompt(qtContext?: QtContext): string {
     let prompt = BASE_SYSTEM_PROMPT;
+
+    // Ponytail: lazy senior dev mode (opt-in via PONYTAIL_MODE env var)
+    const ponyLevel = this.ponytailLevel;
+    if (ponyLevel !== 'off') {
+      prompt += '\n\n' + getPonytailPrompt(ponyLevel);
+    }
+
     if (qtContext?.isQtProject) {
       prompt += '\n\n' + buildQtPrompt(qtContext);
     }

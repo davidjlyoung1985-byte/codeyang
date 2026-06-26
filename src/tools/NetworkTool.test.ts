@@ -9,6 +9,7 @@ vi.mock('axios', () => {
   const mockFn = vi.fn();
   mockFn.post = vi.fn();
   mockFn.head = vi.fn();
+  mockFn.defaults = { timeout: 30000 };
   return { default: mockFn };
 });
 

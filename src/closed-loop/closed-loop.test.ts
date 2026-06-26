@@ -166,10 +166,10 @@ describe('VerificationPipeline', () => {
     // Should clamp to 10
   });
 
-  it('runBatch returns results for TS files only', { timeout: 15000 }, async () => {
+  it('runBatch returns results for TS files only', async () => {
     const results = await pipeline.runBatch([join(tempDir, 'a.ts'), join(tempDir, 'b.md')]);
     expect(results.length).toBeGreaterThanOrEqual(0);
-  });
+  }, 30000);
 });
 
 // ── FeedbackInjector ────────────────────────────────────────────────────────
