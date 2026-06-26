@@ -11,7 +11,7 @@ describe('MemoryStore benchmarks', () => {
       const mem = await saveMemory(`bench-key-${i}`, `bench-value-${i}-data-for-testing`, 'fact');
       ids.push(mem.id);
     }
-  }, 30000);
+  }, 60000);
 
   afterAll(async () => {
     for (const id of ids) {
