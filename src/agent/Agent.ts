@@ -12,7 +12,7 @@ import { ReflexionEngine } from '../reflexion/ReflexionEngine.js';
 import { CritiqueEngine } from '../reflexion/CritiqueEngine.js';
 import { Planner } from '../planner/Planner.js';
 import { TreeOfThoughts } from '../tot/TreeOfThoughts.js';
-import { recordToolOutcome } from '../tools/rl-weighter.js';
+import { recordToolOutcome, getAllToolWeights } from '../tools/rl-weighter.js';
 import { runConsolidation } from '../continual-learning/MemoryManager.js';
 import { A2AProtocol, globalAgentRegistry } from '../a2a/A2AProtocol.js';
 import { Tracer } from '../tracing/index.js';
@@ -144,7 +144,7 @@ export class Agent {
    */
   private async runSelfCritique(
     assistantText: string,
-    toolCalls: ToolCall[],
+    toolCalls: Array<{ name: string; input: Record<string, unknown> }>,
     toolResults: ToolResult[],
     messages: LLMMessage[],
   ): Promise<void> {
@@ -279,8 +279,11 @@ export class Agent {
         auditOps = Object.keys(auditStats).length;
         auditReqs = Object.values(auditStats).reduce((sum, s) => sum + s.total, 0);
       }
-    } catch {
-      // best-effort
+    } catch (err) {
+      // Best-effort stats collection - failure is non-critical
+      if (process.env.CODEYANG_DEBUG) {
+        console.warn('[Agent] Failed to collect audit stats:', err);
+      }
     }
     return {
       tracing: {
@@ -311,6 +314,19 @@ export class Agent {
       recentExecs.length >= 2 && recentExecs.every((r) => !r.success)
         ? recentExecs.filter((r) => !r.success).length
         : 0;
+
+    // Get RL tool statistics
+    const toolWeights = getAllToolWeights();
+    const topTools = toolWeights
+      .sort((a: { weight: number }, b: { weight: number }) => b.weight - a.weight)
+      .slice(0, 5)
+      .map((t: { name: string; weight: number; successRate: number; calls: number }) => ({
+        name: t.name,
+        weight: t.weight.toFixed(2),
+        successRate: `${(t.successRate * 100).toFixed(0)}%`,
+        calls: t.calls,
+      }));
+
     return {
       autoVerify: config.autoVerify && !!this.verificationPipeline,
       autoFixOnError: config.autoFixOnError,
@@ -326,6 +342,11 @@ export class Agent {
         activePlans: this.planner.getActivePlans().length,
         totalPlans: this.planner.getAllPlans().length,
       },
+      rlWeights: {
+        enabled: true,
+        topPerformingTools: topTools,
+        totalToolCalls: toolWeights.reduce((sum: number, t: { calls: number }) => sum + t.calls, 0),
+      },
     };
   }
 
@@ -333,8 +354,12 @@ export class Agent {
     let currentVersion = -1;
     try {
       currentVersion = getMemoryVersion();
-    } catch {
+    } catch (err) {
+      // Memory system unavailable - agent can still function without memory
       this.memoryLoadFailure = true;
+      if (process.env.CODEYANG_DEBUG) {
+        console.warn('[Agent] Failed to get memory version:', err);
+      }
       return '';
     }
     // Re-read only when version changes �?avoids defeating LLM prompt caching
@@ -347,9 +372,11 @@ export class Agent {
       this.memorySummary = await getMemorySummary();
       this.lastMemoryVersion = currentVersion;
       this.memoryLoadFailure = false;
-    } catch {
+    } catch (err) {
+      // Memory load failed - continue without memory context
       this.memoryLoadFailure = true;
       this.memorySummary = '';
+      console.warn('[Agent] Failed to load memory summary:', err instanceof Error ? err.message : String(err));
     }
     return this.memorySummary ?? '';
   }
@@ -370,6 +397,25 @@ export class Agent {
       const learnedPatterns = await this.reflexionEngine.getLearnedPatterns(3);
       if (learnedPatterns) {
         prompt += '\n\n## Learned Patterns (from past failures)\n' + learnedPatterns;
+      }
+    }
+
+    // Inject RL tool weights (adaptive tool selection based on success rates)
+    const toolWeights = getAllToolWeights();
+    if (toolWeights.length > 0) {
+      const topTools = toolWeights
+        .sort((a: { weight: number }, b: { weight: number }) => b.weight - a.weight)
+        .slice(0, 10)
+        .filter((t: { calls: number }) => t.calls > 2); // Only show tools with enough data
+
+      if (topTools.length > 0) {
+        prompt += '\n\n## Tool Performance (RL-based recommendations)\n';
+        prompt += 'Based on past performance, prefer these tools when applicable:\n';
+        topTools.forEach((tool: { name: string; successRate: number; calls: number }) => {
+          const successRate = (tool.successRate * 100).toFixed(0);
+          prompt += `- ${tool.name}: ${successRate}% success rate (${tool.calls} uses)\n`;
+        });
+        prompt += '\nLower-performing tools may still be appropriate for specific tasks.\n';
       }
     }
 
@@ -399,6 +445,7 @@ export class Agent {
           this.toolCache.delete(key);
         }
       } catch {
+        // JSON parse failed - use fallback pattern matching
         if (key.includes(filePath)) {
           this.toolCache.delete(key);
         }
@@ -986,9 +1033,9 @@ export class Agent {
       if (summary && summary.length > 20) {
         return [{ role: 'user', content: `[Prior context summarized by LLM]: ${summary}` }, ...recent];
       }
-    } catch {
-      // LLM summarization failed — this is non-critical, fall through to rule-based
-      logger.debug('[llmSummarizeContext] LLM call failed, keeping rule-based summary');
+    } catch (err) {
+      // LLM summarization failed - this is non-critical, fall through to rule-based
+      logger.debug('[llmSummarizeContext] LLM call failed:', err);
     }
 
     return messages;
@@ -1059,8 +1106,11 @@ export class Agent {
                 toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
                 this.cbs.onToolResult?.(tc.name, output, false);
                 return;
-              } catch {
-                // Pending read failed; fall through to retry
+              } catch (err) {
+                // Pending read failed - will retry with fresh execution
+                if (process.env.CODEYANG_DEBUG) {
+                  console.warn(`[Agent] Cached read failed for ${tc.name}, retrying:`, err);
+                }
               }
             }
           }
@@ -1235,8 +1285,13 @@ export class Agent {
 
         messages.push({ role: 'user', content: planNotice });
         this.cbs.onToolResult?.('Planner', `${plan.steps.length} steps generated`, false);
+        // Activate the plan so step tracking begins
+        this.planner.activatePlan(plan.id);
       }
     }
+
+    // Track the current active plan for step-by-step progress
+    let currentPlanId = this.planner.getLatestActivePlanId();
 
     for (let turn = 0; turn < maxTurns; turn++) {
       logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
@@ -1302,8 +1357,12 @@ export class Agent {
                         name: accum.name!,
                         input: JSON.parse(accum.args || '{}'),
                       });
-                    } catch {
+                    } catch (err) {
+                      // JSON parse failed - use empty input as fallback
                       toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
+                      if (process.env.CODEYANG_DEBUG) {
+                        console.warn('[Agent] Failed to parse tool args:', err);
+                      }
                     }
                   }
                 } else if (event.type === 'usage') {
@@ -1517,6 +1576,26 @@ export class Agent {
         }
       }
 
+      // ── Planner: step advancement ─────────────────────────
+      // After each turn's tool execution, advance the active plan step.
+      // This provides both internal tracking and feedback to the agent.
+      if (currentPlanId) {
+        const progress = this.planner.advanceStep(currentPlanId);
+        if (progress) {
+          this.cbs.onToolResult?.('Planner', progress, false);
+          // If plan is complete, clear the tracker
+          if (progress.includes('✅')) {
+            currentPlanId = null;
+          } else {
+            // Inject a gentle progress reminder so the agent knows where it is
+            // Only inject every 2 turns to avoid cluttering the conversation
+            if (turn % 2 === 1) {
+              messages.push({ role: 'user', content: progress });
+            }
+          }
+        }
+      }
+
       // ── Self-Critique: review output quality ──────────────────
       await this.runSelfCritique(assistantText, toolCalls, toolResults, messages);
 
@@ -1534,32 +1613,6 @@ export class Agent {
             }
           })
           .catch(() => {});
-      }
-
-      // ── Self-Critique: review output quality ──────────────────
-      if (assistantText && !this.critiqueEngine.getIterationCount()) {
-        const critiqueResult = await this.critiqueEngine.checkAndImprove(
-          this.client,
-          config.model,
-          config.maxTokens,
-          assistantText,
-          toolCalls,
-          toolResults,
-        );
-        if (!critiqueResult.passed && critiqueResult.critiqueMessage) {
-          messages.push({ role: 'user', content: critiqueResult.critiqueMessage });
-          this.cbs.onToolResult?.(
-            'Self-Critique',
-            `Quality score: ${critiqueResult.critique?.score}/100 — issues found`,
-            false,
-          );
-        } else if (critiqueResult.critique) {
-          this.cbs.onToolResult?.(
-            'Self-Critique',
-            `Quality score: ${critiqueResult.critique.score}/100 — passed`,
-            false,
-          );
-        }
       }
 
       this.history.length = 0;

@@ -1,4 +1,4 @@
-﻿import { readFile, writeFile, mkdir, copyFile, unlink } from 'node:fs/promises';
+﻿import { readFile, writeFile, mkdir, copyFile, unlink, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -6,7 +6,6 @@ import type { McpServerConfig } from '../mcp/types.js';
 import type { QtContext } from '../qt/index.js';
 import { buildQtPrompt } from '../qt/index.js';
 import { BASE_SYSTEM_PROMPT } from './system-prompt.js';
-import { atomicRename } from '../utils/fileSystem.js';
 
 const CONFIG_DIR = join(homedir(), '.codeyang');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
