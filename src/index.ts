@@ -402,6 +402,23 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     if (running) return;
     running = true;
 
+    // ── Gateway: route every user input through the Gateway middleware pipeline ──
+    const gwReq = gateway.createRequest({
+      source: 'cli',
+      operation: 'agent.run',
+      payload: { prompt: line },
+      auth: { apiKey: key },
+      meta: { sessionId: currentSessionId },
+    });
+
+    const gwResp = await gateway.handle(gwReq);
+    if (!gwResp.success) {
+      ui.showError(gwResp.error || 'Request rejected by gateway');
+      running = false;
+      ui.promptUser();
+      return;
+    }
+
     try {
       ui.showUserMessage(line);
       ui.showAgentStart();

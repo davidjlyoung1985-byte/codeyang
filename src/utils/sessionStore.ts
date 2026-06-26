@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, unlink, readdir, stat } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, unlink, readdir, stat, rename } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';

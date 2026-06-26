@@ -14,6 +14,8 @@ export interface CompletionRequest {
   suffix: string;
   context: string;
   cursorLine: number;
+  intent?: 'function' | 'class' | 'statement' | 'comment' | 'unknown';
+  isMultiLine?: boolean;
 }
 
 export class CodeYangClient {
@@ -56,7 +58,8 @@ export class CodeYangClient {
         '/messages',
         {
           model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 500,
+          max_tokens: request.isMultiLine ? 2000 : 500,
+          temperature: 0.2, // Lower temperature for more deterministic completions
           messages: [
             {
               role: 'user',
@@ -142,10 +145,17 @@ Output ONLY the test code, no explanation.`;
   }
 
   private buildCompletionPrompt(request: CompletionRequest): string {
+    const intentHint = request.isMultiLine
+      ? `This appears to be a ${request.intent || 'multi-line'} completion. Provide a complete implementation.`
+      : 'Provide a concise single-line or short completion.';
+
+    const maxLines = request.isMultiLine ? 20 : 3;
+
     return `You are an AI code completion assistant. Complete the code at the cursor position.
 
 File: ${request.fileName}
 Language: ${request.language}
+Intent: ${intentHint}
 
 Context (surrounding code):
 \`\`\`
@@ -158,9 +168,11 @@ ${request.prefix}|${request.suffix}
 Instructions:
 1. Provide ONLY the completion text that should appear after the cursor
 2. Match the code style and indentation
-3. Keep it concise (max 3-5 lines for inline completion)
-4. Do NOT repeat the prefix
-5. Do NOT include explanations
+3. For multi-line completions: provide complete implementation (max ${maxLines} lines)
+4. For single-line completions: keep it concise (1-3 lines)
+5. Do NOT repeat the prefix
+6. Do NOT include explanations or markdown formatting
+7. Ensure proper syntax and type safety
 
 Completion:`;
   }
@@ -172,11 +184,10 @@ Completion:`;
     // Remove ```language\n and trailing ```
     cleaned = cleaned.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
 
-    // Limit to reasonable length for inline completion
-    const maxLength = vscode.workspace.getConfiguration('codeyang').get<number>('maxCompletionLength') || 500;
-    if (cleaned.length > maxLength) {
-      cleaned = cleaned.substring(0, maxLength);
-    }
+    // Remove leading/trailing whitespace from each line but preserve indentation
+    const lines = cleaned.split('\n');
+    const trimmedLines = lines.map((line) => line.trimEnd());
+    cleaned = trimmedLines.join('\n');
 
     return cleaned;
   }

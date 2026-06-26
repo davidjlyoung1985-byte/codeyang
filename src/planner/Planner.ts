@@ -298,4 +298,102 @@ export class Planner {
   getValidator(): PlanValidator {
     return this.validator;
   }
+
+  /**
+   * Activate a plan (mark first step as in_progress, plan as in_progress).
+   * Called after the plan is injected into the conversation.
+   */
+  activatePlan(planId: string): void {
+    const plan = this.store.get(planId);
+    if (!plan) return;
+    plan.status = 'in_progress';
+    plan.updatedAt = Date.now();
+    if (plan.steps.length > 0) {
+      plan.steps[0].status = 'in_progress';
+    }
+    this.store.save(plan);
+  }
+
+  /**
+   * Advance to the next step in the active plan.
+   * Marks current step as completed, advances pointer, marks next step as in_progress.
+   * Returns the plan progress status string, or null if no active plan.
+   */
+  advanceStep(planId: string): string | null {
+    const plan = this.store.get(planId);
+    if (!plan || plan.status !== 'in_progress') return null;
+
+    const steps = plan.steps;
+    const current = plan.currentStep;
+
+    // Mark current step as completed
+    if (current < steps.length) {
+      steps[current].status = 'completed';
+    }
+
+    // Advance to next step
+    plan.currentStep++;
+    plan.updatedAt = Date.now();
+
+    if (plan.currentStep >= steps.length) {
+      // All steps done
+      plan.status = 'completed';
+      this.store.save(plan);
+      return this.formatProgress(plan, true);
+    }
+
+    // Mark next step as in_progress
+    steps[plan.currentStep].status = 'in_progress';
+    this.store.save(plan);
+    return this.formatProgress(plan, false);
+  }
+
+  /**
+   * Get a compact progress notice suitable for injection into the conversation.
+   */
+  getProgressNotice(planId: string): string | null {
+    const plan = this.store.get(planId);
+    if (!plan || plan.status !== 'in_progress') return null;
+    return this.formatProgress(plan, false);
+  }
+
+  /**
+   * Format plan progress as a compact notice.
+   */
+  private formatProgress(plan: Plan, done: boolean): string {
+    const total = plan.steps.length;
+    const completed = plan.steps.filter((s) => s.status === 'completed').length;
+    const current = plan.steps[plan.currentStep];
+
+    if (done) {
+      return `[Plan] ✅ All ${total} steps completed: "${plan.task}"`;
+    }
+
+    const statusIcons: Record<string, string> = {
+      pending: '⏳',
+      in_progress: '🔄',
+      completed: '✓',
+      failed: '✗',
+      skipped: '⊘',
+    };
+
+    const progressBar = plan.steps.map((s) => statusIcons[s.status] || '?').join('');
+
+    const lines: string[] = [
+      `[Plan Progress] ${completed}/${total} steps complete  ${progressBar}`,
+      `Current: Step ${plan.currentStep + 1}/${total} — ${current?.description || '?'}`,
+    ];
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Get the ID of the most recent active plan.
+   */
+  getLatestActivePlanId(): string | null {
+    const active = this.getActivePlans();
+    if (active.length === 0) return null;
+    // Return the most recently updated active plan
+    return active.sort((a, b) => b.updatedAt - a.updatedAt)[0].id;
+  }
 }

@@ -2,7 +2,7 @@
  * Continual Learning — intelligent memory management.
  *
  * Extends the basic memoryStore with:
- * 1. **Auto-classification**: Automatically categorizes memories by content analysis
+ * 1. **Auto-classification**: Automatically categorizes memories using semantic embeddings
  * 2. **Auto-compression**: Merges related memories into summaries
  * 3. **Auto-forgetting**: Removes stale/low-value memories based on access patterns
  * 4. **Memory consolidation**: Periodically consolidates fragmented memories
