@@ -39,7 +39,7 @@ async function checkFileForQt(name: string, fullPath: string, cwd: string, ctx: 
   if (name.endsWith('.pro')) {
     ctx.isQtProject = true;
     ctx.buildSystem = 'qmake';
-    ctx.proFile = fullPath;
+    ctx.proFile = name;
     try {
       ctx.qtVersion = await detectQtVersionFromPro(fullPath);
     } catch {
