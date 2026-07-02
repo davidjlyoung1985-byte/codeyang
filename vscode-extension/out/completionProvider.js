@@ -113,8 +113,7 @@ class CodeYangCompletionProvider {
             this.manageCacheSize();
             // Update stats
             this.stats.avgLength =
-                (this.stats.avgLength * (this.stats.requested - 1) + processedCompletion.length) /
-                    this.stats.requested;
+                (this.stats.avgLength * (this.stats.requested - 1) + processedCompletion.length) / this.stats.requested;
             return [this.createCompletionItem(processedCompletion, position, completionContext)];
         }
         catch (error) {

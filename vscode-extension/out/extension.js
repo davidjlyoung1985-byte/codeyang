@@ -43,21 +43,58 @@ exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const completionProvider_1 = require("./completionProvider");
 const client_1 = require("./client");
+const bridgeClient_1 = require("./bridgeClient");
+const bridgeCompletionProvider_1 = require("./bridgeCompletionProvider");
 let completionProvider;
 let client;
+let bridgeClient;
+let usingBridge = false;
 function activate(context) {
     console.log('CodeYang extension activated');
     // Initialize CodeYang client
     const config = vscode.workspace.getConfiguration('codeyang');
     const apiKey = config.get('apiKey') || process.env.ANTHROPIC_API_KEY || '';
-    if (!apiKey) {
-        vscode.window.showWarningMessage('CodeYang: No API key configured. Please set codeyang.apiKey in settings.');
+    const useBridgeMode = config.get('useBridge', false);
+    const bridgeURL = config.get('bridgeURL', 'http://localhost:9876');
+    // Try Bridge mode first if enabled
+    if (useBridgeMode) {
+        bridgeClient = new bridgeClient_1.BridgeClient({ url: bridgeURL, apiKey });
+        bridgeClient
+            .checkConnection()
+            .then((connected) => {
+            if (connected) {
+                usingBridge = true;
+                vscode.window.showInformationMessage('✅ CodeYang: Connected to Agent (Full features available)');
+                // Connect WebSocket for real-time updates
+                return bridgeClient.connectWebSocket();
+            }
+            else {
+                throw new Error('Bridge not available');
+            }
+        })
+            .catch((error) => {
+            console.warn('[CodeYang] Bridge connection failed:', error);
+            vscode.window.showWarningMessage('⚠️ CodeYang: Bridge not available. Start bridge server with: npm run bridge-server');
+            bridgeClient = undefined;
+            usingBridge = false;
+        });
+    }
+    // Fallback to direct API if Bridge not available
+    if (!apiKey && !useBridgeMode) {
+        vscode.window.showWarningMessage('CodeYang: No API key configured. Please set codeyang.apiKey in settings or enable Bridge mode.');
     }
     client = new client_1.CodeYangClient(apiKey);
     // Register inline completion provider
     if (config.get('enableInlineCompletion')) {
-        completionProvider = vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, new completionProvider_1.CodeYangCompletionProvider(client));
-        context.subscriptions.push(completionProvider);
+        // Wait a bit for Bridge connection to establish
+        setTimeout(() => {
+            const provider = usingBridge && bridgeClient
+                ? new bridgeCompletionProvider_1.BridgeCompletionProvider(bridgeClient)
+                : new completionProvider_1.CodeYangCompletionProvider(client);
+            completionProvider = vscode.languages.registerInlineCompletionItemProvider({ pattern: '**' }, provider);
+            context.subscriptions.push(completionProvider);
+            console.log(`[CodeYang] Using ${usingBridge ? 'Bridge' : 'Direct API'} mode for completions`);
+        }, 1000);
     }
     // Register commands
     context.subscriptions.push(vscode.commands.registerCommand('codeyang.inlineCompletion', async () => {
@@ -69,6 +106,18 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('codeyang.generateTests', async () => {
         await generateTests();
     }));
+    // Bridge-specific commands
+    if (useBridgeMode) {
+        context.subscriptions.push(vscode.commands.registerCommand('codeyang.reconnectBridge', async () => {
+            await reconnectBridge();
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('codeyang.showStats', async () => {
+            await showAgentStats();
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('codeyang.executeCustomTask', async () => {
+            await executeCustomTask();
+        }));
+    }
     // Watch for configuration changes
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('codeyang.apiKey')) {
@@ -148,5 +197,112 @@ function deactivate() {
     if (completionProvider) {
         completionProvider.dispose();
     }
+    if (bridgeClient) {
+        bridgeClient.disconnect();
+    }
+}
+/**
+ * Reconnect to Bridge
+ */
+async function reconnectBridge() {
+    if (!bridgeClient) {
+        vscode.window.showErrorMessage('Bridge mode not enabled');
+        return;
+    }
+    try {
+        const connected = await bridgeClient.checkConnection();
+        if (connected) {
+            await bridgeClient.connectWebSocket();
+            vscode.window.showInformationMessage('✅ CodeYang: Reconnected to Bridge');
+        }
+        else {
+            vscode.window.showErrorMessage('❌ CodeYang: Bridge server not responding');
+        }
+    }
+    catch (error) {
+        vscode.window.showErrorMessage(`Failed to reconnect: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+/**
+ * Show Agent statistics
+ */
+async function showAgentStats() {
+    if (!bridgeClient) {
+        vscode.window.showErrorMessage('Bridge mode not enabled');
+        return;
+    }
+    try {
+        const stats = await bridgeClient.getStats();
+        const message = `
+📊 CodeYang Agent Statistics
+
+🛠️ Tools Used:
+${Object.entries(stats.toolsUsed)
+            .map(([tool, count]) => `  ${tool}: ${count} times`)
+            .join('\n')}
+
+⚖️ Top RL Weights:
+${stats.rlWeights
+            .slice(0, 5)
+            .map((w) => `  ${w.name}: ${w.weight.toFixed(2)}`)
+            .join('\n')}
+
+💾 Memory: ${stats.memorySize} entries
+    `;
+        vscode.window.showInformationMessage(message, { modal: true });
+    }
+    catch (error) {
+        vscode.window.showErrorMessage(`Failed to get stats: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+/**
+ * Execute custom task
+ */
+async function executeCustomTask() {
+    if (!bridgeClient) {
+        vscode.window.showErrorMessage('Bridge mode not enabled');
+        return;
+    }
+    const taskDescription = await vscode.window.showInputBox({
+        prompt: 'What would you like CodeYang Agent to do?',
+        placeHolder: 'e.g., "Find all TODOs in the project" or "Optimize this function"',
+    });
+    if (!taskDescription) {
+        return;
+    }
+    const editor = vscode.window.activeTextEditor;
+    const context = {};
+    if (editor) {
+        context.filePath = editor.document.uri.fsPath;
+        context.selection = editor.document.getText(editor.selection);
+    }
+    vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: 'CodeYang Agent working...',
+        cancellable: true,
+    }, async (progress, token) => {
+        try {
+            const result = await bridgeClient.executeTask({
+                type: 'custom',
+                description: taskDescription,
+                context,
+            });
+            if (result.success) {
+                vscode.window.showInformationMessage('✅ Task completed');
+                // Show result in new document
+                const doc = await vscode.workspace.openTextDocument({
+                    content: result.result,
+                    language: 'markdown',
+                });
+                await vscode.window.showTextDocument(doc);
+            }
+            else {
+                vscode.window.showErrorMessage('❌ Task failed');
+            }
+        }
+        catch (error) {
+            vscode.window.showErrorMessage(`Task execution failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    });
 }
 //# sourceMappingURL=extension.js.map
