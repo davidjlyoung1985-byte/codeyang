@@ -121,7 +121,7 @@ export class EmbeddingService {
     }
 
     const model = options.model || this.model;
-    const dimensions = options.dimensions || 1536; // Default for text-embedding-3-small
+    const dimensions = options.dimensions || 1536;
 
     try {
       const response = await axios.post(
@@ -227,29 +227,24 @@ export class EmbeddingService {
    * Generate pseudo-embedding (fallback when no embedding service available)
    */
   private generatePseudoEmbedding(text: string): EmbeddingVector {
-    // Simple hash-based embedding (384 dimensions)
     const dimensions = 384;
     const vector = new Array(dimensions).fill(0);
 
-    // Use text features to generate pseudo-embedding
     const words = text.toLowerCase().split(/\s+/);
     const chars = text.split('');
 
-    // Feature 1: Word frequency distribution
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
       const hash = this.simpleHash(word) % dimensions;
       vector[hash] += 1.0 / words.length;
     }
 
-    // Feature 2: Character n-grams
     for (let i = 0; i < chars.length - 2; i++) {
       const trigram = chars.slice(i, i + 3).join('');
       const hash = this.simpleHash(trigram) % dimensions;
       vector[hash] += 0.5 / (chars.length - 2);
     }
 
-    // Normalize vector
     const norm = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
     if (norm > 0) {
       for (let i = 0; i < dimensions; i++) {
@@ -272,7 +267,7 @@ export class EmbeddingService {
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
       hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
     return Math.abs(hash);
   }
@@ -291,10 +286,16 @@ export class EmbeddingService {
       metadata: candidate.metadata,
     }));
 
-    // Sort by similarity descending
     similarities.sort((a, b) => b.similarity - a.similarity);
 
     return similarities.slice(0, topK);
+  }
+
+  /**
+   * Get the current provider
+   */
+  getProvider(): 'openai' | 'voyage' | 'local' {
+    return this.provider;
   }
 
   /**
@@ -316,11 +317,22 @@ export class EmbeddingService {
 let embeddingService: EmbeddingService | null = null;
 
 /**
- * Get or create embedding service instance
+ * Get or create embedding service instance.
+ * If options.provider is specified and differs from the existing singleton,
+ * a new instance is created (allows test isolation).
  */
 export function getEmbeddingService(options?: EmbeddingOptions): EmbeddingService {
-  if (!embeddingService) {
+  if (options?.provider && embeddingService?.getProvider() !== options.provider) {
+    embeddingService = new EmbeddingService(options);
+  } else if (!embeddingService) {
     embeddingService = new EmbeddingService(options);
   }
   return embeddingService;
+}
+
+/**
+ * Reset the singleton instance (useful for testing)
+ */
+export function resetEmbeddingService(): void {
+  embeddingService = null;
 }

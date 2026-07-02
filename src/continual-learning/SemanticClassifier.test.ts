@@ -4,11 +4,15 @@
  * Tests the new embedding-based memory classification system
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
-import { SemanticClassifier, getSemanticClassifier, classifyMemorySemantic } from '../SemanticClassifier.js';
-import { getEmbeddingService } from '../EmbeddingService.js';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { SemanticClassifier, getSemanticClassifier, classifyMemorySemantic } from './SemanticClassifier.js';
+import { getEmbeddingService, resetEmbeddingService } from './EmbeddingService.js';
 
 describe('EmbeddingService', () => {
+  beforeEach(() => {
+    resetEmbeddingService();
+  });
+
   it('should create singleton instance', () => {
     const service1 = getEmbeddingService();
     const service2 = getEmbeddingService();
@@ -26,7 +30,7 @@ describe('EmbeddingService', () => {
   });
 
   it('should cache embeddings', async () => {
-    const service = getEmbeddingService();
+    const service = getEmbeddingService({ provider: 'local' });
     service.clearCache();
 
     await service.embed('test content');
@@ -40,13 +44,13 @@ describe('EmbeddingService', () => {
   });
 
   it('should calculate cosine similarity correctly', async () => {
-    const service = getEmbeddingService();
+    const service = getEmbeddingService({ provider: 'local' });
 
     const result1 = await service.embed('Always use TypeScript');
     const result2 = await service.embed('Always use TypeScript'); // Identical
     const result3 = await service.embed('I prefer dark mode'); // Different
 
-    const { cosineSimilarity } = await import('../EmbeddingService.js');
+    const { cosineSimilarity } = await import('./EmbeddingService.js');
 
     // Identical vectors should have similarity = 1
     const sim1 = cosineSimilarity(result1.vector, result2.vector);
@@ -62,6 +66,9 @@ describe('SemanticClassifier', () => {
   let classifier: SemanticClassifier;
 
   beforeAll(async () => {
+    // Use local provider so tests work without OpenAI API key
+    resetEmbeddingService();
+    getEmbeddingService({ provider: 'local' });
     classifier = getSemanticClassifier();
     await classifier.initialize();
   });
@@ -145,6 +152,11 @@ describe('SemanticClassifier', () => {
 });
 
 describe('classifyMemorySemantic helper', () => {
+  beforeEach(() => {
+    resetEmbeddingService();
+    getEmbeddingService({ provider: 'local' });
+  });
+
   it('should classify memories using the global classifier', async () => {
     const result = await classifyMemorySemantic('git-workflow', 'Never commit directly to main branch');
 
@@ -158,6 +170,9 @@ describe('Real-world classification scenarios', () => {
   let classifier: SemanticClassifier;
 
   beforeAll(async () => {
+    // Use local provider so tests work without OpenAI API key
+    resetEmbeddingService();
+    getEmbeddingService({ provider: 'local' });
     classifier = getSemanticClassifier();
     await classifier.initialize();
   });

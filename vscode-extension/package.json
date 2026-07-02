@@ -1,13 +1,13 @@
 {
   "name": "codeyang-vscode",
   "displayName": "CodeYang",
-  "description": "AI coding agent with inline completion",
-  "version": "0.1.0",
+  "description": "AI coding agent with inline completion and full Agent support via Bridge",
+  "version": "0.2.0",
   "publisher": "codeyang",
   "engines": {
     "vscode": "^1.80.0"
   },
-  "categories": ["Programming Languages", "Machine Learning"],
+  "categories": ["Programming Languages", "Machine Learning", "Snippets"],
   "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
   "contributes": {
@@ -23,6 +23,18 @@
       {
         "command": "codeyang.generateTests",
         "title": "CodeYang: Generate Tests"
+      },
+      {
+        "command": "codeyang.reconnectBridge",
+        "title": "CodeYang: Reconnect to Bridge"
+      },
+      {
+        "command": "codeyang.showStats",
+        "title": "CodeYang: Show Agent Statistics"
+      },
+      {
+        "command": "codeyang.executeCustomTask",
+        "title": "CodeYang: Execute Custom Task"
       }
     ],
     "keybindings": [
@@ -30,30 +42,74 @@
         "command": "codeyang.inlineCompletion",
         "key": "ctrl+shift+space",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "codeyang.refactor",
+        "key": "ctrl+shift+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "codeyang.generateTests",
+        "key": "ctrl+shift+t",
+        "when": "editorTextFocus"
       }
     ],
     "configuration": {
       "title": "CodeYang",
       "properties": {
+        "codeyang.useBridge": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use Bridge mode to connect to CodeYang Agent (recommended for full features)",
+          "order": 1
+        },
+        "codeyang.bridgeURL": {
+          "type": "string",
+          "default": "http://localhost:9876",
+          "description": "Bridge server URL (start with: npm run bridge-server)",
+          "order": 2
+        },
         "codeyang.apiKey": {
           "type": "string",
           "default": "",
-          "description": "Claude API Key"
+          "description": "Claude API Key (not needed if using Bridge mode)",
+          "order": 3
         },
         "codeyang.enableInlineCompletion": {
           "type": "boolean",
           "default": true,
-          "description": "Enable inline completion"
+          "description": "Enable inline completion",
+          "order": 4
         },
         "codeyang.completionDelay": {
           "type": "number",
           "default": 300,
-          "description": "Delay before triggering completion (ms)"
+          "description": "Delay before triggering completion (ms)",
+          "order": 5
         },
         "codeyang.maxCompletionLength": {
           "type": "number",
           "default": 500,
-          "description": "Maximum completion length in characters"
+          "description": "Maximum completion length in characters",
+          "order": 6
+        },
+        "codeyang.useTools": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow Agent to use tools in Bridge mode",
+          "order": 7
+        },
+        "codeyang.useRL": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use RL weights for optimization in Bridge mode",
+          "order": 8
+        },
+        "codeyang.useMemory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable project memory in Bridge mode",
+          "order": 9
         }
       }
     }
