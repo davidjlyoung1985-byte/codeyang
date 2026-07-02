@@ -104,6 +104,11 @@ export class SemanticClassifier {
       // Get embedding for the memory content
       const contentEmbedding = await this.embeddingService.embed(text);
 
+      // If using pseudo-embedding (no real embedding service), fall back to regex
+      if (contentEmbedding.model === 'pseudo-embedding') {
+        return this.fallbackClassify(key, value);
+      }
+
       // Calculate similarity scores for each type
       const scores: Record<string, number> = {};
 
@@ -162,13 +167,17 @@ export class SemanticClassifier {
     };
 
     // Instruction patterns
-    if (/always|never|must|should|prefer|use\s+\w+\s+for/i.test(text)) scores.instruction += 0.3;
-    if (/rule|guideline|convention|policy/i.test(text)) scores.instruction += 0.2;
+    if (/always|never|must|should/i.test(text)) scores.instruction += 0.3;
+    if (/use\s+.+?\s+for/i.test(text)) scores.instruction += 0.3;
+    if (/rule|guideline|convention|policy|standard/i.test(text)) scores.instruction += 0.2;
+    if (/indentation|spacing|format|naming|convention/i.test(text)) scores.instruction += 0.3;
     if (/how\s+to|way\s+to|approach/i.test(text)) scores.instruction += 0.2;
 
     // Preference patterns
     if (/i\s+like|i\s+prefer|i\s+want|favorite|preference/i.test(text)) scores.preference += 0.4;
-    if (/color|theme|font|style|layout/i.test(text)) scores.preference += 0.2;
+    if (/color|theme|font|layout/i.test(text)) scores.preference += 0.2;
+    // 'style' alone is too ambiguous — only count it in preference phrases
+    if (/prefer\s+\w+\s+style|like\s+\w+\s+style|my\s+favorite\s+style/i.test(text)) scores.preference += 0.2;
 
     // Fact patterns
     if (/version|database|api|server|port|config/i.test(text)) scores.fact += 0.3;
