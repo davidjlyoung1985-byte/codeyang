@@ -50,7 +50,7 @@ Terminal-based AI coding agent with 64+ tools, MCP server support, session persi
 | `DEEPSEEK_API_KEY` | — | Fallback API key env var |
 | `CODEYANG_MODEL` | `deepseek-chat` | Model name |
 | `CODEYANG_BASE_URL` | `https://api.deepseek.com/v1` | Custom API base URL |
-| `CODEYANG_MAX_TOKENS` | `8192` | Max tokens per response |
+| `CODEYANG_MAX_TOKENS` | `32000` | Max tokens per response |
 
 ## Tools
 | Category | Tools |
