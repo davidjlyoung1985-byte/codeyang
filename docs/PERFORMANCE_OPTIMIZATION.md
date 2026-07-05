@@ -111,7 +111,7 @@ npm test -- performance.bench.ts # 运行性能测试套件
 # .env 性能调优
 CODEYANG_CACHE_TTL=30000        # 工具缓存时长 (ms) - 默认 30s
 CODEYANG_MAX_CONTEXT=200        # 最大上下文消息数 - 默认 200
-CODEYANG_MAX_TOKENS=8192        # LLM 最大 tokens - 默认 8192
+CODEYANG_MAX_TOKENS=32000        # LLM 最大 tokens - 默认 32000
 ```
 
 ## 未来优化方向

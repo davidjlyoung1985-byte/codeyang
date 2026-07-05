@@ -88,7 +88,7 @@ On first run, you'll be prompted to enter your API key. It can be saved to `~/.c
 | `DEEPSEEK_API_KEY` | — | Alternative API key env var |
 | `CODEYANG_MODEL` | `deepseek-chat` | Model name |
 | `CODEYANG_BASE_URL` | `https://api.deepseek.com/v1` | Custom API base URL |
-| `CODEYANG_MAX_TOKENS` | `8192` | Max tokens per response |
+| `CODEYANG_MAX_TOKENS` | `32000` | Max tokens per response |
 | `CODEX_DEBUG` | — | Set to enable debug output |
 
 API key priority: `--api-key` argument > `CODEYANG_API_KEY` > saved config > interactive prompt.

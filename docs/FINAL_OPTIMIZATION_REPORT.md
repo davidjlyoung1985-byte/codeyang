@@ -232,7 +232,7 @@ if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
 # .env
 CODEYANG_CACHE_TTL=30000      # 工具缓存时长 (推荐 30s)
 CODEYANG_MAX_CONTEXT=200      # 最大上下文消息数
-CODEYANG_MAX_TOKENS=8192      # LLM 最大 tokens
+CODEYANG_MAX_TOKENS=32000      # LLM 最大 tokens
 ```
 
 ### 监控命令

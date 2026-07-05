@@ -473,7 +473,7 @@ function anthropicStreamRequest(apiKey, baseURL, model, systemPrompt, messages, 
     // Anthropic Messages API format: system is a top-level param, not a message
     const body = JSON.stringify({
       model,
-      max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
+      max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '32000'),
       temperature: 0.5,
       system: systemPrompt,
       messages,
@@ -572,7 +572,7 @@ function openaiStreamRequest(apiKey, baseURL, model, systemPrompt, messages, too
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model,
-      max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '8192'),
+      max_tokens: Number(process.env['CODEYANG_MAX_TOKENS'] || '32000'),
       temperature: 0.5,
       messages: [{ role: 'system', content: systemPrompt }, ...messages],
       tools,
