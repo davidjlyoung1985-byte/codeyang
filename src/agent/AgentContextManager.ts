@@ -274,7 +274,7 @@ export class AgentContextManager {
     messages: LLMMessage[],
     client: LLMClient,
     model: string,
-    maxTokens: number,
+    _maxTokens: number,
   ): Promise<LLMMessage[]> {
     const EXTREME_LIMIT = CONTEXT_SOFT_LIMIT * 2; // 400
     if (messages.length <= EXTREME_LIMIT) return messages;
