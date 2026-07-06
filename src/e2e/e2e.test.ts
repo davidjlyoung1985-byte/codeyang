@@ -101,7 +101,11 @@ describe('E2E: Multi-turn File Workflow', () => {
           return makeStream(
             toolCallStart(0, 'tc_w1', 'Write'),
             toolCallDelta(0, JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), content: 'Hello World' })),
-            toolCallEnd(0, 'tc_w1', JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), content: 'Hello World' })),
+            toolCallEnd(
+              0,
+              'tc_w1',
+              JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), content: 'Hello World' }),
+            ),
           );
         case 2:
           return makeStream(
@@ -112,8 +116,15 @@ describe('E2E: Multi-turn File Workflow', () => {
         case 3:
           return makeStream(
             toolCallStart(0, 'tc_e1', 'Edit'),
-            toolCallDelta(0, JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), oldString: 'World', newString: 'CodeYang' })),
-            toolCallEnd(0, 'tc_e1', JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), oldString: 'World', newString: 'CodeYang' })),
+            toolCallDelta(
+              0,
+              JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), oldString: 'World', newString: 'CodeYang' }),
+            ),
+            toolCallEnd(
+              0,
+              'tc_e1',
+              JSON.stringify({ filePath: path.join(testDir, 'hello.txt'), oldString: 'World', newString: 'CodeYang' }),
+            ),
             textDelta('All done.'),
             usageEvent(100, 50),
           );
@@ -205,7 +216,11 @@ describe('E2E: Git Workflow', () => {
           return makeStream(
             toolCallStart(0, 'tc_w1', 'Write'),
             toolCallDelta(0, JSON.stringify({ filePath: path.join(gitDir, 'feature.txt'), content: 'Test Feature' })),
-            toolCallEnd(0, 'tc_w1', JSON.stringify({ filePath: path.join(gitDir, 'feature.txt'), content: 'Test Feature' })),
+            toolCallEnd(
+              0,
+              'tc_w1',
+              JSON.stringify({ filePath: path.join(gitDir, 'feature.txt'), content: 'Test Feature' }),
+            ),
           );
         case 3:
           return makeStream(
@@ -286,7 +301,11 @@ describe('E2E: Error Recovery', () => {
       return makeStream(
         toolCallStart(0, 'tc_c1', 'Write'),
         toolCallDelta(0, JSON.stringify({ filePath: path.join(testDir, 'missing.txt'), content: 'Now it exists' })),
-        toolCallEnd(0, 'tc_c1', JSON.stringify({ filePath: path.join(testDir, 'missing.txt'), content: 'Now it exists' })),
+        toolCallEnd(
+          0,
+          'tc_c1',
+          JSON.stringify({ filePath: path.join(testDir, 'missing.txt'), content: 'Now it exists' }),
+        ),
         textDelta('Recovered.'),
         usageEvent(20, 25),
       );

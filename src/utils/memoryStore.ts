@@ -202,7 +202,9 @@ export async function saveMemory(
     await rename(tmpFile, filePath);
   } catch (err) {
     // Clean up temp file on failure
-    await unlink(tmpFile).catch((err) => console.warn('⚠️ [MemoryStore] Failed to clean up temp file:', err instanceof Error ? err.message : err));
+    await unlink(tmpFile).catch((err) =>
+      console.warn('⚠️ [MemoryStore] Failed to clean up temp file:', err instanceof Error ? err.message : err),
+    );
     throw err;
   }
 
@@ -274,7 +276,9 @@ export async function getMemoryCount(): Promise<number> {
 export async function clearAllMemories(): Promise<number> {
   const all = await getCachedMemories();
   for (const m of all) {
-    await unlink(join(MEMORY_DIR, `${m.id}.json`)).catch((err) => console.warn('⚠️ [MemoryStore] Failed to delete memory file:', err instanceof Error ? err.message : err));
+    await unlink(join(MEMORY_DIR, `${m.id}.json`)).catch((err) =>
+      console.warn('⚠️ [MemoryStore] Failed to delete memory file:', err instanceof Error ? err.message : err),
+    );
   }
   invalidateCache();
   return all.length;

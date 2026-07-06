@@ -131,8 +131,11 @@ export async function executeJsonQuery(input: string, query: string, isFile = tr
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function queryObject(obj: any, path: string): unknown {
+type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+type JsonObject = { [key: string]: JsonValue };
+type JsonArray = JsonValue[];
+
+function queryObject(obj: JsonValue, path: string): unknown {
   const parts = path.split('.').flatMap((part) => {
     // Handle array notation like "items[0]"
     const match = part.match(/^([^[]+)\[(\d+)\]$/);
@@ -142,12 +145,21 @@ function queryObject(obj: any, path: string): unknown {
     return part;
   });
 
-  let current = obj;
+  let current: JsonValue = obj;
   for (const part of parts) {
     if (current === null || current === undefined) {
       return undefined;
     }
-    current = current[part];
+    // Type guard for object/array access
+    if (typeof current === 'object' && current !== null) {
+      if (Array.isArray(current)) {
+        current = current[part as number];
+      } else {
+        current = current[part as string];
+      }
+    } else {
+      return undefined;
+    }
   }
   return current;
 }

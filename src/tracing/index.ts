@@ -124,8 +124,7 @@ export class Tracer {
 
   /** 重置（测试用） */
   static resetInstance(): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Tracer.instance = undefined as any;
+    Tracer.instance = undefined!;
   }
 
   // ========== 配置 ==========

@@ -451,11 +451,15 @@ export class Sandbox {
         doCleanup();
         // Post-exec 钩子（fire-and-forget，不能阻塞 resolveResult）
         for (const hook of this.postExecHooks) {
-          hook(this.id, this.workDir).catch((err) => console.warn('⚠️ [Sandbox] Post-exec hook failed:', err instanceof Error ? err.message : err));
+          hook(this.id, this.workDir).catch((err) =>
+            console.warn('⚠️ [Sandbox] Post-exec hook failed:', err instanceof Error ? err.message : err),
+          );
         }
         // 清理临时目录（fire-and-forget）
         if (this.config.cleanupTempDir && !opts?.cwd) {
-          this.cleanup().catch((err) => console.warn('⚠️ [Sandbox] Cleanup failed:', err instanceof Error ? err.message : err));
+          this.cleanup().catch((err) =>
+            console.warn('⚠️ [Sandbox] Cleanup failed:', err instanceof Error ? err.message : err),
+          );
         }
       };
     });
@@ -609,7 +613,9 @@ export class SandboxPool {
   /** 清理所有沙箱 */
   async drain(): Promise<void> {
     for (const sb of this.pool) {
-      await sb.cleanup().catch((err) => console.warn('⚠️ [Sandbox] Pool cleanup failed:', err instanceof Error ? err.message : err));
+      await sb
+        .cleanup()
+        .catch((err) => console.warn('⚠️ [Sandbox] Pool cleanup failed:', err instanceof Error ? err.message : err));
     }
     this.pool = [];
     this.active.clear();
