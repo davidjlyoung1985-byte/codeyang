@@ -15,7 +15,7 @@
  */
 import type { Message, ToolCall, ToolResult } from '../types.js';
 import { config } from './config.js';
-import { toolSchemas, getTool, setToolContext } from '../tools/registry.js';
+import { toolSchemas, setToolContext } from '../tools/registry.js';
 import type { QtContext } from '../qt/index.js';
 import { createLLMClient, type LLMClient, type LLMMessage } from './LLMClient.js';
 import { logger } from '../utils/logger.js';
@@ -34,7 +34,7 @@ import { Gateway } from '../gateway/index.js';
 import { getAllToolWeights } from '../tools/rl-weighter.js';
 import { AgentContextManager } from './AgentContextManager.js';
 import { AgentToolExecutor } from './AgentToolExecutor.js';
-import { jsonClone, withRetry, sleep, checkExactRepeat, checkFuzzyRepeat } from './AgentUtils.js';
+import { jsonClone, withRetry, checkExactRepeat, checkFuzzyRepeat } from './AgentUtils.js';
 
 // ── Constants ──────────────────────────────────────────────
 
