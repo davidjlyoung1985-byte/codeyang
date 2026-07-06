@@ -3,9 +3,8 @@
  * tool batch execution, and RL outcome recording for the Agent.
  */
 import type { ToolResult } from '../types.js';
-import type { LLMMessage } from './LLMClient.js';
 import type { AgentCallbacks } from './Agent.js';
-import { getTool, setToolContext } from '../tools/registry.js';
+import { getTool } from '../tools/registry.js';
 import { recordToolOutcome } from '../tools/rl-weighter.js';
 import { cacheKey } from './AgentUtils.js';
 import { Tracer } from '../tracing/index.js';
