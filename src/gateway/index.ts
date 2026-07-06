@@ -266,8 +266,7 @@ export class Gateway {
 
   /** 重置（主要用于测试） */
   static resetInstance(): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (Gateway as any).instance = undefined;
+    Gateway.instance = undefined!;
   }
 
   // ========== 配置 ==========
