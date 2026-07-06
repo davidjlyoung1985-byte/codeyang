@@ -2,7 +2,8 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { existsSync, statSync } from 'node:fs';
 import { parse as babelParse, type ParserPlugin } from '@babel/parser';
-import traverse from '@babel/traverse';
+import traverse, { type NodePath } from '@babel/traverse';
+import type * as t from '@babel/types';
 import { parse as acornParse } from 'acorn';
 import * as acornWalk from 'acorn-walk';
 import { ESLint } from 'eslint';
@@ -153,62 +154,58 @@ export async function executeAnalyzeCode(
       variables: [] as Array<{ name: string; kind: string; line: number }>,
     };
 
-    // Babel visitor 类型较复杂，使用带类型守卫的 any 访问
+    // Babel visitor with proper TypeScript types
     traverse(ast, {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ImportDeclaration(path: any) {
-        const sourceVal = path.node?.source?.value;
+      ImportDeclaration(path: NodePath<t.ImportDeclaration>) {
+        const sourceVal = path.node.source.value;
         if (typeof sourceVal === 'string') analysis.imports.push(sourceVal);
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ExportNamedDeclaration(path: any) {
-        const decl = path.node?.declaration;
+      ExportNamedDeclaration(path: NodePath<t.ExportNamedDeclaration>) {
+        const decl = path.node.declaration;
         if (!decl) return;
-        if (decl.type === 'FunctionDeclaration') {
-          analysis.exports.push(decl.id?.name || 'anonymous');
+        if (decl.type === 'FunctionDeclaration' && decl.id) {
+          analysis.exports.push(decl.id.name);
         } else if (decl.type === 'VariableDeclaration') {
-          for (const d of decl.declarations ?? []) {
-            if (d.id?.name) analysis.exports.push(d.id.name);
+          for (const d of decl.declarations) {
+            if (d.id.type === 'Identifier') {
+              analysis.exports.push(d.id.name);
+            }
           }
         }
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      FunctionDeclaration(path: any) {
+      FunctionDeclaration(path: NodePath<t.FunctionDeclaration>) {
         analysis.functions.push({
           name: path.node.id?.name || 'anonymous',
           line: path.node.loc?.start.line || 0,
-          params: (path.node.params ?? []).length,
+          params: path.node.params.length,
         });
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ArrowFunctionExpression(path: any) {
+      ArrowFunctionExpression(path: NodePath<t.ArrowFunctionExpression>) {
         const parent = path.parent;
-        if (parent?.type === 'VariableDeclarator' && parent.id?.name) {
+        if (parent.type === 'VariableDeclarator' && parent.id.type === 'Identifier') {
           analysis.functions.push({
             name: parent.id.name,
             line: path.node.loc?.start.line || 0,
-            params: (path.node.params ?? []).length,
+            params: path.node.params.length,
           });
         }
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ClassDeclaration(path: any) {
-        const body = path.node?.body?.body ?? [];
-        const methods = body.filter((n: { type: string }) => n.type === 'ClassMethod').length;
+      ClassDeclaration(path: NodePath<t.ClassDeclaration>) {
+        const body = path.node.body.body;
+        const methods = body.filter((n) => n.type === 'ClassMethod').length;
         analysis.classes.push({
           name: path.node.id?.name || 'anonymous',
           line: path.node.loc?.start.line || 0,
           methods,
         });
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      VariableDeclaration(path: any) {
-        for (const d of path.node.declarations ?? []) {
-          if (d.id?.name) {
+      VariableDeclaration(path: NodePath<t.VariableDeclaration>) {
+        for (const decl of path.node.declarations) {
+          if (decl.id.type === 'Identifier') {
             analysis.variables.push({
-              name: d.id.name,
-              kind: path.node.kind || 'var',
-              line: d.loc?.start.line || 0,
+              name: decl.id.name,
+              kind: path.node.kind,
+              line: decl.loc?.start.line || 0,
             });
           }
         }
