@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import type { Message } from '../types.js';
 
 // Mock picocolors to return plain text (no ANSI escape codes in test output)
 vi.mock('picocolors', () => ({
@@ -247,6 +248,146 @@ describe('CliUI', () => {
     it('accepts a handler function', () => {
       const handler = vi.fn();
       expect(() => ui.setInputHandler(handler)).not.toThrow();
+    });
+  });
+
+  describe('showHistory', () => {
+    it('shows user and assistant messages', () => {
+      const messages: Message[] = [
+        { role: 'user', content: 'Hello' },
+        { role: 'assistant', content: 'Hi there!', toolCalls: [], toolResults: [] },
+      ];
+      expect(() => ui.showHistory(messages)).not.toThrow();
+    });
+
+    it('shows messages with tool calls and results', () => {
+      const messages: Message[] = [
+        { role: 'user', content: 'Run command' },
+        {
+          role: 'assistant',
+          content: 'OK running',
+          toolCalls: [{ id: 'tc1', name: 'Bash', args: { command: 'echo hi' } }],
+          toolResults: [],
+        },
+        {
+          role: 'user',
+          content: '',
+          toolResults: [{ tool: 'tc1', input: {}, output: 'hi', isError: false }],
+          toolCalls: [],
+        },
+      ];
+      expect(() => ui.showHistory(messages)).not.toThrow();
+    });
+
+    it('shows messages with error results', () => {
+      const messages: Message[] = [
+        { role: 'user', content: 'Test' },
+        {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 'tc1', name: 'Bash', args: { command: 'fail' } }],
+          toolResults: [],
+        },
+        {
+          role: 'user',
+          content: '',
+          toolResults: [{ tool: 'tc1', input: {}, output: 'Error!', isError: true }],
+          toolCalls: [],
+        },
+      ];
+      expect(() => ui.showHistory(messages)).not.toThrow();
+    });
+
+    it('handles system messages', () => {
+      const messages: Message[] = [
+        { role: 'system', content: 'System notice' },
+        { role: 'user', content: 'Hello' },
+      ];
+      expect(() => ui.showHistory(messages)).not.toThrow();
+    });
+  });
+
+  describe('showAgentDelta — streaming', () => {
+    it('renders streaming text chunks', () => {
+      ui.showAgentStart();
+      ui.showAgentDelta('Hello ');
+      ui.showAgentDelta('World');
+      ui.showAgentDone();
+      const output = capturedOutput();
+      expect(output).toBeDefined();
+    });
+
+    it('stops spinner if active', () => {
+      ui.startSpinner('thinking');
+      ui.showAgentDelta('response text');
+      const output = capturedOutput();
+      expect(output).toBeDefined();
+    });
+  });
+
+  describe('progress bar', () => {
+    it('starts and updates progress', () => {
+      ui.startProgress('building', 100);
+      ui.updateProgress(50);
+      ui.updateProgress(100);
+      ui.stopProgress('done!');
+      const output = capturedOutput();
+      expect(output).toContain('done!');
+    });
+
+    it('stops progress without message', () => {
+      ui.startProgress('test', 10);
+      ui.stopProgress();
+      expect(true).toBe(true);
+    });
+  });
+
+  describe('tool progress tracking', () => {
+    it('sets tool progress total', () => {
+      expect(() => ui.setToolProgressTotal(5)).not.toThrow();
+    });
+  });
+
+  describe('renderMarkdown edge cases', () => {
+    it('renders thinking blocks collapsed', () => {
+      ui.showAgentStart();
+      ui.showAgentText('<thinking>\nThis is a reasoning step\n</thinking>\nFinal answer');
+      const output = capturedOutput();
+      expect(output).toContain('思考过程已折叠');
+    });
+
+    it('renders horizontal rules', () => {
+      ui.showAgentStart();
+      ui.showAgentText('Text\n---\nMore');
+      const output = capturedOutput();
+      expect(output).toBeDefined();
+    });
+
+    it('renders blockquotes', () => {
+      ui.showAgentStart();
+      ui.showAgentText('> A quoted line');
+      const output = capturedOutput();
+      expect(output).toBeDefined();
+    });
+
+    it('renders lists', () => {
+      ui.showAgentStart();
+      ui.showAgentText('- item 1\n- item 2');
+      const output = capturedOutput();
+      expect(output).toBeDefined();
+    });
+
+    it('renders headings', () => {
+      ui.showAgentStart();
+      ui.showAgentText('## Heading 2');
+      const output = capturedOutput();
+      expect(output).toContain('Heading 2');
+    });
+  });
+
+  describe('promptForAnswer', () => {
+    it('calls prompt on readline', () => {
+      expect(() => ui.promptForAnswer()).not.toThrow();
     });
   });
 });

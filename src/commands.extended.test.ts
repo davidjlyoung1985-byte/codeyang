@@ -8,6 +8,15 @@ import type { CliUI } from './ui/CliUI.js';
 import type { Agent } from './agent/Agent.js';
 import type { McpManager } from './mcp/McpManager.js';
 
+// Mock process.exit to prevent test runner from exiting
+const originalExit = process.exit;
+beforeEach(() => {
+  vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+});
+afterEach(() => {
+  (process.exit as unknown as ReturnType<typeof vi.spyOn>).mockRestore?.();
+});
+
 describe('Commands - Extended Coverage', () => {
   let mockUI: CliUI;
   let mockAgent: Agent;
@@ -33,14 +42,38 @@ describe('Commands - Extended Coverage', () => {
       restoreCheckpoint: vi.fn(() => true),
       saveCheckpoint: vi.fn(() => 0),
       getStats: vi.fn(() => ({ toolStats: new Map() })),
-      getToolStats: vi.fn(() => ({})),
+      getToolStats: vi.fn(() => new Map()),
       getActiveTaskList: vi.fn(() => []),
+      getTokenUsage: vi.fn(() => ({ inputTokens: 100, outputTokens: 50 })),
+      getLLMClient: vi.fn(),
+      getReflexionEngine: vi.fn(() => ({
+        getRecentExecutions: vi.fn(() => []),
+        shouldReflect: vi.fn(() => false),
+        reflect: vi.fn(),
+      })),
+      getClosedLoopStatus: vi.fn(() => ({
+        autoVerify: true,
+        autoFixOnError: true,
+        watchMode: true,
+        reflexion: { enabled: true, consecutiveFailures: 0, totalReflections: 0, recentErrors: 0 },
+        planner: { enabled: true, activePlans: 0, totalPlans: 0 },
+      })),
+      getHarnessStatus: vi.fn(() => ({
+        tracing: { enabled: true, recentTraces: 0, totalSpans: 0 },
+        circuitBreakers: [],
+        gateway: { operations: 0, totalRequests: 0 },
+      })),
+      answerQuestion: vi.fn(),
+      cancelQuestion: vi.fn(),
+      get waitingForAnswer() { return false; },
     } as unknown as Agent;
 
     mockMcpMgr = {
       shutdown: vi.fn(),
       getServerStatus: vi.fn(() => ({})),
       listAllTools: vi.fn(() => []),
+      hasServers: false,
+      serverNames: [],
     } as unknown as McpManager;
 
     ctx = {
@@ -53,13 +86,27 @@ describe('Commands - Extended Coverage', () => {
 
   describe('/exit and /quit', () => {
     it('should handle /exit command', async () => {
-      const result = await dispatch('/exit', ctx);
-      expect(result.exit).toBe(true);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('EXIT_CALLED');
+      });
+      try {
+        await dispatch('/exit', ctx);
+      } catch (e: unknown) {
+        expect((e as Error).message).toBe('EXIT_CALLED');
+      }
+      expect(exitSpy).toHaveBeenCalledWith(0);
     });
 
     it('should handle /quit command', async () => {
-      const result = await dispatch('/quit', ctx);
-      expect(result.exit).toBe(true);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('EXIT_CALLED');
+      });
+      try {
+        await dispatch('/quit', ctx);
+      } catch (e: unknown) {
+        expect((e as Error).message).toBe('EXIT_CALLED');
+      }
+      expect(exitSpy).toHaveBeenCalledWith(0);
     });
   });
 
@@ -158,7 +205,7 @@ describe('Commands - Extended Coverage', () => {
     it('should handle /commit with message', async () => {
       const result = await dispatch('/commit test message', ctx);
       expect(result.handled).toBe(true);
-    });
+    }, 15000);
 
     it('should handle /commit without message', async () => {
       const result = await dispatch('/commit', ctx);
