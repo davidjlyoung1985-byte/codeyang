@@ -4,6 +4,12 @@ import * as path from 'node:path';
 import { existsSync } from 'node:fs';
 import { Readable } from 'node:stream';
 
+// Mock DNS to prevent actual network lookups (SSRF protection bypass for tests)
+vi.mock('node:dns/promises', () => ({
+  resolve4: vi.fn().mockResolvedValue(['93.184.216.34']), // example.com IP
+  resolve6: vi.fn().mockResolvedValue(['2606:2800:220:1:248:1893:25c8:1946']),
+}));
+
 // Mock axios before importing NetworkTool
 vi.mock('axios', () => {
   const mockFn = vi.fn();

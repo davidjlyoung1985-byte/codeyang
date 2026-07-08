@@ -59,19 +59,19 @@ describe('Tracer', () => {
     it('should end a span', () => {
       const span = tracer.startSpan('test-operation', { traceId: 'test-trace' });
       const initialEndTime = span.endTime;
-      span.end();
+      tracer.endSpan(span);
       expect(span.endTime).toBeGreaterThan(initialEndTime);
     });
 
     it('should calculate span duration', () => {
       const span = tracer.startSpan('test-operation', { traceId: 'test-trace' });
-      span.end();
+      tracer.endSpan(span);
       expect(span.durationMs).toBeGreaterThanOrEqual(0);
     });
 
     it('should set success status', () => {
       const span = tracer.startSpan('test-operation', { traceId: 'test-trace' });
-      span.end({ success: true });
+      tracer.endSpan(span, { status: 'ok' });
       expect(span.status).toBe('ok');
     });
   });
@@ -114,13 +114,13 @@ describe('Tracer', () => {
   describe('Error tracking', () => {
     it('should record errors', () => {
       const span = tracer.startSpan('test-operation', { traceId: 'test-trace' });
-      span.end({ success: false, error: 'Test error' });
+      tracer.endSpan(span, { status: 'error', error: 'Test error' });
       expect(span.error).toBeDefined();
     });
 
     it('should set error status', () => {
       const span = tracer.startSpan('test-operation', { traceId: 'test-trace' });
-      span.end({ success: false });
+      tracer.endSpan(span, { status: 'error' });
       expect(span.status).toBe('error');
     });
   });
@@ -165,6 +165,122 @@ describe('Tracer', () => {
       expect(span).toHaveProperty('durationMs');
       expect(span).toHaveProperty('status');
       expect(span).toHaveProperty('tags');
+    });
+  });
+
+  describe('Trace management', () => {
+    it('should start and end a trace', () => {
+      const traceId = tracer.startTrace({ name: 'test-trace', source: 'test', rootOperation: 'test.run' });
+      expect(traceId).toBeTruthy();
+      expect(typeof traceId).toBe('string');
+
+      tracer.endTrace(traceId);
+      const traces = tracer.getTraces();
+      expect(traces.length).toBeGreaterThan(0);
+      expect(traces[0].id).toBe(traceId);
+    });
+
+    it('should return trace summary for valid trace', () => {
+      const traceId = tracer.startTrace({ name: 'test', source: 'test', rootOperation: 'test' });
+      tracer.endTrace(traceId);
+      const summary = tracer.getTraceSummary(traceId);
+      expect(summary).not.toBeNull();
+      expect(summary!.trace.id).toBe(traceId);
+    });
+
+    it('should return null for non-existent trace summary', () => {
+      const summary = tracer.getTraceSummary('non-existent');
+      expect(summary).toBeNull();
+    });
+
+    it('should handle endTrace for non-existent trace', () => {
+      expect(() => tracer.endTrace('')).not.toThrow();
+    });
+  });
+
+  describe('traceAsync', () => {
+    it('should auto-start and end span', async () => {
+      const traceId = tracer.startTrace({ name: 'async-test', source: 'test', rootOperation: 'async' });
+      const result = await tracer.traceAsync(traceId, 'async-op', 'tool', async (span) => {
+        expect(span.name).toBe('async-op');
+        return 42;
+      });
+      expect(result).toBe(42);
+      tracer.endTrace(traceId);
+    });
+
+    it('should mark error on exception', async () => {
+      const traceId = tracer.startTrace({ name: 'error-test', source: 'test', rootOperation: 'error' });
+      await expect(
+        tracer.traceAsync(traceId, 'failing-op', 'tool', async () => {
+          throw new Error('oops');
+        }),
+      ).rejects.toThrow('oops');
+      tracer.endTrace(traceId);
+    });
+  });
+
+  describe('querySpans', () => {
+    it('should return recent spans filtered by category', () => {
+      const traceId = tracer.startTrace({ name: 'query-test', source: 'test', rootOperation: 'query' });
+      const span = tracer.startSpan('test-span', { traceId, category: 'llm' });
+      tracer.endSpan(span);
+      tracer.endTrace(traceId);
+
+      const results = tracer.querySpans({ category: 'llm', limit: 10 });
+      expect(results.length).toBeGreaterThanOrEqual(1);
+      expect(results[0].category).toBe('llm');
+    });
+
+    it('should return empty for non-matching category', () => {
+      const results = tracer.querySpans({ category: 'verify', limit: 10 });
+      expect(Array.isArray(results)).toBe(true);
+    });
+  });
+
+  describe('Tracer configuration', () => {
+    it('should toggle enabled state', () => {
+      tracer.setEnabled(false);
+      expect(tracer.isEnabled()).toBe(false);
+      tracer.setEnabled(true);
+      expect(tracer.isEnabled()).toBe(true);
+    });
+
+    it('should set max spans', () => {
+      expect(() => tracer.setMaxSpans(100)).not.toThrow();
+    });
+
+    it('should add exporter', () => {
+      const exporter = { export: vi.fn() };
+      expect(() => tracer.addExporter(exporter)).not.toThrow();
+    });
+  });
+
+  describe('exportTrace', () => {
+    it('should return "Trace not found" for invalid trace', () => {
+      const result = tracer.exportTrace('nonexistent');
+      expect(result).toBe('Trace not found');
+    });
+
+    it('should export as JSON format', () => {
+      const traceId = tracer.startTrace({ name: 'export-test', source: 'test', rootOperation: 'export' });
+      const span = tracer.startSpan('span1', { traceId, category: 'tool' });
+      tracer.endSpan(span);
+      tracer.endTrace(traceId);
+
+      const json = tracer.exportTrace(traceId, 'json');
+      const parsed = JSON.parse(json);
+      expect(parsed.trace.id).toBe(traceId);
+      expect(parsed.spans).toBeDefined();
+    });
+
+    it('should export as compact format', () => {
+      const traceId = tracer.startTrace({ name: 'compact-test', source: 'test', rootOperation: 'compact' });
+      tracer.endTrace(traceId);
+
+      const compact = tracer.exportTrace(traceId, 'compact');
+      expect(typeof compact).toBe('string');
+      expect(compact).toContain('Trace:');
     });
   });
 });
