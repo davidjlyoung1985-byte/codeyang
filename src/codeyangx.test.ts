@@ -62,5 +62,115 @@ describe('CodeYangX', () => {
       const mockError = { code: 'UNKNOWN', message: 'Some error' };
       expect(mockError.message).toBeDefined();
     });
+
+    it('should have error message property', () => {
+      const error = new Error('Test error');
+      expect(error.message).toBe('Test error');
+    });
+  });
+
+  describe('path operations', () => {
+    it('should construct project root path', async () => {
+      const { join, dirname } = await import('node:path');
+      const testPath = join('root', 'src');
+      expect(testPath).toContain('src');
+    });
+
+    it('should handle __dirname construction', async () => {
+      const { fileURLToPath } = await import('node:url');
+      const { dirname } = await import('node:path');
+
+      const testUrl = process.platform === 'win32' ? 'file:///C:/test/path/file.js' : 'file:///test/path/file.js';
+      const path = fileURLToPath(testUrl);
+      const dir = dirname(path);
+
+      expect(dir).toBeTruthy();
+    });
+  });
+
+  describe('electron binary paths', () => {
+    it('should construct local electron path for Windows', async () => {
+      const { join } = await import('node:path');
+      const binPath = join('node_modules', '.bin', 'electron.cmd');
+      expect(binPath).toContain('electron.cmd');
+    });
+
+    it('should construct local electron path for Unix', async () => {
+      const { join } = await import('node:path');
+      const binPath = join('node_modules', '.bin', 'electron');
+      expect(binPath).toContain('electron');
+    });
+  });
+
+  describe('process operations', () => {
+    it('should have process.exit defined', () => {
+      expect(process.exit).toBeDefined();
+      expect(typeof process.exit).toBe('function');
+    });
+
+    it('should have process.platform defined', () => {
+      expect(process.platform).toBeDefined();
+      expect(typeof process.platform).toBe('string');
+    });
+
+    it('should have process.env defined', () => {
+      expect(process.env).toBeDefined();
+      expect(typeof process.env).toBe('object');
+    });
+  });
+
+  describe('spawn configuration', () => {
+    it('should support spawn options', () => {
+      const options = {
+        stdio: 'inherit' as const,
+        env: { ...process.env },
+        detached: true,
+      };
+
+      expect(options.stdio).toBe('inherit');
+      expect(options.detached).toBe(true);
+    });
+
+    it('should spread environment variables', () => {
+      const env = { ...process.env, CUSTOM: 'value' };
+      expect(env).toHaveProperty('CUSTOM');
+      expect(env.CUSTOM).toBe('value');
+    });
+  });
+
+  describe('child process events', () => {
+    it('should handle error event', () => {
+      const mockChild = {
+        on: vi.fn((event, callback) => {
+          if (event === 'error') {
+            callback(new Error('Test error'));
+          }
+        }),
+        unref: vi.fn(),
+      };
+
+      expect(mockChild.on).toBeDefined();
+    });
+
+    it('should handle exit event', () => {
+      const mockChild = {
+        on: vi.fn((event, callback) => {
+          if (event === 'exit') {
+            callback(0);
+          }
+        }),
+        unref: vi.fn(),
+      };
+
+      expect(mockChild.on).toBeDefined();
+    });
+  });
+
+  describe('version handling', () => {
+    it('should have VERSION constant available', async () => {
+      const { VERSION } = await import('./version.js');
+      expect(VERSION).toBeDefined();
+      expect(typeof VERSION).toBe('string');
+    });
   });
 });

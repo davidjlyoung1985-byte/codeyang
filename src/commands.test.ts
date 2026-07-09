@@ -150,5 +150,142 @@ describe('Commands', () => {
 
       expect(result.handled).toBe(false);
     });
+
+    it('should suggest similar commands for typos', async () => {
+      const consoleSpy = vi.spyOn(console, 'log');
+
+      await dispatch('/clea', ctx);
+
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Did you mean'));
+      consoleSpy.mockRestore();
+    });
+
+    it('should show available commands when no match', async () => {
+      const consoleSpy = vi.spyOn(console, 'log');
+
+      await dispatch('/xyz123', ctx);
+
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Available:'));
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('/exit and /quit', () => {
+    it('should handle /exit', async () => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+      await dispatch('/exit', ctx);
+
+      expect(exitSpy).toHaveBeenCalledWith(0);
+      exitSpy.mockRestore();
+    });
+
+    it('should handle /quit', async () => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+      await dispatch('/quit', ctx);
+
+      expect(exitSpy).toHaveBeenCalledWith(0);
+      exitSpy.mockRestore();
+    });
+  });
+
+  describe('case insensitivity', () => {
+    it('should handle uppercase commands', async () => {
+      const result = await dispatch('/CLEAR', ctx);
+
+      expect(result.handled).toBe(true);
+      expect(mockAgent.reset).toHaveBeenCalled();
+    });
+
+    it('should handle mixed case commands', async () => {
+      const result = await dispatch('/CleAR', ctx);
+
+      expect(result.handled).toBe(true);
+      expect(mockAgent.reset).toHaveBeenCalled();
+    });
+  });
+
+  describe('whitespace handling', () => {
+    it('should trim leading whitespace', async () => {
+      const result = await dispatch('   /clear', ctx);
+
+      expect(result.handled).toBe(true);
+      expect(mockAgent.reset).toHaveBeenCalled();
+    });
+
+    it('should trim trailing whitespace', async () => {
+      const result = await dispatch('/clear   ', ctx);
+
+      expect(result.handled).toBe(true);
+      expect(mockAgent.reset).toHaveBeenCalled();
+    });
+
+    it('should trim both leading and trailing whitespace', async () => {
+      const result = await dispatch('   /clear   ', ctx);
+
+      expect(result.handled).toBe(true);
+      expect(mockAgent.reset).toHaveBeenCalled();
+    });
+  });
+
+  describe('/model', () => {
+    it('should show current model', async () => {
+      const result = await dispatch('/model', ctx);
+
+      expect(result.handled).toBe(true);
+      expect(mockUI.promptUser).toHaveBeenCalled();
+    });
+
+    it('should accept model argument', async () => {
+      const result = await dispatch('/model gpt-4', ctx);
+
+      expect(result.handled).toBe(true);
+      expect(mockUI.promptUser).toHaveBeenCalled();
+    });
+  });
+
+  describe('/ponytail', () => {
+    it('should show current ponytail level', async () => {
+      const result = await dispatch('/ponytail', ctx);
+
+      expect(result.handled).toBe(true);
+      expect(mockUI.promptUser).toHaveBeenCalled();
+    });
+
+    it('should accept level argument', async () => {
+      const result = await dispatch('/ponytail on', ctx);
+
+      expect(result.handled).toBe(true);
+      expect(mockUI.promptUser).toHaveBeenCalled();
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty string', async () => {
+      const result = await dispatch('', ctx);
+
+      expect(result.handled).toBe(false);
+    });
+
+    it('should handle just a slash', async () => {
+      const consoleSpy = vi.spyOn(console, 'log');
+
+      const result = await dispatch('/', ctx);
+
+      // A lone slash is treated as unknown command
+      expect(result.handled).toBe(true);
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle multiple slashes', async () => {
+      const consoleSpy = vi.spyOn(console, 'log');
+
+      const result = await dispatch('//clear', ctx);
+
+      // Multiple slashes treated as unknown command
+      expect(result.handled).toBe(true);
+      consoleSpy.mockRestore();
+    });
   });
 });
