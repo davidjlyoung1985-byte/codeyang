@@ -1,7 +1,7 @@
 /**
  * Extended tests for index.ts to improve coverage
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 describe('CLI Index - Extended Coverage', () => {
   describe('API Key resolution', () => {
@@ -73,11 +73,7 @@ describe('CLI Index - Extended Coverage', () => {
     });
 
     it('should validate URL format', () => {
-      const validUrls = [
-        'https://api.deepseek.com/v1',
-        'https://api.openai.com/v1',
-        'http://localhost:3000/v1',
-      ];
+      const validUrls = ['https://api.deepseek.com/v1', 'https://api.openai.com/v1', 'http://localhost:3000/v1'];
       validUrls.forEach((url) => {
         expect(url).toMatch(/^https?:\/\/.+/);
       });

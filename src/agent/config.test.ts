@@ -1,19 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdir, writeFile, rm } from 'node:fs/promises';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { randomUUID } from 'node:crypto';
-import {
-  config,
-  validateConfig,
-  saveApiSettings,
-  getMcpServers,
-  saveMcpServers,
-  getLocalConfigApiKey,
-  setSessionApiKey,
-  getConfigVersion,
-  loadLocalConfig,
-} from './config.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { config, validateConfig, getMcpServers, setSessionApiKey, getConfigVersion } from './config.js';
 
 describe('config', () => {
   const originalEnv = { ...process.env };

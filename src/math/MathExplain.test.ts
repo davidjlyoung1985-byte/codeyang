@@ -24,9 +24,6 @@ describe('MathExplain', () => {
 
   describe('with valid topic', () => {
     it('should return detailed content for a topic', () => {
-      // Get the list of topics first
-      const helpResult = executeMathExplain();
-
       // Just verify the function works and returns something
       const result = executeMathExplain('unknown-test-topic');
       expect(typeof result).toBe('string');
@@ -88,8 +85,6 @@ describe('MathExplain', () => {
   describe('topic aliases', () => {
     it('should support topic aliases', () => {
       // Test if some topic has aliases that work
-      const helpResult = executeMathExplain();
-
       // Even if we don't know specific aliases, the function should handle them
       const result = executeMathExplain('function');
       expect(typeof result).toBe('string');

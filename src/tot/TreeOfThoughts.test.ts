@@ -13,7 +13,7 @@ describe('TreeOfThoughts', () => {
       chat: vi.fn(),
       stream: vi.fn(),
     };
-    tot = new TreeOfThoughts(mockClient as any);
+    tot = new TreeOfThoughts(mockClient as Partial<LLMClient> as LLMClient);
   });
 
   describe('Constructor', () => {
@@ -29,7 +29,7 @@ describe('TreeOfThoughts', () => {
         enableMerging: false,
         complexityThreshold: 7,
       };
-      const customTot = new TreeOfThoughts({} as any, customConfig);
+      const customTot = new TreeOfThoughts({} as LLMClient, customConfig);
       expect(customTot).toBeDefined();
     });
   });

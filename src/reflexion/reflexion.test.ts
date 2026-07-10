@@ -32,13 +32,30 @@ describe('ReflexionEngine', () => {
 
   it('detects shouldReflect after consecutive failures', () => {
     // Configure for low threshold
-    const lowThresholdEngine = new ReflexionEngine({ enabled: true, failureThreshold: 2, maxReflections: 50, autoInject: true });
+    const lowThresholdEngine = new ReflexionEngine({
+      enabled: true,
+      failureThreshold: 2,
+      maxReflections: 50,
+      autoInject: true,
+    });
     expect(lowThresholdEngine.shouldReflect()).toBe(false);
 
-    lowThresholdEngine.recordExecution({ task: 'f1', toolCalls: [], success: false, durationMs: 10, errorMessage: 'err' });
+    lowThresholdEngine.recordExecution({
+      task: 'f1',
+      toolCalls: [],
+      success: false,
+      durationMs: 10,
+      errorMessage: 'err',
+    });
     expect(lowThresholdEngine.shouldReflect()).toBe(false);
 
-    lowThresholdEngine.recordExecution({ task: 'f2', toolCalls: [], success: false, durationMs: 10, errorMessage: 'err' });
+    lowThresholdEngine.recordExecution({
+      task: 'f2',
+      toolCalls: [],
+      success: false,
+      durationMs: 10,
+      errorMessage: 'err',
+    });
     expect(lowThresholdEngine.shouldReflect()).toBe(true);
   });
 
@@ -51,8 +68,8 @@ describe('ReflexionEngine', () => {
     engine.recordExecution({ task: 'f1', toolCalls: [], success: false, durationMs: 10, errorMessage: 'err' });
     engine.recordExecution({ task: 'f2', toolCalls: [], success: false, durationMs: 10, errorMessage: 'err' });
 
-    const client = { stream: vi.fn() } as any;
-    const result = await engine.reflect(client, 'test-model', 1000);
+    const client = { stream: vi.fn() } as Partial<LLMClient>;
+    const result = await engine.reflect(client as LLMClient, 'test-model', 1000);
     expect(result).toBeNull();
   });
 
@@ -63,9 +80,9 @@ describe('ReflexionEngine', () => {
     const client = {
       stream: vi.fn(),
       chat: vi.fn().mockRejectedValue(new Error('API error')),
-    } as any;
+    } as Partial<LLMClient>;
 
-    const result = await engine.reflect(client, 'test-model', 1000);
+    const result = await engine.reflect(client as LLMClient, 'test-model', 1000);
     expect(result).toBeNull();
   });
 

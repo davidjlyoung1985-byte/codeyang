@@ -132,9 +132,15 @@ describe('Tracer', () => {
     });
 
     it('should accept valid categories', () => {
-      const categories = ['agent', 'llm', 'tool', 'plan', 'verify'];
+      const categories: Array<'agent' | 'llm' | 'tool' | 'plan' | 'verify'> = [
+        'agent',
+        'llm',
+        'tool',
+        'plan',
+        'verify',
+      ];
       categories.forEach((cat) => {
-        const span = tracer.startSpan('test', { traceId: 'test', category: cat as any });
+        const span = tracer.startSpan('test', { traceId: 'test', category: cat });
         expect(span.category).toBeDefined();
       });
     });
@@ -284,4 +290,3 @@ describe('Tracer', () => {
     });
   });
 });
-

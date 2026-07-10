@@ -9,7 +9,6 @@ import type { Agent } from './agent/Agent.js';
 import type { McpManager } from './mcp/McpManager.js';
 
 // Mock process.exit to prevent test runner from exiting
-const originalExit = process.exit;
 beforeEach(() => {
   vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
 });
@@ -65,7 +64,9 @@ describe('Commands - Extended Coverage', () => {
       })),
       answerQuestion: vi.fn(),
       cancelQuestion: vi.fn(),
-      get waitingForAnswer() { return false; },
+      get waitingForAnswer() {
+        return false;
+      },
     } as unknown as Agent;
 
     mockMcpMgr = {

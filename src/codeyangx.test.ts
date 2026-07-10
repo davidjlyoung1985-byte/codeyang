@@ -71,7 +71,7 @@ describe('CodeYangX', () => {
 
   describe('path operations', () => {
     it('should construct project root path', async () => {
-      const { join, dirname } = await import('node:path');
+      const { join } = await import('node:path');
       const testPath = join('root', 'src');
       expect(testPath).toContain('src');
     });
