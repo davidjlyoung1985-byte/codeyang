@@ -1,12 +1,8 @@
 /**
  * Tests for QueryEngine
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { listFiles, searchContent, extractSymbols } from './queryEngine.js';
-import { existsSync } from 'node:fs';
-import { rm, mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 
 describe('QueryEngine', () => {
   describe('listFiles', () => {
@@ -66,11 +62,7 @@ describe('QueryEngine', () => {
       expect(results).toEqual([]);
     });
 
-    it('should detect function declarations', async () => {
-      // Create a test file content
-      const testFile = 'src/test-temp.ts';
-      const content = 'export function testFunc() { return true; }';
-
+    it('should detect function declarations', () => {
       // We'll just test the regex logic by checking types
       expect(typeof extractSymbols).toBe('function');
     });

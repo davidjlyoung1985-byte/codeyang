@@ -232,6 +232,17 @@ class ProgressBar {
   }
 }
 
+// ─── Tool call buffer (folded display) ────────────────────────────
+
+interface ToolEntry {
+  name: string;
+  argStr: string;
+  durationMs: number;
+  isError: boolean;
+  lineCount: number;
+  preview: string;
+}
+
 // ─── CliUI ──────────────────────────────────────────────────────────
 
 export class CliUI {
@@ -248,6 +259,11 @@ export class CliUI {
   private toolStartTimes = new Map<string, number>();
   private toolBatchTotal = 0;
   private toolResultsCount = 0;
+
+  /** 工具调用 buffer：收集一轮中的所有调用，最后折叠展示 */
+  private toolBuffer: ToolEntry[] = [];
+  /** 当前是否在 buffer 模式（有工具调用正在执行） */
+  private toolBuffering = false;
 
   constructor() {
     this.rl = readline.createInterface({
@@ -304,15 +320,7 @@ export class CliUI {
         // Collect tool calls but don't display yet — wait for their results
         if (msg.toolCalls) {
           for (const tc of msg.toolCalls) {
-            const argStr = Object.entries(tc.args || {})
-              .map(([k, v]) => {
-                const s = typeof v === 'string' ? v : JSON.stringify(v);
-                return s.length > 60 ? `${k}="${s.slice(0, 60)}…"` : `${k}=${JSON.stringify(v)}`;
-              })
-              .join(' ')
-              .slice(0, 100);
             pendingToolCalls.push({ name: tc.name, args: tc.args });
-            process.stdout.write(`\n  ${c.dim(c.cyan('  🔧'))} ${c.white(tc.name)} ${c.dim(argStr)}`);
           }
         }
       } else if (msg.role === 'system') {
@@ -336,19 +344,22 @@ export class CliUI {
     process.stdout.write('\n');
   }
 
-  /** Display collected tool calls with their results. */
+  /** Display collected tool calls with their results — compact folded style. */
   private flushToolContext(
     calls: Array<{ name: string; args: Record<string, unknown> }>,
     results: Array<{ output: string; isError: boolean }>,
   ) {
     if (calls.length === 0) return;
 
-    // Match tool calls with results by position
+    const w = termW();
+    const label = `  🔧 工具调用 (${calls.length}) `;
+    const side = Math.max(0, w - label.length - 4);
+    console.log(`\n  ${c.dim('┌')}${c.dim('─'.repeat(side))}`);
+
     for (let i = 0; i < calls.length; i++) {
       const tc = calls[i];
       const tr = i < results.length ? results[i] : null;
 
-      // Format args
       const argStr = Object.entries(tc.args || {})
         .map(([k, v]) => {
           const s = typeof v === 'string' ? v : JSON.stringify(v);
@@ -357,21 +368,21 @@ export class CliUI {
         .join(' ')
         .slice(0, 100);
 
-      process.stdout.write(`\n  ${c.dim(c.cyan('  🔧'))} ${c.white(tc.name)} ${c.dim(argStr)}`);
-
       if (tr) {
         const firstLine = tr.output.split('\n')[0] || '(empty)';
         const display = firstLine.slice(0, 150);
         const lines = tr.output.split('\n').length;
-        const suffix = lines > 1 ? ` ${c.dim(`(${lines} lines)`)}` : '';
-        if (tr.isError) {
-          process.stdout.write(`\n  ${c.red('  ✗')} ${c.dim(display)}${suffix}`);
-        } else {
-          process.stdout.write(`\n  ${c.green('  ✓')} ${c.dim(display)}${suffix}`);
-        }
+        const suffix = lines > 1 ? ` [输出 ${lines} 行]` : '';
+        const icon = tr.isError ? c.red('✗') : c.dim('·');
+        console.log(
+          `  ${c.dim('│')} ${icon} ${c.white(tc.name)} ${c.dim(argStr)}${tr.isError ? c.red(` ${display}`) : c.dim(` ${display}`)}${c.dim(suffix)}`,
+        );
+      } else {
+        console.log(`  ${c.dim('│')} ${c.dim('·')} ${c.white(tc.name)} ${c.dim(argStr)}`);
       }
     }
-    process.stdout.write('\n');
+
+    console.log(`  ${c.dim('└')}${c.dim('─'.repeat(side))}`);
   }
 
   setInputHandler(handler: (line: string) => void) {
@@ -443,6 +454,12 @@ export class CliUI {
 
   showAgentDone() {
     this.clearBatch();
+    // 工具 buffer 未 flush（如单工具无 toolBatchTotal 场景），兜底 flush
+    if (this.toolBuffering && this.toolBuffer.length > 0) {
+      this.flushToolBatch();
+    } else if (this.spinner.active) {
+      this.spinner.stop();
+    }
     this.streamBuf = '';
     process.stdout.write('\n');
     this.isFirstResponse = true;
@@ -520,12 +537,13 @@ export class CliUI {
     this.progressBar.stop(message);
   }
 
-  // ─── Tools ────────────────────────────────────────────────────────
+  // ─── Tools (folded display) ───────────────────────────────────
 
+  /** 工具开始时：记录到 buffer，更新 spinner 进度 */
   showToolCall(name: string, args: Record<string, unknown>) {
     this.clearBatch();
-    this.spinner.stop();
-    this.toolStartTimes.set(name, Date.now());
+    this.toolBuffering = true;
+
     const argStr = Object.entries(args)
       .map(([k, v]) => {
         const s = typeof v === 'string' ? v : JSON.stringify(v);
@@ -533,38 +551,106 @@ export class CliUI {
       })
       .join(' ')
       .slice(0, 100);
-    const icon = name === 'Question' ? '?' : '>';
-    const progress = this.toolBatchTotal > 0 ? ` (${this.toolResultsCount + 1}/${this.toolBatchTotal})` : '';
-    process.stdout.write(`\n  ${c.dim(`${c.cyan(icon)} ${c.white(name)}${progress}`)} ${c.dim(argStr)}\n`);
+
+    this.toolBuffer.push({
+      name,
+      argStr,
+      durationMs: 0,
+      isError: false,
+      lineCount: 0,
+      preview: '',
+    });
+
+    this.toolStartTimes.set(name + ':' + this.toolBuffer.length, Date.now());
+
+    // 用 spinner 显示执行进度，不逐行打印
+    const idx = this.toolBuffer.length;
+    const total = this.toolBatchTotal || '?';
+    this.spinner.start(`${name} (${idx}/${total})`);
   }
 
+  /** 工具完成时：更新 buffer 条目，累计完成后折叠展示 */
   showToolResult(name: string, output: string, isError: boolean) {
-    const elapsed = this.toolStartTimes.get(name);
-    const duration = elapsed ? ` ${c.dim('[' + (Date.now() - elapsed) + 'ms]')}` : '';
-    this.toolResultsCount++;
-
+    const key = name + ':' + this.toolBuffer.length;
+    const elapsed = this.toolStartTimes.get(key);
+    const durationMs = elapsed ? Date.now() - elapsed : 0;
     const lines = output.split('\n');
     const lineCount = lines.length;
+    const preview = lines[0]?.slice(0, 80) || '(empty)';
 
-    if (isError) {
-      const firstLine = lines[0] || '(empty)';
-      const display = firstLine.slice(0, 120);
-      const suffix = lineCount > 1 ? ` (${lineCount} lines)` : '';
-      console.log(`  ${c.red('\u2717')}${duration} ${c.dim(display)}${suffix}`);
-    } else {
-      // Collapse tool output if more than 3 lines
-      if (lineCount > 3) {
-        const preview = lines[0]?.slice(0, 80) || '(empty)';
-        console.log(
-          `  ${c.dim('\u00b7')}${duration} ${c.dim(`[\u5de5\u5177\u8f93\u51fa\u5df2\u6298\u53e0 - ${lineCount} \u884c]`)}`,
-        );
-        console.log(`  ${c.dim(`   \u9884\u89c8: ${preview}...`)}`);
-      } else {
-        const firstLine = lines[0] || '(empty)';
-        const display = firstLine.slice(0, 150);
-        console.log(`  ${c.dim('\u00b7')}${duration} ${c.dim(display)}`);
+    // 更新 buffer 中最后一个匹配的未完成条目
+    for (let i = this.toolBuffer.length - 1; i >= 0; i--) {
+      const e = this.toolBuffer[i];
+      if (e.name === name && e.durationMs === 0 && !e.isError) {
+        e.durationMs = durationMs;
+        e.isError = isError;
+        e.lineCount = lineCount;
+        e.preview = preview;
+        break;
       }
     }
+
+    this.toolResultsCount++;
+
+    // 更新 spinner 显示累计进度
+    const ok = this.toolBuffer.filter((e) => e.durationMs > 0 && !e.isError).length;
+    const fail = this.toolBuffer.filter((e) => e.isError).length;
+    const totalStr = this.toolBatchTotal > 0 ? `/${this.toolBatchTotal}` : '';
+    const status = fail > 0 ? `${ok}✓ ${fail}✗` : `${ok}✓`;
+    this.spinner.start(`${status}${totalStr}`);
+
+    // 批次完成后自动折叠展示
+    if (this.toolBatchTotal > 0 && this.toolResultsCount >= this.toolBatchTotal) {
+      this.flushToolBatch();
+    }
+  }
+
+  /** 折叠展示 buffer 中的所有工具调用 */
+  private flushToolBatch(): void {
+    if (this.toolBuffer.length === 0) return;
+
+    this.spinner.stop();
+
+    const successCount = this.toolBuffer.filter((e) => !e.isError).length;
+    const failCount = this.toolBuffer.filter((e) => e.isError).length;
+    const totalMs = this.toolBuffer.reduce((sum, e) => sum + e.durationMs, 0);
+    const w = termW();
+
+    // ── 折叠块头部 ──
+    const label = `  🔧 工具调用 (${this.toolBuffer.length}) `;
+    const side = Math.max(0, w - label.length - 4);
+    console.log(`\n  ${c.dim('┌')}${c.dim('─'.repeat(side))}`);
+
+    // ── 每个工具一行 ──
+    for (const e of this.toolBuffer) {
+      const icon = e.isError ? c.red('✗') : c.dim('·');
+      const dur = e.durationMs > 0 ? c.dim(` ${e.durationMs}ms`) : '';
+      let info: string;
+      if (e.isError) {
+        info = c.red(` ${e.preview || '(error)'}`);
+      } else if (e.lineCount > 3) {
+        info = c.dim(` [输出 ${e.lineCount} 行] ${e.preview}...`);
+      } else if (e.preview) {
+        info = c.dim(` ${e.preview}`);
+      } else {
+        info = '';
+      }
+      console.log(`  ${c.dim('│')} ${icon} ${c.white(e.name)} ${c.dim(e.argStr)}${dur}${info}`);
+    }
+
+    // ── 折叠块尾部汇总 ──
+    const summary =
+      failCount > 0
+        ? c.yellow(`${successCount} 成功, ${failCount} 失败 · ${totalMs}ms`)
+        : c.green(`全部成功 · ${totalMs}ms`);
+    console.log(`  ${c.dim('└')}${c.dim('─'.repeat(side))} ${summary}`);
+
+    // ── 重置 buffer ──
+    this.toolBuffer = [];
+    this.toolBuffering = false;
+    this.toolBatchTotal = 0;
+    this.toolResultsCount = 0;
+    this.toolStartTimes.clear();
   }
 
   // ─── Question ─────────────────────────────────────────────────────

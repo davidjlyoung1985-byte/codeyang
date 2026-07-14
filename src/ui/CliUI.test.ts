@@ -191,7 +191,9 @@ describe('CliUI', () => {
     it('shows success output (short)', () => {
       ui.showToolCall('TestTool', {});
       ui.showToolResult('TestTool', 'output text', false);
+      ui.showAgentDone(); // trigger flush
       const output = capturedOutput();
+      expect(output).toContain('TestTool');
       expect(output).toContain('output text');
     });
 
@@ -199,15 +201,18 @@ describe('CliUI', () => {
       const longOutput = 'line1\nline2\nline3\nline4\nline5';
       ui.showToolCall('TestTool', {});
       ui.showToolResult('TestTool', longOutput, false);
+      ui.showAgentDone(); // trigger flush
       const output = capturedOutput();
-      expect(output).toContain('工具输出已折叠');
+      expect(output).toContain('TestTool');
       expect(output).toContain('5 行');
     });
 
     it('shows error output', () => {
       ui.showToolCall('TestTool', {});
       ui.showToolResult('TestTool', 'error text', true);
+      ui.showAgentDone(); // trigger flush
       const output = capturedOutput();
+      expect(output).toContain('TestTool');
       expect(output).toContain('error text');
     });
   });

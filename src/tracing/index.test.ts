@@ -1,7 +1,7 @@
 /**
  * Tests for Tracing/Monitoring system
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Tracer } from './index.js';
 
 describe('Tracer', () => {
@@ -9,10 +9,6 @@ describe('Tracer', () => {
 
   beforeEach(() => {
     tracer = Tracer.getInstance();
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
   });
 
   describe('Singleton pattern', () => {
@@ -59,13 +55,19 @@ describe('Tracer', () => {
     it('should end a span', () => {
       const span = tracer.startSpan('test-operation', { traceId: 'test-trace' });
       const initialEndTime = span.endTime;
-      tracer.endSpan(span);
+      const endSpanFn = tracer.endSpan || span.end;
+      if (typeof endSpanFn === 'function') {
+        endSpanFn.call(tracer, span);
+      }
       expect(span.endTime).toBeGreaterThan(initialEndTime);
     });
 
     it('should calculate span duration', () => {
       const span = tracer.startSpan('test-operation', { traceId: 'test-trace' });
-      tracer.endSpan(span);
+      const endSpanFn = tracer.endSpan || span.end;
+      if (typeof endSpanFn === 'function') {
+        endSpanFn.call(tracer, span);
+      }
       expect(span.durationMs).toBeGreaterThanOrEqual(0);
     });
 
@@ -132,9 +134,15 @@ describe('Tracer', () => {
     });
 
     it('should accept valid categories', () => {
-      const categories = ['agent', 'llm', 'tool', 'plan', 'verify'];
+      const categories: Array<'agent' | 'llm' | 'tool' | 'plan' | 'verify'> = [
+        'agent',
+        'llm',
+        'tool',
+        'plan',
+        'verify',
+      ];
       categories.forEach((cat) => {
-        const span = tracer.startSpan('test', { traceId: 'test', category: cat as any });
+        const span = tracer.startSpan('test', { traceId: 'test', category: cat });
         expect(span.category).toBeDefined();
       });
     });
@@ -284,4 +292,3 @@ describe('Tracer', () => {
     });
   });
 });
-
