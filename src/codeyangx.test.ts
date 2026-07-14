@@ -1,7 +1,7 @@
 /**
  * Tests for CodeYangX desktop launcher
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 

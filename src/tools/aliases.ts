@@ -182,5 +182,32 @@ export function fuzzyFindTools(query: string, names: string[]): string[] {
     .map((s) => s.name);
 }
 
+/**
+ * Get all aliases for a given canonical tool name.
+ * E.g. getToolAliases('Bash') → ['sh', 'shell']
+ */
+export function getToolAliases(name: string): string[] {
+  return Object.entries(TOOL_ALIASES)
+    .filter(([, canonical]) => canonical === name)
+    .map(([alias]) => alias);
+}
+
+/**
+ * Get a map of canonical tool names to their aliases.
+ * E.g. Map { 'Bash' → ['sh', 'shell'], 'Read' → ['cat'], ... }
+ */
+export function getAllAliases(): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const [alias, canonical] of Object.entries(TOOL_ALIASES)) {
+    const existing = map.get(canonical);
+    if (existing) {
+      existing.push(alias);
+    } else {
+      map.set(canonical, [alias]);
+    }
+  }
+  return map;
+}
+
 /** Rebuild the semantic index from the current tool registry. Call after tools change. */
 export { rebuildSemanticIndex } from './semantic-index.js';

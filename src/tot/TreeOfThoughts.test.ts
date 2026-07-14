@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TreeOfThoughts } from './TreeOfThoughts.js';
+import type { LLMClient } from '../agent/LLMClient.js';
 
 describe('TreeOfThoughts', () => {
   let tot: TreeOfThoughts;
@@ -13,7 +14,7 @@ describe('TreeOfThoughts', () => {
       chat: vi.fn(),
       stream: vi.fn(),
     };
-    tot = new TreeOfThoughts(mockClient as any);
+    tot = new TreeOfThoughts(mockClient as unknown as LLMClient);
   });
 
   describe('Constructor', () => {
@@ -29,7 +30,11 @@ describe('TreeOfThoughts', () => {
         enableMerging: false,
         complexityThreshold: 7,
       };
-      const customTot = new TreeOfThoughts({} as any, customConfig);
+      const mockClient = {
+        chat: vi.fn(),
+        stream: vi.fn(),
+      };
+      const customTot = new TreeOfThoughts(mockClient as unknown as LLMClient, customConfig);
       expect(customTot).toBeDefined();
     });
   });
