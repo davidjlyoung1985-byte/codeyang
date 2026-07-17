@@ -68,14 +68,7 @@ export const DEFAULT_BRIDGE_CONFIG: BridgeConfig = {
 
 /** WebSocket event types */
 export type WsEventType =
-  | 'new_task'
-  | 'task_update'
-  | 'new_message'
-  | 'agent_connected'
-  | 'agent_disconnected'
-  | 'ping'
-  | 'pong'
-  | 'auth';
+  'new_task' | 'task_update' | 'new_message' | 'agent_connected' | 'agent_disconnected' | 'ping' | 'pong' | 'auth';
 
 export interface WsEvent {
   type: WsEventType;

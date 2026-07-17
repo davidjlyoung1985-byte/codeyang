@@ -45,8 +45,7 @@ const MIN_REPEAT_TEXTS_FOR_FUZZY = 2;
 const MAX_CHECKPOINTS = 10;
 
 type AssistantContentBlock =
-  | { type: 'text'; text: string }
-  | { type: 'tool_use'; id: string; name: string; input: unknown };
+  { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown };
 
 type ToolResultBlock = {
   type: 'tool_result';

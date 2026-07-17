@@ -268,21 +268,25 @@ export async function executeComplexity(filePath: string): Promise<string> {
     let functions = 0;
     let branches = 0;
 
+    // Note: acorn-walk types are complex and not fully exported.
+    // We use 'any' here with proper runtime checks for safety.
+    type WalkerState = { depth: number };
+
     acornWalk.recursive(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ast as any,
-      { depth: 0 },
+      { depth: 0 } as WalkerState,
       {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        FunctionDeclaration(node: any, state: any, c: any) {
+        FunctionDeclaration(node: any, state: WalkerState, c: any) {
           functions++;
           state.depth++;
           if (state.depth > maxDepth) maxDepth = state.depth;
-          c(node.body, state);
+          if (node.body) c(node.body, state);
           state.depth--;
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ArrowFunctionExpression(node: any, state: any, c: any) {
+        ArrowFunctionExpression(node: any, state: WalkerState, c: any) {
           functions++;
           state.depth++;
           if (state.depth > maxDepth) maxDepth = state.depth;
@@ -292,24 +296,24 @@ export async function executeComplexity(filePath: string): Promise<string> {
           state.depth--;
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        IfStatement(node: any, state: any, c: any) {
+        IfStatement(node: any, state: WalkerState, c: any) {
           complexity++;
           branches++;
           if (node.consequent) c(node.consequent, state);
           if (node.alternate) c(node.alternate, state);
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        WhileStatement(node: any, state: any, c: any) {
+        WhileStatement(node: any, state: WalkerState, c: any) {
           complexity++;
           if (node.body) c(node.body, state);
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ForStatement(node: any, state: any, c: any) {
+        ForStatement(node: any, state: WalkerState, c: any) {
           complexity++;
           if (node.body) c(node.body, state);
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        SwitchCase(node: any, state: any, c: any) {
+        SwitchCase(node: any, state: WalkerState, c: any) {
           complexity++;
           branches++;
           if (node.consequent) {

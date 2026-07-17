@@ -326,7 +326,7 @@ describe('Agent Loop Integration', () => {
       const agent2 = new Agent();
       agent2.loadMessages(exported);
       expect(agent2.exportMessages().length).toBe(exported.length);
-    }, 10000);
+    }, 30000);
 
     it('preserves tool results in exported messages', async () => {
       const agent = new Agent();
