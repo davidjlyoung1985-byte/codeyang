@@ -4,8 +4,7 @@ import type { LLMMessage } from './LLMClient.js';
 
 /** Internal types used for message serialization. */
 type AssistantContentBlock =
-  | { type: 'text'; text: string }
-  | { type: 'tool_use'; id: string; name: string; input: unknown };
+  { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown };
 
 type ToolResultBlock = {
   type: 'tool_result';

@@ -40,7 +40,7 @@ import axios from 'axios';
 
 // ── LaunchAppTool ───────────────────────────────────────
 describe('LaunchAppTool', () => {
-  let executeLaunchApp: typeof import('./LaunchAppTool.js')['executeLaunchApp'];
+  let executeLaunchApp: (typeof import('./LaunchAppTool.js'))['executeLaunchApp'];
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -65,7 +65,7 @@ describe('LaunchAppTool', () => {
 
 // ── WebSearchTool ───────────────────────────────────────
 describe('WebSearchTool', () => {
-  let executeWebSearch: typeof import('./WebSearchTool.js')['executeWebSearch'];
+  let executeWebSearch: (typeof import('./WebSearchTool.js'))['executeWebSearch'];
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -109,7 +109,7 @@ describe('WebSearchTool', () => {
 
 // ── PowerShellTool ───────────────────────────────────────
 describe('PowerShellTool', () => {
-  let executePowerShell: typeof import('./PowerShellTool.js')['executePowerShell'];
+  let executePowerShell: (typeof import('./PowerShellTool.js'))['executePowerShell'];
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -129,7 +129,7 @@ describe('PowerShellTool', () => {
 
 // ── ToolSearchTool ───────────────────────────────────────
 describe('ToolSearchTool', () => {
-  let executeToolSearch: typeof import('./ToolSearchTool.js')['executeToolSearch'];
+  let executeToolSearch: (typeof import('./ToolSearchTool.js'))['executeToolSearch'];
 
   beforeEach(async () => {
     executeToolSearch = (await import('./ToolSearchTool.js')).executeToolSearch;
@@ -148,8 +148,8 @@ describe('ToolSearchTool', () => {
 
 // ── EnterPlanModeTool / ExitPlanModeTool ─────────────────
 describe('PlanMode tools', () => {
-  let executeEnterPlanMode: typeof import('./EnterPlanModeTool.js')['executeEnterPlanMode'];
-  let executeExitPlanMode: typeof import('./ExitPlanModeTool.js')['executeExitPlanMode'];
+  let executeEnterPlanMode: (typeof import('./EnterPlanModeTool.js'))['executeEnterPlanMode'];
+  let executeExitPlanMode: (typeof import('./ExitPlanModeTool.js'))['executeExitPlanMode'];
 
   beforeEach(async () => {
     // Reset plan mode via registry
@@ -174,7 +174,7 @@ describe('PlanMode tools', () => {
 
 // ── ClaudeCodeTool ───────────────────────────────────────
 describe('ClaudeCodeTool', () => {
-  let tool: typeof import('./ClaudeCodeTool.js')['claudeCodeTool'];
+  let tool: (typeof import('./ClaudeCodeTool.js'))['claudeCodeTool'];
 
   beforeEach(async () => {
     vi.clearAllMocks();

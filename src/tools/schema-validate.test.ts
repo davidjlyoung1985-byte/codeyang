@@ -43,37 +43,37 @@ describe('validateParams', () => {
 
   it('catches wrong type for number', () => {
     const errors = validateParams({ name: 'test', count: 'abc' }, fullSchema);
-    expect(errors.some(e => e.includes('count') && e.includes('number'))).toBe(true);
+    expect(errors.some((e) => e.includes('count') && e.includes('number'))).toBe(true);
   });
 
   it('catches wrong type for boolean', () => {
     const errors = validateParams({ name: 'test', flag: 'yes' }, fullSchema);
-    expect(errors.some(e => e.includes('flag') && e.includes('boolean'))).toBe(true);
+    expect(errors.some((e) => e.includes('flag') && e.includes('boolean'))).toBe(true);
   });
 
   it('catches wrong type for array', () => {
     const errors = validateParams({ name: 'test', tags: 'not-array' }, fullSchema);
-    expect(errors.some(e => e.includes('tags') && e.includes('array'))).toBe(true);
+    expect(errors.some((e) => e.includes('tags') && e.includes('array'))).toBe(true);
   });
 
   it('validates array item types', () => {
     const errors = validateParams({ name: 'test', tags: [123, 456] }, fullSchema);
-    expect(errors.some(e => e.includes('tags') && e.includes('string'))).toBe(true);
+    expect(errors.some((e) => e.includes('tags') && e.includes('string'))).toBe(true);
   });
 
   it('catches wrong type for object', () => {
     const errors = validateParams({ name: 'test', config: 'not-object' }, fullSchema);
-    expect(errors.some(e => e.includes('config') && e.includes('object'))).toBe(true);
+    expect(errors.some((e) => e.includes('config') && e.includes('object'))).toBe(true);
   });
 
   it('validates enum values', () => {
     const errors = validateParams({ name: 'test', mode: 'turbo' }, fullSchema);
-    expect(errors.some(e => e.includes('mode') && e.includes('one of'))).toBe(true);
+    expect(errors.some((e) => e.includes('mode') && e.includes('one of'))).toBe(true);
   });
 
   it('passes valid enum value', () => {
     const errors = validateParams({ name: 'test', mode: 'fast' }, fullSchema);
-    expect(errors.filter(e => e.includes('mode'))).toEqual([]);
+    expect(errors.filter((e) => e.includes('mode'))).toEqual([]);
   });
 
   it('handles null/undefined values gracefully', () => {

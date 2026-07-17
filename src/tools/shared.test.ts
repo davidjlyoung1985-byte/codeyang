@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
 describe('resolveSafePath', () => {
-  let resolveSafePath: typeof import('./shared.js')['resolveSafePath'];
+  let resolveSafePath: (typeof import('./shared.js'))['resolveSafePath'];
 
   beforeEach(async () => {
     resolveSafePath = (await import('./shared.js')).resolveSafePath;

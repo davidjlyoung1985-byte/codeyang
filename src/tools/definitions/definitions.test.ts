@@ -100,8 +100,8 @@ describe('Tool Definitions', () => {
       const mod = await importer();
       for (const def of mod.definitions as ToolDefinition[]) {
         // Build minimal args from parameter schema
-        const props = (def.parameters as Record<string, unknown>)?.properties as Record<string, unknown> ?? {};
-        const required = (def.parameters as Record<string, unknown>)?.required as string[] ?? [];
+        const props = ((def.parameters as Record<string, unknown>)?.properties as Record<string, unknown>) ?? {};
+        const required = ((def.parameters as Record<string, unknown>)?.required as string[]) ?? [];
         const args: Record<string, unknown> = {};
 
         for (const key of required) {
