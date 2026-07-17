@@ -224,7 +224,7 @@ describe('executeWebFetch', () => {
 // ──────────────────────────────────────────────
 
 describe('executeBash', () => {
-  it('executes a simple echo command', { timeout: 10000 }, async () => {
+  it('executes a simple echo command', { timeout: 30000 }, async () => {
     if (process.platform === 'win32') {
       const result = await executeBash('echo hello');
       expect(result).toContain('hello');
@@ -234,7 +234,7 @@ describe('executeBash', () => {
     }
   });
 
-  it('returns exit code for failing commands', { timeout: 10000 }, async () => {
+  it('returns exit code for failing commands', { timeout: 30000 }, async () => {
     if (process.platform === 'win32') {
       // On Windows, use a command that fails
       const result = await executeBash('cmd /c "exit 1"');

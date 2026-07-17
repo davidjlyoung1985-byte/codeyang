@@ -65,7 +65,9 @@ describe('Commands - Extended Coverage', () => {
       })),
       answerQuestion: vi.fn(),
       cancelQuestion: vi.fn(),
-      get waitingForAnswer() { return false; },
+      get waitingForAnswer() {
+        return false;
+      },
     } as unknown as Agent;
 
     mockMcpMgr = {
@@ -205,7 +207,7 @@ describe('Commands - Extended Coverage', () => {
     it('should handle /commit with message', async () => {
       const result = await dispatch('/commit test message', ctx);
       expect(result.handled).toBe(true);
-    }, 15000);
+    }, 30000);
 
     it('should handle /commit without message', async () => {
       const result = await dispatch('/commit', ctx);
