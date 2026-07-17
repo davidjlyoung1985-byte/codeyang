@@ -1,9 +1,39 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { executeQtBuild } from './QtBuildTool.js';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
+
+// Mock execa to avoid actually running qmake/cmake
+vi.mock('execa', () => ({
+  execa: vi.fn(async (command: string, args?: string[]) => {
+    // Simulate successful command execution
+    if (command === 'qmake') {
+      return {
+        exitCode: 0,
+        stdout: 'qmake output',
+        stderr: '',
+      };
+    }
+    if (command === 'cmake') {
+      return {
+        exitCode: 0,
+        stdout: 'cmake build output',
+        stderr: '',
+      };
+    }
+    if (command === 'make' || command === 'nmake') {
+      return {
+        exitCode: 0,
+        stdout: 'Build successful\n[100%] Built target myapp',
+        stderr: '',
+      };
+    }
+    // Default: command not found
+    throw new Error(`Command not found: ${command}`);
+  }),
+}));
 
 let tempDir: string;
 
@@ -28,29 +58,29 @@ afterEach(async () => {
 
 // ──────────────────────────────────────────────
 // QtBuild Tool — build system execution
-// Note: These tests verify graceful handling when
-// qmake/cmake are not installed in the test environment.
+// Note: These tests use mocked execa to avoid
+// requiring actual qmake/cmake installation.
 // ──────────────────────────────────────────────
 
 describe('QtBuildTool', () => {
   describe('qmake mode', () => {
-    it('handles qmake not being installed gracefully', { timeout: 10000 }, async () => {
-      // qmake will not be found in test environment
+    it('handles qmake execution gracefully', async () => {
       const r = await executeQtBuild('qmake', '', tempDir);
-      // Should return a message, not crash
       expect(r).toBeDefined();
       expect(typeof r).toBe('string');
+      expect(r).toContain('Qt Build (qmake)');
     });
 
-    it('reports qmake build header', { timeout: 10000 }, async () => {
+    it('reports qmake build header', async () => {
       const r = await executeQtBuild('qmake', 'myapp', tempDir);
       expect(r).toBeDefined();
       expect(typeof r).toBe('string');
+      expect(r).toContain('Qt Build (qmake)');
     });
   });
 
   describe('cmake mode', () => {
-    it('handles cmake not being installed gracefully', async () => {
+    it('handles cmake execution gracefully', async () => {
       const r = await executeQtBuild('cmake', '', tempDir);
       expect(r).toContain('Qt Build (cmake)');
       expect(r.length).toBeGreaterThan(0);
