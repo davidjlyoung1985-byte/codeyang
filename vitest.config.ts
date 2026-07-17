@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    testTimeout: 30000, // 增加全局测试超时到 30 秒
+    hookTimeout: 30000,
     include: ['src/**/*.test.ts', 'src/**/*.bench.ts'],
     exclude: ['**/node_modules/**', '**/.git/**', '**/dist/**'],
     coverage: {

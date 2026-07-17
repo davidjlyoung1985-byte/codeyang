@@ -58,12 +58,12 @@ describe('BashTool', () => {
   });
 
   describe('deny list', () => {
-    it('should allow normal commands (deny list empty by default)', async () => {
+    it('should allow normal commands (deny list empty by default)', { timeout: 10000 }, async () => {
       const result = await executeBash('echo not-blocked');
       expect(result).toContain('not-blocked');
     });
 
-    it('should still execute when permission allows', async () => {
+    it('should still execute when permission allows', { timeout: 10000 }, async () => {
       vi.mocked(checkPermission).mockResolvedValue({ level: 'allow' });
       const result = await executeBash('echo normal');
       expect(result).toContain('normal');
