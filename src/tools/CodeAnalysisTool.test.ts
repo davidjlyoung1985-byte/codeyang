@@ -10,12 +10,14 @@ import {
   executeLint,
   executeFindDeps,
   executeCountLines,
+  clearCache,
 } from './CodeAnalysisTool.js';
 
 const TEST_DIR = path.join(os.tmpdir(), 'codeyang-test-code-analysis');
 
 describe('CodeAnalysisTool', () => {
   beforeEach(async () => {
+    clearCache(); // prevent cross-test cache pollution
     if (existsSync(TEST_DIR)) {
       await fs.rm(TEST_DIR, { recursive: true, force: true });
     }

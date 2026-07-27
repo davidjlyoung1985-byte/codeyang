@@ -25,7 +25,11 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
   const lower = line.toLowerCase().trim();
 
   if (['exit', 'quit', '/exit', '/quit'].includes(lower)) {
-    await saveSession(ctx.agent.exportMessages(), ctx.currentSessionId);
+    try {
+      await saveSession(ctx.agent.exportMessages(), ctx.currentSessionId);
+    } catch {
+      // Ignore save failures on exit — the process is terminating anyway
+    }
     await ctx.mcpMgr.shutdown();
     ctx.ui.close();
     process.exit(0);
