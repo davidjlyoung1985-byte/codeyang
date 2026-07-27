@@ -29,6 +29,13 @@ function setCached(key: string, result: string): void {
 }
 
 /**
+ * Clear the result cache (used in tests to prevent cross-test contamination).
+ */
+export function clearCache(): void {
+  resultCache.clear();
+}
+
+/**
  * Build a cache key from the resolved file path + current mtime.
  * Returns null if the file can't be stat'd (e.g. deleted).
  */
