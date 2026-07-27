@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 
 // Mock execa to avoid actually running qmake/cmake
 vi.mock('execa', () => ({
-  execa: vi.fn(async (command: string, args?: string[]) => {
+  execa: vi.fn(async (command: string, _args?: string[]) => {
     // Simulate successful command execution
     if (command === 'qmake') {
       return {

@@ -117,7 +117,6 @@ export class ApiKeyAuthProvider implements AuthProvider {
     this.validApiKeys = new Set(keys.filter(Boolean));
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async authenticate(req: Request): Promise<AuthResult> {
     // 内部请求免认证
     if (req.source === 'internal') {
@@ -155,7 +154,6 @@ export class TokenBucketRateLimiter implements RateLimiter {
     private burstSize = 30,
   ) {}
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async check(key: string): Promise<RateLimitResult> {
     const now = Date.now();
     let bucket = this.buckets.get(key);
@@ -207,7 +205,6 @@ export interface AuditLogger {
 export class ConsoleAuditLogger implements AuditLogger {
   private entries: AuditEntry[] = [];
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async log(entry: AuditEntry): Promise<void> {
     this.entries.push(entry);
     // 只保留最近 1000 条在内存中

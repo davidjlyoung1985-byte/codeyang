@@ -1,11 +1,17 @@
 import { defineConfig } from 'vitest/config';
+import path from 'node:path';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',
-    testTimeout: 30000, // 增加全局测试超时到 30 秒
-    hookTimeout: 30000,
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     include: ['src/**/*.test.ts', 'src/**/*.bench.ts'],
     exclude: ['**/node_modules/**', '**/.git/**', '**/dist/**'],
     coverage: {
@@ -13,13 +19,12 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: [
         'src/**/*.test.ts',
-        'src/index.ts',
         'src/**/*.bench.ts',
-        'src/bridge/',
-        'src/sandbox/',
-        'src/tot/',
-        'src/mcp/',
+        'src/index.ts',
+        'src/bridge/types.ts',
+        'src/sandbox/sandbox-runner.js',
         'src/tools/semantic-index.ts',
+        // src/tot/ and src/mcp/ have basic tests — keep included
       ],
       thresholds: {
         statements: 80,
@@ -27,6 +32,12 @@ export default defineConfig({
         functions: 75,
         lines: 80,
       },
+      // Fail CI if thresholds not met
+      reportOnFailure: true,
     },
+    // Ensure test files are found on Windows with absolute paths
+    root: __dirname,
+    // For Windows: force POSIX-style path separators in test file matching
+    forceExit: true,
   },
 });

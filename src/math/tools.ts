@@ -2,7 +2,6 @@
  * Math tool factory — creates ToolDefinition[] for registration.
  * Conditionally called when math tools are enabled.
  */
-/* eslint-disable @typescript-eslint/require-await -- ToolDefinition interface requires async execute methods */
 import type { ToolDefinition } from '../types.js';
 import { executeMathSolve } from './MathSolve.js';
 import { executeMathPlot } from './MathPlot.js';
