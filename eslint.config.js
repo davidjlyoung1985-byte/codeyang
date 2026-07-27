@@ -14,7 +14,9 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/require-await': 'warn',
+      // Off: too many false positives with interface implementations (Gateway/CircuitBreaker/tool defs)
+      // that require async for interface compliance even when no await needed
+      '@typescript-eslint/require-await': 'off',
       'no-console': 'off',
       'prefer-const': 'error',
       'no-var': 'error',

@@ -15,7 +15,6 @@ export const definitions: ToolDefinition[] = [
       },
       required: [],
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- ToolDefinition interface requires async
     execute: async (args) => executeEnterPlanMode(args['goal'] ? String(args['goal']) : undefined),
   },
   {
@@ -27,7 +26,6 @@ export const definitions: ToolDefinition[] = [
       properties: {},
       required: [],
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- ToolDefinition interface requires async
     execute: async () => executeExitPlanMode(),
   },
 ];

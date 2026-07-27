@@ -32,10 +32,11 @@ export async function safeRenameWithSuffix(oldPath: string, newPath: string): Pr
 }
 
 /**
- * Atomic rename that handles cross-device moves.
+ * Atomic rename that handles cross-device moves and Windows file locking.
  *
  * Uses rename() for same-device moves (atomic).
  * Falls back to copy+delete for cross-device (EXDEV error).
+ * Retries on Windows EPERM errors (file locking).
  *
  * This is the low-level primitive used by atomicWrite and other operations.
  *
@@ -43,16 +44,37 @@ export async function safeRenameWithSuffix(oldPath: string, newPath: string): Pr
  * @param dest - Destination path
  */
 export async function atomicRename(src: string, dest: string): Promise<void> {
-  try {
-    await rename(src, dest);
-  } catch (err: unknown) {
-    // Handle cross-device move (e.g., temp in C: target in D:)
-    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EXDEV') {
-      await copyFile(src, dest);
-      await unlink(src).catch(() =>
-        console.warn('⚠️ [FileSystem] Failed to clean up temp file after cross-device copy'),
-      );
-    } else {
+  const maxRetries = 3;
+  const retryDelay = 100; // ms
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      await rename(src, dest);
+      return; // Success
+    } catch (err: unknown) {
+      if (!(err instanceof Error && 'code' in err)) {
+        throw err;
+      }
+
+      const code = (err as NodeJS.ErrnoException).code;
+
+      // Handle cross-device move (e.g., temp in C: target in D:)
+      if (code === 'EXDEV') {
+        await copyFile(src, dest);
+        await unlink(src).catch(() =>
+          console.warn('⚠️ [FileSystem] Failed to clean up temp file after cross-device copy'),
+        );
+        return;
+      }
+
+      // Handle Windows file locking (EPERM, EBUSY, EACCES)
+      if ((code === 'EPERM' || code === 'EBUSY' || code === 'EACCES') && attempt < maxRetries) {
+        // Wait briefly and retry
+        await new Promise((resolve) => setTimeout(resolve, retryDelay * (attempt + 1)));
+        continue;
+      }
+
+      // All retries exhausted or non-retryable error
       throw err;
     }
   }
