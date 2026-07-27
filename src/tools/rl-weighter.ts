@@ -12,9 +12,14 @@
  *
  * This is UCB1 (Upper Confidence Bound), balancing exploitation
  * (use what works) with exploration (try what hasn't been tried much).
+ *
+ * All I/O is async. On module load, data starts as an in-memory default;
+ * the first call to any API triggers lazy async load from disk.
+ * If the file doesn't exist or is corrupt, we silently use defaults.
+ * This avoids synchronous `require('fs')` hacks that break ESM.
  */
 
-import { writeFile, mkdir, rename } from 'node:fs/promises';
+import { writeFile, mkdir, rename, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -52,39 +57,51 @@ const ALPHA = 1.0; // Beta prior: alpha (success pseudo-count)
 const BETA = 1.0; // Beta prior: beta (failure pseudo-count)
 const EXPLORATION_C = 0.5; // UCB1 exploration constant
 const MAX_ERRORS_PER_TOOL = 5;
+const PERSIST_INTERVAL = 5; // Persist every N calls
 
 // ── State ─────────────────────────────────────────────────────────────
 
-let rlData: RLData = loadSync();
+/** In-memory RL data — starts as default, lazy-loaded from disk on first use. */
+let rlData: RLData = {
+  version: 0,
+  tools: {},
+  totalCalls: 0,
+  updatedAt: Date.now(),
+};
 
-function loadSync(): RLData {
-  try {
-    // Dynamic import for ESM compatibility
-    const fsModule = require_node_fs();
-    if (fsModule.existsSync(DATA_FILE)) {
-      const raw = fsModule.readFileSync(DATA_FILE, 'utf-8');
+/** Whether the async load from disk has completed (or failed). */
+let loadAttempted = false;
+/** Guards against concurrent loads. */
+let loadPromise: Promise<void> | null = null;
+
+// ── Lazy async loader ─────────────────────────────────────────────────
+
+/**
+ * Ensures RL data is loaded from disk at least once.
+ * Safe to call multiple times — only the first call reads the file.
+ * Falls back to default in-memory data if the file is missing/corrupt.
+ */
+async function ensureLoaded(): Promise<void> {
+  if (loadAttempted) return;
+  if (loadPromise) return loadPromise;
+
+  loadPromise = (async () => {
+    try {
+      const raw = await readFile(DATA_FILE, 'utf-8');
       const parsed = JSON.parse(raw) as RLData;
-      return {
+      rlData = {
         version: parsed.version || 0,
         tools: parsed.tools || {},
         totalCalls: parsed.totalCalls || 0,
         updatedAt: parsed.updatedAt || Date.now(),
       };
+    } catch {
+      // File missing or corrupt — stay with default in-memory data
     }
-  } catch {
-    // File corrupt or missing — start fresh
-  }
-  return { version: 0, tools: {}, totalCalls: 0, updatedAt: Date.now() };
-}
+    loadAttempted = true;
+  })();
 
-/** Lazily resolve fs for ESM compatibility */
-let _fs: typeof import('fs') | null = null;
-function require_node_fs(): typeof import('fs') {
-  if (!_fs) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    _fs = require('fs') as typeof import('fs');
-  }
-  return _fs;
+  return loadPromise;
 }
 
 async function persist(): Promise<void> {
@@ -105,6 +122,7 @@ async function persist(): Promise<void> {
 
 /**
  * Record a tool call outcome. Call this after each tool execution.
+ * Automatically loads data from disk on first call.
  */
 export async function recordToolOutcome(
   name: string,
@@ -112,9 +130,9 @@ export async function recordToolOutcome(
   durationMs: number,
   errorMessage?: string,
 ): Promise<void> {
-  if (!rldata_loaded()) await ensureLoaded();
+  await ensureLoaded();
 
-  const stats = rlData.tools[name] || {
+  const stats = rlData.tools[name] ?? {
     name,
     calls: 0,
     successes: 0,
@@ -138,28 +156,10 @@ export async function recordToolOutcome(
   rlData.tools[name] = stats;
   rlData.totalCalls++;
 
-  // Persist every 10 calls (debounced)
-  if (rlData.totalCalls % 10 === 0) {
+  // Debounced persist
+  if (rlData.totalCalls % PERSIST_INTERVAL === 0) {
     await persist();
   }
-}
-
-/** Lazy load flag */
-let _loaded = false;
-async function ensureLoaded(): Promise<void> {
-  if (!_loaded) {
-    try {
-      const { readFile: rf } = await import('node:fs/promises');
-      const raw = await rf(DATA_FILE, 'utf-8');
-      rlData = JSON.parse(raw);
-    } catch {
-      // File not found — use default
-    }
-    _loaded = true;
-  }
-}
-function rldata_loaded(): boolean {
-  return _loaded;
 }
 
 /**
@@ -172,10 +172,9 @@ function rldata_loaded(): boolean {
  */
 export function getToolWeight(name: string): number {
   const stats = rlData.tools[name];
-  if (!stats || stats.calls === 0) {
-    // Unknown tool: give medium weight to encourage exploration
-    return 50;
-  }
+
+  // Unknown tool: medium weight to encourage exploration
+  if (!stats || stats.calls === 0) return 50;
 
   // Bayesian success rate: (successes + α) / (calls + α + β)
   const successRate = (stats.successes + ALPHA) / (stats.calls + ALPHA + BETA);
@@ -184,48 +183,42 @@ export function getToolWeight(name: string): number {
   const explorationBonus =
     rlData.totalCalls > 0 ? EXPLORATION_C * Math.sqrt(Math.log(rlData.totalCalls + 1) / (stats.calls + 1)) : 0;
 
-  const weight = Math.round(Math.min(100, Math.max(0, successRate * 90 + explorationBonus * 20)));
-  return weight;
+  return Math.round(Math.min(100, Math.max(0, successRate * 90 + explorationBonus * 20)));
 }
 
 /**
  * Get all tool weights for ranking.
  */
 export function getAllToolWeights(): Array<{ name: string; weight: number; calls: number; successRate: number }> {
-  const result: Array<{ name: string; weight: number; calls: number; successRate: number }> = [];
-
-  for (const [name, stats] of Object.entries(rlData.tools)) {
-    const sr = stats.calls > 0 ? stats.successes / stats.calls : 0.5;
-    result.push({
+  return Object.entries(rlData.tools)
+    .map(([name, stats]) => ({
       name,
       weight: getToolWeight(name),
       calls: stats.calls,
-      successRate: Math.round(sr * 100) / 100,
-    });
-  }
-
-  return result.sort((a, b) => b.weight - a.weight);
+      successRate: stats.calls > 0 ? Math.round((stats.successes / stats.calls) * 100) / 100 : 0.5,
+    }))
+    .sort((a, b) => b.weight - a.weight);
 }
 
 /**
- * Get the top-k tools for a given task type, weighted by RL.
- * If the query matches multiple tools, prefer the one with higher weight.
+ * Rank tool names by RL weight (highest first).
  */
 export function rankToolsByRL(toolNames: string[]): string[] {
-  const weighted = toolNames.map((name) => ({
-    name,
-    weight: getToolWeight(name),
-  }));
-  return weighted.sort((a, b) => b.weight - a.weight).map((t) => t.name);
+  return [...toolNames]
+    .map((name) => ({ name, weight: getToolWeight(name) }))
+    .sort((a, b) => b.weight - a.weight)
+    .map((t) => t.name);
 }
 
 /**
  * Suggest an alternative tool based on RL history.
- * If a tool has high failure rate, suggest the most successful alternative.
+ * If a tool has high failure rate (>=30%), suggest the most successful alternative.
+ * Returns null if the tool hasn't failed enough or no suitable alternative found.
  */
 export function suggestAlternative(failedTool: string, alternatives: string[]): string | null {
   const failedStats = rlData.tools[failedTool];
   if (!failedStats || failedStats.calls < 3) return null;
+
   const failureRate = 1 - failedStats.successes / failedStats.calls;
   if (failureRate < 0.3) return null; // Not failing enough to warrant a switch
 
@@ -234,24 +227,147 @@ export function suggestAlternative(failedTool: string, alternatives: string[]): 
 }
 
 /**
+ * Apply temporal decay to RL data.
+ * Older data points are weighted less than recent ones using exponential decay.
+ *
+ * Formula for decayed success rate:
+ *   effective(start) + Σ(decayFactor^(now - t_i) * outcome_i)
+ *
+ * This prevents ancient history from biasing current tool selection.
+ */
+export async function applyDecay(halflifeDays = 30): Promise<number> {
+  await ensureLoaded();
+  const now = Date.now();
+  const halfLifeMs = halflifeDays * 24 * 60 * 60 * 1000;
+  const decayLambda = Math.LN2 / halfLifeMs;
+  let decayed = 0;
+
+  for (const stats of Object.values(rlData.tools)) {
+    if (stats.calls === 0) continue;
+    const age = now - stats.lastUsed;
+    if (age <= halfLifeMs) continue; // Still within half-life, keep as-is
+
+    // Apply decay: simulate the effect of age by gradually reducing success count
+    const decayFactor = Math.exp(-decayLambda * age);
+    const effectiveCalls = Math.max(1, Math.round(stats.calls * decayFactor));
+    const effectiveSuccesses = Math.round(stats.successes * decayFactor);
+
+    // Only decay if it meaningfully changes the stats
+    const callReduction = stats.calls - effectiveCalls;
+    if (callReduction > 3) {
+      stats.calls = effectiveCalls;
+      stats.successes = effectiveSuccesses;
+      decayed++;
+    }
+  }
+
+  if (decayed > 0) {
+    rlData.updatedAt = Date.now();
+    await persist();
+  }
+
+  return decayed;
+}
+
+/**
  * Get RL statistics summary text.
  */
 export function getRLSummary(): string {
-  const tools = Object.entries(rlData.tools);
-  if (tools.length === 0) return 'No tool usage data yet.';
+  const entries = Object.entries(rlData.tools);
+  if (entries.length === 0) return 'No tool usage data yet.';
 
-  const lines: string[] = [`Tool RL Statistics (${tools.length} tools, ${rlData.totalCalls} total calls):`, ''];
-
-  for (const [name, stats] of tools.sort((a, b) => b[1].calls - a[1].calls).slice(0, 20)) {
-    const sr = stats.calls > 0 ? ((stats.successes / stats.calls) * 100).toFixed(0) : '—';
-    lines.push(`  ${name.padEnd(25)} ${String(stats.calls).padStart(5)} calls  ${sr.padStart(3)}% success`);
+  const lines = [`Tool RL Statistics (${entries.length} tools, ${rlData.totalCalls} total calls):`, ''];
+  for (const [name, stats] of entries.sort((a, b) => b[1].calls - a[1].calls).slice(0, 20)) {
+    const sr = stats.calls > 0 ? `${((stats.successes / stats.calls) * 100).toFixed(0)}%` : '—';
+    lines.push(`  ${name.padEnd(25)} ${String(stats.calls).padStart(5)} calls  ${sr.padStart(4)} success`);
   }
-
   return lines.join('\n');
 }
 
 /**
- * Reset all RL data.
+ * Export RL data as a portable JSON string.
+ * Useful for sharing learning across different machines or backing up.
+ */
+export async function exportRLData(): Promise<string> {
+  await ensureLoaded();
+  return JSON.stringify(
+    {
+      version: rlData.version,
+      tools: rlData.tools,
+      totalCalls: rlData.totalCalls,
+      exportedAt: Date.now(),
+    },
+    null,
+    2,
+  );
+}
+
+/**
+ * Import RL data from a JSON string.
+ * Merges with existing data — if a tool already exists, the higher-call-count
+ * version wins (to prevent stale data from overwriting fresh data).
+ */
+export async function importRLData(json: string): Promise<{ merged: number; skipped: number }> {
+  await ensureLoaded();
+  let merged = 0;
+  let skipped = 0;
+
+  try {
+    const imported = JSON.parse(json) as {
+      tools?: Record<string, ToolStats>;
+      totalCalls?: number;
+    };
+
+    if (!imported.tools || typeof imported.tools !== 'object') {
+      return { merged: 0, skipped: 0 };
+    }
+
+    for (const [name, importedStats] of Object.entries(imported.tools)) {
+      if (!importedStats || typeof importedStats.calls !== 'number') continue;
+
+      const existing = rlData.tools[name];
+      if (!existing || importedStats.calls > existing.calls) {
+        // Import wins: has more data than we have
+        rlData.tools[name] = { ...importedStats };
+        merged++;
+      } else if (importedStats.calls === existing.calls) {
+        // Equal: merge by averaging success rate
+        const avgSuccesses = Math.round((importedStats.successes + existing.successes) / 2);
+        const avgCalls = Math.max(importedStats.calls, existing.calls);
+        existing.successes = Math.max(existing.successes, avgSuccesses);
+        existing.calls = Math.max(existing.calls, avgCalls);
+        merged++;
+      } else {
+        // Our data is more recent — skip
+        skipped++;
+      }
+    }
+
+    if (imported.totalCalls && imported.totalCalls > rlData.totalCalls) {
+      rlData.totalCalls = imported.totalCalls;
+    }
+
+    if (merged > 0) {
+      await persist();
+    }
+  } catch {
+    // Invalid JSON — nothing imported
+  }
+
+  return { merged, skipped };
+}
+
+/**
+ * Force-persist RL data to disk immediately.
+ * Call this on process exit/session save to ensure no data loss.
+ */
+export async function flushRLData(): Promise<void> {
+  await ensureLoaded();
+  await persist();
+}
+
+/**
+ * Reset all RL data (async — call and await).
  */
 export async function resetRLData(): Promise<void> {
   rlData = { version: 0, tools: {}, totalCalls: 0, updatedAt: Date.now() };
@@ -259,7 +375,8 @@ export async function resetRLData(): Promise<void> {
 }
 
 /**
- * Get RL configuration version (for cache invalidation).
+ * Get RL data version (for cache invalidation in AgentContextManager).
+ * Increments on every persist.
  */
 export function getRLVersion(): number {
   return rlData.version;

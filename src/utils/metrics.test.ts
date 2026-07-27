@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { metrics, createTimer } from './metrics.js';
 
 describe('MetricsCollector', () => {
