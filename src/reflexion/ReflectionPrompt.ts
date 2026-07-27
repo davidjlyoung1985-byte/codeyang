@@ -30,10 +30,12 @@ export class ReflectionPrompt {
       }
       prompt.push('');
       prompt.push('**Results:**');
-      for (const result of record.results) {
-        prompt.push(`- ${result.tool}: ${result.isError ? 'ERROR' : 'OK'}`);
-        if (result.isError || !record.success) {
-          prompt.push(`  Output: ${result.output.slice(0, 200)}`);
+      if (record.results && Array.isArray(record.results)) {
+        for (const result of record.results) {
+          prompt.push(`- ${result.tool}: ${result.isError ? 'ERROR' : 'OK'}`);
+          if (result.isError || !record.success) {
+            prompt.push(`  Output: ${result.output.slice(0, 200)}`);
+          }
         }
       }
       if (record.errorMessage) {
