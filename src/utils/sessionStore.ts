@@ -273,6 +273,29 @@ export interface SessionSearchResult {
   createdAt: string;
   updatedAt: string;
   messageCount: number;
+  project?: string;
+}
+
+/**
+ * List sessions grouped by project name.
+ * Project name is extracted from the session title format: [project] title
+ */
+export async function listSessionsByProject(): Promise<Record<string, SessionSearchResult[]>> {
+  const all = await listSessions();
+  const groups: Record<string, SessionSearchResult[]> = {};
+
+  for (const s of all) {
+    const project = s.title.match(/^\[(.*?)\]/)?.[1] || 'other';
+    if (!groups[project]) groups[project] = [];
+    groups[project].push({ ...s, project });
+  }
+
+  // Sort each group by updatedAt descending
+  for (const key of Object.keys(groups)) {
+    groups[key].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  return groups;
 }
 
 /**
