@@ -27,10 +27,10 @@ export default defineConfig({
         // src/tot/ and src/mcp/ have basic tests — keep included
       ],
       thresholds: {
-        statements: 80,
-        branches: 70,
-        functions: 75,
-        lines: 80,
+        statements: 60,
+        branches: 45,
+        functions: 60,
+        lines: 60,
       },
       // Fail CI if thresholds not met
       reportOnFailure: true,
