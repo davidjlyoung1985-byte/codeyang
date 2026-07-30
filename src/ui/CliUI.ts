@@ -405,13 +405,14 @@ export class CliUI {
         c.cyan('│'),
     );
     console.log(
-      c.cyan('  │') + '  ' + c.dim('💡 64+ Tools | Qt Support | Code Refactoring') + ' '.repeat(w - 52) + c.cyan('│'),
+      c.cyan('  │') + '  ' + c.dim('💡 64+ Tools | Qt Support | Code Refactoring | Personal Profile') + ' '.repeat(w - 58) + c.cyan('│'),
     );
     console.log(c.cyan('  ╰' + '─'.repeat(w - 4) + '╯'));
     console.log('');
     console.log(
-      `  ${c.dim('Commands:')} ${c.cyan('/clear')} ${c.cyan('/sessions')} ${c.cyan('/stats')} ${c.cyan('/model')} ${c.cyan('/mcp')}  ${c.dim('·')}  ${c.dim('Ctrl+C to exit')}`,
+      `  ${c.dim('Commands:')} ${c.cyan('/review')} ${c.cyan('/fix')} ${c.cyan('/gen-commit')} ${c.cyan('/sessions')} ${c.cyan('/stats')} ${c.cyan('/model')} ${c.dim('·')} ${c.dim('Ctrl+C to exit')}`,
     );
+    console.log(`  ${c.dim('Profile:')} ${c.dim('~/.codeyang/profile.md')}  ${c.dim('Knowledge:')} ${c.dim('~/.codeyang/knowledge/*.md')}`);
     console.log('');
     hr('ready');
     this.isFirstResponse = true;
