@@ -5,12 +5,15 @@
 import type { CliUI } from './ui/CliUI.js';
 import type { Agent } from './agent/Agent.js';
 import type { McpManager } from './mcp/McpManager.js';
+import picocolors from 'picocolors';
 import { config, getMcpServers, reloadConfig } from './agent/config.js';
 import { getPonytailPrompt } from './agent/ponytail-prompt.js';
 import type { PonytailLevel } from './agent/ponytail-prompt.js';
 import { saveSession, searchSessions } from './utils/sessionStore.js';
 import { editHistory } from './utils/editHistory.js';
 import { writeFile } from 'node:fs/promises';
+
+const c = picocolors;
 
 export interface CommandContext {
   ui: CliUI;
@@ -44,6 +47,9 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
   if (lower === '/tag') return cmdTag(ctx);
   if (lower === '/ctx_viz' || lower === '/context') return cmdCtxViz(ctx);
   if (lower === '/plan') return cmdPlan(ctx);
+  if (lower === '/review') return await cmdReview(line, ctx);
+  if (lower === '/fix') return await cmdFix(ctx);
+  if (lower === '/gen-commit') return await cmdGenCommit(line, ctx);
   if (lower === '/sessions') return await cmdSessions(ctx);
   if (lower === '/tools') return await cmdTools(ctx);
   if (lower === '/stats') return cmdStats(ctx);
@@ -63,7 +69,6 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
     const validCommands = [
       '/clear',
       '/sessions',
-      '/tasks',
       '/tools',
       '/model',
       '/ponytail',
@@ -71,6 +76,17 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
       '/stats',
       '/status',
       '/reflect',
+      '/review',
+      '/fix',
+      '/gen-commit',
+      '/config',
+      '/diff',
+      '/commit',
+      '/undo',
+      '/redo',
+      '/harness',
+      '/plan',
+      '/tasks',
       '/exit',
       '/quit',
     ];
@@ -187,15 +203,39 @@ async function cmdPlan(ctx: CommandContext): Promise<DispatchResult> {
 }
 
 async function cmdSessions(ctx: CommandContext): Promise<DispatchResult> {
-  const sessions = await searchSessions();
-  if (sessions.length === 0) {
+  const { listSessionsByProject } = await import('./utils/sessionStore.js');
+  const groups = await listSessionsByProject();
+
+  const projectNames = Object.keys(groups);
+  if (projectNames.length === 0 || projectNames.every((p) => groups[p].length === 0)) {
     console.log('No saved sessions.');
-  } else {
-    for (const s of sessions) {
+    ctx.ui.promptUser();
+    return { handled: true };
+  }
+
+  // Sort: current project first, then alphabetical
+  const currentProject = projectNames.includes('other') ? 'other' : projectNames[0];
+  const sortedProjects = projectNames.sort((a, b) => {
+    if (a === currentProject) return -1;
+    if (b === currentProject) return 1;
+    return a.localeCompare(b);
+  });
+
+  for (const project of sortedProjects) {
+    const sessions = groups[project];
+    if (sessions.length === 0) continue;
+    const isCurrent = project === currentProject;
+    console.log(`\n  ${isCurrent ? c.bold(c.green('📁 ' + project)) : c.dim('📁 ' + project)} (${sessions.length})`);
+    for (const s of sessions.slice(0, 10)) {
       const msgInfo = s.messageCount ? ` ${s.messageCount}msgs` : '';
-      console.log(`  ${s.id.slice(0, 12)}  ${s.title.slice(0, 50).padEnd(50)}  ${s.updatedAt.slice(0, 10)}${msgInfo}`);
+      const title = s.title.replace(/^\[.*?\]\s*/, '').slice(0, 40).padEnd(40);
+      console.log(`    ${c.dim(s.id.slice(0, 12))}  ${title}  ${c.dim(s.updatedAt.slice(0, 10))}${msgInfo}`);
+    }
+    if (sessions.length > 10) {
+      console.log(`    ${c.dim(`... and ${sessions.length - 10} more`)}`);
     }
   }
+  console.log('');
   ctx.ui.promptUser();
   return { handled: true };
 }
@@ -454,6 +494,46 @@ function cmdPonytail(line: string, ctx: CommandContext): DispatchResult {
     console.log(`  Usage: /ponytail [lite | full | ultra | off]\n  Current: ${current}`);
   }
   ctx.ui.promptUser();
+  return { handled: true };
+}
+
+async function cmdReview(line: string, ctx: CommandContext): Promise<DispatchResult> {
+  const file = line.slice(8).trim() || '.';
+  ctx.ui.showSystemMessage(`Reviewing: ${file} ...`);
+  // Don't await — let it run in the main agent loop naturally
+  ctx.ui.promptUser();
+  ctx.agent
+    .run(`请 code review 以下内容：${file}。重点关注：类型安全、潜在 bug、性能问题、代码规范。指出问题并给出修复建议。`)
+    .catch((err) => ctx.ui.showError(err instanceof Error ? err.message : String(err)));
+  return { handled: true };
+}
+
+async function cmdFix(ctx: CommandContext): Promise<DispatchResult> {
+  ctx.ui.showSystemMessage('Analyzing project for lint/type errors...');
+  ctx.ui.promptUser();
+  ctx.agent
+    .run('分析当前项目的 lint 错误和类型错误。先运行 lint 和 type-check 查看错误列表，然后逐个修复。修复后再次验证确保全部通过。')
+    .catch((err) => ctx.ui.showError(err instanceof Error ? err.message : String(err)));
+  return { handled: true };
+}
+
+async function cmdGenCommit(line: string, ctx: CommandContext): Promise<DispatchResult> {
+  const msg = line.slice(8).trim();
+  if (msg) {
+    // Custom commit message provided — delegate to existing /commit handler
+    const { executeGitCommit } = await import('./tools/GitTool.js');
+    const result = await executeGitCommit(msg, process.cwd(), true);
+    console.log(`\n${result}`);
+    ctx.ui.promptUser();
+    return { handled: true };
+  }
+
+  // Auto-generate commit message from git diff
+  ctx.ui.showSystemMessage('Generating commit message from staged changes...');
+  ctx.ui.promptUser();
+  ctx.agent
+    .run('运行 git diff --cached 查看暂存区变更，然后生成一个规范的 commit message。格式：<type>(<scope>): <description>。只输出 commit message，不执行 git commit。')
+    .catch((err) => ctx.ui.showError(err instanceof Error ? err.message : String(err)));
   return { handled: true };
 }
 

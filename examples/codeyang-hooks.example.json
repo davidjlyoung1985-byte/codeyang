@@ -1,0 +1,16 @@
+{
+  "onFileChange": [
+    {
+      "pattern": "\\.ts$",
+      "command": "npm run type-check"
+    },
+    {
+      "pattern": "\\.test\\.ts$",
+      "command": "npm test -- --run"
+    },
+    {
+      "pattern": "\\.(ts|tsx)$",
+      "command": "npm run lint"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 import { watch } from 'node:fs/promises';
-import { resolve, relative } from 'node:path';
+import { resolve, relative, join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { execa } from 'execa';
 import { logger } from '../utils/logger.js';
 
 /** Directories that should always be excluded from file watching. */
@@ -94,10 +96,13 @@ export class WatcherSystem {
     if (this.active) return;
     this.active = true;
 
+    // ── Load custom hooks from .codeyang-hooks.json ──
+    const hooks = this.loadHooks(projectDir);
+
     for (const rule of this.rules) {
       try {
         if (rule.source.type === 'file') {
-          this.startFileWatcher(projectDir, rule);
+          this.startFileWatcher(projectDir, rule, hooks);
         } else if (rule.source.type === 'timer') {
           this.startTimer(rule);
         }
@@ -111,6 +116,9 @@ export class WatcherSystem {
     const postToolRules = this.rules.filter((r) => r.source.type === 'post-tool').length;
     if (fileRules > 0 || timerRules > 0) {
       logger.info(`[Watcher] Started: ${fileRules} file, ${timerRules} timer, ${postToolRules} post-tool rules`);
+    }
+    if (hooks.commands.length > 0) {
+      logger.info(`[Watcher] Loaded ${hooks.commands.length} custom hook(s) from .codeyang-hooks.json`);
     }
   }
 
@@ -167,7 +175,65 @@ export class WatcherSystem {
     return false;
   }
 
-  private startFileWatcher(projectDir: string, rule: TriggerRule): void {
+  /**
+   * Load custom hooks from .codeyang-hooks.json in the project root.
+   *
+   * Format:
+   * {
+   *   "onFileChange": [
+   *     { "pattern": "\\.ts$", "command": "npm run type-check" },
+   *     { "pattern": "\\.test\\.ts$", "command": "npm test -- --run" }
+   *   ]
+   * }
+   */
+  private loadHooks(projectDir: string): { commands: Array<{ pattern: RegExp; command: string }> } {
+    const hooksPath = join(projectDir, '.codeyang-hooks.json');
+    try {
+      if (!existsSync(hooksPath)) return { commands: [] };
+      const raw = readFileSync(hooksPath, 'utf-8');
+      const config = JSON.parse(raw);
+      if (!Array.isArray(config.onFileChange)) return { commands: [] };
+
+      const commands = config.onFileChange
+        .filter((h: unknown) => h && typeof h === 'object' && typeof (h as Record<string, unknown>).pattern === 'string' && typeof (h as Record<string, unknown>).command === 'string')
+        .map((h: { pattern: string; command: string }) => ({
+          pattern: new RegExp(h.pattern),
+          command: h.command,
+        }));
+
+      return { commands };
+    } catch (err) {
+      logger.warn(`[Watcher] Failed to load .codeyang-hooks.json: ${err instanceof Error ? err.message : String(err)}`);
+      return { commands: [] };
+    }
+  }
+
+  /**
+   * Execute custom hooks matching the changed file.
+   */
+  private async executeHooks(
+    hooks: Array<{ pattern: RegExp; command: string }>,
+    filePath: string,
+    projectDir: string,
+  ): Promise<void> {
+    const relPath = relative(projectDir, filePath).replace(/[\\]/g, '/');
+    for (const hook of hooks) {
+      if (hook.pattern.test(relPath)) {
+        // Fire and forget — don't block the watcher
+        execa(hook.command, { shell: true, cwd: projectDir })
+          .then((result) => {
+            if (result.stdout?.trim()) {
+              logger.info(`[Hook] ${hook.command}: ${result.stdout.trim().slice(0, 200)}`);
+            }
+          })
+          .catch((err) => {
+            logger.warn(`[Hook] ${hook.command} failed: ${err instanceof Error ? err.message : String(err)}`);
+          });
+      }
+    }
+  }
+
+  private startFileWatcher(projectDir: string, rule: TriggerRule, hooks?: { commands: Array<{ pattern: RegExp; command: string }> }): void {
     if (rule.source.type !== 'file') return;
     const ac = new AbortController();
     this.abortControllers.push(ac);
@@ -191,6 +257,10 @@ export class WatcherSystem {
             setTimeout(() => {
               debounceTimers.delete(fullPath);
               this.onTrigger(rule, { filePath: fullPath });
+              // Execute custom hooks on file change
+              if (hooks?.commands.length) {
+                this.executeHooks(hooks.commands, fullPath, projectDir);
+              }
             }, 300),
           );
         }

@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import type { McpServerConfig } from '../mcp/types.js';
 import type { QtContext } from '../qt/index.js';
 import { buildQtPrompt } from '../qt/index.js';
-import { BASE_SYSTEM_PROMPT } from './system-prompt.js';
+import { buildBaseSystemPrompt } from './system-prompt.js';
 import { getPonytailPrompt, getPonytailLevel, type PonytailLevel } from './ponytail-prompt.js';
 
 const CONFIG_DIR = join(homedir(), '.codeyang');
@@ -235,7 +235,7 @@ export const config = {
   },
 
   getSystemPrompt(qtContext?: QtContext): string {
-    let prompt = BASE_SYSTEM_PROMPT;
+    let prompt = buildBaseSystemPrompt();
 
     // Ponytail: lazy senior dev mode (opt-in via PONYTAIL_MODE env var)
     const ponyLevel = this.ponytailLevel;

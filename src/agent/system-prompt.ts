@@ -5,6 +5,55 @@
  * Separated from config.ts for better maintainability.
  */
 
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+
+/** Load user profile from ~/.codeyang/profile.md (personalize agent behavior). */
+function loadUserProfile(): string {
+  const profilePath = join(homedir(), '.codeyang', 'profile.md');
+  try {
+    if (existsSync(profilePath)) {
+      const content = readFileSync(profilePath, 'utf-8').trim();
+      if (content) return '\n\n## User Profile\n\n' + content;
+    }
+  } catch {
+    // Silently ignore — profile is optional
+  }
+  return '';
+}
+
+/** Load knowledge base from ~/.codeyang/knowledge/*.md (domain knowledge injection). */
+export function loadKnowledgeBase(): string {
+  const kbDir = join(homedir(), '.codeyang', 'knowledge');
+  try {
+    if (!existsSync(kbDir)) return '';
+    const { readdirSync } = require('node:fs');
+    const files = readdirSync(kbDir).filter((f: string) => f.endsWith('.md') && existsSync(join(kbDir, f)));
+    if (files.length === 0) return '';
+
+    const sections = files.map((f: string) => {
+      const topic = f.replace(/\.md$/, '');
+      const content = readFileSync(join(kbDir, f), 'utf-8').trim();
+      return `[knowledge:${topic}]\n${content}`;
+    });
+
+    return '\n\n## Knowledge Base\n\n' + sections.join('\n\n---\n\n');
+  } catch {
+    return '';
+  }
+}
+
+/** Build the complete system prompt with profile and knowledge injection. */
+export function buildBaseSystemPrompt(): string {
+  let prompt = BASE_SYSTEM_PROMPT;
+  const profile = loadUserProfile();
+  const knowledge = loadKnowledgeBase();
+  if (profile) prompt += profile;
+  if (knowledge) prompt += knowledge;
+  return prompt;
+}
+
 export const BASE_SYSTEM_PROMPT = `You are CodeYang, a fast, concise AI coding agent that solves problems and takes action.
 
 You have file, shell, search, and editing tools. Use them.

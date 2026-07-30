@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import 'dotenv/config';
 import * as readline from 'node:readline';
+import * as path from 'node:path';
 import picocolors from 'picocolors';
 const c = picocolors;
 import { CliUI } from './ui/CliUI.js';
@@ -427,7 +428,16 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
 
       try {
         await agent.run(line);
-        currentSessionId = await saveSession(agent.exportMessages(), currentSessionId);
+        // Inject project name into session title for grouping
+        const messages = agent.exportMessages();
+        const projectName = path.basename(process.cwd());
+        if (messages.length > 0 && messages[0]?.role === 'user') {
+          const firstMsg = messages[0];
+          if (!firstMsg.content.startsWith(`[${projectName}]`)) {
+            firstMsg.content = `[${projectName}] ${firstMsg.content}`;
+          }
+        }
+        currentSessionId = await saveSession(messages, currentSessionId);
       } catch (err) {
         ui.showError(err instanceof Error ? err.message : String(err));
       }
