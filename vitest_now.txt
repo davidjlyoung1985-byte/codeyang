@@ -1,0 +1,1079 @@
+﻿
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90mC:/Users/Ehua/codeyang[39m
+
+[90mstdout[2m | src/closed-loop/closed-loop.test.ts[2m > [22m[2mWatcherSystem[2m > [22m[2mcan start and stop
+[22m[39m[Watcher] Started: 0 file, 1 timer, 0 post-tool rules
+
+[90mstdout[2m | src/closed-loop/closed-loop.test.ts[2m > [22m[2mWatcherSystem[2m > [22m[2mdoes not double-start
+[22m[39m[Watcher] Started: 0 file, 1 timer, 0 post-tool rules
+
+ [32m鉁?[39m src/utils/memoryStore.bench.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 2864[2mms[22m[39m
+ [32m鉁?[39m src/tools/remaining-tools.test.ts [2m([22m[2m20 tests[22m[2m)[22m[33m 3512[2mms[22m[39m
+     [33m[2m鉁?[22m[39m rejects empty target [33m 618[2mms[22m[39m
+     [33m[2m鉁?[22m[39m returns results for a query [33m 2769[2mms[22m[39m
+[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/tasks[2m > [22m[2mshould show task list
+[22m[39m  135 task(s):
+  鈼?tsk_ms8q2pni_7a5  test-value  [pending]
+  鈼?tsk_ms8q1uw1_459  test-value  [pending]
+  鈼?tsk_ms8q15hv_3ca  test-value  [pending]
+  鈼?tsk_ms8et2qq_788  test-value  [pending]
+  鈼?tsk_ms8epyvm_1cd  test-value  [pending]
+  鈼?tsk_ms8eobdl_cc5  test-value  [pending]
+  鈼?tsk_ms8elchy_b1f  test-value  [pending]
+  鈼?tsk_ms8ejs4t_f38  test-value  [pending]
+  鈼?tsk_ms8egtlz_a03  test-value  [pending]
+  鈼?tsk_ms8ef0mb_2ea  test-value  [pending]
+  鈼?tsk_ms8eblvf_339  test-value  [pending]
+  鈼?tsk_ms8e9gvd_b68  test-value  [pending]
+  鈼?tsk_ms8e6f68_4a1  test-value  [pending]
+  鈼?tsk_ms8e4tcs_90b  test-value  [pending]
+  鈼?tsk_ms8e1u13_141  test-value  [pending]
+  鈼?tsk_ms8e052n_021  test-value  [pending]
+  鈼?tsk_ms8dx523_347  test-value  [pending]
+  鈼?tsk_ms8dvjk8_52f  test-value  [pending]
+  鈼?tsk_ms8drr8g_0dc  test-value  [pending]
+  鈼?tsk_ms8dpoyt_d80  test-value  [pending]
+  鈼?tsk_ms8dm7m4_033  test-value  [pending]
+  鈼?tsk_ms8dkrv1_b64  test-value  [pending]
+  鈼?tsk_ms8dgu7t_971  test-value  [pending]
+  鈼?tsk_ms8dg1an_eea  test-value  [pending]
+  鈼?tsk_ms8detp5_f57  test-value  [pending]
+  鈼?tsk_ms8ddslt_0b0  test-value  [pending]
+  鈼?tsk_ms8dcr86_3a2  test-value  [pending]
+  鈼?tsk_ms8dbzhd_7a7  test-value  [pending]
+  鈼?tsk_ms8d9evv_882  test-value  [pending]
+  鈼?tsk_ms8d7ied_3d6  test-value  [pending]
+  鈼?tsk_ms8d49rq_ba2  test-value  [pending]
+  鈼?tsk_ms8d2com_3dd  test-value  [pending]
+  鈼?tsk_ms8cysb5_fe3  test-value  [pending]
+  鈼?tsk_ms8cy5l7_165  test-value  [pending]
+  鈼?tsk_ms8cx3an_187  test-value  [pending]
+  鈼?tsk_ms8cw6u9_558  test-value  [pending]
+  鈼?tsk_ms8cvrf5_0f1  test-value  [pending]
+  鈼?tsk_ms8cuzne_b51  test-value  [pending]
+  鈼?tsk_ms8cu7ia_781  test-value  [pending]
+  鈼?tsk_ms8ctihk_8a4  test-value  [pending]
+  鈼?tsk_ms8cr071_301  test-value  [pending]
+  鈼?tsk_ms8cp5p6_a08  test-value  [pending]
+  鈼?tsk_ms8cls72_45b  test-value  [pending]
+  鈼?tsk_ms8cjtyt_439  test-value  [pending]
+  鈼?tsk_ms8cgh7j_436  test-value  [pending]
+  鈼?tsk_ms8ceaca_f83  test-value  [pending]
+  鈼?tsk_ms8caem6_036  test-value  [pending]
+  鈼?tsk_ms8c847f_264  test-value  [pending]
+  鈼?tsk_ms7cpucl_c37  test-value  [pending]
+  鈼?tsk_ms7cmh2g_202  test-value  [pending]
+  鈼?tsk_ms7cka3s_4ee  test-value  [pending]
+  鈼?tsk_ms7cgvwn_3ee  test-value  [pending]
+  鈼?tsk_ms7cdkaf_d5c  test-value  [pending]
+  鈼?tsk_ms7cbmry_142  test-value  [pending]
+  鈼?tsk_ms7c8mph_736  test-value  [pending]
+  鈼?tsk_ms7c6c01_05e  test-value  [pending]
+  鈼?tsk_ms7c3dro_671  test-value  [pending]
+  鈼?tsk_ms7bzihk_9f4  test-value  [pending]
+  鈼?tsk_ms7bxj3o_37d  test-value  [pending]
+  鈼?tsk_ms7bpkah_359  test-value  [pending]
+  鈼?tsk_ms7bor78_53a  test-value  [pending]
+  鈼?tsk_ms7ao5pc_483  test-value  [pending]
+  鈼?tsk_ms7ajpl8_197  test-value  [pending]
+  鈼?tsk_ms7ahw2h_c2b  test-value  [pending]
+  鈼?tsk_ms7ae9mw_eb4  test-value  [pending]
+  鈼?tsk_ms79erf2_7f8  test-value  [pending]
+  鈼?tsk_ms799dr2_c73  test-value  [pending]
+  鈼?tsk_ms797u9f_e90  test-value  [pending]
+  鈼?tsk_ms793gng_913  test-value  [pending]
+  鈼?tsk_ms6zjcri_450  test-value  [pending]
+  鈼?tsk_ms6zdduz_9b4  test-value  [pending]
+  鈼?tsk_ms2wkpw8_a7e  test-value  [pending]
+  鈼?tsk_ms2w53dg_d82  test-value  [pending]
+  鈼?tsk_ms2v05dx_de2  test-value  [pending]
+  鈼?tsk_ms2ux8df_d66  test-value  [pending]
+  鈼?tsk_ms2pb6ev_2e3  test-value  [pending]
+  鈼?tsk_ms2p8bgk_520  test-value  [pending]
+  鈼?tsk_ms2p7xv2_e75  test-value  [pending]
+  鈼?tsk_ms2p3ntt_be5  test-value  [pending]
+  鈼?tsk_ms2p2xqp_e3a  test-value  [pending]
+  鈼?tsk_ms2okku7_2ce  test-value  [pending]
+  鈼?tsk_ms2ojxkx_9ce  test-value  [pending]
+  鈼?tsk_ms2oj74i_098  test-value  [pending]
+  鈼?tsk_ms2oifc0_c02  test-value  [pending]
+  鈼?tsk_ms2ohpa9_36e  test-value  [pending]
+  鈼?tsk_ms2nn2db_14a  test-value  [pending]
+  鈼?tsk_ms2nmdfs_b59  test-value  [pending]
+  鈼?tsk_ms2nlnq5_190  test-value  [pending]
+  鈼?tsk_ms2nkyc2_0cb  test-value  [pending]
+  鈼?tsk_ms2nk6cy_4af  test-value  [pending]
+  鈼?tsk_mroeqivq_11c  test-value  [pending]
+  鈼?tsk_mroeokud_1ed  test-value  [pending]
+  鈼?tsk_mroemgc7_d6a  test-value  [pending]
+  鈼?tsk_mroegdq0_45c  test-value  [pending]
+  鈼?tsk_mroefmol_de6  test-value  [pending]
+  鈼?tsk_mroeezai_880  test-value  [pending]
+  鈼?tsk_mroee7po_f5e  test-value  [pending]
+  鈼?tsk_mroedi9v_fb4  test-value  [pending]
+  鈼?tsk_mroecs6u_d4b  test-value  [pending]
+  鈼?tsk_mroebyaa_985  test-value  [pending]
+  鈼?tsk_mrodpq7c_1dd  test-value  [pending]
+  鈼?tsk_mrode6in_8b9  test-value  [pending]
+  鈼?tsk_mrodch0x_38b  test-value  [pending]
+  鈼?tsk_mroda11r_479  test-value  [pending]
+  鈼?tsk_mrod8bt6_717  test-value  [pending]
+  鈼?tsk_mrod6frv_c60  test-value  [pending]
+  鈼?tsk_mrod41bx_946  test-value  [pending]
+  鈼?tsk_mrocwevo_271  test-value  [pending]
+  鈼?tsk_mrocuxfb_c19  test-value  [pending]
+  鈼?tsk_mrk1dxhf_8ea  test-value  [pending]
+  鈼?tsk_mrk19t73_7d6  test-value  [pending]
+  鈼?tsk_mrk195nj_596  test-value  [pending]
+  鈼?tsk_mrk18k19_fed  test-value  [pending]
+  鈼?tsk_mrk0zn45_2b4  test-value  [pending]
+  鈼?tsk_mrk0xhzu_b67  test-value  [pending]
+  鈼?tsk_mrk0u0na_a47  test-value  [pending]
+  鈼?tsk_mrequakm_11a  test-value  [pending]
+  鈼?tsk_mreqtr77_4a2  test-value  [pending]
+  鈼?tsk_mreqrw3v_aa0  test-value  [pending]
+  鈼?tsk_mreqquoq_f83  test-value  [pending]
+  鈼?tsk_mreqq8b4_3dc  test-value  [pending]
+  鈼?tsk_mreqotpl_8d7  test-value  [pending]
+  鈼?tsk_mreqlrlx_323  test-value  [pending]
+  鈼?tsk_mreql0qc_e17  test-value  [pending]
+  鈼?tsk_mrec89ej_91b  test-value  [pending]
+  鈼?tsk_mrec7485_bbd  test-value  [pending]
+  鈼?tsk_mrbwsjqm_ae4  test-value  [pending]
+  鈼?tsk_mrbwqwu9_233  test-value  [pending]
+  鈼?tsk_mrbwpa8b_4a3  test-value  [pending]
+  鈼?tsk_mrbwo52v_d72  test-value  [pending]
+  鈼?tsk_mrbwn2w1_4c6  test-value  [pending]
+  鈼?tsk_mrbwluvj_c11  test-value  [pending]
+  鈼?tsk_mrbwl9mp_66c  test-value  [pending]
+  鈼?tsk_mrbwit9f_ec6  test-value  [pending]
+  鈼?tsk_mrbwi0dm_490  test-value  [pending]
+
+[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/rewind[2m > [22m[2mshould rewind to checkpoint when available
+[22m[39m  Rewound to previous checkpoint.
+
+[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/rewind[2m > [22m[2mshould handle no checkpoints
+[22m[39m  No checkpoints available.
+
+[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/stats[2m > [22m[2mshould show tool statistics
+[22m[39m
+  No tools used yet.
+
+
+[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/mcp[2m > [22m[2mshould show MCP server status
+[22m[39mNo MCP servers configured.
+
+Add servers to ~/.codeyang/config.json:
+{
+  "mcpServers": {
+    "my-server": {
+      "command": "node",
+      "args": ["server.js"]
+    }
+  }
+}
+
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/help[2m > [22m[2mshould display help information
+[22m[39m  Available: /clear, /sessions, /tools, /model, /ponytail, /mcp, /stats, /status, /reflect, /review, /fix, /gen-commit, /config, /diff, /commit, /undo, /redo, /harness, /plan, /tasks, /exit, /quit
+
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/model[2m > [22m[2mshould display current model
+[22m[39m  Model: deepseek-chat
+
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/ponytail[2m > [22m[2mshould display ponytail status
+[22m[39m
+  Ponytail Mode: 鉁?OFF
+  Toggle with: /ponytail lite | full | ultra | off
+  Or set PONYTAIL_MODE env var permanently.
+
+
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/ponytail[2m > [22m[2mshould handle ponytail level change
+[22m[39m  Usage: /ponytail [lite | full | ultra | off]
+  Current: off
+
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/config[2m > [22m[2mshould display configuration
+[22m[39m
+  Provider:       deepseek
+  Model:          gpt-4
+  Base URL:       https://api.deepseek.com/anthropic
+  Max Tokens:     1000000
+  Max Turns:      40
+  Auto Verify:    鉁?  Auto Fix:       鉁?  Watch Mode:     鉁?  API Key:        (not set)
+  CWD:            C:\Users\Ehua\codeyang
+
+
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/reload[2m > [22m[2mshould reload configuration
+[22m[39mConfiguration reloaded (v1)
+
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/reload[2m > [22m[2mshould reload configuration
+[22m[39m  Configuration reloaded from ~/.codeyang/config.json
+
+ [32m鉁?[39m src/tools/SearchTool.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1273[2mms[22m[39m
+     [33m[2m鉁?[22m[39m finds files by content [33m 615[2mms[22m[39m
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/sessions[2m > [22m[2mshould list sessions
+[22m[39m
+  [1m[32m馃搧 other[39m[22m (594)
+    [2mtest-session[22m  untitled                                  [2m2026-07-31[22m
+    [2mms8q1wz1-e9d[22m  Recent                                    [2m2026-07-31[22m 1msgs
+    [2mbeta-session[22m  Beta test                                 [2m2026-07-31[22m 1msgs
+    [2mms8q1wxw-466[22m  Alpha test                                [2m2026-07-31[22m 1msgs
+    [2mms8q1wwk-eb5[22m  Hello, write a test                       [2m2026-07-31[22m 2msgs
+    [2mms8q1wvj-412[22m  Hello, write a test                       [2m2026-07-31[22m 2msgs
+    [2mvalid-import[22m  hello                                     [2m2026-07-31[22m 2msgs
+    [2mimport-test-[22m  hello                                     [2m2026-07-31[22m 2msgs
+    [2mms8q1wlo-043[22m  Updated message                           [2m2026-07-31[22m 2msgs
+    [2mms8q1wjf-90d[22m  Hello, write a test                       [2m2026-07-31[22m 2msgs
+    [2m... and 584 more[22m
+
+
+ [32m鉁?[39m src/tools/definitions/definitions.test.ts [2m([22m[2m48 tests[22m[2m)[22m[33m 6123[2mms[22m[39m
+       [33m[2m鉁?[22m[39m should export a definitions array [33m 547[2mms[22m[39m
+       [33m[2m鉁?[22m[39m should export a definitions array [33m 573[2mms[22m[39m
+       [33m[2m鉁?[22m[39m should export a definitions array [33m 1320[2mms[22m[39m
+       [33m[2m鉁?[22m[39m should export a definitions array [33m 689[2mms[22m[39m
+       [33m[2m鉁?[22m[39m should export a definitions array [33m 443[2mms[22m[39m
+       [33m[2m鉁?[22m[39m each execute function should return a string [33m 1679[2mms[22m[39m
+ [32m鉁?[39m src/tools/RefactorTool.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 2066[2mms[22m[39m
+node.exe : [90mstderr[2m | src/e2e/e2e.test.ts[2m > [22m[2mE2E: Error Recovery[2m > [22m[2mshould handle file n
+ot found gracefully
+所在位置 行:1 字符: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([90mstderr[2m...ound gracefully:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[22m[39mLLM client does not support chat method
+
+ [32m鉁?[39m src/e2e/e2e.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2513[2mms[22m[39m
+     [33m[2m鉁?[22m[39m should search across multiple files [33m 305[2mms[22m[39m
+     [33m[2m鉁?[22m[39m should create branch, make changes, and verify commit [33m 1090[2mms[22m[39m
+ [32m鉁?[39m src/utils/sessionStore.test.ts [2m([22m[2m48 tests[22m[2m)[22m[33m 736[2mms[22m[39m
+ [32m鉁?[39m src/qt/tools/QtMigrationTool.test.ts [2m([22m[2m39 tests[22m[2m)[22m[33m 454[2mms[22m[39m
+ [32m鉁?[39m src/qt/tools/QtQmlTool.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 344[2mms[22m[39m
+ [32m鉁?[39m src/tools/shared.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 610[2mms[22m[39m
+     [33m[2m鉁?[22m[39m resolves relative paths [33m 603[2mms[22m[39m
+[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/tools[2m > [22m[2mshould list all tools
+[22m[39m
+  Available tools (81):
+  路 Bash               Execute a shell command
+  路 LaunchApp          Open a local application, file, URL, or document using the OS default launcher
+  路 Read               Read the contents of a file or list a directory
+  路 Write              Write content to a file
+  路 Edit               Edit a file by replacing exact text
+  路 Glob               Search for files matching a glob pattern
+  路 Grep               Search file contents for a regex pattern
+  路 TodoWrite          Create and maintain a structured task list for the current coding session
+  路 WebFetch           Fetches content from a specified URL and returns it as text
+  路 Task               Launch a sub-agent to handle a task autonomously
+  路 Question           Ask the user a question when you need clarification or a decision
+  路 Copy               Copy a file or directory to a new location
+  路 Move               Move or rename a file or directory
+  路 Delete             Delete a file or directory
+  路 Mkdir              Create a directory
+  路 List               List directory contents with optional detailed information (size, modified date)
+  路 Exists             Check if a path exists and get basic information (type, size, modified date)
+  路 JsonParse          Parse JSON from a file or string and return formatted output
+  路 JsonWrite          Write JSON data to a file with optional pretty formatting
+  路 JsonQuery          Query JSON using dot notation (e
+  路 YamlParse          Parse YAML from a file or string and return as JSON
+  路 YamlWrite          Write data to a YAML file
+  路 Convert            Convert between JSON and YAML formats
+  路 CsvParse           Parse CSV from a file or string and return as JSON array
+  路 CsvWrite           Write JSON array to a CSV file
+  路 XmlParse           Parse XML from a file or string and return as JSON
+  路 XmlWrite           Write JSON data to an XML file
+  路 GitStatus          Get git repository status
+  路 GitDiff            Show git diff
+  路 GitCommit          Create a git commit with a message
+  路 GitBranch          List git branches
+  路 GitCheckout        Switch to a branch or create a new branch
+  路 GitLog             Show git commit history
+  路 GitPush            Push commits to remote repository
+  路 GitPull            Pull changes from remote repository
+  路 GitClone           Clone a git repository from a URL
+  路 GitAdd             Stage files for commit
+  路 GitReset           Unstage files or reset changes
+  路 GitStash           Stash uncommitted changes
+  路 GitMerge           Merge a branch into the current branch
+  路 GitRemote          List remote repositories
+  路 GitCurrentBranch   Show the current branch name
+  路 GitBlame           Show who last modified each line of a file
+  路 ParseAst           Parse JavaScript/TypeScript code and return AST information
+  路 AnalyzeCode        Analyze code structure and extract symbols (imports, exports, functions, classes, variables)
+  路 Complexity         Calculate code complexity metrics (cyclomatic complexity, nesting depth, branches)
+  路 Lint               Run ESLint on a file to find code quality issues
+  路 FindDeps           Find and list project dependencies from package
+  路 CountLines         Count lines of code, comments, and blank lines in a file
+  路 HttpRequest        Send HTTP request with configurable method, headers, and body
+  路 DownloadFile       Download file from URL to local path
+  路 UploadFile         Upload file to server via multipart/form-data
+  路 ApiCall            Call RESTful API with JSON body and parse response
+  路 CheckUrl           Check if URL is accessible
+  路 ParseUrl           Parse URL and extract components (protocol, host, port, pathname, query parameters, hash)
+  路 Remember           Save a fact, preference, or piece of information to persistent memory
+  路 Recall             Retrieve memories by key, id, or search query
+  路 Forget             Delete a memory by its key or id
+  路 ListMemories       List all saved memories, optionally filtered by type
+  路 ImageInfo          Read image file metadata: format, dimensions, file size
+  路 ImageToBase64      Encode an image file to a base64 data URI string
+  路 ListImages         List all image files in a directory (PNG, JPEG, GIF, WEBP, BMP, ICO, SVG, TIFF)
+  路 Search             Search for files by name and/or content in a directory
+  路 PowerShell         Execute a PowerShell command on Windows
+  路 ToolSearch         Search available tools by name or description
+  路 WebSearch          Search the web for current information
+  路 EnterPlanMode      Enter structured planning mode
+  路 ExitPlanMode       Exit planning mode and return to normal execution
+  路 Agent              Launch a specialized sub-agent to handle a task autonomously
+  路 QuerySymbols       List all symbols (functions, classes, interfaces, types) defined in a file
+  路 FindDefinition     Find the definition of a symbol (function, class, variable) across the project
+  路 FindReferences     Find all usages of a symbol across the project
+  路 SearchProject      Fast project-wide content search using ripgrep
+  路 ListFiles          List all files in the project with optional name filter
+  路 TaskCreate         Create a new task with title, description, priority, tags, and dependencies
+  路 TaskGet            Get detailed information about a task by ID, including description, status, progress, and output
+  路 TaskUpdate         Update a task: change title, description, status, priority, progress percentage, or append output
+  路 TaskList           List tasks with optional filtering by status, priority, tags, or search keyword
+  路 TaskStop           Stop a running or pending task by ID
+  路 TaskOutput         Read the accumulated output of a task by ID
+  路 claude_code        [Bridge] Interact with Claude Code (VS Code extension AI agent)
+
+
+[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2munhandled commands[2m > [22m[2mshould handle unknown slash commands
+[22m[39m  Available: /clear, /sessions, /tools, /model, /ponytail, /mcp, /stats, /status, /reflect, /review, /fix, /gen-commit, /config, /diff, /commit, /undo, /redo, /harness, /plan, /tasks, /exit, /quit
+
+ [32m鉁?[39m src/commands.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 3278[2mms[22m[39m
+       [33m[2m鉁?[22m[39m should list all tools [33m 3172[2mms[22m[39m
+ [32m鉁?[39m src/closed-loop/closed-loop.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 8094[2mms[22m[39m
+     [33m[2m鉁?[22m[39m runBatch returns results for TS files only [33m 8059[2mms[22m[39m
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/plan[2m > [22m[2mshould show current plan
+[22m[39m  Enter planning mode: the agent will plan before executing.
+  Use EnterPlanMode tool in conversation, or /plan again to exit.
+
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/tag[2m > [22m[2mshould create checkpoint
+[22m[39m  Checkpoint 0 saved. Use /rewind to return here.
+
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/ctx_viz and /context[2m > [22m[2mshould show context visualization with /ctx_viz
+[22m[39m  Context: 鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒 0%
+  Used: 150 / 1,000,000 tokens
+  Messages in history: 0
+
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/ctx_viz and /context[2m > [22m[2mshould show context visualization with /context
+[22m[39m  Context: 鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒鈻戔枒 0%
+  Used: 150 / 1,000,000 tokens
+  Messages in history: 0
+
+ [32m鉁?[39m src/utils/retry.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 668[2mms[22m[39m
+       [33m[2m鉁?[22m[39m should apply exponential backoff [33m 324[2mms[22m[39m
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2mGit commands[2m > [22m[2mshould handle /diff command
+[22m[39m
+diff --git a/vitest_now.txt b/vitest_now.txt
+index e69de29..77e0c07 100644
+--- a/vitest_now.txt
++++ b/vitest_now.txt
+@@ -0,0 +1,365 @@
++锘?+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90mC:/Users/Ehua/codeyang[39m
++
++[90mstdout[2m | src/closed-loop/closed-loop.test.ts[2m > [22m[2mWatcherSystem[2m > [22m[2mcan start and stop
++[22m[39m[Watcher] Started: 0 file, 1 timer, 0 post-tool rules
++
++[90mstdout[2m | src/closed-loop/closed-loop.test.ts[2m > [22m[2mWatcherSystem[2m > [22m[2mdoes not double-start
++[22m[39m[Watcher] Started: 0 file, 1 timer, 0 post-tool rules
++
++ [32m閴?[39m src/utils/memoryStore.bench.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 2864[2mms[22m[39m
++ [32m閴?[39m src/tools/remaining-tools.test.ts [2m([22m[2m20 tests[22m[2m)[22m[33m 3512[2mms[22m[39m
++     [33m[2m閴?[22m[39m rejects empty target [33m 618[2mms[22m[39m
++     [33m[2m閴?[22m[39m returns results for a query [33m 2769[2mms[22m[39m
++[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/tasks[2m > [22m[2mshould show task list
++[22m[39m  135 task(s):
++  閳?tsk_ms8q2pni_7a5  test-value  [pending]
++  閳?tsk_ms8q1uw1_459  test-value  [pending]
++  閳?tsk_ms8q15hv_3ca  test-value  [pending]
++  閳?tsk_ms8et2qq_788  test-value  [pending]
++  閳?tsk_ms8epyvm_1cd  test-value  [pending]
++  閳?tsk_ms8eobdl_cc5  test-value  [pending]
++  閳?tsk_ms8elchy_b1f  test-value  [pending]
++  閳?tsk_ms8ejs4t_f38  test-value  [pending]
++  閳?tsk_ms8egtlz_a03  test-value  [pending]
++  閳?tsk_ms8ef0mb_2ea  test-value  [pending]
++  閳?tsk_ms8eblvf_339  test-value  [pending]
++  閳?tsk_ms8e9gvd_b68  test-value  [pending]
++  閳?tsk_ms8e6f68_4a1  test-value  [pending]
++  閳?tsk_ms8e4tcs_90b  test-value  [pending]
++  閳?tsk_ms8e1u13_141  test-value  [pending]
++  閳?tsk_ms8e052n_021  test-value  [pending]
++  閳?tsk_ms8dx523_347  test-value  [pending]
++  閳?tsk_ms8dvjk8_52f  test-value  [pending]
++  閳?tsk_ms8drr8g_0dc  test-value  [pending]
++  閳?tsk_ms8dpoyt_d80  test-value  [pending]
++  閳?tsk_ms8dm7m4_033  test-value  [pending]
++  閳?tsk_ms8dkrv1_b64  test-value  [pending]
++  閳?tsk_ms8dgu7t_971  test-value  [pending]
++  閳?tsk_ms8dg1an_eea  test-value  [pending]
++  閳?tsk_ms8detp5_f57  test-value  [pending]
++  閳?tsk_ms8ddslt_0b0  test-value  [pending]
++  閳?tsk_ms8dcr86_3a2  test-value  [pending]
++  閳?tsk_ms8dbzhd_7a7  test-value  [pending]
++  閳?tsk_ms8d9evv_882  test-value  [pending]
++  閳?tsk_ms8d7ied_3d6  test-value  [pending]
++  閳?tsk_ms8d49rq_ba2  test-value  [pending]
++  閳?tsk_ms8d2com_3dd  test-value  [pending]
++  閳?tsk_ms8cysb5_fe3  test-value  [pending]
++  閳?tsk_ms8cy5l7_165  test-value  [pending]
++  閳?tsk_ms8cx3an_187  test-value  [pending]
++  閳?tsk_ms8cw6u9_558  test-value  [pending]
++  閳?tsk_ms8cvrf5_0f1  test-value  [pending]
++  閳?tsk_ms8cuzne_b51  test-value  [pending]
++  閳?tsk_ms8cu7ia_781  test-value  [pending]
++  閳?tsk_ms8ctihk_8a4  test-value  [pending]
++  閳?tsk_ms8cr071_301  test-value  [pending]
++  閳?tsk_ms8cp5p6_a08  test-value  [pending]
++  閳?tsk_ms8cls72_45b  test-value  [pending]
++  閳?tsk_ms8cjtyt_439  test-value  [pending]
++  閳?tsk_ms8cgh7j_436  test-value  [pending]
++  閳?tsk_ms8ceaca_f83  test-value  [pending]
++  閳?tsk_ms8caem6_036  test-value  [pending]
++  閳?tsk_ms8c847f_264  test-value  [pending]
++  閳?tsk_ms7cpucl_c37  test-value  [pending]
++  閳?tsk_ms7cmh2g_202  test-value  [pending]
++  閳?tsk_ms7cka3s_4ee  test-value  [pending]
++  閳?tsk_ms7cgvwn_3ee  test-value  [pending]
++  閳?tsk_ms7cdkaf_d5c  test-value  [pending]
++  閳?tsk_ms7cbmry_142  test-value  [pending]
++  閳?tsk_ms7c8mph_736  test-value  [pending]
++  閳?tsk_ms7c6c01_05e  test-value  [pending]
++  閳?tsk_ms7c3dro_671  test-value  [pending]
++  閳?tsk_ms7bzihk_9f4  test-value  [pending]
++  閳?tsk_ms7bxj3o_37d  test-value  [pending]
++  閳?tsk_ms7bpkah_359  test-value  [pending]
++  閳?tsk_ms7bor78_53a  test-value  [pending]
++  閳?tsk_ms7ao5pc_483  test-value  [pending]
++  閳?tsk_ms7ajpl8_197  test-value  [pending]
++  閳?tsk_ms7ahw2h_c2b  test-value  [pending]
++  閳?tsk_ms7ae9mw_eb4  test-value  [pending]
++  閳?tsk_ms79erf2_7f8  test-value  [pending]
++  閳?tsk_ms799dr2_c73  test-value  [pending]
++  閳?tsk_ms797u9f_e90  test-value  [pending]
++  閳?tsk_ms793gng_913  test-value  [pending]
++  閳?tsk_ms6zjcri_450  test-value  [pending]
++  閳?tsk_ms6zdduz_9b4  test-value  [pending]
++  閳?tsk_ms2wkpw8_a7e  test-value  [pending]
++  閳?tsk_ms2w53dg_d82  test-value  [pending]
++  閳?tsk_ms2v05dx_de2  test-value  [pending]
++  閳?tsk_ms2ux8df_d66  test-value  [pending]
++  閳?tsk_ms2pb6ev_2e3  test-value  [pending]
++  閳?tsk_ms2p8bgk_520  test-value  [pending]
++  閳?tsk_ms2p7xv2_e75  test-value  [pending]
++  閳?tsk_ms2p3ntt_be5  test-value  [pending]
++  閳?tsk_ms2p2xqp_e3a  test-value  [pending]
++  閳?tsk_ms2okku7_2ce  test-value  [pending]
++  閳?tsk_ms2ojxkx_9ce  test-value  [pending]
++  閳?tsk_ms2oj74i_098  test-value  [pending]
++  閳?tsk_ms2oifc0_c02  test-value  [pending]
++  閳?tsk_ms2ohpa9_36e  test-value  [pending]
++  閳?tsk_ms2nn2db_14a  test-value  [pending]
++  閳?tsk_ms2nmdfs_b59  test-value  [pending]
++  閳?tsk_ms2nlnq5_190  test-value  [pending]
++  閳?tsk_ms2nkyc2_0cb  test-value  [pending]
++  閳?tsk_ms2nk6cy_4af  test-value  [pending]
++  閳?tsk_mroeqivq_11c  test-value  [pending]
++  閳?tsk_mroeokud_1ed  test-value  [pending]
++  閳?tsk_mroemgc7_d6a  test-value  [pending]
++  閳?tsk_mroegdq0_45c  test-value  [pending]
++  閳?tsk_mroefmol_de6  test-value  [pending]
++  閳?tsk_mroeezai_880  test-value  [pending]
++  閳?tsk_mroee7po_f5e  test-value  [pending]
++  閳?tsk_mroedi9v_fb4  test-value  [pending]
++  閳?tsk_mroecs6u_d4b  test-value  [pending]
++  閳?tsk_mroebyaa_985  test-value  [pending]
++  閳?tsk_mrodpq7c_1dd  test-value  [pending]
++  閳?tsk_mrode6in_8b9  test-value  [pending]
++  閳?tsk_mrodch0x_38b  test-value  [pending]
++  閳?tsk_mroda11r_479  test-value  [pending]
++  閳?tsk_mrod8bt6_717  test-value  [pending]
++  閳?tsk_mrod6frv_c60  test-value  [pending]
++  閳?tsk_mrod41bx_946  test-value  [pending]
++  閳?tsk_mrocwevo_271  test-value  [pending]
++  閳?tsk_mrocuxfb_c19  test-value  [pending]
++  閳?tsk_mrk1dxhf_8ea  test-value  [pending]
++  閳?tsk_mrk19t73_7d6  test-value  [pending]
++  閳?tsk_mrk195nj_596  test-value  [pending]
++  閳?tsk_mrk18k19_fed  test-value  [pending]
++  閳?tsk_mrk0zn45_2b4  test-value  [pending]
++  閳?tsk_mrk0xhzu_b67  test-value  [pending]
++  閳?tsk_mrk0u0na_a47  test-value  [pending]
++  閳?tsk_mrequakm_11a  test-value  [pending]
++  閳?tsk_mreqtr77_4a2  test-value  [pending]
++  閳?tsk_mreqrw3v_aa0  test-value  [pending]
++  閳?tsk_mreqquoq_f83  test-value  [pending]
++  閳?tsk_mreqq8b4_3dc  test-value  [pending]
++  閳?tsk_mreqotpl_8d7  test-value  [pending]
++  閳?tsk_mreqlrlx_323  test-value  [pending]
++  閳?tsk_mreql0qc_e17  test-value  [pending]
++  閳?tsk_mrec89ej_91b  test-value  [pending]
++  閳?tsk_mrec7485_bbd  test-value  [pending]
++  閳?tsk_mrbwsjqm_ae4  test-value  [pending]
++  閳?tsk_mrbwqwu9_233  test-value  [pending]
++  閳?tsk_mrbwpa8b_4a3  test-value  [pending]
++  閳?tsk_mrbwo52v_d72  test-value  [pending]
++  閳?tsk_mrbwn2w1_4c6  test-value  [pending]
++  閳?tsk_mrbwluvj_c11  test-value  [pending]
++  閳?tsk_mrbwl9mp_66c  test-value  [pending]
++  閳?tsk_mrbwit9f_ec6  test-value  [pending]
++  閳?tsk_mrbwi0dm_490  test-value  [pending]
++
++[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/rewind[2m > [22m[2mshould rewind to checkpoint when available
++[22m[39m  Rewound to previous checkpoint.
++
++[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/rewind[2m > [22m[2mshould handle no checkpoints
++[22m[39m  No checkpoints available.
++
++[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/stats[2m > [22m[2mshould show tool statistics
++[22m[39m
++  No tools used yet.
++
++
++[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/mcp[2m > [22m[2mshould show MCP server status
++[22m[39mNo MCP servers configured.
++
++Add servers to ~/.codeyang/config.json:
++{
++  "mcpServers": {
++    "my-server": {
++      "command": "node",
++      "args": ["server.js"]
++    }
++  }
++}
++
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/help[2m > [22m[2mshould display help information
++[22m[39m  Available: /clear, /sessions, /tools, /model, /ponytail, /mcp, /stats, /status, /reflect, /review, /fix, /gen-commit, /config, /diff, /commit, /undo, /redo, /harness, /plan, /tasks, /exit, /quit
++
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/model[2m > [22m[2mshould display current model
++[22m[39m  Model: deepseek-chat
++
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/ponytail[2m > [22m[2mshould display ponytail status
++[22m[39m
++  Ponytail Mode: 閴?OFF
++  Toggle with: /ponytail lite | full | ultra | off
++  Or set PONYTAIL_MODE env var permanently.
++
++
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/ponytail[2m > [22m[2mshould handle ponytail level change
++[22m[39m  Usage: /ponytail [lite | full | ultra | off]
++  Current: off
++
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/config[2m > [22m[2mshould display configuration
++[22m[39m
++  Provider:       deepseek
++  Model:          gpt-4
++  Base URL:       https://api.deepseek.com/anthropic
++  Max Tokens:     1000000
++  Max Turns:      40
++  Auto Verify:    閴?  Auto Fix:       閴?  Watch Mode:     閴?  API Key:        (not set)
++  CWD:            C:\Users\Ehua\codeyang
++
++
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/reload[2m > [22m[2mshould reload configuration
++[22m[39mConfiguration reloaded (v1)
++
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/reload[2m > [22m[2mshould reload configuration
++[22m[39m  Configuration reloaded from ~/.codeyang/config.json
++
++ [32m閴?[39m src/tools/SearchTool.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 1273[2mms[22m[39m
++     [33m[2m閴?[22m[39m finds files by content [33m 615[2mms[22m[39m
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/sessions[2m > [22m[2mshould list sessions
++[22m[39m
++  [1m[32m棣冩惂 other[39m[22m (594)
++    [2mtest-session[22m  untitled                                  [2m2026-07-31[22m
++    [2mms8q1wz1-e9d[22m  Recent                                    [2m2026-07-31[22m 1msgs
++    [2mbeta-session[22m  Beta test                                 [2m2026-07-31[22m 1msgs
++    [2mms8q1wxw-466[22m  Alpha test                                [2m2026-07-31[22m 1msgs
++    [2mms8q1wwk-eb5[22m  Hello, write a test                       [2m2026-07-31[22m 2msgs
++    [2mms8q1wvj-412[22m  Hello, write a test                       [2m2026-07-31[22m 2msgs
++    [2mvalid-import[22m  hello                                     [2m2026-07-31[22m 2msgs
++    [2mimport-test-[22m  hello                                     [2m2026-07-31[22m 2msgs
++    [2mms8q1wlo-043[22m  Updated message                           [2m2026-07-31[22m 2msgs
++    [2mms8q1wjf-90d[22m  Hello, write a test                       [2m2026-07-31[22m 2msgs
++    [2m... and 584 more[22m
++
++
++ [32m閴?[39m src/tools/definitions/definitions.test.ts [2m([22m[2m48 tests[22m[2m)[22m[33m 6123[2mms[22m[39m
++       [33m[2m閴?[22m[39m should export a definitions array [33m 547[2mms[22m[39m
++       [33m[2m閴?[22m[39m should export a definitions array [33m 573[2mms[22m[39m
++       [33m[2m閴?[22m[39m should export a definitions array [33m 1320[2mms[22m[39m
++       [33m[2m閴?[22m[39m should export a definitions array [33m 689[2mms[22m[39m
++       [33m[2m閴?[22m[39m should export a definitions array [33m 443[2mms[22m[39m
++       [33m[2m閴?[22m[39m each execute function should return a string [33m 1679[2mms[22m[39m
++ [32m閴?[39m src/tools/RefactorTool.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 2066[2mms[22m[39m
++node.exe : [90mstderr[2m | src/e2e/e2e.test.ts[2m > [22m[2mE2E: Error Recovery[2m > [22m[2mshould handle file n
++ot found gracefully
++鎵€鍦ㄤ綅缃?琛?1 瀛楃: 1
+++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
+++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++    + CategoryInfo          : NotSpecified: ([90mstderr[2m...ound gracefully:String) [], RemoteException
++    + FullyQualifiedErrorId : NativeCommandError
++ 
++[22m[39mLLM client does not support chat method
++
++ [32m閴?[39m src/e2e/e2e.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 2513[2mms[22m[39m
++     [33m[2m閴?[22m[39m should search across multiple files [33m 305[2mms[22m[39m
++     [33m[2m閴?[22m[39m should create branch, make changes, and verify commit [33m 1090[2mms[22m[39m
++ [32m閴?[39m src/utils/sessionStore.test.ts [2m([22m[2m48 tests[22m[2m)[22m[33m 736[2mms[22m[39m
++ [32m閴?[39m src/qt/tools/QtMigrationTool.test.ts [2m([22m[2m39 tests[22m[2m)[22m[33m 454[2mms[22m[39m
++ [32m閴?[39m src/qt/tools/QtQmlTool.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 344[2mms[22m[39m
++ [32m閴?[39m src/tools/shared.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 610[2mms[22m[39m
++     [33m[2m閴?[22m[39m resolves relative paths [33m 603[2mms[22m[39m
++[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2m/tools[2m > [22m[2mshould list all tools
++[22m[39m
++  Available tools (81):
++  璺?Bash               Execute a shell command
++  璺?LaunchApp          Open a local application, file, URL, or document using the OS default launcher
++  璺?Read               Read the contents of a file or list a directory
++  璺?Write              Write content to a file
++  璺?Edit               Edit a file by replacing exact text
++  璺?Glob               Search for files matching a glob pattern
++  璺?Grep               Search file contents for a regex pattern
++  璺?TodoWrite          Create and maintain a structured task list for the current coding session
++  璺?WebFetch           Fetches content from a specified URL and returns it as text
++  璺?Task               Launch a sub-agent to handle a task autonomously
++  璺?Question           Ask the user a question when you need clarification or a decision
++  璺?Copy               Copy a file or directory to a new location
++  璺?Move               Move or rename a file or directory
++  璺?Delete             Delete a file or directory
++  璺?Mkdir              Create a directory
++  璺?List               List directory contents with optional detailed information (size, modified date)
++  璺?Exists             Check if a path exists and get basic information (type, size, modified date)
++  璺?JsonParse          Parse JSON from a file or string and return formatted output
++  璺?JsonWrite          Write JSON data to a file with optional pretty formatting
++  璺?JsonQuery          Query JSON using dot notation (e
++  璺?YamlParse          Parse YAML from a file or string and return as JSON
++  璺?YamlWrite          Write data to a YAML file
++  璺?Convert            Convert between JSON and YAML formats
++  璺?CsvParse           Parse CSV from a file or string and return as JSON array
++  璺?CsvWrite           Write JSON array to a CSV file
++  璺?XmlParse           Parse XML from a file or string and return as JSON
++  璺?XmlWrite           Write JSON data to an XML file
++  璺?GitStatus          Get git repository status
++  璺?GitDiff            Show git diff
++  璺?GitCommit          Create a git commit with a message
++  璺?GitBranch          List git branches
++  璺?GitCheckout        Switch to a branch or create a new branch
++  璺?GitLog             Show git commit history
++  璺?GitPush            Push commits to remote repository
++  璺?GitPull            Pull changes from remote repository
++  璺?GitClone           Clone a git repository from a URL
++  璺?GitAdd             Stage files for commit
++  璺?GitReset           Unstage files or reset changes
++  璺?GitStash           Stash uncommitted changes
++  璺?GitMerge           Merge a branch into the current branch
++  璺?GitRemote          List remote repositories
++  璺?GitCurrentBranch   Show the current branch name
++  璺?GitBlame           Show who last modified each line of a file
++  璺?ParseAst           Parse JavaScript/TypeScript code and return AST information
++  璺?AnalyzeCode        Analyze code structure and extract symbols (imports, exports, functions, classes, variables)
++  璺?Complexity         Calculate code complexity metrics (cyclomatic complexity, nesting depth, branches)
++  璺?Lint               Run ESLint on a file to find code quality issues
++  璺?FindDeps           Find and list project dependencies from package
++  璺?CountLines         Count lines of code, comments, and blank lines in a file
++  璺?HttpRequest        Send HTTP request with configurable method, headers, and body
++  璺?DownloadFile       Download file from URL to local path
++  璺?UploadFile         Upload file to server via multipart/form-data
++  璺?ApiCall            Call RESTful API with JSON body and parse response
++  璺?CheckUrl           Check if URL is accessible
++  璺?ParseUrl           Parse URL and extract components (protocol, host, port, pathname, query parameters, hash)
++  璺?Remember           Save a fact, preference, or piece of information to persistent memory
++  璺?Recall             Retrieve memories by key, id, or search query
++  璺?Forget             Delete a memory by its key or id
++  璺?ListMemories       List all saved memories, optionally filtered by type
++  璺?ImageInfo          Read image file metadata: format, dimensions, file size
++  璺?ImageToBase64      Encode an image file to a base64 data URI string
++  璺?ListImages         List all image files in a directory (PNG, JPEG, GIF, WEBP, BMP, ICO, SVG, TIFF)
++  璺?Search             Search for files by name and/or content in a directory
++  璺?PowerShell         Execute a PowerShell command on Windows
++  璺?ToolSearch         Search available tools by name or description
++  璺?WebSearch          Search the web for current information
++  璺?EnterPlanMode      Enter structured planning mode
++  璺?ExitPlanMode       Exit planning mode and return to normal execution
++  璺?Agent              Launch a specialized sub-agent to handle a task autonomously
++  璺?QuerySymbols       List all symbols (functions, classes, interfaces, types) defined in a file
++  璺?FindDefinition     Find the definition of a symbol (function, class, variable) across the project
++  璺?FindReferences     Find all usages of a symbol across the project
++  璺?SearchProject      Fast project-wide content search using ripgrep
++  璺?ListFiles          List all files in the project with optional name filter
++  璺?TaskCreate         Create a new task with title, description, priority, tags, and dependencies
++  璺?TaskGet            Get detailed information about a task by ID, including description, status, progress, and output
++  璺?TaskUpdate         Update a task: change title, description, status, priority, progress percentage, or append output
++  璺?TaskList           List tasks with optional filtering by status, priority, tags, or search keyword
++  璺?TaskStop           Stop a running or pending task by ID
++  璺?TaskOutput         Read the accumulated output of a task by ID
++  璺?claude_code        [Bridge] Interact with Claude Code (VS Code extension AI agent)
++
++
++[90mstdout[2m | src/commands.test.ts[2m > [22m[2mCommands[2m > [22m[2munhandled commands[2m > [22m[2mshould handle unknown slash commands
++[22m[39m  Available: /clear, /sessions, /tools, /model, /ponytail, /mcp, /stats, /status, /reflect, /review, /fix, /gen-commit, /config, /diff, /commit, /undo, /redo, /harness, /plan, /tasks, /exit, /quit
++
++ [32m閴?[39m src/commands.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 3278[2mms[22m[39m
++       [33m[2m閴?[22m[39m should list all tools [33m 3172[2mms[22m[39m
++ [32m閴?[39m src/closed-loop/closed-loop.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 8094[2mms[22m[39m
++     [33m[2m閴?[22m[39m runBatch returns results for TS files only [33m 8059[2mms[22m[39m
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/plan[2m > [22m[2mshould show current plan
++[22m[39m  Enter planning mode: the agent will plan before executing.
++  Use EnterPlanMode tool in conversation, or /plan again to exit.
++
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/tag[2m > [22m[2mshould create checkpoint
++[22m[39m  Checkpoint 0 saved. Use /rewind to return here.
++
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/ctx_viz and /context[2m > [22m[2mshould show context visualization with /ctx_viz
++[22m[39m  Context: 閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋?0%
++  Used: 150 / 1,000,000 tokens
++  Messages in history: 0
++
++[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2m/ctx_viz and /context[2m > [22m[2mshould show context visualization with /context
++[22m[39m  Context: 閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋掗埢鎴旀瀿閳绘垟鏋?0%
++  Used: 150 / 1,000,000 tokens
++  Messages in history: 0
++
++ [32m閴?[39m src/utils/retry.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 668[2mms[22m[39m
++       [33m[2m閴?[22m[39m should apply exponential backoff [33m 324[2mms[22m[39m
+
+ [32m鉁?[39m src/tools/CodeAnalysisTool.test.ts [2m([22m[2m19 tests[22m[2m)[22m[33m 453[2mms[22m[39m
+ [32m鉁?[39m src/qt/tools.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 287[2mms[22m[39m
+[90mstdout[2m | src/commands.extended.test.ts[2m > [22m[2mCommands - Extended Coverage[2m > [22m[2mGit commands[2m > [22m[2mshould handle /branch command
+[22m[39m
+  feat/websearch-launchapp-sandbox
+* feature/v0.7.1-improvements
+  fix/cleanup-type-safety-and-linting
+  master
+
+ [32m鉁?[39m src/utils/taskStore.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 193[2mms[22m[39m
+ [32m鉁?[39m src/tools/DataTool.test.ts [2m([22m[2m23 tests[22m[2m)[22m[33m 393[2mms[22m[39m
+ [32m鉁?[39m src/bridge/bridge.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 247[2mms[22m[39m
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mEmbeddingService[2m > [22m[2mshou
+ld generate pseudo-embeddings as fallback
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mEmbeddingService[2m > [22m[2mshou
+ld cache embeddings
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mEmbeddingService[2m > [22m[2mshou
+ld cache embeddings
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mEmbeddingService[2m > [22m[2mshou
+ld calculate cosine similarity correctly
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mEmbeddingService[2m > [22m[2mshou
+ld calculate cosine similarity correctly
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstdout[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39m[SemanticClassifier] Initializing with example embeddings...
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+ [32m鉁?[39m src/utils/queryEngine.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 492[2mms[22m[39m
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstdout[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier
+[22m[39m[SemanticClassifier] Initialized with embeddings for [33m5[39m types
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier[2m > [22m[2msh
+ould classify instruction memories
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier[2m > [22m[2msh
+ould classify preference memories
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier[2m > [22m[2msh
+ould classify fact memories
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier[2m > [22m[2msh
+ould classify context memories
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier[2m > [22m[2msh
+ould handle edge cases
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier[2m > [22m[2msh
+ould handle edge cases
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier[2m > [22m[2msh
+ould handle edge cases
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier[2m > [22m[2msh
+ould allow adding custom examples
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mSemanticClassifier[2m > [22m[2msh
+ould provide confidence scores for all types
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mclassifyMemorySemantic helper[2m > 
+[22m[2mshould classify memories using the global classifier
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify coding standards
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify coding standards
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify coding standards
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify user preferences
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify user preferences
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify user preferences
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify technical facts
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify technical facts
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify technical facts
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify context information
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify context information
+[22m[39mLocal embedding service unavailable, using fallback
+
+[90mstderr[2m | src/continual-learning/SemanticClassifier.test.ts[2m > [22m[2mReal-world classification scenarios
+[2m > [22m[2mshould correctly classify context information
+[22m[39mLocal embedding service unavailable, using fallback
+
+ [32m鉁?[39m src/continual-learning/SemanticClassifier.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 478[2mms[22m[39m
+ [32m鉁?[39m src/tools/NetworkTool.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 208[2mms[22m[39m
+ [32m鉁?[39m src/utils/streamingFileReader.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 361[2mms[22m[39m
+ [32m鉁?[39m src/tools/EditTool.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 259[2mms[22m[39m
+ [32m鉁?[39m src/qt/tools/QtProFileTool.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 387[2mms[22m[39m
+ [32m鉁?[39m src/utils/memoryMonitor.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 313[2mms[22m[39m
+ [32m鉁?[39m src/tools/GlobTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 306[2mms[22m[39m
+ [32m鉁?[39m src/permission/index.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 238[2mms[22m[39m
+ [32m鉁?[39m src/gateway/index.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 190[2mms[22m[39m
+[90mstderr[2m | src/utils/errorHandling.test.ts[2m > [22m[2mError Handling[2m > [22m[2mwithErrorBoundary[2m > 
+[22m[2mshould catch and handle errors
+[22m[39m[test-operation] Error: Invalid input
+
+[90mstderr[2m | src/utils/errorHandling.test.ts[2m > [22m[2mError Handling[2m > [22m[2mwithErrorBoundary[2m > 
+[22m[2mshould re-throw non-recoverable errors
+[22m[39m[test-operation] Error: Security issue
+
+ [32m鉁?[39m src/utils/errorHandling.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 180[2mms[22m[39m
+ [32m鉁?[39m src/tools/index.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 253[2mms[22m[39m
+ [32m鉁?[39m src/tools/FileSystemTool.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 223[2mms[22m[39m
+ [32m鉁?[39m src/tracing/index.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m鉁?[39m src/tools/ReadTool.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 222[2mms[22m[39m
+ [32m鉁?[39m src/math/index.extended.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 538[2mms[22m[39m
+     [33m[2m鉁?[22m[39m generates function graph [33m 483[2mms[22m[39m
+ [32m鉁?[39m src/tools/ImageTool.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 115[2mms[22m[39m
+ [32m鉁?[39m src/utils/fileSystem.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 196[2mms[22m[39m
+ [32m鉁?[39m src/utils/largeFileReader.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 97[2mms[22m[39m
+ [32m鉁?[39m src/tools/WriteTool.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 146[2mms[22m[39m
+ [32m鉁?[39m src/a2a/A2AProtocol.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 141[2mms[22m[39m
+[90mstderr[2m | src/utils/debug.test.ts[2m > [22m[2mdebugAssert[2m > [22m[2mthrows when condition is false and 
+debug is enabled
+[22m[39m[DEBUG:ASSERT] test failure
+
+ [32m鉁?[39m src/utils/debug.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 71[2mms[22m[39m
+ [32m鉁?[39m src/utils/dotenv.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+ [32m鉁?[39m src/utils/metrics.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+ [32m鉁?[39m src/qt/index.test.ts [2m([22m[2m30 tests[22m[2m)[22m[33m 497[2mms[22m[39m
+ [32m鉁?[39m src/ui/CliUI.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 103[2mms[22m[39m
+ [32m鉁?[39m src/utils/projectIndex.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32m鉁?[39m src/agent/LLMClient.test.ts [2m([22m[2m36 tests[22m[2m)[22m[32m 106[2mms[22m[39m
+ [32m鉁?[39m src/tools/rl-weighter.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m鉁?[39m src/agent/Agent.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 72[2mms[22m[39m
+ [32m鉁?[39m src/tools/utils-extra.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m鉁?[39m src/tools/GlobTool.bench.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m鉁?[39m src/agent/ConversationManager.test.ts [2m([22m[2m34 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m鉁?[39m src/qt/tools/QtMathTool.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 150[2mms[22m[39m
+[90mstderr[2m | src/reflexion/reflexion.test.ts[2m > [22m[2mReflexionEngine[2m > [22m[2mreflect returns null wh
+en client has no chat method
+[22m[39mLLM client does not support chat method
+
+[90mstderr[2m | src/reflexion/reflexion.test.ts[2m > [22m[2mReflexionEngine[2m > [22m[2mreflect returns null on
+ LLM error
+[22m[39mReflection failed: Error: API error
+    at C:/Users/Ehua/codeyang/src/reflexion/reflexion.test.ts:82:39
+    at [90mfile:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:302:11
+    at [90mfile:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:1903:26
+    at [90mfile:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel [90m(file:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact
+.js:2323:10[90m)[39m
+    at [90mfile:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2305:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifac
+t.js:2272:10[90m)[39m
+    at [90mfile:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2955:64
+
+ [32m鉁?[39m src/reflexion/reflexion.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m鉁?[39m src/qt/tools/QtBuildTool.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 82[2mms[22m[39m
+[90mstderr[2m | src/utils/nodeVersionCheck.test.ts[2m > [22m[2mcheckNodeVersion[2m > [22m[2mexits on Node < 18
+[22m[39m
+  鉂?Node.js v12.0.0 is not supported.
+  馃搵 CodeYang requires Node.js >= 18.0.0
+  馃攧 Upgrade: https://nodejs.org/en/download/
+
+
+ [32m鉁?[39m src/utils/nodeVersionCheck.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 83[2mms[22m[39m
+ [32m鉁?[39m src/math/index.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m鉁?[39m src/index.extended.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m鉁?[39m src/tools/MemoryTool.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m鉁?[39m src/utils/lruCache.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m鉁?[39m src/tools/registry.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m鉁?[39m src/index.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m鉁?[39m src/utils/securityValidation.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 89[2mms[22m[39m
+ [32m鉁?[39m src/utils/globMatch.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+[90mstderr[2m | src/agent/Agent-integration.test.ts[2m > [22m[2mAgent Loop Integration[2m > [22m[2mfull agent l
+oop: text 鈫?tool 鈫?result 鈫?text[2m > [22m[2mcompletes a cycle with Edit tool call
+[22m[39mLLM client does not support chat method
+
+[90mstderr[2m | src/agent/Agent-integration.test.ts[2m > [22m[2mAgent Loop Integration[2m > [22m[2mfull agent l
+oop: text 鈫?tool 鈫?result 鈫?text[2m > [22m[2mcompletes a cycle with Edit tool call
+[22m[39mLLM client does not support chat method
+
+[90mstderr[2m | src/agent/Agent-integration.test.ts[2m > [22m[2mAgent Loop Integration[2m > [22m[2mfull agent l
+oop: text 鈫?tool 鈫?result 鈫?text[2m > [22m[2mcompletes a cycle with Edit tool call
+[22m[39mLLM client does not support chat method
+
+ [32m鉁?[39m src/web-server.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m鉁?[39m src/tot/TreeOfThoughts.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+[90mstderr[2m | src/agent/Agent-integration.test.ts[2m > [22m[2mAgent Loop Integration[2m > [22m[2mparallel too
+l calls[2m > [22m[2mhandles mixed success and error in parallel batch
+[22m[39mLLM client does not support chat method
+
+[90mstderr[2m | src/planner/Planner.test.ts[2m > [22m[2mPlanner[2m > [22m[2mgeneratePlan[2m > [22m[2mshould 
+return null if client does not support chat
+[22m[39mLLM client does not support chat method
+
+[90mstderr[2m | src/planner/Planner.test.ts[2m > [22m[2mPlanner[2m > [22m[2mgeneratePlan[2m > [22m[2mshould 
+return null for invalid JSON
+[22m[39mFailed to parse plan response: SyntaxError: Unexpected token 'T', "This is no"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at Planner.parsePlanResponse (C:/Users/Ehua/codeyang/src/planner/Planner.ts:170:25)
+    at Planner.generatePlan (C:/Users/Ehua/codeyang/src/planner/Planner.ts:78:25)
+[90m    at processTicksAndRejections (node:internal/process/task_queues:104:5)[39m
+    at C:/Users/Ehua/codeyang/src/planner/Planner.test.ts:168:22
+
+[90mstderr[2m | src/planner/Planner.test.ts[2m > [22m[2mPlanner[2m > [22m[2mgeneratePlan[2m > [22m[2mshould 
+handle plan generation errors
+[22m[39mPlan generation failed: Error: API error
+    at Object.chat (C:/Users/Ehua/codeyang/src/planner/Planner.test.ts:176:17)
+    at Planner.generatePlan (C:/Users/Ehua/codeyang/src/planner/Planner.ts:71:37)
+    at C:/Users/Ehua/codeyang/src/planner/Planner.test.ts:180:36
+    at [90mfile:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:302:11
+    at [90mfile:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:1903:26
+    at [90mfile:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel [90m(file:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact
+.js:2323:10[90m)[39m
+    at [90mfile:///C:/Users/Ehua/codeyang/[39mnode_modules/[4m@vitest/runner[24m/dist/chunk-artifact.js:2305:20
+    at new Promise (<anonymous>)
+
+ [32m鉁?[39m src/planner/Planner.test.ts [2m([22m[2m29 tests[22m[2m)[22m[32m 129[2mms[22m[39m
+ [32m鉁?[39m src/sandbox/sandbox.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m鉁?[39m src/tools/mcp.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m鉁?[39m src/tot/tot.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m鉁?[39m src/utils/logger.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m鉁?[39m src/tools/TaskTool.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m鉁?[39m src/codeyangx.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m鉁?[39m src/tools/schema-validate.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m鉁?[39m src/mcp/mcp.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [2m[90m鈫?[39m[22m src/utils/performance.bench.ts [2m([22m[2m5 tests[22m[2m | [22m[33m5 skipped[39m[2m)[22m

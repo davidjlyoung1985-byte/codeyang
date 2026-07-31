@@ -228,7 +228,10 @@ async function cmdSessions(ctx: CommandContext): Promise<DispatchResult> {
     console.log(`\n  ${isCurrent ? c.bold(c.green('📁 ' + project)) : c.dim('📁 ' + project)} (${sessions.length})`);
     for (const s of sessions.slice(0, 10)) {
       const msgInfo = s.messageCount ? ` ${s.messageCount}msgs` : '';
-      const title = s.title.replace(/^\[.*?\]\s*/, '').slice(0, 40).padEnd(40);
+      const title = s.title
+        .replace(/^\[.*?\]\s*/, '')
+        .slice(0, 40)
+        .padEnd(40);
       console.log(`    ${c.dim(s.id.slice(0, 12))}  ${title}  ${c.dim(s.updatedAt.slice(0, 10))}${msgInfo}`);
     }
     if (sessions.length > 10) {
@@ -512,7 +515,9 @@ async function cmdFix(ctx: CommandContext): Promise<DispatchResult> {
   ctx.ui.showSystemMessage('Analyzing project for lint/type errors...');
   ctx.ui.promptUser();
   ctx.agent
-    .run('分析当前项目的 lint 错误和类型错误。先运行 lint 和 type-check 查看错误列表，然后逐个修复。修复后再次验证确保全部通过。')
+    .run(
+      '分析当前项目的 lint 错误和类型错误。先运行 lint 和 type-check 查看错误列表，然后逐个修复。修复后再次验证确保全部通过。',
+    )
     .catch((err) => ctx.ui.showError(err instanceof Error ? err.message : String(err)));
   return { handled: true };
 }
@@ -532,7 +537,9 @@ async function cmdGenCommit(line: string, ctx: CommandContext): Promise<Dispatch
   ctx.ui.showSystemMessage('Generating commit message from staged changes...');
   ctx.ui.promptUser();
   ctx.agent
-    .run('运行 git diff --cached 查看暂存区变更，然后生成一个规范的 commit message。格式：<type>(<scope>): <description>。只输出 commit message，不执行 git commit。')
+    .run(
+      '运行 git diff --cached 查看暂存区变更，然后生成一个规范的 commit message。格式：<type>(<scope>): <description>。只输出 commit message，不执行 git commit。',
+    )
     .catch((err) => ctx.ui.showError(err instanceof Error ? err.message : String(err)));
   return { handled: true };
 }
