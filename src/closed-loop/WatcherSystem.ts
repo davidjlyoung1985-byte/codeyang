@@ -195,7 +195,13 @@ export class WatcherSystem {
       if (!Array.isArray(config.onFileChange)) return { commands: [] };
 
       const commands = config.onFileChange
-        .filter((h: unknown) => h && typeof h === 'object' && typeof (h as Record<string, unknown>).pattern === 'string' && typeof (h as Record<string, unknown>).command === 'string')
+        .filter(
+          (h: unknown) =>
+            h &&
+            typeof h === 'object' &&
+            typeof (h as Record<string, unknown>).pattern === 'string' &&
+            typeof (h as Record<string, unknown>).command === 'string',
+        )
         .map((h: { pattern: string; command: string }) => ({
           pattern: new RegExp(h.pattern),
           command: h.command,
@@ -233,7 +239,11 @@ export class WatcherSystem {
     }
   }
 
-  private startFileWatcher(projectDir: string, rule: TriggerRule, hooks?: { commands: Array<{ pattern: RegExp; command: string }> }): void {
+  private startFileWatcher(
+    projectDir: string,
+    rule: TriggerRule,
+    hooks?: { commands: Array<{ pattern: RegExp; command: string }> },
+  ): void {
     if (rule.source.type !== 'file') return;
     const ac = new AbortController();
     this.abortControllers.push(ac);
