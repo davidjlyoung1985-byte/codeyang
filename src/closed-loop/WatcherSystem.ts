@@ -269,7 +269,7 @@ export class WatcherSystem {
               this.onTrigger(rule, { filePath: fullPath });
               // Execute custom hooks on file change
               if (hooks?.commands.length) {
-                this.executeHooks(hooks.commands, fullPath, projectDir);
+                void this.executeHooks(hooks.commands, fullPath, projectDir);
               }
             }, 300),
           );

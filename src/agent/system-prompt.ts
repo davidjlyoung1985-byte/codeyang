@@ -28,6 +28,7 @@ export function loadKnowledgeBase(): string {
   const kbDir = join(homedir(), '.codeyang', 'knowledge');
   try {
     if (!existsSync(kbDir)) return '';
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { readdirSync } = require('node:fs');
     const files = readdirSync(kbDir).filter((f: string) => f.endsWith('.md') && existsSync(join(kbDir, f)));
     if (files.length === 0) return '';

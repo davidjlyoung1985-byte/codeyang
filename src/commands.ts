@@ -9,7 +9,7 @@ import picocolors from 'picocolors';
 import { config, getMcpServers, reloadConfig } from './agent/config.js';
 import { getPonytailPrompt } from './agent/ponytail-prompt.js';
 import type { PonytailLevel } from './agent/ponytail-prompt.js';
-import { saveSession, searchSessions } from './utils/sessionStore.js';
+import { saveSession } from './utils/sessionStore.js';
 import { editHistory } from './utils/editHistory.js';
 import { writeFile } from 'node:fs/promises';
 
