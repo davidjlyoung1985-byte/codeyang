@@ -36,12 +36,12 @@ import { AgentContextManager } from './AgentContextManager.js';
 import { AgentToolExecutor } from './AgentToolExecutor.js';
 import { jsonClone, withRetry, checkExactRepeat } from './AgentUtils.js';
 import { StateManager } from './managers/StateManager.js';
+import { ConversationManager } from './managers/ConversationManager.js';
 
 // ── Constants ──────────────────────────────────────────────
 
 const STREAM_TIMEOUT_MS = 120_000; // 2 min
 const SIMILARITY_PREFIX_LEN = 100;
-const MAX_CHECKPOINTS = 10;
 
 type AssistantContentBlock =
   { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown };
@@ -67,26 +67,17 @@ export interface AgentCallbacks {
 export class Agent {
   // ── Instance state ───────────────────────────────────────
   private client: LLMClient;
-  private history: LLMMessage[] = [];
   private cbs: AgentCallbacks = {};
-  private checkpoints: LLMMessage[][] = [];
   private maxRetries: number;
-
-  // Anti-repetition (moved to StateManager)
-  // private lastAssistantText = '';
-  // private recentAssistantTexts: string[] = [];
-  // private repeatCount = 0;
 
   // Streaming timeout
   private abortController: AbortController | null = null;
 
-  // Token usage tracking (moved to StateManager)
-  // private tokenUsage = { inputTokens: 0, outputTokens: 0 };
-
-  // Delegated helpers
+  // Delegated managers
   private ctxManager: AgentContextManager;
   private toolExecutor: AgentToolExecutor;
-  private stateManager: StateManager; // 新增
+  private stateManager: StateManager;
+  private conversationManager: ConversationManager;
 
   // Closed-loop
   private verificationPipeline: VerificationPipeline | null = null;
@@ -124,7 +115,8 @@ export class Agent {
 
     this.ctxManager = new AgentContextManager((max) => this.reflexionEngine.getLearnedPatterns(max));
     this.toolExecutor = new AgentToolExecutor(this.reflexionEngine);
-    this.stateManager = new StateManager(); // 新增
+    this.stateManager = new StateManager();
+    this.conversationManager = new ConversationManager();
 
     // Harness
     this.tracer = Tracer.getInstance();
@@ -277,26 +269,25 @@ export class Agent {
   }
 
   saveCheckpoint(): number {
-    const idx = this.checkpoints.length;
-    this.checkpoints.push(jsonClone(this.history));
-    if (this.checkpoints.length > MAX_CHECKPOINTS) this.checkpoints.shift();
-    return idx;
+    this.conversationManager.saveCheckpoint();
+    return this.conversationManager.getCheckpointCount() - 1;
   }
 
   restoreCheckpoint(): boolean {
-    if (this.checkpoints.length === 0) return false;
-    this.history = this.checkpoints.pop()!;
+    const count = this.conversationManager.getCheckpointCount();
+    if (count === 0) return false;
+    this.conversationManager.restoreCheckpoint(count - 1);
     return true;
   }
 
   get checkpointCount(): number {
-    return this.checkpoints.length;
+    return this.conversationManager.getCheckpointCount();
   }
 
   reset() {
-    this.history = [];
+    this.conversationManager.resetAll();
     this.toolExecutor.invalidateCache();
-    this.stateManager.resetAll(); // 使用 StateManager
+    this.stateManager.resetAll();
     this.toolExecutor = new AgentToolExecutor(this.reflexionEngine);
     this.ctxManager.invalidateCache();
   }
@@ -351,7 +342,7 @@ export class Agent {
     const traceId = this.currentTraceId;
 
     this.abortController = new AbortController();
-    const messages = jsonClone(this.history);
+    const messages = jsonClone(this.conversationManager.getHistory());
 
     const isComplex = prompt.length > 200 || (prompt.match(/[。；;.!?？]/g) || []).length >= 2 || prompt.includes('\n');
     const userMsg = isComplex
@@ -392,7 +383,9 @@ export class Agent {
     }
 
     if (messages.length === 0) {
-      logger.error(`[run] messages is empty! history.length=${this.history.length}, prompt="${prompt}"`);
+      logger.error(
+        `[run] messages is empty! history.length=${this.conversationManager.getHistoryLength()}, prompt="${prompt}"`,
+      );
       throw new Error('Internal error: messages array is empty after summarization');
     }
 
@@ -550,16 +543,14 @@ export class Agent {
         if (exactCheck.isRepeat) {
           this.cbs.onError?.('Agent loop detected (exact repeat) — stopping');
           this.pushCancelledToolResults(messages, toolCalls);
-          this.history.length = 0;
-          this.history.push(...messages);
+          this.conversationManager.setHistory(messages);
           break;
         }
 
         if (this.stateManager.checkFuzzyRepeat(assistantText, SIMILARITY_PREFIX_LEN)) {
           this.cbs.onError?.('Agent loop detected (similar repeat) — stopping');
           this.pushCancelledToolResults(messages, toolCalls);
-          this.history.length = 0;
-          this.history.push(...messages);
+          this.conversationManager.setHistory(messages);
           break;
         }
 
@@ -568,8 +559,7 @@ export class Agent {
       }
 
       if (toolCalls.length === 0) {
-        this.history.length = 0;
-        this.history.push(...messages);
+        this.conversationManager.setHistory(messages);
         break;
       }
 
@@ -653,8 +643,7 @@ export class Agent {
           );
       }
 
-      this.history.length = 0;
-      this.history.push(...messages);
+      this.conversationManager.setHistory(messages);
     }
 
     setToolContext(null);
@@ -798,9 +787,9 @@ export class Agent {
             content: tr.output,
             is_error: tr.isError,
           }));
-          this.history.push({ role: 'user', content: blocks });
+          this.conversationManager.addMessage({ role: 'user', content: blocks });
         } else {
-          this.history.push({ role: 'user', content: m.content });
+          this.conversationManager.addMessage({ role: 'user', content: m.content });
         }
       } else if (m.role === 'assistant') {
         const blocks: AssistantContentBlock[] = [];
@@ -810,14 +799,14 @@ export class Agent {
             blocks.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.args });
           }
         }
-        this.history.push({ role: 'assistant', content: blocks });
+        this.conversationManager.addMessage({ role: 'assistant', content: blocks });
       }
     }
   }
 
   /** Serialize history preserving tool_result blocks for session persistence. */
   exportMessages(): Message[] {
-    return this.history.map((m) => {
+    return this.conversationManager.getHistory().map((m) => {
       if (typeof m.content === 'string') {
         return { role: m.role as 'user' | 'assistant', content: m.content };
       }
