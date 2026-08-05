@@ -1,1 +1,0 @@
-% hello.m\n% 第一个MATLAB脚本\n\ndisp('Hello, world!');\n
