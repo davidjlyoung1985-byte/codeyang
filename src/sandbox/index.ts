@@ -337,15 +337,16 @@ export class Sandbox {
     // ── 执行命令 ──
     return new Promise<SandboxResult>((resolveResult) => {
       let timedOut = false;
-      let stdout = '';
-      let stderr = '';
-      let stdoutExceeded = false;
-      let stderrExceeded = false;
+      let runnerStderr = '';
 
       const spawnArgs = this.resourceLimiter.getSpawnOptions();
       const env = {
         ...(spawnArgs.env as Record<string, string> | undefined),
         ...this.buildEnv(opts?.env),
+        // Pass limits to the runner
+        CODEYANG_SANDBOX_TIMEOUT: String(timeoutMs),
+        CODEYANG_SANDBOX_MAX_STDOUT: String(this.config.maxStdoutBytes),
+        CODEYANG_SANDBOX_MAX_STDERR: String(this.config.maxStderrBytes),
       };
 
       // 清理函数（先在作用域中声明，因为在 try-catch 和 exit handler 中都会用到）
@@ -357,7 +358,7 @@ export class Sandbox {
         this.childProcess = fork(this.getSandboxRunnerPath(), [command, ...args], {
           cwd: this.workDir,
           env,
-          stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+          stdio: ['ignore', 'pipe', 'pipe', 'ipc'], // Keep pipe for runner's own output
           serialization: 'advanced',
         });
       } catch (err) {
@@ -377,63 +378,56 @@ export class Sandbox {
         return;
       }
 
-      // ── stdout ──
-      this.childProcess.stdout?.on('data', (chunk: Buffer) => {
-        if (!stdoutExceeded) {
-          const remaining = this.config.maxStdoutBytes - Buffer.byteLength(stdout);
-          if (remaining <= 0) {
-            stdoutExceeded = true;
-            stdout += '\n... (stdout truncated, exceeded max)';
-          } else {
-            stdout += chunk.toString().slice(0, remaining);
-          }
-        }
+      // ── Listen for result via IPC ──
+      this.childProcess.on('message', (msg: unknown) => {
+        const result = msg as SandboxResult;
+        // Update with our metadata
+        result.sandboxId = this.id;
+        result.workDir = this.workDir;
+        result.command = command;
+        finishCleanup();
+        resolveResult(result);
       });
 
-      // ── stderr ──
+      // ── Capture runner's stderr (for debugging) ──
       this.childProcess.stderr?.on('data', (chunk: Buffer) => {
-        if (!stderrExceeded) {
-          const remaining = this.config.maxStderrBytes - Buffer.byteLength(stderr);
-          if (remaining <= 0) {
-            stderrExceeded = true;
-            stderr += '\n... (stderr truncated, exceeded max)';
-          } else {
-            stderr += chunk.toString().slice(0, remaining);
-          }
-        }
+        runnerStderr += chunk.toString();
       });
 
-      // ── 超时计时器 ──
+      // ── Timeout ──
       const timer = setTimeout(() => {
         timedOut = true;
         this.kill('SIGTERM');
       }, timeoutMs);
 
-      // ── 完成 ──
+      // ── Exit (fallback if no IPC message) ──
       this.childProcess.on('exit', (exitCode) => {
         clearTimeout(timer);
-        const result: SandboxResult = {
-          success: exitCode === 0 && !timedOut,
-          stdout,
-          stderr,
-          exitCode,
-          durationMs: Date.now() - this.startTime,
-          timedOut,
-          resourceLimited: false,
-          sandboxId: this.id,
-          workDir: this.workDir,
-          command,
-        };
-        finishCleanup();
-        resolveResult(result);
+        // If we haven't received a result via IPC, create a fallback
+        if (this.childProcess) {
+          const result: SandboxResult = {
+            success: false,
+            stdout: '',
+            stderr: runnerStderr || 'Sandbox runner exited without sending result',
+            exitCode,
+            durationMs: Date.now() - this.startTime,
+            timedOut,
+            resourceLimited: false,
+            sandboxId: this.id,
+            workDir: this.workDir,
+            command,
+          };
+          finishCleanup();
+          resolveResult(result);
+        }
       });
 
       this.childProcess.on('error', (err) => {
         clearTimeout(timer);
         const result: SandboxResult = {
           success: false,
-          stdout,
-          stderr: `Sandbox process error: ${err.message}`,
+          stdout: '',
+          stderr: `Sandbox runner error: ${err.message}`,
           exitCode: null,
           durationMs: Date.now() - this.startTime,
           timedOut,
@@ -551,7 +545,14 @@ export class Sandbox {
 
   /** 获取沙箱执行器脚本路径（内嵌的 runner） */
   private getSandboxRunnerPath(): string {
-    // 使用内联 script 避免额外文件依赖
+    // In production (dist), use the compiled runner
+    // In development (src), need to resolve to dist or handle differently
+    const isDev = __dirname.includes('src');
+    if (isDev) {
+      // Development: point to dist version
+      return join(__dirname, '../../dist/sandbox/sandbox-runner.js');
+    }
+    // Production: use the compiled JS file in the same directory
     return join(__dirname, 'sandbox-runner.js');
   }
 }

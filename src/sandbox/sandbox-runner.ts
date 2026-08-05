@@ -22,66 +22,58 @@ const maxStdoutBytes = parseInt(process.env['CODEYANG_SANDBOX_MAX_STDOUT'] || '1
 const maxStderrBytes = parseInt(process.env['CODEYANG_SANDBOX_MAX_STDERR'] || '1048576', 10);
 const networkBlocked = process.env['CODEYANG_SANDBOX_NETWORK_BLOCKED'] === '1';
 
-let stdout = '';
-let stderr = '';
-let stdoutTruncated = false;
-let stderrTruncated = false;
 let timedOut = false;
 const startTime = Date.now();
 
 // ── Execute ──────────────────────────────────────────────────
-const child = execFile(command, args, {
+const execOptions: Parameters<typeof execFile>[2] = {
   cwd: process.cwd(),
   env: {
     ...process.env,
-    // Strip dangerous env vars
+    // Mark as sandboxed
     CODEYANG_SANDBOX: '1',
-    ...(networkBlocked ? { NODE_OPTIONS: '--no-network' } : {}),
+    // Note: Network blocking flag is set, but actual network isolation
+    // requires OS-level features (network namespaces on Linux, job objects on Windows)
+    // This flag serves as a marker that can be checked by scripts
   },
   timeout: timeoutMs,
   maxBuffer: Math.max(maxStdoutBytes, maxStderrBytes),
-  shell: platform() === 'win32',
-});
+  // Don't use shell - execFile is meant to run executables directly
+  shell: false,
+  encoding: 'utf-8',
+};
 
-child.stdout?.on('data', (chunk: Buffer) => {
-  if (!stdoutTruncated) {
-    const remaining = maxStdoutBytes - Buffer.byteLength(stdout);
-    if (remaining <= 0) {
-      stdoutTruncated = true;
-      stdout += '\n... (stdout truncated)';
-    } else {
-      stdout += chunk.toString('utf-8').slice(0, remaining);
-    }
-  }
-});
-
-child.stderr?.on('data', (chunk: Buffer) => {
-  if (!stderrTruncated) {
-    const remaining = maxStderrBytes - Buffer.byteLength(stderr);
-    if (remaining <= 0) {
-      stderrTruncated = true;
-      stderr += '\n... (stderr truncated)';
-    } else {
-      stderr += chunk.toString('utf-8').slice(0, remaining);
-    }
-  }
-});
-
-child.on('exit', (code, signal) => {
+// Use callback-based execFile to get all output at once
+execFile(command, args, execOptions, (error, stdout, stderr) => {
   const durationMs = Date.now() - startTime;
 
-  if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+  // Check if it was killed by timeout
+  if (error && error.killed && error.signal) {
     timedOut = true;
   }
 
+  // Truncate if needed
+  let finalStdout = stdout || '';
+  let finalStderr = stderr || '';
+
+  if (finalStdout.length > maxStdoutBytes) {
+    finalStdout = finalStdout.slice(0, maxStdoutBytes) + '\n... (stdout truncated)';
+  }
+
+  if (finalStderr.length > maxStderrBytes) {
+    finalStderr = finalStderr.slice(0, maxStderrBytes) + '\n... (stderr truncated)';
+  }
+
+  const exitCode = error && !timedOut ? (error.code ?? 1) : 0;
+
   const result = {
-    success: code === 0 && !timedOut,
-    stdout,
-    stderr,
-    exitCode: code,
+    success: exitCode === 0 && !timedOut,
+    stdout: finalStdout,
+    stderr: finalStderr,
+    exitCode,
     durationMs,
     timedOut,
-    signal: signal || undefined,
+    signal: error?.signal || undefined,
   };
 
   // Send result back to parent via IPC
@@ -92,33 +84,15 @@ child.on('exit', (code, signal) => {
     process.stdout.write(JSON.stringify(result));
   }
 
-  process.exit(code || 0);
-});
-
-child.on('error', (err) => {
-  const result = {
-    success: false,
-    stdout: '',
-    stderr: `Sandbox process error: ${err.message}`,
-    exitCode: null,
-    durationMs: Date.now() - startTime,
-    timedOut: false,
-    signal: undefined,
-  };
-
-  if (process.send) {
-    process.send(result);
-  } else {
-    process.stderr.write(JSON.stringify(result));
-  }
-
-  process.exit(1);
+  process.exit(exitCode);
 });
 
 // ── Handle parent messages ────────────────────────────────────
 process.on('message', (msg: unknown) => {
   const message = msg as { type?: string; signal?: string };
   if (message?.type === 'kill') {
-    child.kill((message.signal as NodeJS.Signals) || 'SIGTERM');
+    // Note: The child would already be managed by execFile's timeout
+    // But we can force kill if needed
+    process.exit(1);
   }
 });
