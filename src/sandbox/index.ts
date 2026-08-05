@@ -51,16 +51,9 @@
 import { randomUUID } from 'node:crypto';
 import { fork, type ChildProcess } from 'node:child_process';
 import { writeFile, mkdir, rm } from 'node:fs/promises';
-import { join, resolve, normalize } from 'node:path';
-import { tmpdir, platform } from 'node:os';
-import { minimatch } from 'minimatch';
-import {
-  checkCommandSecurity,
-  filterEnvVars,
-  isPathAllowed,
-  createDefaultSecurityConfig,
-  type SecurityConfig,
-} from '../security/SecurityPolicy.js';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { filterEnvVars, isPathAllowed } from '../security/SecurityPolicy.js';
 import { detectNetworkIsolationSupport, wrapCommandWithNetworkIsolation } from './os-isolation.js';
 
 // ===================== 类型定义 =====================
