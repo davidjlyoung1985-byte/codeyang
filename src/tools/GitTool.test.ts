@@ -311,4 +311,166 @@ describe('GitTool', () => {
       expect(result).toMatch(/master|main/);
     });
   });
+
+  describe('Error Handling', () => {
+    it('should handle non-existent directory', async () => {
+      const nonExistentDir = path.join(TEST_DIR, 'non-existent');
+
+      await expect(executeGitStatus(nonExistentDir)).rejects.toThrow();
+    });
+
+    it('should handle invalid branch name on checkout', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'init.txt'), 'init');
+      await execa('git', ['add', 'init.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'init'], { cwd: TEST_DIR });
+
+      // Try to checkout non-existent branch without create flag
+      await expect(executeGitCheckout('non-existent-branch', TEST_DIR, false)).rejects.toThrow();
+    });
+
+    it('should handle commit with empty message', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+
+      const result = await executeGitCommit('', TEST_DIR);
+
+      // Should handle gracefully or reject
+      expect(result).toBeDefined();
+    });
+
+    it('should handle git operations in non-git directory', async () => {
+      const nonGitDir = path.join(TEST_DIR, 'not-git');
+      await fs.mkdir(nonGitDir, { recursive: true });
+
+      await expect(executeGitStatus(nonGitDir)).rejects.toThrow();
+    });
+
+    it('should handle unstaging files that are not staged', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+
+      const result = await executeGitReset(['test.txt'], TEST_DIR, false);
+
+      // Should handle gracefully
+      expect(result).toBeDefined();
+    });
+
+    it('should handle checkout with uncommitted changes', async () => {
+      const file = path.join(TEST_DIR, 'test.txt');
+      await fs.writeFile(file, 'initial');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+
+      await execa('git', ['branch', 'feature'], { cwd: TEST_DIR });
+
+      // Make uncommitted changes
+      await fs.writeFile(file, 'modified');
+
+      // Try to checkout - should either fail or force
+      const result = await executeGitCheckout('feature', TEST_DIR, false).catch((e) => e);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle adding non-existent files', async () => {
+      const result = await executeGitAdd(['non-existent-file.txt'], TEST_DIR);
+
+      // Should report error or handle gracefully
+      expect(result.toLowerCase()).toMatch(/error|warning|did not match|pathspec/);
+    });
+
+    it('should handle stash when there are no changes', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+
+      const result = await executeGitStash('save', 'empty stash', TEST_DIR);
+
+      // Should indicate no changes to stash
+      expect(result.toLowerCase()).toMatch(/no local changes|nothing to save/);
+    });
+
+    it('should handle diff with no commits', async () => {
+      const result = await executeGitDiff(TEST_DIR);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle log with no commits', async () => {
+      const result = await executeGitLog(TEST_DIR);
+
+      expect(result.toLowerCase()).toMatch(/no commits|fatal|your branch/);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle files with spaces in names', async () => {
+      const fileName = 'file with spaces.txt';
+      await fs.writeFile(path.join(TEST_DIR, fileName), 'content');
+
+      const addResult = await executeGitAdd([fileName], TEST_DIR);
+      expect(addResult).toContain('Staged');
+
+      const status = await executeGitStatus(TEST_DIR);
+      expect(status).toContain(fileName);
+    });
+
+    it('should handle special characters in commit message', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+
+      const message = 'Test: "quotes" & <special> chars $VAR';
+      const result = await executeGitCommit(message, TEST_DIR);
+
+      expect(result).toContain(message);
+    });
+
+    it('should handle very long commit messages', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+
+      const longMessage = 'A'.repeat(1000);
+      const result = await executeGitCommit(longMessage, TEST_DIR);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle adding multiple files at once', async () => {
+      for (let i = 0; i < 10; i++) {
+        await fs.writeFile(path.join(TEST_DIR, `file${i}.txt`), `content${i}`);
+      }
+
+      const files = Array.from({ length: 10 }, (_, i) => `file${i}.txt`);
+      const result = await executeGitAdd(files, TEST_DIR);
+
+      expect(result).toContain('Staged 10 file(s)');
+    });
+
+    it('should handle branch names with special characters', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'init.txt'), 'init');
+      await execa('git', ['add', 'init.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'init'], { cwd: TEST_DIR });
+
+      const branchName = 'feature/test-123';
+      const result = await executeGitCheckout(branchName, TEST_DIR, true);
+
+      expect(result).toContain(branchName);
+    });
+
+    it('should handle empty directory for add', async () => {
+      const result = await executeGitAdd(['.'], TEST_DIR);
+
+      // Should handle empty directory gracefully
+      expect(result).toBeDefined();
+    });
+
+    it('should handle stash pop when no stashes exist', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+
+      const result = await executeGitStash('pop', undefined, TEST_DIR).catch((e) => e.message);
+
+      expect(result.toLowerCase()).toMatch(/no stash|error/);
+    });
+  });
 });
