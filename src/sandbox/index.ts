@@ -8,8 +8,19 @@
  *   2. 资源限制 — CPU / 内存 / 磁盘 / 网络使用上限
  *   3. 超时控制 — 强制终止超时任务
  *   4. 文件系统隔离 — 限制只能访问特定目录
- *   5. 网络隔离 — 可选择禁止网络访问
+ *   5. 网络隔离 — 可选择禁止网络访问（软隔离或 OS 级隔离）
  *   6. 结果捕获 — 获取 stdout/stderr/exitCode
+ *
+ * 安全边界:
+ *   ✅ 适用于可信代码的隔离执行
+ *   ✅ 防止意外崩溃和资源滥用
+ *   ✅ 开发和测试环境
+ *   ⚠️ 网络隔离为软限制（环境变量标记），除非启用 useOsNetworkIsolation
+ *   ⚠️ 内存限制为软限制（环境变量标记）
+ *   ❌ 不适用于完全不可信的第三方代码
+ *   ❌ 不适用于需要强隔离的多租户平台
+ *
+ *   详见: docs/sandbox-security-boundaries.md
  *
  * 架构:
  *   Sandbox 使用 child_process.fork() 在独立进程中运行，
@@ -21,9 +32,15 @@
  *   └─────────────┘             └───────────────┘
  *
  * 使用方式:
- *   const sb = new Sandbox({ timeoutMs: 30_000, memoryMb: 512 });
- *   const result = await sb.run('node', ['script.js'], { cwd: '/tmp/work' });
- *   console.log(result.stdout);
+ *   // 基础隔离
+ *   const sb = new Sandbox({ timeoutMs: 30_000 });
+ *   const result = await sb.run('node', ['script.js']);
+ *
+ *   // OS 级网络隔离（需要系统支持）
+ *   const sb = new Sandbox({
+ *     blockNetwork: true,
+ *     useOsNetworkIsolation: true,  // Linux + unshare
+ *   });
  *
  * 集成点（见 tools/BashTool.ts）:
  *   - BashTool 中高危命令 (rm -rf, sudo, curl|sh) 走沙箱执行
@@ -58,6 +75,8 @@ export interface SandboxConfig {
   blockedPathPatterns: string[];
   /** 是否禁止网络访问（默认 false） */
   blockNetwork: boolean;
+  /** 使用 OS 级网络隔离（需要系统支持，默认 false） */
+  useOsNetworkIsolation?: boolean;
   /** 临时工作目录前缀 */
   tempDirPrefix: string;
   /** 清除临时目录（默认 true） */
