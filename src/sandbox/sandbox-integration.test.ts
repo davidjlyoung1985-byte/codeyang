@@ -11,8 +11,6 @@
 
 import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { Sandbox, SandboxPool } from './index.js';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 
 describe('Sandbox - Integration Tests', () => {
   let sandbox: Sandbox;
@@ -326,7 +324,7 @@ describe('Sandbox - Integration Tests', () => {
     test('should execute post-exec hooks', async () => {
       let hookCalled = false;
 
-      sandbox.registerPostExecHook(async (sandboxId, workDir) => {
+      sandbox.registerPostExecHook(async (_sandboxId, _workDir) => {
         hookCalled = true;
       });
 
