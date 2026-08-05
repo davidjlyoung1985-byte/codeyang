@@ -34,14 +34,13 @@ import { Gateway } from '../gateway/index.js';
 import { getAllToolWeights } from '../tools/rl-weighter.js';
 import { AgentContextManager } from './AgentContextManager.js';
 import { AgentToolExecutor } from './AgentToolExecutor.js';
-import { jsonClone, withRetry, checkExactRepeat, checkFuzzyRepeat } from './AgentUtils.js';
+import { jsonClone, withRetry, checkExactRepeat } from './AgentUtils.js';
+import { StateManager } from './managers/StateManager.js';
 
 // ── Constants ──────────────────────────────────────────────
 
 const STREAM_TIMEOUT_MS = 120_000; // 2 min
 const SIMILARITY_PREFIX_LEN = 100;
-const MAX_RECENT_TEXTS = 4;
-const MIN_REPEAT_TEXTS_FOR_FUZZY = 2;
 const MAX_CHECKPOINTS = 10;
 
 type AssistantContentBlock =
@@ -71,23 +70,23 @@ export class Agent {
   private history: LLMMessage[] = [];
   private cbs: AgentCallbacks = {};
   private checkpoints: LLMMessage[][] = [];
-  private questionResolve: ((answer: string) => void) | null = null;
   private maxRetries: number;
 
-  // Anti-repetition
-  private lastAssistantText = '';
-  private recentAssistantTexts: string[] = [];
-  private repeatCount = 0;
+  // Anti-repetition (moved to StateManager)
+  // private lastAssistantText = '';
+  // private recentAssistantTexts: string[] = [];
+  // private repeatCount = 0;
 
   // Streaming timeout
   private abortController: AbortController | null = null;
 
-  // Token usage tracking
-  private tokenUsage = { inputTokens: 0, outputTokens: 0 };
+  // Token usage tracking (moved to StateManager)
+  // private tokenUsage = { inputTokens: 0, outputTokens: 0 };
 
   // Delegated helpers
   private ctxManager: AgentContextManager;
   private toolExecutor: AgentToolExecutor;
+  private stateManager: StateManager; // 新增
 
   // Closed-loop
   private verificationPipeline: VerificationPipeline | null = null;
@@ -125,6 +124,7 @@ export class Agent {
 
     this.ctxManager = new AgentContextManager((max) => this.reflexionEngine.getLearnedPatterns(max));
     this.toolExecutor = new AgentToolExecutor(this.reflexionEngine);
+    this.stateManager = new StateManager(); // 新增
 
     // Harness
     this.tracer = Tracer.getInstance();
@@ -273,7 +273,7 @@ export class Agent {
     return config.apiKey.length > 0;
   }
   getTokenUsage(): { inputTokens: number; outputTokens: number } {
-    return { ...this.tokenUsage };
+    return this.stateManager.getTokenUsage();
   }
 
   saveCheckpoint(): number {
@@ -296,26 +296,17 @@ export class Agent {
   reset() {
     this.history = [];
     this.toolExecutor.invalidateCache();
-    this.lastAssistantText = '';
-    this.recentAssistantTexts = [];
-    this.repeatCount = 0;
-    this.tokenUsage = { inputTokens: 0, outputTokens: 0 };
+    this.stateManager.resetAll(); // 使用 StateManager
     this.toolExecutor = new AgentToolExecutor(this.reflexionEngine);
     this.ctxManager.invalidateCache();
   }
 
   answerQuestion(answer: string) {
-    if (this.questionResolve) {
-      this.questionResolve(answer);
-      this.questionResolve = null;
-    }
+    this.stateManager.answerQuestion(answer);
   }
 
   cancelQuestion() {
-    if (this.questionResolve) {
-      this.questionResolve('[Cancelled by user]');
-      this.questionResolve = null;
-    }
+    this.stateManager.cancelQuestion();
   }
 
   cancelRunningTools() {
@@ -323,7 +314,7 @@ export class Agent {
   }
 
   get waitingForAnswer(): boolean {
-    return this.questionResolve !== null;
+    return this.stateManager.hasPendingQuestion();
   }
 
   // ── Tool stats (delegate) ────────────────────────────────
@@ -505,8 +496,9 @@ export class Agent {
                       }
                     }
                   } else if (event.type === 'usage') {
-                    if (event.inputTokens !== undefined) this.tokenUsage.inputTokens += event.inputTokens;
-                    if (event.outputTokens !== undefined) this.tokenUsage.outputTokens += event.outputTokens;
+                    if (event.inputTokens !== undefined || event.outputTokens !== undefined) {
+                      this.stateManager.updateTokenUsage(event.inputTokens ?? 0, event.outputTokens ?? 0);
+                    }
                   }
                 }
                 return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
@@ -550,8 +542,10 @@ export class Agent {
 
       // Anti-repetition
       if (assistantText) {
-        const exactCheck = checkExactRepeat(assistantText, this.lastAssistantText, this.repeatCount, 2);
-        this.repeatCount = exactCheck.newRepeatCount;
+        const lastText = this.stateManager.getLastAssistantText();
+        const repeatCount = this.stateManager.getRepeatCount();
+        const exactCheck = checkExactRepeat(assistantText, lastText, repeatCount, 2);
+        this.stateManager.updateRepeatCount(exactCheck.isRepeat);
 
         if (exactCheck.isRepeat) {
           this.cbs.onError?.('Agent loop detected (exact repeat) — stopping');
@@ -561,9 +555,7 @@ export class Agent {
           break;
         }
 
-        if (
-          checkFuzzyRepeat(assistantText, this.recentAssistantTexts, MIN_REPEAT_TEXTS_FOR_FUZZY, SIMILARITY_PREFIX_LEN)
-        ) {
+        if (this.stateManager.checkFuzzyRepeat(assistantText, SIMILARITY_PREFIX_LEN)) {
           this.cbs.onError?.('Agent loop detected (similar repeat) — stopping');
           this.pushCancelledToolResults(messages, toolCalls);
           this.history.length = 0;
@@ -571,9 +563,8 @@ export class Agent {
           break;
         }
 
-        this.lastAssistantText = assistantText;
-        this.recentAssistantTexts.push(assistantText);
-        if (this.recentAssistantTexts.length > MAX_RECENT_TEXTS) this.recentAssistantTexts.shift();
+        this.stateManager.updateLastAssistantText(assistantText);
+        this.stateManager.recordAssistantText(assistantText);
       }
 
       if (toolCalls.length === 0) {
@@ -600,9 +591,7 @@ export class Agent {
         this.cbs,
         traceId,
         this.tracer,
-        (resolve) => {
-          this.questionResolve = resolve;
-        },
+        () => this.stateManager.askQuestion(), // 使用 StateManager
       );
       this.abortController = null;
 
@@ -798,9 +787,7 @@ export class Agent {
 
   /** Restore history from saved messages including tool_result blocks. */
   loadMessages(msgs: Message[]) {
-    this.lastAssistantText = '';
-    this.recentAssistantTexts = [];
-    this.repeatCount = 0;
+    this.stateManager.resetRepetition(); // 使用 StateManager
 
     for (const m of msgs) {
       if (m.role === 'user') {
