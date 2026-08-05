@@ -61,6 +61,7 @@ import {
   createDefaultSecurityConfig,
   type SecurityConfig,
 } from '../security/SecurityPolicy.js';
+import { detectNetworkIsolationSupport, wrapCommandWithNetworkIsolation } from './os-isolation.js';
 
 // ===================== 类型定义 =====================
 
@@ -251,9 +252,39 @@ export class Sandbox {
     this.startTime = Date.now();
     const timeoutMs = opts?.timeoutMs ?? this.config.timeoutMs;
 
+    // ── OS 级网络隔离（如果启用） ──
+    let actualCommand = command;
+    let actualArgs = args;
+
+    if (this.config.blockNetwork && this.config.useOsNetworkIsolation) {
+      const capabilities = detectNetworkIsolationSupport();
+
+      if (capabilities.supported && !capabilities.requiresRoot) {
+        // 支持且有权限，包装命令
+        try {
+          const wrapped = wrapCommandWithNetworkIsolation(command, args);
+          actualCommand = wrapped.command;
+          actualArgs = wrapped.args;
+        } catch (err) {
+          // 包装失败，回退到软隔离
+          console.warn(
+            `[Sandbox ${this.id}] OS network isolation requested but failed: ${err instanceof Error ? err.message : String(err)}. Falling back to soft blocking.`,
+          );
+        }
+      } else {
+        // 不支持或需要 root，警告用户
+        const reason = capabilities.requiresRoot
+          ? 'requires elevated privileges'
+          : capabilities.error || 'not supported';
+        console.warn(
+          `[Sandbox ${this.id}] OS network isolation requested but ${reason}. Using soft blocking (environment variable).`,
+        );
+      }
+    }
+
     // ── 路径安全检查 ──
-    const commandPath = resolve(command);
-    if (!this.pathValidator.isAllowed(commandPath) && !this.isBuiltinCommand(command)) {
+    const commandPath = resolve(actualCommand);
+    if (!this.pathValidator.isAllowed(commandPath) && !this.isBuiltinCommand(actualCommand)) {
       return {
         success: false,
         stdout: '',
@@ -264,7 +295,7 @@ export class Sandbox {
         resourceLimited: false,
         sandboxId: this.id,
         workDir: '',
-        command,
+        command: actualCommand,
       };
     }
 
@@ -351,7 +382,7 @@ export class Sandbox {
       };
 
       try {
-        this.childProcess = fork(this.getSandboxRunnerPath(), [command, ...args], {
+        this.childProcess = fork(this.getSandboxRunnerPath(), [actualCommand, ...actualArgs], {
           cwd: this.workDir,
           env,
           stdio: ['ignore', 'pipe', 'pipe', 'ipc'], // Keep pipe for runner's own output
