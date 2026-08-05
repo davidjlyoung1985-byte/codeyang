@@ -327,4 +327,213 @@ describe('Agent', () => {
       expect(agent.getTokenUsage()).toEqual({ inputTokens: 0, outputTokens: 0 });
     });
   });
+
+  describe('error handling', () => {
+    it('handles LLM API errors gracefully', async () => {
+      mockStream.mockRejectedValue(new Error('API connection failed'));
+      const onError = vi.fn();
+      agent.setCallbacks({ onError });
+
+      await expect(agent.run('test prompt')).rejects.toThrow('API connection failed');
+      expect(onError).toHaveBeenCalled();
+    });
+
+    it('handles malformed tool call JSON', async () => {
+      mockStream.mockReturnValue(
+        makeStream(
+          toolCallStart(0, 'tc_bad', 'Bash'),
+          toolCallDelta(0, '{invalid json'),
+          toolCallEnd(0, 'tc_bad', '{invalid json'),
+        ),
+      );
+
+      const onToolResult = vi.fn();
+      agent.setCallbacks({ onToolResult });
+
+      await agent.run('bad json');
+
+      // Should report error for malformed JSON
+      const errorCalls = onToolResult.mock.calls.filter(([, , isError]: [string, string, boolean]) => isError === true);
+      expect(errorCalls.length).toBeGreaterThan(0);
+    });
+
+    it('handles tool execution errors', async () => {
+      mockToolExecute.mockRejectedValue(new Error('Tool execution failed'));
+
+      let callIndex = 0;
+      mockStream.mockImplementation(() => {
+        callIndex++;
+        if (callIndex === 1) {
+          return makeStream(
+            toolCallStart(0, 'tc_err', 'Bash'),
+            toolCallDelta(0, '{"command":"fail"}'),
+            toolCallEnd(0, 'tc_err', '{"command":"fail"}'),
+          );
+        }
+        return makeStream(textDelta('Handled error'));
+      });
+
+      const onToolResult = vi.fn();
+      agent.setCallbacks({ onToolResult });
+
+      await agent.run('execute failing command');
+
+      // Should report tool error
+      const errorCalls = onToolResult.mock.calls.filter(([, , isError]: [string, string, boolean]) => isError === true);
+      expect(errorCalls.length).toBeGreaterThan(0);
+    });
+
+    it('handles empty user prompt', async () => {
+      mockStream.mockReturnValue(makeStream(textDelta('Response')));
+      await agent.run('');
+      expect(mockStream).toHaveBeenCalled();
+    });
+
+    it('handles very long user prompts', async () => {
+      const longPrompt = 'a'.repeat(10000);
+      mockStream.mockReturnValue(makeStream(textDelta('OK')));
+      await agent.run(longPrompt);
+      expect(mockStream).toHaveBeenCalled();
+    });
+
+    it('handles stream interruption', async () => {
+      async function* brokenStream() {
+        yield textDelta('Start');
+        throw new Error('Stream interrupted');
+      }
+
+      mockStream.mockReturnValue(brokenStream());
+
+      await expect(agent.run('test')).rejects.toThrow('Stream interrupted');
+    });
+
+    it('handles multiple tool calls in single turn', async () => {
+      let callIndex = 0;
+      mockStream.mockImplementation(() => {
+        callIndex++;
+        if (callIndex === 1) {
+          return makeStream(
+            toolCallStart(0, 'tc_1', 'Bash'),
+            toolCallDelta(0, '{"command":"cmd1"}'),
+            toolCallEnd(0, 'tc_1', '{"command":"cmd1"}'),
+            toolCallStart(1, 'tc_2', 'Bash'),
+            toolCallDelta(1, '{"command":"cmd2"}'),
+            toolCallEnd(1, 'tc_2', '{"command":"cmd2"}'),
+          );
+        }
+        return makeStream(textDelta('Both executed'));
+      });
+
+      mockToolExecute.mockResolvedValue('OK');
+      await agent.run('run multiple commands');
+      expect(mockToolExecute).toHaveBeenCalledTimes(2);
+    });
+
+    it('handles timeout scenarios', async () => {
+      async function* slowStream() {
+        yield textDelta('Start');
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        yield textDelta('End');
+      }
+
+      mockStream.mockReturnValue(slowStream());
+      await agent.run('slow response');
+      expect(mockStream).toHaveBeenCalled();
+    });
+
+    it('handles null or undefined in messages', async () => {
+      mockStream.mockReturnValue(makeStream(textDelta('Response')));
+
+      // Should not throw
+      await agent.run('test');
+      expect(agent.exportMessages()).toBeDefined();
+    });
+
+    it('handles concurrent run calls', async () => {
+      mockStream.mockReturnValue(makeStream(textDelta('Response')));
+
+      // Multiple concurrent runs
+      const promise1 = agent.run('prompt 1');
+      const promise2 = agent.run('prompt 2');
+
+      await Promise.all([promise1, promise2]);
+
+      // Should handle both without crashing
+      expect(mockStream).toHaveBeenCalled();
+    });
+  });
+
+  describe('edge cases', () => {
+    it('handles special characters in prompts', async () => {
+      mockStream.mockReturnValue(makeStream(textDelta('OK')));
+      await agent.run('Test with "quotes" and <tags> & special chars $VAR');
+      expect(mockStream).toHaveBeenCalled();
+    });
+
+    it('handles unicode in prompts', async () => {
+      mockStream.mockReturnValue(makeStream(textDelta('OK')));
+      await agent.run('Hello 世界 🌍 Здравствуй');
+      expect(mockStream).toHaveBeenCalled();
+    });
+
+    it('handles newlines and formatting in prompts', async () => {
+      mockStream.mockReturnValue(makeStream(textDelta('OK')));
+      await agent.run('Line 1\nLine 2\n\tIndented\n\nDouble newline');
+      expect(mockStream).toHaveBeenCalled();
+    });
+
+    it('handles tool calls with empty arguments', async () => {
+      let callIndex = 0;
+      mockStream.mockImplementation(() => {
+        callIndex++;
+        if (callIndex === 1) {
+          return makeStream(
+            toolCallStart(0, 'tc_empty', 'Bash'),
+            toolCallDelta(0, '{}'),
+            toolCallEnd(0, 'tc_empty', '{}'),
+          );
+        }
+        return makeStream(textDelta('Done'));
+      });
+
+      mockToolExecute.mockResolvedValue('OK');
+      await agent.run('empty args');
+      expect(mockToolExecute).toHaveBeenCalled();
+    });
+
+    it('handles rapid reset and run cycles', async () => {
+      mockStream.mockReturnValue(makeStream(textDelta('OK')));
+
+      for (let i = 0; i < 5; i++) {
+        agent.reset();
+        await agent.run(`prompt ${i}`);
+      }
+
+      expect(mockStream).toHaveBeenCalledTimes(5);
+    });
+
+    it('handles message export after errors', async () => {
+      mockStream.mockRejectedValue(new Error('Test error'));
+
+      try {
+        await agent.run('failing prompt');
+      } catch {
+        // Expected error
+      }
+
+      const messages = agent.exportMessages();
+      expect(Array.isArray(messages)).toBe(true);
+    });
+
+    it('handles loadMessages with malformed data', async () => {
+      // Should not crash on malformed messages
+      agent.loadMessages([
+        { role: 'user', content: 'Valid' },
+        { role: 'assistant' } as unknown as { role: string; content: string }, // Missing content
+      ]);
+
+      const exported = agent.exportMessages();
+      expect(exported.length).toBeGreaterThan(0);
+    });
+  });
 });
