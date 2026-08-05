@@ -36,6 +36,14 @@ import { fork, type ChildProcess } from 'node:child_process';
 import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join, resolve, normalize } from 'node:path';
 import { tmpdir, platform } from 'node:os';
+import { minimatch } from 'minimatch';
+import {
+  checkCommandSecurity,
+  filterEnvVars,
+  isPathAllowed,
+  createDefaultSecurityConfig,
+  type SecurityConfig,
+} from '../security/SecurityPolicy.js';
 
 // ===================== 类型定义 =====================
 
@@ -107,6 +115,8 @@ const DEFAULT_CONFIG: SandboxConfig = {
 
 /**
  * 路径安全校验器 — 白名单 + 黑名单双重检查。
+ *
+ * @deprecated 使用 SecurityPolicy.isPathAllowed() 代替
  */
 class PathValidator {
   constructor(private config: SandboxConfig) {}
@@ -116,28 +126,7 @@ class PathValidator {
    * 返回 true 表示安全，false 表示被禁止。
    */
   isAllowed(absolutePath: string): boolean {
-    const normalized = normalize(absolutePath);
-
-    // 检查黑名单
-    for (const pattern of this.config.blockedPathPatterns) {
-      const regex = new RegExp('^' + pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
-      if (regex.test(normalized)) {
-        return false;
-      }
-    }
-
-    // 如果白名单为空，默认允许所有（除了黑名单外的）
-    if (this.config.allowedPaths.length === 0) return true;
-
-    // 检查白名单
-    for (const allowed of this.config.allowedPaths) {
-      const resolved = resolve(allowed);
-      if (normalized.startsWith(resolved)) {
-        return true;
-      }
-    }
-
-    return false;
+    return isPathAllowed(absolutePath, this.config.allowedPaths, this.config.blockedPathPatterns);
   }
 }
 
@@ -153,33 +142,21 @@ class ResourceLimiter {
   constructor(private config: SandboxConfig) {}
 
   /** 获取子进程 spawn 的选项 */
-  getSpawnOptions(): Record<string, unknown> {
-    const options: Record<string, unknown> = {};
+  getSpawnOptions(): { env: Record<string, string>; execArgv: string[] } {
+    const env: Record<string, string> = {};
+    const execArgv: string[] = [];
 
-    if (platform() === 'linux' || platform() === 'darwin') {
-      // Unix: 使用 ulimit 前置命令
-      const limits: string[] = [];
-      if (this.config.maxMemoryMb > 0) {
-        limits.push(`ulimit -v ${this.config.maxMemoryMb * 1024}`);
-      }
-      if (this.config.timeoutMs > 0) {
-        limits.push(`ulimit -t ${Math.ceil(this.config.timeoutMs / 1000)}`);
-      }
-      if (limits.length > 0) {
-        options.shell = true;
-      }
-    }
-
+    // 网络隔离标记（真正的网络隔离需要 OS 级支持）
     if (this.config.blockNetwork) {
-      // 网络禁止提示（实际需要 OS 级网络命名空间支持）
-      // 这里通过环境变量提醒沙箱内的脚本
-      options.env = {
-        ...process.env,
-        CODEYANG_SANDBOX_NETWORK_BLOCKED: '1',
-      };
+      env.CODEYANG_SANDBOX_NETWORK_BLOCKED = '1';
     }
 
-    return options;
+    // 资源限制标记（传递给 runner，由 runner 在 execFile 中实现）
+    if (this.config.maxMemoryMb > 0) {
+      env.CODEYANG_SANDBOX_MAX_MEMORY_MB = String(this.config.maxMemoryMb);
+    }
+
+    return { env, execArgv };
   }
 }
 
@@ -339,10 +316,10 @@ export class Sandbox {
       let timedOut = false;
       let runnerStderr = '';
 
-      const spawnArgs = this.resourceLimiter.getSpawnOptions();
+      const resourceOptions = this.resourceLimiter.getSpawnOptions();
       const env = {
-        ...(spawnArgs.env as Record<string, string> | undefined),
         ...this.buildEnv(opts?.env),
+        ...resourceOptions.env, // 应用资源限制的环境变量
         // Pass limits to the runner
         CODEYANG_SANDBOX_TIMEOUT: String(timeoutMs),
         CODEYANG_SANDBOX_MAX_STDOUT: String(this.config.maxStdoutBytes),
@@ -512,29 +489,15 @@ export class Sandbox {
   }
 
   private buildEnv(extraEnv?: Record<string, string>): Record<string, string> {
-    const env: Record<string, string> = {};
+    // 使用统一的环境变量过滤
+    const sandboxVars = {
+      CODEYANG_SANDBOX_ID: this.id,
+      CODEYANG_SANDBOX: '1',
+      ...(this.config.blockNetwork ? { CODEYANG_SANDBOX_NETWORK_BLOCKED: '1' } : {}),
+      ...extraEnv,
+    };
 
-    // 只保留白名单中的环境变量
-    for (const key of this.config.allowedEnvVars) {
-      if (process.env[key]) {
-        env[key] = process.env[key]!;
-      }
-    }
-
-    // 添加沙箱标识
-    env['CODEYANG_SANDBOX_ID'] = this.id;
-    env['CODEYANG_SANDBOX'] = '1';
-
-    if (this.config.blockNetwork) {
-      env['CODEYANG_SANDBOX_NETWORK_BLOCKED'] = '1';
-    }
-
-    // 合并用户传入的环境变量
-    if (extraEnv) {
-      Object.assign(env, extraEnv);
-    }
-
-    return env;
+    return filterEnvVars(process.env, this.config.allowedEnvVars, sandboxVars);
   }
 
   /** 内置命令白名单（不检查路径限制） */
