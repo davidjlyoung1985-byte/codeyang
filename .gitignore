@@ -40,6 +40,14 @@ dist-electron/
 
 # Test output
 test-output.txt
+test-output*.txt
+test-result.json
+
+# Test artifacts
+*.svg
+!skills/**/*.svg
+temp/test-*.txt
+temp/archived-reports/
 
 # Local undo history
 .codeyang/
