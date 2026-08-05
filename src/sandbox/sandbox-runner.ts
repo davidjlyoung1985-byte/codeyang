@@ -7,7 +7,6 @@
  */
 
 import { execFile } from 'node:child_process';
-import { platform } from 'node:os';
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -20,7 +19,6 @@ if (!command) {
 const timeoutMs = parseInt(process.env['CODEYANG_SANDBOX_TIMEOUT'] || '30000', 10);
 const maxStdoutBytes = parseInt(process.env['CODEYANG_SANDBOX_MAX_STDOUT'] || '1048576', 10);
 const maxStderrBytes = parseInt(process.env['CODEYANG_SANDBOX_MAX_STDERR'] || '1048576', 10);
-const networkBlocked = process.env['CODEYANG_SANDBOX_NETWORK_BLOCKED'] === '1';
 
 let timedOut = false;
 const startTime = Date.now();
