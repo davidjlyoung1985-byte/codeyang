@@ -40,7 +40,9 @@ import { ConversationManager } from './managers/ConversationManager.js';
 
 // ── Constants ──────────────────────────────────────────────
 
-const STREAM_TIMEOUT_MS = 120_000; // 2 min
+// Stream timeout: configurable via env var, default 5 minutes (was 2 min)
+// Increase if you experience frequent "Stream timed out" errors
+const STREAM_TIMEOUT_MS = parseInt(process.env.CODEYANG_STREAM_TIMEOUT || '300000', 10); // 5 min default
 const SIMILARITY_PREFIX_LEN = 100;
 
 type AssistantContentBlock =

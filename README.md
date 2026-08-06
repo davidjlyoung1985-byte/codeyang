@@ -83,8 +83,27 @@ CODEYANG_API_KEY=your-key npm start
 | `CODEYANG_BASE_URL` | `https://api.deepseek.com/v1` | API endpoint |
 | `CODEYANG_MAX_TOKENS` | `32000` | Max tokens per response |
 | `CODEYANG_DEBUG` | — | Enable debug logging |
+| `CODEYANG_STREAM_TIMEOUT` | `300000` | Stream timeout in ms (5 min) |
+| `CODEYANG_BASH_TIMEOUT` | `60` | Bash command timeout in seconds |
 
 API key priority: CLI arg > env var > saved config > interactive prompt
+
+### Troubleshooting Connection Issues
+
+If conversations are interrupted or timeout frequently:
+
+```bash
+# Increase stream timeout to 10 minutes
+export CODEYANG_STREAM_TIMEOUT=600000
+
+# Increase bash command timeout to 2 minutes
+export CODEYANG_BASH_TIMEOUT=120
+
+# Enable debug mode to see what's happening
+export CODEYANG_DEBUG=true
+```
+
+See [TROUBLESHOOTING_INTERRUPTION.md](TROUBLESHOOTING_INTERRUPTION.md) for detailed diagnostics.
 
 ## Project Structure
 
