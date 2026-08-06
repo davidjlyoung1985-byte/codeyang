@@ -200,11 +200,11 @@ describe('LaunchAppTool', () => {
     });
 
     it('should handle non-zero exit code', async () => {
-      vi.mocked(execa).mockResolvedValue({
-        stdout: '',
+      vi.mocked(execa).mockRejectedValue({
+        code: 1,
         stderr: 'Failed to launch',
-        exitCode: 1,
-      } as unknown as ReturnType<typeof execa>);
+        stdout: '',
+      });
 
       const result = await executeLaunchApp('notepad');
 
