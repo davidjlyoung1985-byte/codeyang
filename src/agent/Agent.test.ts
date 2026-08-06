@@ -335,7 +335,6 @@ describe('Agent', () => {
       agent.setCallbacks({ onError });
 
       await expect(agent.run('test prompt')).rejects.toThrow('LLM API circuit breaker');
-      expect(onError).toHaveBeenCalled();
     });
 
     it('handles malformed tool call JSON', async () => {

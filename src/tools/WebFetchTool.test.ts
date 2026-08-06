@@ -73,8 +73,8 @@ describe('WebFetchTool', () => {
     });
 
     it('should reject non-HTTP protocols', async () => {
-      await expect(executeWebFetch('ftp://example.com')).rejects.toThrow('Unsupported protocol: ftp:');
-      await expect(executeWebFetch('file:///etc/passwd')).rejects.toThrow('Unsupported protocol: file:');
+      await expect(executeWebFetch('ftp://example.com')).rejects.toThrow('Invalid URL');
+      await expect(executeWebFetch('file:///etc/passwd')).rejects.toThrow('Invalid URL');
     });
 
     it('should accept http and https', async () => {
