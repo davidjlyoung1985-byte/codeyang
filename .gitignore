@@ -42,6 +42,9 @@ dist-electron/
 test-output.txt
 test-output*.txt
 test-result.json
+test_run*.log
+fail_detail.log
+test-value
 
 # Test artifacts
 *.svg
@@ -49,8 +52,9 @@ test-result.json
 temp/test-*.txt
 temp/archived-reports/
 
-# Local undo history
+# Local test pollution (should be cleaned by afterEach)
 .codeyang/
+~/.codeyang/test-*
 
 # Temp fix scripts
 fix_*.mjs
