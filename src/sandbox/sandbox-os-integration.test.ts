@@ -137,7 +137,8 @@ describe('Sandbox OS Network Isolation Integration', () => {
 
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const result = await sandbox.run('echo', ['test']);
+      // 用 node 而非 echo：echo 是 Windows/cmd 内建命令，spawn 无法直接执行（平台无关性）
+      const result = await sandbox.run('node', ['-e', 'console.log("ok")']);
 
       // 应该成功执行（回退到软隔离）
       expect(result.success).toBe(true);
