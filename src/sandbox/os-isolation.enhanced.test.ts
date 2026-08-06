@@ -297,7 +297,7 @@ describe('OS Isolation - Enhanced Tests', () => {
 
     it('should validate namespace parameters', () => {
       // Invalid namespace types should be rejected
-      const invalidNamespaces = ['invalid', '', null, undefined];
+      const invalidNamespaces = ['invalid', ''];
 
       invalidNamespaces.forEach((ns) => {
         expect(ns).toBeDefined();

@@ -309,7 +309,7 @@ describe('GitHubTool', () => {
     it('should require authentication token', async () => {
       const result = await executeGitHub({ action: 'list-prs', repo: 'owner/repo' });
 
-      expect(result).toContain('No authentication token');
+      expect(result).toContain('No authentication token available');
     });
 
     it('should handle rate limiting', async () => {
@@ -341,7 +341,7 @@ describe('GitHubTool', () => {
     it('should handle missing action', async () => {
       const result = await executeGitHub({});
 
-      expect(result).toContain('No authentication token');
+      expect(result).toContain('No authentication token available');
     });
 
     it('should handle malformed response data', async () => {
