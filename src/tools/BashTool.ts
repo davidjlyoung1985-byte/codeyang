@@ -155,8 +155,15 @@ function truncateOutput(output: string, label: string): string {
 
 /**
  * Execute a shell command with permission checks.
+ *
+ * @param timeoutSecs - Command timeout in seconds (default 60, was 30)
+ *                      Increase via env: CODEYANG_BASH_TIMEOUT=120
  */
-export async function executeBash(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
+export async function executeBash(
+  command: string,
+  cwd?: string,
+  timeoutSecs = parseInt(process.env.CODEYANG_BASH_TIMEOUT || '60', 10),
+): Promise<string> {
   // Rate limit check first
   checkRateLimit('bash');
 

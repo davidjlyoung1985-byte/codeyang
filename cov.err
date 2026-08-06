@@ -1,0 +1,18 @@
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Unhandled Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[31m[1mError[22m: ENOENT: no such file or directory, open 'C:\Users\Ehua\codeyang\coverage\.tmp\coverage-84.json'[39m
+[90m [2m❯[22m open node:internal/fs/promises:[2m640:25[22m[39m
+[90m [2m❯[22m Object.readFile node:internal/fs/promises:[2m1287:14[22m[39m
+[90m [2m❯[22m node_modules/vitest/dist/chunks/coverage.DM_a_rWm.js:[2m763:23[22m[39m
+[90m [2m❯[22m V8CoverageProvider.readCoverageFiles node_modules/vitest/dist/chunks/coverage.DM_a_rWm.js:[2m762:5[22m[39m
+[90m [2m❯[22m V8CoverageProvider.generateCoverage node_modules/@vitest/coverage-v8/dist/provider.js:[2m32:3[22m[39m
+[90m [2m❯[22m node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:[2m13604:23[22m[39m
+[90m [2m❯[22m node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:[2m13617:11[22m[39m
+[90m [2m❯[22m node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:[2m13479:19[22m[39m
+[90m [2m❯[22m startVitest node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:[2m14554:8[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22m[39m
+[31m[1mSerialized Error:[22m[39m [90m{ errno: -4058, code: 'ENOENT', syscall: 'open', path: 'C:\Users\Ehua\codeyang\coverage\.tmp\coverage-84.json' }[39m
+
+
+
