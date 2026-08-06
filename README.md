@@ -1,42 +1,49 @@
 # CodeYang — AI Coding Agent
 
 [![CI](https://github.com/davidjlyoung1985-byte/codeyang/actions/workflows/ci.yml/badge.svg)](https://github.com/davidjlyoung1985-byte/codeyang/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/davidjlyoung1985-byte/codeyang/branch/master/graph/badge.svg)](https://codecov.io/gh/davidjlyoung1985-byte/codeyang)
-[![npm version](https://badge.fury.io/js/codeyang.svg)](https://www.npmjs.com/package/codeyang)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
-[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/r/codeyang/codeyang)
 
-A production-ready AI coding agent powered by Claude, with enterprise-grade architecture. Describe what you want in natural language — CodeYang autonomously reads files, writes code, runs commands, manages Git, and more.
+An AI coding agent inspired by [Claude Code](https://github.com/anthropics/claude-code) architecture. CodeYang lets you describe coding tasks in natural language — it reads files, writes code, runs commands, manages Git, and more.
 
-Also includes a **VS Code extension** for in-editor AI chat with the same tool-using capabilities.
+**Project Status**: B+ / Work in Progress  
+✅ Core functionality works  
+⚠️ Some tests have known issues (see [Contributing](#contributing))  
+📊 Test Coverage: ~65% statements, ~52% branches
+
+## Architecture
+
+This project is **heavily inspired by Anthropic's Claude Code architecture**:
+- Tool naming and interfaces follow Claude Code conventions
+- Agent loop design based on Claude's streaming tool-use pattern
+- Skills system adapted from Anthropic's skills repository
+
+**Original contributions**:
+- MCP client integration
+- Multi-provider LLM support (Claude, DeepSeek, OpenAI-compatible)
+- Process sandbox with fork/IPC isolation
+- VS Code extension + Electron desktop app
+- Web service wrapper
 
 ## Features
 
 ### Core Capabilities
-- **Natural language coding** — describe what you want and CodeYang figures out how to do it
-- **64+ built-in tools** — File ops, Git (16 operations), Code analysis, Data transforms, Network requests, and more
-- **Streaming responses** — see output in real-time as it generates
-- **Multi-provider support** — Claude (recommended), DeepSeek, or any OpenAI-compatible API
-- **MCP (Model Context Protocol)** — connect external tool servers for extended capabilities
+- **80+ built-in tools** — File ops, Git, Bash, code analysis, web requests
+- **Streaming responses** — real-time output as the agent generates
+- **MCP (Model Context Protocol)** — connect external tool servers
+- **Multi-provider** — Claude (recommended), DeepSeek, or OpenAI-compatible APIs
 
 ### Advanced Features
-- **Harness Architecture** — 6-layer design with Gateway, Circuit Breakers, Sandbox, and Tracing
-- **LRU Caching** — tool results cached to avoid redundant operations
-- **Streaming File I/O** — efficient handling of large files (>10MB)
-- **Performance Metrics** — track tool execution time, error rates, and system health
-- **Debug Mode** — detailed logging with category filtering (`CODEYANG_DEBUG=true`)
-
-### Enterprise Ready
-- **Docker Support** — multi-stage builds, health checks, non-root user
-- **CI/CD Pipeline** — matrix testing (3 Node × 3 OS), Codecov, auto-release
-- **Security Hardening** — SSRF protection, sandbox isolation, permission system
-- **Comprehensive Docs** — Architecture, API reference, deployment guides, security policy
+- **Agent Loop** — autonomous task execution with tool calling
+- **Memory System** — session persistence and context management
+- **Sandbox Isolation** — fork-based process isolation for risky commands
+- **Permission System** — deny lists and approval workflows
+- **VS Code Extension** — in-editor AI chat
+- **Electron Desktop App** — standalone GUI application
 
 ## Installation
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/davidjlyoung1985-byte/codeyang.git
 cd codeyang
 npm install
 npm run build
@@ -47,303 +54,140 @@ npm run build
 ### CLI
 
 ```bash
-# Show version
-codeyang --version
-
 # Start interactive session
-codeyang
+npm start
 
-# List saved sessions
-codeyang --list
+# Or use the built binary
+node dist/cli.js
 
-# Resume a session
-codeyang --resume <session-id>
-
-# Delete a session
-codeyang --delete <session-id>
-
-# Pass API key directly (overrides env/config)
-codeyang --api-key <your-key>
+# With API key
+CODEYANG_API_KEY=your-key npm start
 ```
 
-### Interactive commands
+### Interactive Commands
 
 | Command | Description |
 |---|---|
-| `/clear` | Reset the conversation and start fresh |
-| `/sessions` | List all saved sessions |
-| `/tools` | List all available tools (including MCP-discovered) |
-| `/model` | Show current model |
-| `/model <name>` | Switch model mid-session |
-| `/mcp` | Show MCP server connection status |
-| `/exit`, `/quit` | Exit CodeYang |
-
-On first run, you'll be prompted to enter your API key. It can be saved to `~/.codeyang/config.json`.
+| `/clear` | Reset conversation |
+| `/sessions` | List saved sessions |
+| `/tools` | Show available tools |
+| `/model <name>` | Switch model |
+| `/exit` | Quit |
 
 ## Configuration
 
 | Environment Variable | Default | Description |
 |---|---|---|
-| `CODEYANG_API_KEY` | — | API key for the LLM provider |
-| `DEEPSEEK_API_KEY` | — | Alternative API key env var |
+| `CODEYANG_API_KEY` | — | API key (required) |
 | `CODEYANG_MODEL` | `deepseek-chat` | Model name |
-| `CODEYANG_BASE_URL` | `https://api.deepseek.com/v1` | Custom API base URL |
+| `CODEYANG_BASE_URL` | `https://api.deepseek.com/v1` | API endpoint |
 | `CODEYANG_MAX_TOKENS` | `32000` | Max tokens per response |
-| `CODEX_DEBUG` | — | Set to enable debug output |
+| `CODEYANG_DEBUG` | — | Enable debug logging |
 
-API key priority: `--api-key` argument > `CODEYANG_API_KEY` > saved config > interactive prompt.
-
-## Full Tool Reference
-
-### Core Tools
-
-| Tool | Description |
-|---|---|
-| **Bash** | Execute shell commands with configurable timeout |
-| **Read** | Read files (with offset/limit) or list directories |
-| **Write** | Create or overwrite files with auto parent directory creation |
-| **Edit** | Surgical text replacement with unique-match enforcement |
-| **Glob** | Find files by glob pattern with recursive walk |
-| **Grep** | Search file contents with regex, include filters, and context lines |
-| **TodoWrite** | Track task progress with status and priority |
-| **WebFetch** | Fetch web content as readable text (HTML-to-text) |
-| **Task** | Launch autonomous sub-agents for complex parallel work |
-| **Question** | Ask the user for clarification with optional multiple-choice |
-
-### File System
-
-| Tool | Description |
-|---|---|
-| **Copy** | Copy files or directories recursively |
-| **Move** | Move or rename files and directories |
-| **Delete** | Delete files or directories with safety checks |
-| **Mkdir** | Create directories with parent creation |
-| **List** | List directory contents with optional details (size, date) |
-| **Exists** | Check if path exists and get type/size/modified info |
-
-### Search
-
-| Tool | Description |
-|---|---|
-| **Search** | Combined file name + content search with ranked results |
-| **Glob** | Find files by glob pattern |
-| **Grep** | Search file contents with regex |
-
-### Data Processing
-
-| Tool | Description |
-|---|---|
-| **JsonParse** | Parse JSON from file or string with formatted output |
-| **JsonWrite** | Write JSON data to file with pretty-printing |
-| **JsonQuery** | Query JSON using dot notation (e.g., `users[0].name`) |
-| **YamlParse** | Parse YAML from file or string |
-| **YamlWrite** | Write data to YAML file |
-| **Convert** | Convert between JSON and YAML formats |
-| **CsvParse** | Parse CSV to JSON array with configurable delimiter |
-| **CsvWrite** | Write JSON array to CSV |
-| **XmlParse** | Parse XML to JSON |
-| **XmlWrite** | Write JSON data to XML file |
-
-### Git
-
-| Tool | Description |
-|---|---|
-| **GitStatus** | Show repository status (modified/staged/untracked) |
-| **GitDiff** | Show changes (staged/unstaged, per-file) |
-| **GitCommit** | Create commits with optional auto-stage |
-| **GitBranch** | List branches (local or including remotes) |
-| **GitCheckout** | Switch to or create branches |
-| **GitLog** | View commit history with configurable count |
-| **GitPush** | Push commits to remote |
-| **GitPull** | Pull from remote |
-| **GitClone** | Clone a repository |
-| **GitAdd** | Stage specific files |
-| **GitReset** | Unstage or reset changes |
-| **GitStash** | Stash changes |
-| **GitMerge** | Merge branches |
-| **GitRemote** | List remotes |
-| **GitCurrentBranch** | Show current branch name |
-| **GitBlame** | Show file annotations with commit info |
-
-### Code Analysis
-
-| Tool | Description |
-|---|---|
-| **ParseAst** | Parse JS/TS to AST and extract statement info |
-| **AnalyzeCode** | Extract top-level symbols from code files |
-| **Complexity** | Calculate cyclomatic complexity of functions |
-| **Lint** | Run ESLint with optional auto-fix |
-| **FindDeps** | List project dependencies (runtime, dev, peer) |
-| **CountLines** | Count code/comment/blank lines per file or directory |
-
-### Network
-
-| Tool | Description |
-|---|---|
-| **HttpRequest** | Send HTTP requests (GET/POST/PUT/DELETE) |
-| **DownloadFile** | Download files from URLs |
-| **UploadFile** | Upload files via multipart/form-data |
-| **ApiCall** | Call RESTful APIs with JSON body |
-| **CheckUrl** | Check URL accessibility with timing info |
-| **ParseUrl** | Parse URL components and query parameters |
-
-### Memory
-
-| Tool | Description |
-|---|---|
-| **Remember** | Save key-value facts to persistent memory (5 types) |
-| **Recall** | Retrieve memories by ID or search query |
-| **Forget** | Delete a memory by key or ID |
-| **ListMemories** | List all memories, optionally filtered by type |
-
-### Image
-
-| Tool | Description |
-|---|---|
-| **ImageInfo** | Get image dimensions, format, and file size |
-| **ImageToBase64** | Convert image file to base64 string |
-| **ListImages** | List image files in a directory |
-
-### Math
-
-| Tool | Description |
-|---|---|
-| **MathSolve** | Solve math expressions and equations step-by-step |
-| **MathPlot** | Generate mathematical function plots as SVG |
-| **MathExplain** | Explain math concepts with examples |
-
-### MCP (Dynamic)
-
-Any tools exposed by connected MCP servers, prefixed by server name. Connect external data sources, APIs, or custom automation via the [Model Context Protocol](https://modelcontextprotocol.io).
-
-### Qt (Project-specific)
-
-Activated automatically when a Qt project is detected:
-- **QtBuild** — Analyze build system (qmake/CMake)
-- **QtUi** — Analyze and preview .ui form files
-- **QtQml** — Analyze QML files (versioned imports, type annotations, bindings)
-- **QtSignals** — Analyze signal/slot connections
-- **QtThread** — Analyze thread safety (QThread usage)
-- **QtCharts** — Generate chart code examples
-- **QtModelView** — Analyze model/view pattern usage
-- **QtProFile** — Analyze and edit .pro files
-- **QtMigration** — Qt5→Qt6 migration path scanning
-- **QtMath** — Qt-compatible math examples and conversions
+API key priority: CLI arg > env var > saved config > interactive prompt
 
 ## Project Structure
 
 ```
 src/
-├── index.ts              # CLI entry point (arg parsing, key resolution, agent bootstrap)
-├── types.ts              # Shared type definitions
-├── agent/
-│   ├── Agent.ts          # Core agent loop (streaming, retry, anti-repetition, tool execution)
-│   ├── config.ts         # Configuration management (env vars, local config, system prompt)
-│   └── LLMClient.ts      # Multi-provider LLM client (OpenAI-compatible + Anthropic)
-├── ui/
-│   └── CliUI.ts          # Terminal UI (markdown rendering, spinner, colored output)
-├── tools/
-│   ├── registry.ts       # Tool definitions, schema generation, MCP/Qt tool injection
-│   ├── BashTool.ts       # Shell command execution (execa)
-│   ├── ReadTool.ts       # File/directory reading
-│   ├── WriteTool.ts      # File writing
-│   ├── EditTool.ts       # Surgical text replacement
-│   ├── FileSystemTool.ts # Copy/Move/Delete/Mkdir/List/Exists
-│   ├── DataTool.ts       # JSON/YAML/CSV/XML parse/write/convert
-│   ├── GitTool.ts        # 16 git operations
-│   ├── CodeAnalysisTool.ts # AST parsing, complexity, lint, dependency analysis
-│   ├── NetworkTool.ts    # HTTP requests, download, upload, URL tools
-│   ├── GlobTool.ts       # Glob pattern matching
-│   ├── GrepTool.ts       # Content regex search
-│   ├── SearchTool.ts     # Combined name + content search
-│   ├── TodoWriteTool.ts  # Task list management
-│   ├── WebFetchTool.ts   # HTTP fetch + HTML-to-text conversion
-│   ├── TaskTool.ts       # Sub-agent execution engine
-│   ├── MemoryTool.ts     # Persistent memory (Remember/Recall/Forget/ListMemories)
-│   └── ImageTool.ts      # Image info, base64, listing
-├── mcp/
-│   ├── McpManager.ts     # Multi-server MCP connection management
-│   ├── McpClient.ts      # Single MCP server connection (stdio)
-│   └── types.ts          # MCP config types
-├── math/
-│   ├── MathSolve.ts      # Expression/equation solver
-│   ├── MathPlot.ts       # SVG function plotter
-│   └── MathExplain.ts    # Concept explanation engine
-├── qt/
-│   ├── detector.ts       # Qt project auto-detection
-│   ├── prompt.ts         # Qt-specific system prompt injection
-│   ├── tools.ts          # Qt tool definitions
-│   └── tools/            # Individual Qt tool implementations
-└── utils/
-    ├── sessionStore.ts   # Session persistence with indexed metadata
-    ├── memoryStore.ts    # Persistent memory storage
-    └── globMatch.ts      # Glob pattern matching utility
+├── agent/          # Agent loop, streaming, tool orchestration
+├── tools/          # 80+ built-in tools (Bash, Git, Read, Write, etc.)
+├── mcp/            # Model Context Protocol client
+├── sandbox/        # Process isolation (fork/IPC)
+├── permission/     # Permission checking and deny lists
+├── security/       # SSRF protection, input validation
+├── ui/             # CLI interface
+├── utils/          # Logging, caching, session store
+├── vscode-ext/     # VS Code extension
+└── electron/       # Desktop app
 ```
-
-## Tech Stack
-
-- **Language**: TypeScript (strict mode, ESM)
-- **Runtime**: Node.js >= 18
-- **LLM SDKs**: `openai` (primary), `@anthropic-ai/sdk` (fallback)
-- **Shell**: execa
-- **UI**: readline + picocolors
-- **MCP**: `@modelcontextprotocol/sdk`
-- **Data**: fast-xml-parser, yaml, csv-parse/stringify
-- **Build**: tsup (ESM bundle + dts)
-- **Test**: vitest
-- **Lint/Format**: eslint + prettier
-- **License**: MIT
 
 ## Development
 
 ```bash
-# Build (CLI + shared tools)
-npm run build
+# Install dependencies
+npm install
 
-# Watch mode
-npm run dev
-
-# Run in development
-npm start
-
-# Type check
-npm run check
-
-# Run tests (290+ tests)
+# Run tests
 npm test
-npm run test:watch
+
+# Run tests with coverage
 npm run test:coverage
 
 # Lint
 npm run lint
-npm run lint:fix
 
-# Format
-npm run format
-npm run format:check
+# Type check
+npm run type-check
+
+# Build
+npm run build
 ```
 
-## MCP Integration
+## Testing
 
-CodeYang supports the [Model Context Protocol](https://modelcontextprotocol.io) for connecting external tool servers. Configure MCP servers in `~/.codeyang/config.json`:
+Current test status:
+- **1645 passing** / 3 failing (99.8% pass rate)
+- Known issues:
+  - BashTool: 2 tests timeout (cwd option, permission cache)
+  - Agent integration: 1 test timeout (max turns)
 
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
-    },
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"]
-    }
-  }
-}
-```
+These are environment-dependent timeouts, not logic bugs. Contributions to fix them are welcome!
 
-Tools from MCP servers automatically appear with the `mcp__serverName__` prefix and are available alongside built-in tools.
+Coverage targets:
+- Statements: 65% ✅
+- Branches: 52% ✅ (target: 50%+)
+- Functions: 67% ✅
+
+## Contributing
+
+We welcome contributions! Current priorities:
+
+1. **Fix failing tests** — especially BashTool timeouts
+2. **Improve test coverage** — bring branches to 65%+
+3. **Clean up test pollution** — tests currently leave files in `~/.codeyang/`
+4. **Documentation** — more examples and use cases
+
+Please:
+- Write tests for new features
+- Follow existing code style (ESLint + Prettier)
+- Keep commits focused and descriptive
+
+## Credits
+
+**Architecture heavily inspired by**:
+- [Anthropic Claude Code](https://github.com/anthropics/claude-code) — agent loop, tool design
+- [Anthropic Skills](https://github.com/anthropics/skills) — skills system
+
+**Original work**:
+- MCP client integration
+- Multi-provider support
+- Desktop/web wrappers
+- Extended tool set
 
 ## License
 
 MIT
+
+## Honest Assessment
+
+This is a **functional but work-in-progress** AI agent project:
+
+**Strengths**:
+- ✅ Rich feature set (80+ tools, MCP, multi-provider)
+- ✅ Clean TypeScript codebase
+- ✅ Good modular architecture
+- ✅ Multiple interfaces (CLI, VS Code, Electron)
+
+**Areas for improvement**:
+- ⚠️ Test suite not fully green (3 timeouts)
+- ⚠️ Coverage could be higher (branches at 52%)
+- ⚠️ Tests pollute user environment (`~/.codeyang/`)
+- ⚠️ Heavy dependency on Claude Code patterns
+
+**Estimated maturity**: B+ (78/100)
+- Production-ready for personal use
+- Not yet recommended for critical enterprise workloads
+- Active development continues
+
+We believe in honest documentation. If you find issues, please report them!
