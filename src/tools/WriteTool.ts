@@ -6,22 +6,78 @@ import { checkRateLimit } from '../utils/rateLimiter.js';
 
 const MAX_WRITE_SIZE = 100 * 1024 * 1024; // 100 MB limit for writes
 
-// 不允许覆盖的敏感项目文件
-const PROTECTED_FILES = ['.env', '.env.local', '.env.production', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'];
+// Protected files that should never be overwritten to prevent accidental corruption or credential leakage
+const PROTECTED_FILES = [
+  // Environment files
+  '.env',
+  '.env.local',
+  '.env.production',
+  '.env.development',
+  '.env.test',
+  // Lock files
+  'package-lock.json',
+  'yarn.lock',
+  'pnpm-lock.yaml',
+  // SSH keys
+  'id_rsa',
+  'id_rsa.pub',
+  'id_ed25519',
+  'id_ed25519.pub',
+  'id_ecdsa',
+  'id_ecdsa.pub',
+  // SSL/TLS certificates and keys
+  '*.pem',
+  '*.key',
+  '*.crt',
+  '*.cer',
+  // Package manager credentials
+  '.npmrc',
+  '.yarnrc',
+  '.yarnrc.yml',
+  // Cloud service credentials
+  'credentials.json',
+  'service-account.json',
+  'gcloud-key.json',
+  // Common secret files
+  'secrets.json',
+  'config.prod.json',
+  'config.production.json',
+];
+
+function isProtectedFile(filePath: string): boolean {
+  const basename = filePath.split(/[/\\]/).pop() || '';
+
+  // Exact match
+  if (PROTECTED_FILES.includes(basename)) {
+    return true;
+  }
+
+  // Pattern match for wildcards (*.pem, *.key, etc.)
+  for (const pattern of PROTECTED_FILES) {
+    if (pattern.includes('*')) {
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+      if (regex.test(basename)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 export async function executeWrite(filePath: string, content: string): Promise<string> {
   checkRateLimit('file');
 
   const resolved = resolveSafePath(filePath);
 
-  // 保护敏感配置文件不被意外覆盖
-  const basename = filePath.split(/[/\\]/).pop() || '';
-  if (PROTECTED_FILES.includes(basename)) {
+  // Protect sensitive files from accidental overwrite
+  if (isProtectedFile(filePath)) {
+    const basename = filePath.split(/[/\\]/).pop() || '';
     throw new Error(
       toolError(
         'Write',
         `Cannot write to protected file: ${basename}`,
-        'This file is protected to prevent accidental corruption.',
+        'This file is protected to prevent accidental corruption or credential leakage.',
       ),
     );
   }

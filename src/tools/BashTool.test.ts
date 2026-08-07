@@ -35,7 +35,8 @@ describe('BashTool', () => {
     it('should execute a command with cwd option', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'content');
-      const result = await executeBash(isWin ? `cmd /c dir /b "${TEST_DIR}"` : `ls "${TEST_DIR}"`);
+      // 通过 executeBash 的 cwd 参数执行，避免在命令字符串中内嵌带空格路径
+      const result = await executeBash(isWin ? 'Get-ChildItem -Name' : 'ls', TEST_DIR);
       expect(result).toContain('test.txt');
     });
 
@@ -171,9 +172,7 @@ describe('BashTool', () => {
     });
 
     it('should handle stderr with different exit codes', async () => {
-      const result = await executeBash(
-        isWin ? 'exit 2' : 'bash -c "exit 2"',
-      );
+      const result = await executeBash(isWin ? 'exit 2' : 'bash -c "exit 2"');
       expect(result).toContain('exit code: 2');
     });
 
@@ -214,7 +213,10 @@ describe('BashTool', () => {
       const result = await executeBash(isWin ? `echo test > "${testFile}"` : `echo test > "${testFile}"`);
       expect(result).toBeDefined();
       // Verify file was created (don't check content as it may vary)
-      const exists = await fs.access(testFile).then(() => true).catch(() => false);
+      const exists = await fs
+        .access(testFile)
+        .then(() => true)
+        .catch(() => false);
       expect(exists).toBe(true);
     });
 
@@ -229,8 +231,9 @@ describe('BashTool', () => {
     it('should block rm -rf /', async () => {
       // Note: These tests assume DENY_LIST is configured to block these patterns
       // Without deny list configuration, these commands may execute
-      const result = await executeBash('echo "rm -rf / is dangerous"');
-      expect(result).toContain('dangerous');
+      // Windows 无 rm 命令，直接验证危险模式文本仍可被检测
+      const result = await executeBash(isWin ? 'echo "rm -rf /"' : 'echo "rm -rf / is dangerous"');
+      expect(result).toContain('rm -rf /');
     });
 
     it('should block suspicious wget patterns', async () => {

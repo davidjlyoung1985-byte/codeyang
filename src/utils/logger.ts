@@ -8,7 +8,7 @@ const LEVEL_MAP: Record<LogLevel, number> = {
   error: 3,
 };
 
-let currentLevel: LogLevel = process.env['CODEX_DEBUG'] ? 'debug' : 'info';
+let currentLevel: LogLevel = process.env['CODEYANG_DEBUG'] ? 'debug' : 'info';
 
 /** 检查当前级别是否允许输出指定级别的日志 */
 function shouldLog(level: LogLevel): boolean {

@@ -52,7 +52,7 @@ export class AgentContextManager {
     } catch (err) {
       this.memoryLoadFailure = true;
       if (process.env.CODEYANG_DEBUG) {
-        console.warn('[AgentContextManager] Failed to get memory version:', err);
+        logger.warn('[AgentContextManager] Failed to get memory version:', err);
       }
       return '';
     }
@@ -68,7 +68,7 @@ export class AgentContextManager {
     } catch (err) {
       this.memoryLoadFailure = true;
       this.memorySummary = '';
-      console.warn('[AgentContextManager] Failed to load memory:', err instanceof Error ? err.message : String(err));
+      logger.warn('[AgentContextManager] Failed to load memory:', err instanceof Error ? err.message : String(err));
     }
     return this.memorySummary ?? '';
   }

@@ -64,7 +64,7 @@ export class Planner {
 
       // Use chat method if available
       if (!client.chat) {
-        console.error('LLM client does not support chat method');
+        logger.error('LLM client does not support chat method');
         return null;
       }
 
@@ -82,7 +82,7 @@ export class Planner {
       // Validate plan
       const validation = this.validator.validate(plan);
       if (!validation.valid) {
-        console.error('Plan validation failed:', validation.errors);
+        logger.error('Plan validation failed:', validation.errors);
         return null;
       }
 
@@ -91,7 +91,7 @@ export class Planner {
 
       return plan;
     } catch (err) {
-      console.error('Plan generation failed:', err);
+      logger.error('Plan generation failed:', err);
       return null;
     }
   }
@@ -204,7 +204,7 @@ export class Planner {
 
       return plan;
     } catch (err) {
-      console.error('Failed to parse plan response:', err);
+      logger.error('Failed to parse plan response:', err);
       return null;
     }
   }

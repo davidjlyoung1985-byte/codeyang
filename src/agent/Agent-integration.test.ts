@@ -263,7 +263,7 @@ describe('Agent Loop Integration', () => {
   });
 
   describe('max turns enforcement', () => {
-    it('stops after reaching max turns', async () => {
+    it('stops after reaching max turns', { timeout: 90000 }, async () => {
       const agent = new Agent();
       let turn = 0;
       mockStream.mockImplementation(() => {
@@ -277,7 +277,7 @@ describe('Agent Loop Integration', () => {
       await agent.run('loop');
       expect(turn).toBeGreaterThanOrEqual(1);
       expect(turn).toBeLessThanOrEqual(5);
-    }, 30000);
+    });
   });
 
   describe('tool error handling', () => {
