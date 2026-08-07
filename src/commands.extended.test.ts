@@ -2,6 +2,10 @@
  * Additional tests for commands to improve coverage
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { execa } from 'execa';
 import { dispatch } from './commands.js';
 import type { CommandContext } from './commands.js';
 import type { CliUI } from './ui/CliUI.js';
@@ -204,8 +208,23 @@ describe('Commands - Extended Coverage', () => {
     });
 
     it('should handle /commit with message', async () => {
-      const result = await dispatch('/commit test message', ctx);
-      expect(result.handled).toBe(true);
+      // 在隔离的临时 git 仓库中执行，避免 git add -A 扫描项目工作树
+      // 从而不受 GitTool 测试创建的 .test-git-tools 嵌套仓库干扰（flaky 根因）
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cy-commit-'));
+      const origCwd = process.cwd();
+      try {
+        process.chdir(tmp);
+        await execa('git', ['init', '-q'], { cwd: tmp });
+        await execa('git', ['config', 'user.name', 'Test User'], { cwd: tmp });
+        await execa('git', ['config', 'user.email', 'test@example.com'], { cwd: tmp });
+        fs.writeFileSync(path.join(tmp, 'a.txt'), 'content');
+
+        const result = await dispatch('/commit test message', ctx);
+        expect(result.handled).toBe(true);
+      } finally {
+        process.chdir(origCwd);
+        fs.rmSync(tmp, { recursive: true, force: true });
+      }
     }, 30000);
 
     it('should handle /commit without message', async () => {

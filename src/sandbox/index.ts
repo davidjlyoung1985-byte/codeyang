@@ -260,7 +260,7 @@ export class Sandbox {
           actualArgs = wrapped.args;
         } catch (err) {
           // 包装失败，回退到软隔离
-          console.warn(
+          logger.warn(
             `[Sandbox ${this.id}] OS network isolation requested but failed: ${err instanceof Error ? err.message : String(err)}. Falling back to soft blocking.`,
           );
         }
@@ -269,7 +269,7 @@ export class Sandbox {
         const reason = capabilities.requiresRoot
           ? 'requires elevated privileges'
           : capabilities.error || 'not supported';
-        console.warn(
+        logger.warn(
           `[Sandbox ${this.id}] OS network isolation requested but ${reason}. Using soft blocking (environment variable).`,
         );
       }
@@ -466,13 +466,13 @@ export class Sandbox {
         // Post-exec 钩子（fire-and-forget，不能阻塞 resolveResult）
         for (const hook of this.postExecHooks) {
           hook(this.id, this.workDir).catch((err) =>
-            console.warn('⚠️ [Sandbox] Post-exec hook failed:', err instanceof Error ? err.message : err),
+            logger.warn('⚠️ [Sandbox] Post-exec hook failed:', err instanceof Error ? err.message : err),
           );
         }
         // 清理临时目录（fire-and-forget）
         if (this.config.cleanupTempDir && !opts?.cwd) {
           this.cleanup().catch((err) =>
-            console.warn('⚠️ [Sandbox] Cleanup failed:', err instanceof Error ? err.message : err),
+            logger.warn('⚠️ [Sandbox] Cleanup failed:', err instanceof Error ? err.message : err),
           );
         }
       };
@@ -622,7 +622,7 @@ export class SandboxPool {
     for (const sb of this.pool) {
       await sb
         .cleanup()
-        .catch((err) => console.warn('⚠️ [Sandbox] Pool cleanup failed:', err instanceof Error ? err.message : err));
+        .catch((err) => logger.warn('⚠️ [Sandbox] Pool cleanup failed:', err instanceof Error ? err.message : err));
     }
     this.pool = [];
     this.active.clear();

@@ -67,7 +67,7 @@ export class SemanticClassifier {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    console.log('[SemanticClassifier] Initializing with example embeddings...');
+    logger.debug('[SemanticClassifier] Initializing with example embeddings...');
 
     for (const [type, examples] of Object.entries(TYPE_EXAMPLES)) {
       const embeddings: number[][] = [];
@@ -77,7 +77,7 @@ export class SemanticClassifier {
           const result = await this.embeddingService.embed(example);
           embeddings.push(result.vector);
         } catch (err) {
-          console.warn(`[SemanticClassifier] Failed to embed example for ${type}:`, err);
+          logger.warn(`[SemanticClassifier] Failed to embed example for ${type}:`, err);
         }
       }
 
@@ -85,7 +85,7 @@ export class SemanticClassifier {
     }
 
     this.initialized = true;
-    console.log('[SemanticClassifier] Initialized with embeddings for', this.typeEmbeddings.size, 'types');
+    logger.debug('[SemanticClassifier] Initialized with embeddings for', this.typeEmbeddings.size, 'types');
   }
 
   /**
@@ -148,7 +148,7 @@ export class SemanticClassifier {
       };
     } catch (err) {
       // Fallback to regex-based classification
-      console.warn('[SemanticClassifier] Embedding failed, using fallback:', err);
+      logger.warn('[SemanticClassifier] Embedding failed, using fallback:', err);
       return this.fallbackClassify(key, value);
     }
   }
@@ -219,7 +219,7 @@ export class SemanticClassifier {
         const result = await this.embeddingService.embed(example);
         existingEmbeddings.push(result.vector);
       } catch (err) {
-        console.warn(`[SemanticClassifier] Failed to add example for ${type}:`, err);
+        logger.warn(`[SemanticClassifier] Failed to add example for ${type}:`, err);
       }
     }
 

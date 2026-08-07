@@ -97,7 +97,7 @@ export function jsonClone<T>(obj: T): T {
       return structuredClone(obj);
     } catch (err) {
       if (process.env.CODEYANG_DEBUG) {
-        console.warn('[AgentUtils] structuredClone failed, using JSON fallback:', err);
+        logger.warn('[AgentUtils] structuredClone failed, using JSON fallback:', err);
       }
     }
   }

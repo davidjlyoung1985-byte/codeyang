@@ -194,7 +194,7 @@ export class AgentToolExecutor {
                 return;
               } catch (err) {
                 if (process.env.CODEYANG_DEBUG) {
-                  console.warn(`[AgentToolExecutor] Pending read failed for ${tc.name}, retrying:`, err);
+                  logger.warn(`[AgentToolExecutor] Pending read failed for ${tc.name}, retrying:`, err);
                 }
               }
             }
