@@ -42,9 +42,12 @@ dist-electron/
 test-output.txt
 test-output*.txt
 test-result.json
+*-result.json
 test_run*.log
 fail_detail.log
 test-value
+cov.json
+cov.err
 
 # Test artifacts
 *.svg
