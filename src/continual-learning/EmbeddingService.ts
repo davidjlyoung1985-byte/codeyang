@@ -218,7 +218,7 @@ export class EmbeddingService {
       };
     } catch {
       // Fallback: use simple hash-based pseudo-embedding
-      console.warn('Local embedding service unavailable, using fallback');
+      logger.warn('Local embedding service unavailable, using fallback');
       return this.generatePseudoEmbedding(text);
     }
   }

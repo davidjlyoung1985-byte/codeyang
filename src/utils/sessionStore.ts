@@ -257,7 +257,7 @@ export async function listSessions(): Promise<SessionMeta[]> {
         // Skip corrupted session files - they'll be cleaned up by garbage collection
         // Log only in debug mode to avoid noise
         if (process.env.CODEYANG_DEBUG) {
-          console.error(`Failed to parse session file ${f}:`, err);
+          logger.error(`Failed to parse session file ${f}:`, err);
         }
       }
     }
@@ -503,7 +503,7 @@ export async function auditLog(entry: {
       const stats = await stat(AUDIT_LOG);
       if (stats.size >= 10 * 1024 * 1024) {
         const rotated = `${AUDIT_LOG}.1`;
-        await rename(AUDIT_LOG, rotated).catch(() => console.warn('⚠️ [SessionStore] Failed to rotate audit log'));
+        await rename(AUDIT_LOG, rotated).catch(() => logger.warn('[SessionStore] Failed to rotate audit log'));
       }
     } catch {
       // File doesn't exist yet — first write, nothing to rotate

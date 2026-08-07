@@ -62,7 +62,7 @@ export class ReflexionEngine {
 
       // Call LLM for reflection (use chat method if available)
       if (!client.chat) {
-        console.error('LLM client does not support chat method');
+        logger.error('LLM client does not support chat method');
         return null;
       }
 
@@ -83,7 +83,7 @@ export class ReflexionEngine {
 
       return reflection;
     } catch (err) {
-      console.error('Reflection failed:', err);
+      logger.error('Reflection failed:', err);
       return null;
     } finally {
       this.reflectionInProgress = false;
@@ -112,7 +112,7 @@ export class ReflexionEngine {
       };
     } catch {
       // Fallback: treat entire content as analysis
-      console.warn(
+      logger.warn(
         '[Reflexion] LLM reflection response was not valid JSON. Using raw text as analysis.\n',
         `  Trigger: ${trigger}\n`,
         `  Response preview: ${content.slice(0, 200)}...`,

@@ -199,7 +199,7 @@ export class Agent {
         auditReqs = Object.values(auditStats).reduce((sum, s) => sum + s.total, 0);
       }
     } catch (err) {
-      if (process.env.CODEYANG_DEBUG) console.warn('[Agent] Failed to collect audit stats:', err);
+      if (process.env.CODEYANG_DEBUG) logger.warn('[Agent] Failed to collect audit stats:', err);
     }
     return {
       tracing: {
@@ -487,7 +487,7 @@ export class Agent {
                         });
                       } catch (err) {
                         toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
-                        if (process.env.CODEYANG_DEBUG) console.warn('[Agent] Failed to parse tool args:', err);
+                        if (process.env.CODEYANG_DEBUG) logger.warn('[Agent] Failed to parse tool args:', err);
                       }
                     }
                   } else if (event.type === 'usage') {

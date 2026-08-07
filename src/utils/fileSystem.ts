@@ -61,9 +61,7 @@ export async function atomicRename(src: string, dest: string): Promise<void> {
       // Handle cross-device move (e.g., temp in C: target in D:)
       if (code === 'EXDEV') {
         await copyFile(src, dest);
-        await unlink(src).catch(() =>
-          console.warn('⚠️ [FileSystem] Failed to clean up temp file after cross-device copy'),
-        );
+        await unlink(src).catch(() => logger.warn('[FileSystem] Failed to clean up temp file after cross-device copy'));
         return;
       }
 
