@@ -12,8 +12,8 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 30_000,
     hookTimeout: 30_000,
-    include: ['src/**/*.test.ts', 'src/**/*.bench.ts'],
-    exclude: ['**/node_modules/**', '**/.git/**', '**/dist/**'],
+    include: ['src/**/*.test.ts'],
+    exclude: ['**/node_modules/**', '**/.git/**', '**/dist/**', 'src/**/*.bench.ts'],
     globalSetup: './vitest.setup.ts',
     setupFiles: ['./vitest.isolate.ts'],
     coverage: {
@@ -28,10 +28,12 @@ export default defineConfig({
         'src/tools/semantic-index.ts',
         // src/tot/ and src/mcp/ have basic tests — keep included
       ],
+      // Current coverage: statements 64%, branches 52%, functions 67%, lines 66%
+      // Targets set slightly below current to allow for variance
       thresholds: {
         statements: 60,
-        branches: 45,
-        functions: 60,
+        branches: 50,
+        functions: 65,
         lines: 60,
       },
       // Fail CI if thresholds not met
