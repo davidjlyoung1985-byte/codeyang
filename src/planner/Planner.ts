@@ -2,6 +2,7 @@ import type { LLMClient } from '../agent/LLMClient.js';
 import type { Plan, PlanStep } from './PlanStore.js';
 import { PlanStore } from './PlanStore.js';
 import { PlanValidator } from './PlanValidator.js';
+import { logger } from '../utils/logger.js';
 
 export interface PlannerConfig {
   enabled: boolean;

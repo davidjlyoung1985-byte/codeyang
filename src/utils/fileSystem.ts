@@ -4,6 +4,7 @@
 
 import { rename, stat, copyFile, unlink } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
+import { logger } from './logger.js';
 
 /**
  * Safely rename file with conflict resolution.

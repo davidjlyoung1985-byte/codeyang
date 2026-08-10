@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import crypto from 'node:crypto';
 import type { Session, Message } from '../types.js';
 import { atomicRename } from './fileSystem.js';
+import { logger } from './logger.js';
 
 const SESSIONS_DIR = join(homedir(), '.codeyang', 'sessions');
 const INDEX_FILE = join(homedir(), '.codeyang', 'sessions.index.json');

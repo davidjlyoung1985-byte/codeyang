@@ -7,6 +7,7 @@
 
 import { getEmbeddingService, cosineSimilarity } from './EmbeddingService.js';
 import type { Memory } from '../utils/memoryStore.js';
+import { logger } from '../utils/logger.js';
 
 // Memory type examples for few-shot classification
 const TYPE_EXAMPLES: Record<Memory['type'], string[]> = {

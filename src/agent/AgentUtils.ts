@@ -2,6 +2,7 @@
  * Agent utilities — pure helper functions used by the Agent.
  */
 import type { LLMMessage } from './LLMClient.js';
+import { logger } from '../utils/logger.js';
 
 // ── Constants ──────────────────────────────────────────────
 

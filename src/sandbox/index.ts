@@ -55,6 +55,7 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { filterEnvVars, isPathAllowed } from '../security/SecurityPolicy.js';
 import { detectNetworkIsolationSupport, wrapCommandWithNetworkIsolation } from './os-isolation.js';
+import { logger } from '../utils/logger.js';
 
 // ===================== 类型定义 =====================
 
