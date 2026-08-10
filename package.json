@@ -37,7 +37,7 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",
-        "bench": "vitest run --reporter=verbose src/utils/memoryStore.bench.ts src/tools/GlobTool.bench.ts",
+        "bench": "vitest bench --reporter=verbose",
         "prepublishOnly": "npm run build",
         "lint": "eslint src/ --ext .ts",
         "lint:fix": "eslint src/ --ext .ts --fix",
