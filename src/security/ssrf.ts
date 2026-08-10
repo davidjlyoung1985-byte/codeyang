@@ -52,7 +52,7 @@ const CLOUD_METADATA_PATTERNS = [
 /**
  * Check if a hostname resolves to a private IP address
  */
-function isPrivateIP(hostname: string): boolean {
+export function isPrivateIP(hostname: string): boolean {
   // Direct IP check
   for (const pattern of PRIVATE_IP_PATTERNS) {
     if (pattern.test(hostname)) {

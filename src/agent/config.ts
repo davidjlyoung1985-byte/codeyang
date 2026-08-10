@@ -7,6 +7,7 @@ import type { QtContext } from '../qt/index.js';
 import { buildQtPrompt } from '../qt/index.js';
 import { buildBaseSystemPrompt } from './system-prompt.js';
 import { getPonytailPrompt, getPonytailLevel, type PonytailLevel } from './ponytail-prompt.js';
+import { logger } from '../utils/logger.js';
 
 const CONFIG_DIR = join(homedir(), '.codeyang');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');

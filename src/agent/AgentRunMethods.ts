@@ -10,7 +10,6 @@ import { isComplexPrompt, formatComplexPrompt, validateMessages } from './AgentR
 import { config } from './config.js';
 import { setToolContext } from '../tools/registry.js';
 import { jsonClone } from './AgentUtils.js';
-import { logger } from '../utils/logger.js';
 
 /**
  * Setup data returned from initialization
