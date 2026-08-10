@@ -1,15 +1,15 @@
 import { readFile, writeFile, mkdir, unlink, readdir, stat, rename } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { homedir } from 'node:os';
 import crypto from 'node:crypto';
 import type { Session, Message } from '../types.js';
 import { atomicRename } from './fileSystem.js';
 import { logger } from './logger.js';
+import { codeyangPath, getCodeyangHome } from './paths.js';
 
-const SESSIONS_DIR = join(homedir(), '.codeyang', 'sessions');
-const INDEX_FILE = join(homedir(), '.codeyang', 'sessions.index.json');
-const AUDIT_LOG = join(homedir(), '.codeyang', 'audit.log');
+const SESSIONS_DIR = codeyangPath('sessions');
+const INDEX_FILE = codeyangPath('sessions.index.json');
+const AUDIT_LOG = codeyangPath('audit.log');
 
 /** Estimated max tokens per saved session (≈ 1M tokens). Prune based on content size, not message count. */
 const MAX_SESSION_TOKENS = 1_000_000;
@@ -497,7 +497,7 @@ export async function auditLog(entry: {
   const timestamp = new Date().toISOString();
   const line = JSON.stringify({ timestamp, ...entry }) + '\n';
   try {
-    await mkdir(join(homedir(), '.codeyang'), { recursive: true });
+    await mkdir(getCodeyangHome(), { recursive: true });
 
     // Rotate log file if it exceeds 10 MB
     try {
@@ -538,7 +538,7 @@ export async function importSession(session: Session): Promise<string> {
  */
 export async function importSessionFromFile(filePath: string): Promise<string> {
   // SECURITY: Resolve symlinks in allowed base directory
-  const allowedBase = realpathSync(join(homedir(), '.codeyang'));
+  const allowedBase = realpathSync(getCodeyangHome());
 
   // SECURITY: Resolve symlinks in target path to prevent traversal via symlink
   let absPath: string;

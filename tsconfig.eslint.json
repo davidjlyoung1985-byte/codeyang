@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src", "mcp-servers", "web", "vite.config.ts", "vitest.config.ts", "vitest.setup.ts", "tsup.config.ts", "test-*.ts", "test-*/*.ts"],
+  "include": ["src", "mcp-servers", "web", "vite.config.ts", "vitest.config.ts", "vitest.setup.ts", "vitest.isolate.ts", "tsup.config.ts", "test-*.ts", "test-*/*.ts"],
   "exclude": []
 }

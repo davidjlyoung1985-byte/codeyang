@@ -4,10 +4,10 @@
  */
 import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
 import crypto from 'node:crypto';
+import { codeyangPath } from './paths.js';
 
-const TASKS_DIR = join(homedir(), '.codeyang', 'tasks');
+const TASKS_DIR = codeyangPath('tasks');
 const INDEX_FILE = join(TASKS_DIR, 'index.json');
 
 export interface Task {

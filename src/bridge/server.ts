@@ -12,15 +12,15 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile, writeFile, mkdir, stat, readdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import type { BridgeTask, BridgeMessage, BridgeConfig, AgentId, WsEvent } from './types.js';
 import { logger } from '../utils/logger.js';
+import { codeyangPath } from '../utils/paths.js';
 
 // ── Defaults ─────────────────────────────────────────────────────
 
-const BRIDGE_DIR = join(homedir(), '.codeyang', 'bridge');
+const BRIDGE_DIR = codeyangPath('bridge');
 const TASKS_FILE = join(BRIDGE_DIR, 'tasks.json');
 const MESSAGES_FILE = join(BRIDGE_DIR, 'messages.json');
 const SHARED_DIR = join(BRIDGE_DIR, 'shared');

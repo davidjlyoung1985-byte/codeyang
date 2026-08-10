@@ -1,9 +1,9 @@
 import { readFile, writeFile, mkdir, readdir, unlink, rename } from 'node:fs/promises';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
+import { codeyangPath } from './paths.js';
 
-const MEMORY_DIR = join(homedir(), '.codeyang', 'memory');
+const MEMORY_DIR = codeyangPath('memory');
 
 // ── In-memory cache layer ────────────────────────────────────────────────
 // Avoids re-reading & re-parsing every .json file on every access.

@@ -14,9 +14,8 @@
  *   CODEYANG_PERMIT_FORCE  — "allow" to skip git push --force confirmation
  */
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
 import { minimatch } from 'minimatch';
+import { codeyangPath, getCodeyangHome } from '../utils/paths.js';
 
 export type PermissionLevel = 'allow' | 'deny' | 'ask';
 
@@ -32,7 +31,7 @@ interface PermissionConfig {
   rules: PermissionRule[];
 }
 
-const CONFIG_PATH = join(homedir(), '.codeyang', 'permissions.json');
+const CONFIG_PATH = codeyangPath('permissions.json');
 const DEFAULT_CONFIG: PermissionConfig = {
   version: 2,
   rules: [
@@ -62,7 +61,7 @@ async function loadConfig(): Promise<PermissionConfig> {
     return cachedConfig!;
   } catch {
     // Create default config
-    await mkdir(join(homedir(), '.codeyang'), { recursive: true });
+    await mkdir(getCodeyangHome(), { recursive: true });
     await writeFile(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2));
     cachedConfig = { ...DEFAULT_CONFIG, rules: [...DEFAULT_CONFIG.rules] };
     return cachedConfig;
