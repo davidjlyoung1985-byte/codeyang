@@ -208,7 +208,7 @@ export class AgentRegistry {
   /**
    * Find the best agent for a task based on capability overlap.
    */
-  findBestAgent(task: string, requiredCaps: AgentCapability[]): AgentCard | null {
+  findBestAgent(_task: string, requiredCaps: AgentCapability[]): AgentCard | null {
     // Score agents by how many required capabilities they have
     const scored = [...this.agents.values()]
       .map((agent) => {

@@ -222,7 +222,7 @@ function findMatchingTest(className: string, testFiles: string[]): string | unde
   });
 }
 
-function hasSignalTest(testFile: string, className: string, signal: string): boolean {
+function hasSignalTest(testFile: string, _className: string, signal: string): boolean {
   try {
     const content = readFileSync(testFile, 'utf-8');
     return content.includes(`test_signal_${signal}`) || (content.includes(`QSignalSpy`) && content.includes(signal));
@@ -231,7 +231,7 @@ function hasSignalTest(testFile: string, className: string, signal: string): boo
   }
 }
 
-function hasSlotTest(testFile: string, className: string, slot: string): boolean {
+function hasSlotTest(testFile: string, _className: string, slot: string): boolean {
   try {
     const content = readFileSync(testFile, 'utf-8');
     return content.includes(`test_slot_${slot}`) || content.includes(`test_${slot}`);

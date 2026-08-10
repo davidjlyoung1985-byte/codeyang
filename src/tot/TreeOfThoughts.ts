@@ -106,7 +106,7 @@ Output as JSON array:
   ...
 ]`;
 
-const MERGE_PROMPT = (task: string, selected: ThoughtPath, others: ThoughtPath[]) =>
+const MERGE_PROMPT = (_task: string, selected: ThoughtPath, others: ThoughtPath[]) =>
   `You have selected the primary approach for the task.
 
 ## Selected Approach: ${selected.approach}
@@ -474,7 +474,7 @@ export class TreeOfThoughts {
     return Math.min(score, 10);
   }
 
-  private generateSummary(task: string, selected: ThoughtPath, insights: string[]): string {
+  private generateSummary(_task: string, selected: ThoughtPath, insights: string[]): string {
     const lines = [
       `**Approach:** ${selected.approach}`,
       `**Confidence:** ${selected.evaluation.score}/100`,

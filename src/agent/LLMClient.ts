@@ -275,11 +275,9 @@ class AnthropicClient implements LLMClient {
 
 class OpenAICompatClient implements LLMClient {
   private client: OpenAI;
-  private baseURL: string;
 
   constructor(apiKey: string, baseURL: string) {
     this.client = new OpenAI({ apiKey, baseURL });
-    this.baseURL = baseURL;
   }
 
   async chat(params: {
