@@ -5,10 +5,10 @@
 
 An AI coding agent inspired by [Claude Code](https://github.com/anthropics/claude-code) architecture. CodeYang lets you describe coding tasks in natural language — it reads files, writes code, runs commands, manages Git, and more.
 
-**Project Status**: B+ / Work in Progress  
+**Project Status**: A- / Production-ready for personal & small-team use  
 ✅ Core functionality works  
-⚠️ Some tests have known issues (see [Contributing](#contributing))  
-📊 Test Coverage: ~65% statements, ~52% branches
+✅ CI/CD hard gates (tsc + lint + vitest) green  
+📊 Test Coverage: enforced by CI (statements 60%+ / branches 45%+ / functions 60%+)
 
 ## Architecture
 
@@ -58,7 +58,7 @@ npm run build
 npm start
 
 # Or use the built binary
-node dist/cli.js
+node dist/index.js
 
 # With API key
 CODEYANG_API_KEY=your-key npm start
@@ -137,7 +137,7 @@ npm run test:coverage
 npm run lint
 
 # Type check
-npm run type-check
+npm run check
 
 # Build
 npm run build
