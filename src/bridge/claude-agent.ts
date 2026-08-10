@@ -21,14 +21,14 @@
  */
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import { WebSocket } from 'ws';
 import type { BridgeTask, BridgeMessage, WsEvent } from './types.js';
+import { codeyangPath } from '../utils/paths.js';
 
 // ── Config ────────────────────────────────────────────────────────
 
-const BRIDGE_DIR = join(homedir(), '.codeyang', 'bridge');
+const BRIDGE_DIR = codeyangPath('bridge');
 const TASKS_DIR = join(BRIDGE_DIR, 'claude-tasks');
 
 function getConfig() {

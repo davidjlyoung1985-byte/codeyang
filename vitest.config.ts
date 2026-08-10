@@ -15,6 +15,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'src/**/*.bench.ts'],
     exclude: ['**/node_modules/**', '**/.git/**', '**/dist/**'],
     globalSetup: './vitest.setup.ts',
+    setupFiles: ['./vitest.isolate.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

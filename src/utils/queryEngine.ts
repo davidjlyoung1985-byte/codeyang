@@ -10,8 +10,8 @@
 import { existsSync, statSync } from 'node:fs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
-import { homedir } from 'node:os';
 import { execa } from 'execa';
+import { codeyangPath } from './paths.js';
 
 interface SymbolEntry {
   name: string;
@@ -20,7 +20,7 @@ interface SymbolEntry {
   line: number;
 }
 
-const CACHE_DIR = join(homedir(), '.codeyang', 'cache');
+const CACHE_DIR = codeyangPath('cache');
 
 async function ensureCache() {
   await mkdir(CACHE_DIR, { recursive: true });

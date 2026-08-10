@@ -20,9 +20,8 @@
  */
 
 import { writeFile, mkdir, rename, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
+import { codeyangPath, getCodeyangHome } from '../utils/paths.js';
 
 // ── Data Structure ────────────────────────────────────────────────────
 
@@ -52,7 +51,7 @@ interface RLData {
 
 // ── Configuration ────────────────────────────────────────────────────
 
-const DATA_FILE = join(homedir(), '.codeyang', 'rl-weights.json');
+const DATA_FILE = codeyangPath('rl-weights.json');
 const ALPHA = 1.0; // Beta prior: alpha (success pseudo-count)
 const BETA = 1.0; // Beta prior: beta (failure pseudo-count)
 const EXPLORATION_C = 0.5; // UCB1 exploration constant
@@ -106,7 +105,7 @@ async function ensureLoaded(): Promise<void> {
 
 async function persist(): Promise<void> {
   try {
-    const dir = join(homedir(), '.codeyang');
+    const dir = getCodeyangHome();
     await mkdir(dir, { recursive: true });
     rlData.updatedAt = Date.now();
     rlData.version++;

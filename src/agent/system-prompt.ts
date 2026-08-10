@@ -7,11 +7,11 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { codeyangPath } from '../utils/paths.js';
 
 /** Load user profile from ~/.codeyang/profile.md (personalize agent behavior). */
 function loadUserProfile(): string {
-  const profilePath = join(homedir(), '.codeyang', 'profile.md');
+  const profilePath = codeyangPath('profile.md');
   try {
     if (existsSync(profilePath)) {
       const content = readFileSync(profilePath, 'utf-8').trim();
@@ -25,7 +25,7 @@ function loadUserProfile(): string {
 
 /** Load knowledge base from ~/.codeyang/knowledge/*.md (domain knowledge injection). */
 export function loadKnowledgeBase(): string {
-  const kbDir = join(homedir(), '.codeyang', 'knowledge');
+  const kbDir = codeyangPath('knowledge');
   try {
     if (!existsSync(kbDir)) return '';
     // eslint-disable-next-line @typescript-eslint/no-require-imports

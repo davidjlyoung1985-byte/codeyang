@@ -15,10 +15,10 @@ import {
 } from '../utils/sessionStore.js';
 import { rm, mkdir, writeFile, readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { codeyangPath } from '../utils/paths.js';
 import type { Message, Session } from '../types.js';
 
-const SESSIONS_DIR = join(homedir(), '.codeyang', 'sessions');
+const SESSIONS_DIR = codeyangPath('sessions');
 
 describe('sessionStore', () => {
   const messages: Message[] = [
@@ -34,9 +34,9 @@ describe('sessionStore', () => {
 
   afterEach(async () => {
     // Cleanup audit log between tests to avoid interference
-    await rm(join(homedir(), '.codeyang', 'audit.log'), { force: true }).catch(() => {});
+    await rm(codeyangPath('audit.log'), { force: true }).catch(() => {});
     // Remove oversized / temporary test JSON files left by importSessionFromFile tests
-    const codeyangDir = join(homedir(), '.codeyang');
+    const codeyangDir = codeyangPath();
     const entries = await readdir(codeyangDir).catch(() => []);
     for (const entry of entries) {
       if (entry.startsWith('test-') && entry.endsWith('.json')) {
@@ -297,19 +297,19 @@ describe('sessionStore', () => {
   });
 
   it('importSessionFromFile: throws for nonexistent file inside whitelist', async () => {
-    await expect(importSessionFromFile(join(homedir(), '.codeyang', 'no-such-file.json'))).rejects.toThrow(
+    await expect(importSessionFromFile(codeyangPath('no-such-file.json'))).rejects.toThrow(
       'Cannot access session file',
     );
   });
 
   it('importSessionFromFile: throws for invalid JSON', async () => {
-    const filePath = join(homedir(), '.codeyang', 'test-bad-json.json');
+    const filePath = codeyangPath('test-bad-json.json');
     await writeFile(filePath, '{bad json}', 'utf-8');
     await expect(importSessionFromFile(filePath)).rejects.toThrow('Invalid JSON in session file');
   });
 
   it('importSessionFromFile: throws for oversized file', async () => {
-    const filePath = join(homedir(), '.codeyang', 'test-oversized.json');
+    const filePath = codeyangPath('test-oversized.json');
     // Write a JSON larger than 10 MB
     const bigContent = JSON.stringify({ id: 'x', messages: [{ role: 'user', content: 'a'.repeat(11 * 1024 * 1024) }] });
     await writeFile(filePath, bigContent, 'utf-8');
@@ -317,7 +317,7 @@ describe('sessionStore', () => {
   });
 
   it('importSessionFromFile: rejects invalid tools in file', async () => {
-    const filePath = join(homedir(), '.codeyang', 'test-bad-tools.json');
+    const filePath = codeyangPath('test-bad-tools.json');
     await writeFile(
       filePath,
       JSON.stringify({
@@ -330,7 +330,7 @@ describe('sessionStore', () => {
   });
 
   it('importSessionFromFile: accepts valid file', async () => {
-    const filePath = join(homedir(), '.codeyang', 'test-valid.json');
+    const filePath = codeyangPath('test-valid.json');
     await writeFile(
       filePath,
       JSON.stringify({
@@ -457,7 +457,7 @@ describe('sessionStore', () => {
       }),
     ).resolves.toBeUndefined();
 
-    const logPath = join(homedir(), '.codeyang', 'audit.log');
+    const logPath = codeyangPath('audit.log');
     const content = await readFile(logPath, 'utf-8');
     expect(content).toContain('"action":"test"');
     expect(content).toContain('"command":"echo hello"');
@@ -468,7 +468,7 @@ describe('sessionStore', () => {
   it('auditLog appends multiple entries', async () => {
     await auditLog({ action: 'first' });
     await auditLog({ action: 'second' });
-    const logPath = join(homedir(), '.codeyang', 'audit.log');
+    const logPath = codeyangPath('audit.log');
     const content = await readFile(logPath, 'utf-8');
     const lines = content.trim().split('\n');
     expect(lines).toHaveLength(2);

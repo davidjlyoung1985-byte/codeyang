@@ -40,7 +40,7 @@ export async function teardown() {
     const entries = await readdir(tmpDir);
 
     for (const entry of entries) {
-      if (entry.startsWith('codeyang-test-')) {
+      if (entry.startsWith('codeyang-test-') || entry.startsWith('codeyang-home-')) {
         await rm(join(tmpDir, entry), { recursive: true, force: true }).catch(() => {});
       }
     }

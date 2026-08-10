@@ -1,8 +1,8 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { codeyangPath } from './paths.js';
 
-const DIR = join(homedir(), '.codeyang');
+const DIR = codeyangPath();
 const FILE = join(DIR, 'todos.json');
 
 export interface TodoItem {
