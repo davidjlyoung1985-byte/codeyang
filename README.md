@@ -158,17 +158,17 @@ npm run test:coverage # With coverage report
 ```
 
 Coverage targets maintained by CI (see [.github/workflows/ci.yml](.github/workflows/ci.yml)):
-- Statements: 60%+
-- Branches: 60%+
-- Functions: 60%+
-- Lines: 60%+
+- Statements: 60%+ (current: 64.9%)
+- Branches: 50%+ (current: 52.0%)
+- Functions: 65%+ (current: 67.0%)
+- Lines: 60%+ (current: 66.1%)
 
 ## Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 Current priorities:
-1. **Improve test coverage** — bring branches to 60%+ (CI gate)
+1. **Improve test coverage** — reach 60% branches (currently 52%)
 2. **Fix environment-dependent test timeouts**
 3. **Add more examples and use cases**
 4. **Performance optimizations**

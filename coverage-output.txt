@@ -1,0 +1,967 @@
+
+> codeyang@0.7.1 test:coverage
+> vitest run --coverage
+
+
+ RUN  v4.1.10 c:/Users/Ehua/codeyang
+      Coverage enabled with v8
+
+[Test Setup] Cleaning test environment...
+[Test Setup] Test environment cleaned
+ ❯ src/tools/definitions/definitions.test.ts (0 test)
+ ❯ src/performance.bench.ts (0 test)
+ ❯ src/utils/memoryStore.bench.ts (0 test)
+ ❯ src/sandbox/sandbox-integration.test.ts (0 test)
+ ❯ src/tools/GitTool.test.ts (0 test)
+ ❯ src/tools/BashTool.test.ts (0 test)
+ ❯ src/closed-loop/closed-loop.test.ts (0 test)
+ ❯ src/sandbox/sandbox-os-integration.test.ts (0 test)
+ ❯ src/tools/remaining-tools.test.ts (0 test)
+ ❯ src/tools/SearchTool.test.ts (0 test)
+ ❯ src/math/index.extended.test.ts (0 test)
+ ❯ src/utils/sessionStore.test.ts (0 test)
+ ❯ src/tools/tools.test.ts (0 test)
+ ❯ src/tools/RefactorTool.test.ts (0 test)
+ ❯ src/qt/tools/QtProFileTool.test.ts (0 test)
+ ❯ src/qt/tools/QtQmlTool.test.ts (0 test)
+ ❯ src/utils/streamingFileReader.test.ts (0 test)
+ ❯ src/tools/GlobTool.test.ts (0 test)
+ ❯ src/tools/EditTool.test.ts (0 test)
+ ❯ src/utils/largeFileReader.test.ts (0 test)
+ ❯ src/utils/queryEngine.test.ts (0 test)
+ ❯ src/utils/retry.test.ts (0 test)
+ ❯ src/tools/CodeAnalysisTool.test.ts (0 test)
+ ❯ src/tools/shared.test.ts (0 test)
+ ❯ src/commands.extended.test.ts (0 test)
+ ❯ src/tools/FileSystemTool.test.ts (0 test)
+ ❯ src/tools/DataTool.test.ts (0 test)
+ ❯ src/qt/tools/QtMigrationTool.test.ts (0 test)
+ ❯ src/commands.test.ts (0 test)
+ ❯ src/qt/tools.test.ts (0 test)
+ ❯ src/continual-learning/SemanticClassifier.test.ts (0 test)
+ ❯ src/bridge/bridge.test.ts (0 test)
+ ❯ src/utils/dotenv.test.ts (0 test)
+ ❯ src/utils/memoryMonitor.test.ts (0 test)
+ ❯ src/tools/WriteTool.test.ts (0 test)
+ ❯ src/tools/index.test.ts (0 test)
+ ❯ src/tools/ReadTool.test.ts (0 test)
+ ❯ src/tools/ImageTool.test.ts (0 test)
+ ❯ src/tools/NetworkTool.test.ts (0 test)
+ ❯ src/qt/index.test.ts (0 test)
+ ❯ src/utils/projectIndex.test.ts (0 test)
+ ❯ src/tools/WebFetchTool.test.ts (0 test)
+ ❯ src/utils/errorHandling.test.ts (0 test)
+ ❯ src/utils/taskStore.test.ts (0 test)
+ ❯ src/gateway/index.test.ts (0 test)
+ ❯ src/utils/debug.test.ts (0 test)
+ ❯ src/ui/CliUI.test.ts (0 test)
+ ❯ src/qt/tools/QtMathTool.test.ts (0 test)
+ ❯ src/permission/index.test.ts (0 test)
+ ❯ src/agent/Agent-integration.test.ts (0 test)
+ ❯ src/e2e/e2e.test.ts (0 test)
+ ❯ src/tools/GlobTool.bench.ts (0 test)
+ ❯ src/utils/fileSystem.test.ts (0 test)
+ ❯ src/tools/GitHubTool.test.ts (0 test)
+ ❯ src/a2a/A2AProtocol.test.ts (0 test)
+ ❯ src/utils/nodeVersionCheck.test.ts (0 test)
+ ❯ src/qt/tools/QtBuildTool.test.ts (0 test)
+ ❯ src/agent/ConversationManager.test.ts (0 test)
+ ❯ src/tracing/index.test.ts (0 test)
+ ❯ src/agent/LLMClient.test.ts (0 test)
+ ❯ src/security/SecurityPolicy.test.ts (0 test)
+ ❯ src/reflexion/reflexion.test.ts (0 test)
+ ❯ src/tools/rl-weighter.test.ts (0 test)
+ ❯ src/tools/utils-extra.test.ts (0 test)
+ ❯ src/utils/metrics.test.ts (0 test)
+ ❯ src/utils/lruCache.test.ts (0 test)
+ ❯ src/tools/LaunchAppTool.test.ts (0 test)
+ ❯ src/sandbox/os-isolation.enhanced.test.ts (0 test)
+ ❯ src/tools/MemoryTool.test.ts (0 test)
+ ❯ src/math/index.test.ts (0 test)
+ ❯ src/security/ssrf.test.ts (0 test)
+ ❯ src/agent/managers/ConversationManager.test.ts (0 test)
+ ❯ src/config/index.test.ts (0 test)
+ ❯ src/index.test.ts (0 test)
+ ❯ src/agent/Agent.test.ts (0 test)
+ ❯ src/agent/AgentRunHelpers.test.ts (0 test)
+ ❯ src/planner/Planner.test.ts (0 test)
+ ❯ src/web-server.test.ts (0 test)
+ ❯ src/agent/managers/StateManager.test.ts (0 test)
+ ❯ src/utils/logger.test.ts (0 test)
+ ❯ src/tot/TreeOfThoughts.test.ts (0 test)
+ ❯ src/index.extended.test.ts (0 test)
+ ❯ src/tools/schema-validate.test.ts (0 test)
+ ❯ src/mcp/mcp.test.ts (0 test)
+ ❯ src/utils/securityValidation.test.ts (0 test)
+ ❯ src/codeyangx.test.ts (0 test)
+ ❯ src/sandbox/sandbox.test.ts (0 test)
+ ❯ src/sandbox/os-isolation.test.ts (0 test)
+ ❯ src/tot/tot.test.ts (0 test)
+ ❯ src/utils/globMatch.test.ts (0 test)
+ ❯ src/utils/performance.bench.ts (0 test)
+ ❯ src/tools/mcp.test.ts (0 test)
+ ❯ src/tools/registry.test.ts (0 test)
+ ❯ src/tools/TaskTool.test.ts (0 test)
+ ❯ src/agent/AgentRunMethods.test.ts (0 test)
+ ❯ src/agent/config.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 96 ⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/codeyangx.test.ts [ src/codeyangx.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/codeyangx.test.ts:20:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/96]⎯
+
+ FAIL  src/commands.extended.test.ts [ src/commands.extended.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/commands.extended.test.ts:16:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/96]⎯
+
+ FAIL  src/commands.test.ts [ src/commands.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/commands.test.ts:11:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/96]⎯
+
+ FAIL  src/index.extended.test.ts [ src/index.extended.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/index.extended.test.ts:6:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/96]⎯
+
+ FAIL  src/index.test.ts [ src/index.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/index.test.ts:6:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/96]⎯
+
+ FAIL  src/performance.bench.ts [ src/performance.bench.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/performance.bench.ts:15:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/96]⎯
+
+ FAIL  src/web-server.test.ts [ src/web-server.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/web-server.test.ts:6:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/96]⎯
+
+ FAIL  src/a2a/A2AProtocol.test.ts [ src/a2a/A2AProtocol.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/a2a/A2AProtocol.test.ts:11:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/96]⎯
+
+ FAIL  src/agent/Agent-integration.test.ts [ src/agent/Agent-integration.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/agent/Agent-integration.test.ts:94:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/96]⎯
+
+ FAIL  src/agent/Agent.test.ts [ src/agent/Agent.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/agent/Agent.test.ts:139:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/96]⎯
+
+ FAIL  src/agent/AgentRunHelpers.test.ts [ src/agent/AgentRunHelpers.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/agent/AgentRunHelpers.test.ts:12:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/96]⎯
+
+ FAIL  src/agent/AgentRunMethods.test.ts [ src/agent/AgentRunMethods.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/agent/AgentRunMethods.test.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/96]⎯
+
+ FAIL  src/agent/config.test.ts [ src/agent/config.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/agent/config.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/96]⎯
+
+ FAIL  src/agent/ConversationManager.test.ts [ src/agent/ConversationManager.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/agent/ConversationManager.test.ts:6:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/96]⎯
+
+ FAIL  src/agent/LLMClient.test.ts [ src/agent/LLMClient.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/agent/LLMClient.test.ts:5:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/96]⎯
+
+ FAIL  src/bridge/bridge.test.ts [ src/bridge/bridge.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/bridge/bridge.test.ts:8:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/96]⎯
+
+ FAIL  src/closed-loop/closed-loop.test.ts [ src/closed-loop/closed-loop.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/closed-loop/closed-loop.test.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/96]⎯
+
+ FAIL  src/config/index.test.ts [ src/config/index.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/config/index.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/96]⎯
+
+ FAIL  src/continual-learning/SemanticClassifier.test.ts [ src/continual-learning/SemanticClassifier.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/continual-learning/SemanticClassifier.test.ts:11:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/96]⎯
+
+ FAIL  src/e2e/e2e.test.ts [ src/e2e/e2e.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/e2e/e2e.test.ts:79:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/96]⎯
+
+ FAIL  src/gateway/index.test.ts [ src/gateway/index.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/gateway/index.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/96]⎯
+
+ FAIL  src/math/index.extended.test.ts [ src/math/index.extended.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/math/index.extended.test.ts:8:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/96]⎯
+
+ FAIL  src/math/index.test.ts [ src/math/index.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/math/index.test.ts:8:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/96]⎯
+
+ FAIL  src/mcp/mcp.test.ts [ src/mcp/mcp.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/mcp/mcp.test.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/96]⎯
+
+ FAIL  src/permission/index.test.ts [ src/permission/index.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/permission/index.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/96]⎯
+
+ FAIL  src/planner/Planner.test.ts [ src/planner/Planner.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/planner/Planner.test.ts:7:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/96]⎯
+
+ FAIL  src/qt/index.test.ts [ src/qt/index.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/qt/index.test.ts:16:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/96]⎯
+
+ FAIL  src/qt/tools.test.ts [ src/qt/tools.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/qt/tools.test.ts:14:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/96]⎯
+
+ FAIL  src/reflexion/reflexion.test.ts [ src/reflexion/reflexion.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/reflexion/reflexion.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/96]⎯
+
+ FAIL  src/security/SecurityPolicy.test.ts [ src/security/SecurityPolicy.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/security/SecurityPolicy.test.ts:12:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/96]⎯
+
+ FAIL  src/security/ssrf.test.ts [ src/security/ssrf.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/security/ssrf.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/96]⎯
+
+ FAIL  src/tot/tot.test.ts [ src/tot/tot.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tot/tot.test.ts:7:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/96]⎯
+
+ FAIL  src/tot/TreeOfThoughts.test.ts [ src/tot/TreeOfThoughts.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tot/TreeOfThoughts.test.ts:8:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/96]⎯
+
+ FAIL  src/sandbox/os-isolation.enhanced.test.ts [ src/sandbox/os-isolation.enhanced.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/sandbox/os-isolation.enhanced.test.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/96]⎯
+
+ FAIL  src/sandbox/os-isolation.test.ts [ src/sandbox/os-isolation.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/sandbox/os-isolation.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[35/96]⎯
+
+ FAIL  src/sandbox/sandbox-integration.test.ts [ src/sandbox/sandbox-integration.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/sandbox/sandbox-integration.test.ts:15:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[36/96]⎯
+
+ FAIL  src/sandbox/sandbox-os-integration.test.ts [ src/sandbox/sandbox-os-integration.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/sandbox/sandbox-os-integration.test.ts:7:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[37/96]⎯
+
+ FAIL  src/sandbox/sandbox.test.ts [ src/sandbox/sandbox.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/sandbox/sandbox.test.ts:11:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[38/96]⎯
+
+ FAIL  src/tracing/index.test.ts [ src/tracing/index.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tracing/index.test.ts:7:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39/96]⎯
+
+ FAIL  src/tools/BashTool.test.ts [ src/tools/BashTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/BashTool.test.ts:16:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[40/96]⎯
+
+ FAIL  src/tools/CodeAnalysisTool.test.ts [ src/tools/CodeAnalysisTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/CodeAnalysisTool.test.ts:18:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[41/96]⎯
+
+ FAIL  src/tools/DataTool.test.ts [ src/tools/DataTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/DataTool.test.ts:20:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[42/96]⎯
+
+ FAIL  src/tools/EditTool.test.ts [ src/tools/EditTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/EditTool.test.ts:10:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[43/96]⎯
+
+ FAIL  src/tools/FileSystemTool.test.ts [ src/tools/FileSystemTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/FileSystemTool.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[44/96]⎯
+
+ FAIL  src/tools/GitHubTool.test.ts [ src/tools/GitHubTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/GitHubTool.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[45/96]⎯
+
+ FAIL  src/tools/GitTool.test.ts [ src/tools/GitTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/GitTool.test.ts:21:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[46/96]⎯
+
+ FAIL  src/tools/GlobTool.bench.ts [ src/tools/GlobTool.bench.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/GlobTool.bench.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[47/96]⎯
+
+ FAIL  src/tools/GlobTool.test.ts [ src/tools/GlobTool.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/tools/GlobTool.test.ts:14:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[48/96]⎯
+
+ FAIL  src/tools/ImageTool.test.ts [ src/tools/ImageTool.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/tools/ImageTool.test.ts:20:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[49/96]⎯
+
+ FAIL  src/tools/index.test.ts [ src/tools/index.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/index.test.ts:15:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[50/96]⎯
+
+ FAIL  src/tools/LaunchAppTool.test.ts [ src/tools/LaunchAppTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/LaunchAppTool.test.ts:14:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[51/96]⎯
+
+ FAIL  src/tools/mcp.test.ts [ src/tools/mcp.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/mcp.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[52/96]⎯
+
+ FAIL  src/tools/MemoryTool.test.ts [ src/tools/MemoryTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/MemoryTool.test.ts:53:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[53/96]⎯
+
+ FAIL  src/tools/NetworkTool.test.ts [ src/tools/NetworkTool.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/tools/NetworkTool.test.ts:38:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[54/96]⎯
+
+ FAIL  src/tools/ReadTool.test.ts [ src/tools/ReadTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/ReadTool.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[55/96]⎯
+
+ FAIL  src/tools/RefactorTool.test.ts [ src/tools/RefactorTool.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/tools/RefactorTool.test.ts:15:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[56/96]⎯
+
+ FAIL  src/tools/registry.test.ts [ src/tools/registry.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/registry.test.ts:79:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[57/96]⎯
+
+ FAIL  src/tools/remaining-tools.test.ts [ src/tools/remaining-tools.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/remaining-tools.test.ts:42:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[58/96]⎯
+
+ FAIL  src/tools/rl-weighter.test.ts [ src/tools/rl-weighter.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/rl-weighter.test.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[59/96]⎯
+
+ FAIL  src/tools/schema-validate.test.ts [ src/tools/schema-validate.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/schema-validate.test.ts:7:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[60/96]⎯
+
+ FAIL  src/tools/SearchTool.test.ts [ src/tools/SearchTool.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/tools/SearchTool.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[61/96]⎯
+
+ FAIL  src/tools/shared.test.ts [ src/tools/shared.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/shared.test.ts:6:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[62/96]⎯
+
+ FAIL  src/tools/TaskTool.test.ts [ src/tools/TaskTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/TaskTool.test.ts:35:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[63/96]⎯
+
+ FAIL  src/tools/tools.test.ts [ src/tools/tools.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/tools/tools.test.ts:18:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[64/96]⎯
+
+ FAIL  src/tools/utils-extra.test.ts [ src/tools/utils-extra.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/utils-extra.test.ts:6:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[65/96]⎯
+
+ FAIL  src/tools/WebFetchTool.test.ts [ src/tools/WebFetchTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/WebFetchTool.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[66/96]⎯
+
+ FAIL  src/tools/WriteTool.test.ts [ src/tools/WriteTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/WriteTool.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[67/96]⎯
+
+ FAIL  src/ui/CliUI.test.ts [ src/ui/CliUI.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/ui/CliUI.test.ts:43:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[68/96]⎯
+
+ FAIL  src/utils/debug.test.ts [ src/utils/debug.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/debug.test.ts:15:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[69/96]⎯
+
+ FAIL  src/utils/dotenv.test.ts [ src/utils/dotenv.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/dotenv.test.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[70/96]⎯
+
+ FAIL  src/utils/errorHandling.test.ts [ src/utils/errorHandling.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/errorHandling.test.ts:12:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[71/96]⎯
+
+ FAIL  src/utils/fileSystem.test.ts [ src/utils/fileSystem.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/fileSystem.test.ts:8:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[72/96]⎯
+
+ FAIL  src/utils/globMatch.test.ts [ src/utils/globMatch.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/globMatch.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[73/96]⎯
+
+ FAIL  src/utils/largeFileReader.test.ts [ src/utils/largeFileReader.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/largeFileReader.test.ts:11:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[74/96]⎯
+
+ FAIL  src/utils/logger.test.ts [ src/utils/logger.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/logger.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[75/96]⎯
+
+ FAIL  src/utils/lruCache.test.ts [ src/utils/lruCache.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/lruCache.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[76/96]⎯
+
+ FAIL  src/utils/memoryMonitor.test.ts [ src/utils/memoryMonitor.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/memoryMonitor.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[77/96]⎯
+
+ FAIL  src/utils/memoryStore.bench.ts [ src/utils/memoryStore.bench.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/memoryStore.bench.ts:6:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[78/96]⎯
+
+ FAIL  src/utils/metrics.test.ts [ src/utils/metrics.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/metrics.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[79/96]⎯
+
+ FAIL  src/utils/nodeVersionCheck.test.ts [ src/utils/nodeVersionCheck.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/nodeVersionCheck.test.ts:3:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[80/96]⎯
+
+ FAIL  src/utils/performance.bench.ts [ src/utils/performance.bench.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/performance.bench.ts:5:10
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[81/96]⎯
+
+ FAIL  src/utils/projectIndex.test.ts [ src/utils/projectIndex.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/projectIndex.test.ts:7:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[82/96]⎯
+
+ FAIL  src/utils/queryEngine.test.ts [ src/utils/queryEngine.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/queryEngine.test.ts:7:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[83/96]⎯
+
+ FAIL  src/utils/retry.test.ts [ src/utils/retry.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/retry.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[84/96]⎯
+
+ FAIL  src/utils/securityValidation.test.ts [ src/utils/securityValidation.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/securityValidation.test.ts:13:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[85/96]⎯
+
+ FAIL  src/utils/sessionStore.test.ts [ src/utils/sessionStore.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/sessionStore.test.ts:23:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[86/96]⎯
+
+ FAIL  src/utils/streamingFileReader.test.ts [ src/utils/streamingFileReader.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/streamingFileReader.test.ts:8:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[87/96]⎯
+
+ FAIL  src/utils/taskStore.test.ts [ src/utils/taskStore.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/utils/taskStore.test.ts:10:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[88/96]⎯
+
+ FAIL  src/agent/managers/ConversationManager.test.ts [ src/agent/managers/ConversationManager.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/agent/managers/ConversationManager.test.ts:9:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[89/96]⎯
+
+ FAIL  src/agent/managers/StateManager.test.ts [ src/agent/managers/StateManager.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/agent/managers/StateManager.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[90/96]⎯
+
+ FAIL  src/qt/tools/QtBuildTool.test.ts [ src/qt/tools/QtBuildTool.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/qt/tools/QtBuildTool.test.ts:40:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[91/96]⎯
+
+ FAIL  src/qt/tools/QtMathTool.test.ts [ src/qt/tools/QtMathTool.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/qt/tools/QtMathTool.test.ts:4:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[92/96]⎯
+
+ FAIL  src/qt/tools/QtMigrationTool.test.ts [ src/qt/tools/QtMigrationTool.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/qt/tools/QtMigrationTool.test.ts:10:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[93/96]⎯
+
+ FAIL  src/qt/tools/QtProFileTool.test.ts [ src/qt/tools/QtProFileTool.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/qt/tools/QtProFileTool.test.ts:10:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[94/96]⎯
+
+ FAIL  src/qt/tools/QtQmlTool.test.ts [ src/qt/tools/QtQmlTool.test.ts ]
+Error: Vitest failed to find the runner. One of the following is possible:
+- "vitest" is imported directly without running "vitest" command
+- "vitest" is imported inside "globalSetup" (to fix this, use "setupFiles" instead, because "globalSetup" runs in a different context)
+- "vitest" is imported inside Vite / Vitest config file
+- Otherwise, it might be a Vitest bug. Please report it to https://github.com/vitest-dev/vitest/issues
+
+ ❯ src/qt/tools/QtQmlTool.test.ts:10:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[95/96]⎯
+
+ FAIL  src/tools/definitions/definitions.test.ts [ src/tools/definitions/definitions.test.ts ]
+TypeError: Cannot read properties of undefined (reading 'config')
+ ❯ src/tools/definitions/definitions.test.ts:77:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[96/96]⎯
+
+
+ Test Files  96 failed (96)
+      Tests  no tests
+   Start at  17:37:35
+   Duration  22.42s (transform 13.64s, setup 3.36s, import 0ms, tests 0ms, environment 32ms)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   13.39 |     9.81 |   21.54 |   13.85 |                   
+ src               |    1.67 |     0.35 |    5.45 |    1.81 |                   
+  codeyangx.ts     |       0 |        0 |       0 |       0 | 14-64             
+  commands.ts      |    2.17 |     0.55 |    8.57 |     2.4 | ...19-249,251-563 
+  web-server.ts    |       0 |        0 |       0 |       0 | 27-364            
+ src/a2a           |   21.32 |    10.76 |    25.8 |   20.47 |                   
+  A2AProtocol.ts   |   21.32 |    10.76 |    25.8 |   20.47 | ...79-434,451-522 
+ src/agent         |   12.91 |     8.24 |   11.11 |   13.02 |                   
+  Agent.ts         |    3.49 |     3.17 |    4.28 |    3.38 | ...92-813,818-836 
+  ...extManager.ts |   13.46 |     3.76 |   11.11 |   13.97 | ...83-357,368-369 
+  ...RunHelpers.ts |      10 |    42.85 |      50 |      10 | 47-79             
+  ...RunMethods.ts |   12.76 |     6.66 |    12.5 |   12.76 | ...41-164,170-204 
+  ...olExecutor.ts |    13.7 |     2.89 |    8.33 |   12.93 | ...08-115,137-269 
+  AgentUtils.ts    |   29.09 |    12.14 |   41.66 |   28.88 | ...77-230,233-247 
+  ...ionManager.ts |   17.11 |     5.55 |    8.33 |   18.71 | ...13-316,322-388 
+  LLMClient.ts     |     8.8 |      2.7 |    9.09 |    8.77 | ...80-289,300-428 
+  config.ts        |   16.84 |       31 |   17.39 |   17.97 | ...11-217,243-249 
+  ...ersion-fns.ts |    7.31 |     3.12 |       0 |    9.09 | 8-9,21-51,53-92   
+  ...ail-prompt.ts |   18.75 |    18.18 |      50 |   21.42 | 17-89             
+  system-prompt.ts |   29.03 |    28.57 |      20 |      28 | 18-29,32-52,55-58 
+ ...agent/managers |   18.88 |     12.5 |      25 |   20.98 |                   
+  ...ionManager.ts |   18.42 |    11.76 |   26.08 |   20.58 | ...02-150,164-190 
+  StateManager.ts  |   19.23 |    13.04 |   23.52 |   21.27 | ...51,153,167-169 
+ src/bridge        |    2.69 |     1.53 |       5 |    2.63 |                   
+  claude-agent.ts  |       0 |        0 |       0 |       0 | 31-375            
+  client.ts        |   22.22 |     9.52 |   26.66 |   22.03 | ...69-233,243-244 
+  server.ts        |       0 |        0 |       0 |       0 | 23-607            
+ ...ircuit-breaker |   14.97 |     8.97 |    27.5 |   15.72 |                   
+  index.ts         |   14.97 |     8.97 |    27.5 |   15.72 | ...26,539,546-547 
+ src/closed-loop   |   14.22 |      3.9 |    20.4 |   16.04 |                   
+  ...ckInjector.ts |   35.71 |        0 |      60 |   38.46 | 20-21,29-34,38-45 
+  ...onPipeline.ts |   10.34 |     3.77 |   10.52 |   12.16 | 29-85,87-213      
+  WatcherSystem.ts |   14.52 |      4.1 |      20 |      16 | ...93-225,229-302 
+ src/config        |    14.7 |    17.64 |      25 |   15.62 |                   
+  index.ts         |    14.7 |    17.64 |      25 |   15.62 | 73-196,204        
+ ...inual-learning |    15.3 |     7.53 |    12.5 |    16.3 |                   
+  ...ingService.ts |   18.09 |    10.52 |   11.76 |   17.52 | ...85-319,330-339 
+  MemoryManager.ts |   17.92 |     8.88 |    7.69 |   19.38 | ...71-314,318-320 
+  ...Classifier.ts |    9.37 |     2.27 |      20 |   11.11 | ...72-254,263-264 
+ src/gateway       |   12.62 |     9.43 |   22.58 |   13.26 |                   
+  index.ts         |   12.62 |     9.43 |   22.58 |   13.26 | ...02,338,353-437 
+ src/math          |    2.63 |     4.86 |    6.55 |    2.68 |                   
+  MathExplain.ts   |   17.24 |       10 |   33.33 |   17.85 | 6-7,15-59         
+  MathPlot.ts      |    3.21 |     9.63 |    8.33 |    3.51 | ...93-453,456-512 
+  MathSolve.ts     |    1.68 |     3.57 |    3.33 |    1.59 | ...55-816,820-882 
+  tools.ts         |       0 |        0 |       0 |       0 | 11-71             
+ src/mcp           |   22.16 |    10.52 |   18.75 |   22.72 |                   
+  McpClient.ts     |   22.03 |      7.5 |   14.28 |   22.41 | 44,80-166,170-189 
+  McpManager.ts    |   20.38 |    14.28 |   17.64 |   21.05 | ...88,191-206,210 
+  types.ts         |   30.43 |     9.37 |     100 |   30.43 | 38-67             
+ src/permission    |   29.26 |       25 |   16.66 |    27.5 |                   
+  index.ts         |   29.26 |       25 |   16.66 |    27.5 | ...84-134,142-143 
+ src/planner       |   14.52 |     7.74 |   16.66 |   14.81 |                   
+  PlanExecutor.ts  |       0 |        0 |       0 |       0 | 20-181            
+  PlanStore.ts     |   21.62 |    18.75 |   30.76 |    25.8 | ...95-121,123-126 
+  PlanValidator.ts |   11.23 |     2.27 |    9.09 |   12.98 | ...83-135,142-175 
+  Planner.ts       |   21.84 |    11.59 |   17.39 |   20.56 | ...65-367,373-396 
+ src/qt            |   14.96 |     7.27 |   22.22 |   16.41 |                   
+  detector.ts      |   14.08 |     1.66 |      20 |   15.87 | ...23-141,146-173 
+  prompt.ts        |      50 |     8.33 |     100 |      50 | 15-142            
+  shared.ts        |   25.92 |     4.34 |      50 |   31.81 | 26-48             
+  tools.ts         |    6.66 |    33.33 |   11.76 |    6.66 | 29-342            
+ src/qt/testing    |    2.93 |     7.46 |    7.69 |    3.21 |                   
+  QtCoverage.ts    |    2.87 |     3.22 |    5.88 |     3.2 | 43-324            
+  QtTestGen.ts     |    2.98 |     7.19 |    5.26 |    3.31 | ...15-260,264-495 
+  QtTestRunner.ts  |    2.85 |       15 |   33.33 |    2.89 | 14-143            
+ src/qt/tools      |    8.54 |     9.15 |   16.66 |    9.23 |                   
+  QtBuildTool.ts   |   17.94 |    20.45 |   33.33 |   18.42 | 64-128            
+  QtChartsTool.ts  |    7.14 |    33.33 |       0 |    7.14 | 15-216            
+  ...aphicsTool.ts |    12.5 |     5.08 |      10 |   13.92 | ...42-249,254-277 
+  QtMathTool.ts    |    4.16 |    11.53 |     100 |    4.16 | 13-149,171-218    
+  ...rationTool.ts |    5.55 |     4.08 |   16.66 |    6.45 | 385-515           
+  ...elViewTool.ts |    9.58 |     3.38 |   16.66 |   10.93 | 23-167            
+  QtProFileTool.ts |     7.5 |    16.66 |   11.11 |    9.23 | 31-144,147-157    
+  QtQmlTool.ts     |    6.31 |     5.35 |    7.69 |    6.32 | 39-220            
+  QtSignalsTool.ts |   14.58 |     9.09 |      20 |    15.9 | 30-133            
+  QtThreadTool.ts  |   10.16 |     4.76 |      25 |   10.71 | 25-169            
+  QtUiTool.ts      |    9.83 |       25 |   16.66 |   11.11 | 45-157            
+ src/reflexion     |   17.19 |    16.15 |   26.15 |   18.78 |                   
+  ...iqueEngine.ts |   21.66 |    13.95 |      15 |   24.52 | ...33,247,251-293 
+  ...ionTracker.ts |   23.33 |    33.33 |   42.85 |      25 | ...3,77-78,92-105 
+  LearningStore.ts |      20 |    15.38 |      20 |    22.5 | ...96-135,140-150 
+  ...tionPrompt.ts |    2.77 |    11.11 |       0 |    2.77 | 22-70             
+  ...xionEngine.ts |      16 |    16.12 |   35.71 |   18.18 | ...03-146,160-181 
+ src/sandbox       |   14.22 |    11.36 |   13.33 |   14.41 |                   
+  index.ts         |   14.19 |    14.28 |   13.15 |   14.47 | ...98-626,629-633 
+  os-isolation.ts  |      25 |       20 |      20 |      25 | ...95-136,140-156 
+  ...box-runner.ts |       0 |        0 |       0 |       0 | 11-94             
+ src/security      |   21.87 |     8.33 |      20 |   21.87 |                   
+  ...rityPolicy.ts |   14.75 |     2.94 |      20 |   14.75 | ...73-188,195-260 
+  ssrf.ts          |   34.28 |    15.38 |      20 |   34.28 | ...03-140,152-154 
+ src/tools         |   14.27 |    10.66 |   24.58 |   14.39 |                   
+  AgentTool.ts     |   21.95 |     4.34 |      75 |   19.44 | 97-181            
+  BashTool.ts      |   16.54 |    15.31 |   41.66 |   16.12 | ...71-230,251-360 
+  ...deCodeTool.ts |   16.45 |    11.94 |      25 |   15.58 | ...42-190,276-297 
+  ...alysisTool.ts |    6.94 |     4.91 |     8.1 |    7.01 | ...38-256,259-571 
+  DataTool.ts      |    9.15 |     9.67 |   13.33 |    8.55 | ...83-348,350-399 
+  EditTool.ts      |    9.09 |        0 |   16.66 |    9.25 | 12-24,33-135      
+  ...anModeTool.ts |     100 |       50 |     100 |     100 | 9                 
+  ...anModeTool.ts |     100 |      100 |       0 |     100 |                   
+  ...SystemTool.ts |    8.59 |     7.69 |    12.5 |    9.01 | ...21-273,276-282 
+  GitHubTool.ts    |   11.76 |    10.66 |      40 |   12.24 | 40-171            
+  GitTool.ts       |   11.11 |     7.45 |    4.76 |   10.16 | ...26-446,452-479 
+  GlobTool.ts      |   15.62 |        4 |      50 |   15.62 | 18-66             
+  GrepTool.ts      |    7.79 |     1.61 |   16.66 |    9.09 | ...2,34-68,74-142 
+  ImageTool.ts     |   12.69 |     7.31 |    12.5 |   13.55 | ...33-101,105-136 
+  LSPTool.ts       |    3.79 |     2.38 |      20 |    4.76 | 30-142            
+  LaunchAppTool.ts |   15.09 |     3.07 |   66.66 |      12 | 65-161            
+  MemoryTool.ts    |   15.21 |    17.77 |      20 |   17.07 | 20-61,65-81       
+  NetworkTool.ts   |   17.55 |    13.66 |    8.69 |   17.91 | ...79-514,528-532 
+  ...rShellTool.ts |       4 |      3.7 |     100 |    4.34 | 26-68             
+  ReadTool.ts      |   10.41 |    22.22 |   14.28 |    11.9 | 15-85             
+  RefactorTool.ts  |   15.89 |    14.56 |   33.33 |   16.14 | ...07-515,535-607 
+  SearchTool.ts    |    3.12 |    11.66 |   14.28 |    3.84 | 24-121            
+  ...CreateTool.ts |   33.33 |       50 |   66.66 |   33.33 | 11,21-33          
+  TaskGetTool.ts   |      75 |       10 |     100 |   66.66 | 4                 
+  TaskListTool.ts  |   11.11 |       10 |     100 |   11.11 | 9,16-27           
+  ...OutputTool.ts |      75 |       75 |     100 |   66.66 | 4                 
+  ...ogressTool.ts |       0 |        0 |       0 |       0 | 8-54              
+  TaskStopTool.ts  |   42.85 |    66.66 |     100 |   33.33 | 4,7-11            
+  TaskTool.ts      |   18.05 |    17.24 |      25 |   19.11 | ...22-239,246-259 
+  ...UpdateTool.ts |   23.52 |    21.42 |     100 |      30 | 12,16-23          
+  TodoWriteTool.ts |   11.11 |        0 |   33.33 |    9.52 | 21-66             
+  ...SearchTool.ts |   19.23 |     8.33 |      50 |   13.63 | 18-46             
+  WebFetchTool.ts  |    6.94 |     8.16 |      20 |    7.14 | 15-36,46-199      
+  WebSearchTool.ts |    1.13 |     5.95 |    6.66 |    1.25 | 38-241            
+  WriteTool.ts     |   16.66 |    21.42 |   33.33 |   17.24 | 56-116            
+  aliases.ts       |    28.2 |    11.11 |      25 |   27.77 | ...00-201,206-209 
+  auto-docs.ts     |       0 |        0 |       0 |       0 | 10-184            
+  errors.ts        |   59.37 |    35.71 |   22.22 |   61.29 | 53-59,61-119      
+  registry.ts      |   43.58 |    21.05 |   53.84 |   45.83 | ...79-196,205-206 
+  rl-weighter.ts   |      30 |    20.54 |   27.27 |   29.66 | ...24-365,373-381 
+  ...a-validate.ts |    9.09 |     9.72 |      25 |   10.41 | 43-141            
+  shared.ts        |    9.61 |       10 |      25 |   10.41 | 23-83,88-142      
+  validate.ts      |   20.68 |    27.77 |      20 |   23.07 | 19-49,54-61       
+ ...ls/definitions |   73.96 |    63.63 |   95.29 |   75.32 |                   
+  agent.def.ts     |      75 |       75 |     100 |      75 | 42                
+  code.def.ts      |    87.5 |      100 |     100 |    87.5 | 27,44             
+  core.def.ts      |   69.81 |    29.16 |    92.3 |   69.23 | ...52-260,290-292 
+  data.def.ts      |   79.48 |    54.54 |     100 |   79.48 | ...44-145,165-166 
+  ...system.def.ts |    90.9 |      100 |     100 |    90.9 | 29,48             
+  git.def.ts       |   80.32 |    80.55 |     100 |   80.32 | ...10,229,248,267 
+  github.def.ts    |       0 |      100 |       0 |       0 | 4-35              
+  network.def.ts   |      75 |       50 |     100 |      75 | ...9,58,79-81,108 
+  query.def.ts     |   34.48 |    71.42 |     100 |   43.47 | 70-78,99-103      
+  search.def.ts    |   44.44 |        0 |     100 |   44.44 | 27-31             
+  shell.def.ts     |   83.33 |     87.5 |     100 |   83.33 | 25                
+  task.def.ts      |      72 |    68.75 |      75 |      72 | 38-48,95-97       
+ src/tot           |    9.62 |     6.66 |   10.34 |    9.83 |                   
+  ...OfThoughts.ts |    9.62 |     6.66 |   10.34 |    9.83 | ...74-428,432-496 
+ src/tracing       |   11.04 |      2.8 |   16.12 |   12.66 |                   
+  index.ts         |   11.04 |      2.8 |   16.12 |   12.66 | ...60-383,385-523 
+ src/ui            |    8.64 |     6.66 |   12.96 |    8.78 |                   
+  CliUI.ts         |    8.64 |     6.66 |   12.96 |    8.78 | ...23-670,673-694 
+ src/utils         |   17.08 |     9.02 |   22.38 |   17.74 |                   
+  debug.ts         |       0 |        0 |       0 |       0 | 13-117            
+  dotenv.ts        |   13.88 |     9.67 |      50 |    12.5 | 17-68             
+  editHistory.ts   |   25.92 |     8.33 |   14.28 |      28 | 19-60             
+  errorHandling.ts |   18.91 |     9.37 |   21.05 |   20.63 | ...01-230,232-262 
+  fileSystem.ts    |   27.27 |        0 |    37.5 |   26.82 | ...,54-99,108-122 
+  globMatch.ts     |   14.63 |     2.94 |     100 |   14.63 | 11-75             
+  ...FileReader.ts |   12.82 |    14.28 |   11.11 |   12.98 | ...56-157,161-202 
+  logger.ts        |   46.15 |       30 |      50 |   66.66 | 28-36             
+  lruCache.ts      |   14.28 |     4.54 |       0 |   13.33 | ...25-156,162-168 
+  memoryMonitor.ts |   34.42 |       16 |   22.72 |   34.54 | ...87-201,210-224 
+  memoryStore.ts   |    9.65 |     8.06 |    9.09 |   11.33 | ...37-278,283-333 
+  metrics.ts       |   11.62 |     3.33 |   22.72 |   13.69 | ...75-231,247-261 
+  ...rsionCheck.ts |       0 |        0 |       0 |       0 | 1-12              
+  projectIndex.ts  |   57.14 |    58.33 |   66.66 |      60 | 32-42,56-62       
+  queryEngine.ts   |    9.78 |     6.45 |   15.38 |    9.87 | ...19-138,142-188 
+  rateLimiter.ts   |   26.31 |     6.25 |      50 |   28.57 | ...1,82-87,92-122 
+  retry.ts         |      24 |     9.52 |    37.5 |   21.73 | 13,36-64,72-100   
+  ...Validation.ts |   34.42 |     7.31 |   64.28 |   31.57 | ...91,202-212,217 
+  sessionStore.ts  |   16.72 |     8.51 |   13.88 |   16.85 | ...16-513,545-593 
+  ...FileReader.ts |   18.36 |    33.33 |    37.5 |   18.75 | ...30-151,155-166 
+  taskStore.ts     |    7.69 |        0 |   13.33 |    9.25 | 37-169            
+  testHelpers.ts   |       0 |        0 |       0 |       0 | 11-109            
+  todoStore.ts     |      50 |      100 |   66.66 |      50 | 22-30             
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 13.39% ( 1618/12078 )
+Branches     : 9.81% ( 699/7122 )
+Functions    : 21.54% ( 398/1847 )
+Lines        : 13.85% ( 1542/11131 )
+================================================================================
+ERROR: Coverage for lines (13.85%) does not meet global threshold (60%)
+ERROR: Coverage for functions (21.54%) does not meet global threshold (60%)
+ERROR: Coverage for statements (13.39%) does not meet global threshold (60%)
+ERROR: Coverage for branches (9.81%) does not meet global threshold (45%)
+[Test Teardown] Final cleanup...
+[Test Teardown] Cleanup complete
