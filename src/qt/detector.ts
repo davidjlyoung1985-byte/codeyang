@@ -34,7 +34,7 @@ const SKIP_DIRS = new Set([
 ]);
 
 /** 检查单个文件是否为 Qt 项目标记，更新 ctx 状态 */
-async function checkFileForQt(name: string, fullPath: string, cwd: string, ctx: QtContext): Promise<void> {
+async function checkFileForQt(name: string, fullPath: string, _cwd: string, ctx: QtContext): Promise<void> {
   // .pro files → qmake project
   if (name.endsWith('.pro')) {
     ctx.isQtProject = true;

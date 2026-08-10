@@ -85,11 +85,11 @@ describe('String Operations Benchmarks', () => {
   const longString = 'a'.repeat(10000);
 
   bench('String length check - short', () => {
-    shortString.length > 200;
+    void (shortString.length > 200);
   });
 
   bench('String length check - long', () => {
-    longString.length > 200;
+    void (longString.length > 200);
   });
 
   bench('Regex match - short', () => {

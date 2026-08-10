@@ -1,5 +1,6 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Sandbox } from './index.js';
+import { logger } from '../utils/logger.js';
 import * as osIsolation from './os-isolation.js';
 import { platform } from 'node:os';
 
@@ -104,7 +105,7 @@ describe('Sandbox OS Network Isolation Integration', () => {
         error: 'Requires elevated privileges',
       });
 
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
       await sandbox.run('echo', ['test']);
 
@@ -113,9 +114,9 @@ describe('Sandbox OS Network Isolation Integration', () => {
       expect(wrapSpy).not.toHaveBeenCalled();
 
       // 应该输出警告
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('requires elevated privileges'));
+      expect(loggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('requires elevated privileges'));
 
-      consoleSpy.mockRestore();
+      loggerWarnSpy.mockRestore();
     });
 
     test('should fallback gracefully when wrapping throws error', async () => {
@@ -135,7 +136,7 @@ describe('Sandbox OS Network Isolation Integration', () => {
         throw new Error('Test wrapping error');
       });
 
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const loggerWarnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
       // 用 node 而非 echo：echo 是 Windows/cmd 内建命令，spawn 无法直接执行（平台无关性）
       const result = await sandbox.run('node', ['-e', 'console.log("ok")']);
@@ -144,9 +145,9 @@ describe('Sandbox OS Network Isolation Integration', () => {
       expect(result.success).toBe(true);
 
       // 应该输出警告
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('OS network isolation requested but failed'));
+      expect(loggerWarnSpy).toHaveBeenCalledWith(expect.stringContaining('OS network isolation requested but failed'));
 
-      consoleSpy.mockRestore();
+      loggerWarnSpy.mockRestore();
     });
   });
 

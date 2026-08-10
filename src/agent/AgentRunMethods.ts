@@ -5,11 +5,17 @@
  * to improve testability and maintainability.
  */
 
-import type { LLMMessage } from './LLMClient.js';
+import type { LLMMessage, LLMClient } from './LLMClient.js';
 import { isComplexPrompt, formatComplexPrompt, validateMessages } from './AgentRunHelpers.js';
 import { config } from './config.js';
 import { setToolContext } from '../tools/registry.js';
 import { jsonClone } from './AgentUtils.js';
+import type { Gateway } from '../gateway/index.js';
+import type { Tracer } from '../tracing/index.js';
+import type { AgentContextManager } from './AgentContextManager.js';
+import type { TreeOfThoughts } from '../tot/TreeOfThoughts.js';
+import type { Planner } from '../planner/Planner.js';
+import type { PlanStep } from '../planner/PlanStore.js';
 
 /**
  * Setup data returned from initialization
@@ -26,11 +32,7 @@ export interface SetupData {
 /**
  * Step 1: Initialize gateway and tracer
  */
-export async function setupRunInitialization(
-  gateway: any,
-  tracer: any,
-  prompt: string,
-): Promise<SetupData> {
+export async function setupRunInitialization(gateway: Gateway, tracer: Tracer, prompt: string): Promise<SetupData> {
   // Gateway validation
   const gatewayRequest = gateway.createRequest({
     source: 'cli',
@@ -78,10 +80,7 @@ export function prepareMessages(
 /**
  * Step 3: Setup tool context
  */
-export function setupToolContext(
-  client: any,
-  signal: AbortSignal | undefined,
-): void {
+export function setupToolContext(client: LLMClient, signal: AbortSignal | undefined): void {
   setToolContext({
     anthropicClient: null,
     llmClient: client,
@@ -97,8 +96,8 @@ export function setupToolContext(
  */
 export async function handleContextSummarization(
   messages: LLMMessage[],
-  ctxManager: any,
-  client: any,
+  ctxManager: AgentContextManager,
+  client: LLMClient,
   onToolResult?: (name: string, result: string, isError: boolean) => void,
 ): Promise<void> {
   // Rule-based summarization
@@ -110,21 +109,12 @@ export async function handleContextSummarization(
 
   // LLM-based summarization for large contexts
   if (messages.length > 400) {
-    const llmSummarized = await ctxManager.llmSummarizeContext(
-      messages,
-      client,
-      config.model,
-      config.maxTokens,
-    );
+    const llmSummarized = await ctxManager.llmSummarizeContext(messages, client, config.model, config.maxTokens);
 
     if (llmSummarized !== messages) {
       messages.length = 0;
       messages.push(...llmSummarized);
-      onToolResult?.(
-        'Context Summarizer',
-        'LLM summarized older turns into a concise narrative',
-        false,
-      );
+      onToolResult?.('Context Summarizer', 'LLM summarized older turns into a concise narrative', false);
     }
   }
 
@@ -135,10 +125,10 @@ export async function handleContextSummarization(
  * Step 5: Handle Tree-of-Thoughts phase
  */
 export async function handleTreeOfThoughts(
-  treeOfThoughts: any,
+  treeOfThoughts: TreeOfThoughts,
   prompt: string,
   messages: LLMMessage[],
-  client: any,
+  client: LLMClient,
   onAgentDelta?: (delta: string) => void,
   onToolResult?: (name: string, result: string, isError: boolean) => void,
 ): Promise<void> {
@@ -148,12 +138,7 @@ export async function handleTreeOfThoughts(
 
   onAgentDelta?.('\n\n_[🌳 Tree-of-Thoughts: exploring alternative approaches...]_');
 
-  const totResult = await treeOfThoughts.explore(
-    client,
-    config.model,
-    config.maxTokens,
-    prompt,
-  );
+  const totResult = await treeOfThoughts.explore(client, config.model, config.maxTokens, prompt);
 
   if (totResult.selected && totResult.selected.steps.length > 0) {
     messages.push({ role: 'user', content: totResult.summary });
@@ -169,10 +154,10 @@ export async function handleTreeOfThoughts(
  * Step 6: Handle Planner phase
  */
 export async function handlePlanner(
-  planner: any,
+  planner: Planner,
   prompt: string,
   messages: LLMMessage[],
-  client: any,
+  client: LLMClient,
   onAgentDelta?: (delta: string) => void,
   onToolResult?: (name: string, result: string, isError: boolean) => void,
 ): Promise<string | null> {
@@ -191,7 +176,7 @@ export async function handlePlanner(
       `Task: **${plan.task}**`,
       `Total steps: ${plan.steps.length}`,
       '',
-      ...plan.steps.map((s: any, i: number) => {
+      ...plan.steps.map((s: PlanStep, i: number) => {
         const deps = s.dependencies.length > 0 ? ` (depends on: ${s.dependencies.join(', ')})` : '';
         return `**Step ${i + 1}:** ${s.description}${deps}`;
       }),
@@ -212,10 +197,7 @@ export async function handlePlanner(
 /**
  * Step 7: Cleanup after run
  */
-export function cleanupRun(
-  tracer: any,
-  traceId: string,
-): void {
+export function cleanupRun(tracer: Tracer, traceId: string): void {
   setToolContext(null);
 
   if (traceId) {

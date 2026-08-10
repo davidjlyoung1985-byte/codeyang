@@ -188,6 +188,13 @@ export class CircuitBreaker {
     if (this.state === 'OPEN') {
       // 检查重置超时是否已过
       if (this.openedAt && Date.now() - this.openedAt >= this.config.resetTimeoutMs) {
+        // 若配置了健康检查，先探测后端是否恢复；未恢复则继续保持 OPEN
+        if (this.healthCheck) {
+          const healthy = await this.healthCheck().catch(() => false);
+          if (!healthy) {
+            return this.degrade<T>(opts?.operation, 'Health check failed, circuit remains OPEN');
+          }
+        }
         this.transitionTo('HALF_OPEN', 'Reset timeout elapsed');
       } else {
         return this.degrade<T>(opts?.operation, 'Circuit breaker is OPEN');

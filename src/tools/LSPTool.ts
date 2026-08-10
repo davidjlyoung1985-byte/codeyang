@@ -16,7 +16,12 @@ import { extractSymbols, searchContent } from '../utils/queryEngine.js';
 
 type LspAction = 'definition' | 'references' | 'hover' | 'symbols' | 'diagnostics';
 
-export async function executeLsp(action: LspAction, filePath: string, line?: number, symbol?: string): Promise<string> {
+export async function executeLsp(
+  action: LspAction,
+  filePath: string,
+  _line?: number,
+  symbol?: string,
+): Promise<string> {
   const root = process.cwd();
 
   switch (action) {
