@@ -151,4 +151,39 @@ describe('Commands', () => {
       expect(result.handled).toBe(false);
     });
   });
+
+  describe('exit commands', () => {
+    // Note: exit commands call process.exit() which is hard to test properly
+    // These are covered by integration tests
+    it.skip('should handle /exit', async () => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
+      const result = await dispatch('/exit', ctx);
+      expect(result.handled).toBe(true);
+      exitSpy.mockRestore();
+    });
+  });
+
+  describe('/plan', () => {
+    it('should show plan command', async () => {
+      const result = await dispatch('/plan', ctx);
+      expect(result.handled).toBe(true);
+      expect(mockUI.promptUser).toHaveBeenCalled();
+    });
+  });
+
+  describe('/config', () => {
+    it('should show config command', async () => {
+      const result = await dispatch('/config', ctx);
+      expect(result.handled).toBe(true);
+      expect(mockUI.promptUser).toHaveBeenCalled();
+    });
+  });
+
+  describe('/tag', () => {
+    it('should show tag command', async () => {
+      const result = await dispatch('/tag', ctx);
+      expect(result.handled).toBe(true);
+      expect(mockUI.promptUser).toHaveBeenCalled();
+    });
+  });
 });
