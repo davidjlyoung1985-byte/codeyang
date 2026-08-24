@@ -249,8 +249,11 @@ This is a **functional but work-in-progress** AI agent project:
 - ✅ CI/CD with hard gates (tsc + lint + vitest)
 - ✅ Performance benchmarks and security hardening
 
-**Production readiness**: A- (88/100)
-- Comprehensive test coverage with CI enforcement
+**Production readiness**: B+ (85/100)
+- Core modules: agent, tools, mcp, security (well-tested, production-ready)
+- Test coverage: 1701/1706 passing (99.7%), branches 51.8%, statements 64.7%
+- Known issues: 4 environment-dependent test timeouts on Windows (full parallel runs)
+- Experimental modules: qt, reflexion, continual-learning (excluded from coverage, research-only)
 - SSRF protection and security best practices
 - Clean git history and organized documentation
 - Active development with regular improvements

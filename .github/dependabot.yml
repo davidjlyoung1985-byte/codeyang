@@ -1,39 +1,38 @@
 version: 2
 updates:
+  # Enable version updates for npm
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "09:00"
-      timezone: "Asia/Shanghai"
     open-pull-requests-limit: 10
-    versioning-strategy: increase
+    reviewers:
+      - "maintainers"
     labels:
       - "dependencies"
-      - "security"
+      - "automated"
     commit-message:
-      prefix: "chore"
-      prefix-development: "chore"
+      prefix: "chore(deps)"
       include: "scope"
+    # Group minor and patch updates together
     groups:
       dev-dependencies:
         patterns:
           - "@types/*"
-          - "vitest"
           - "eslint*"
           - "prettier"
-          - "tsup"
-          - "tsx"
-          - "typescript*"
+          - "typescript"
+          - "vitest"
         update-types:
           - "minor"
           - "patch"
-    ignore:
-      - dependency-name: "node"
-        versions: ["<18"]
+
+  # Enable security updates for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+    labels:
+      - "dependencies"
+      - "github-actions"
