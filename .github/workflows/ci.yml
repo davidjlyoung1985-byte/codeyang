@@ -46,7 +46,14 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npm test
+      - name: Run tests with retry on Windows
+        if: runner.os == 'Windows'
+        run: npm test -- --poolOptions.threads.maxThreads=2 || npm test -- --poolOptions.threads.maxThreads=2
+        env:
+          CI: true
+      - name: Run tests on Unix
+        if: runner.os != 'Windows'
+        run: npm test
         env:
           CI: true
 

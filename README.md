@@ -121,6 +121,32 @@ src/
 └── electron/       # Desktop app
 ```
 
+## Feature Maturity
+
+### 🟢 Production-Ready (Core)
+Stable, well-tested, suitable for production use:
+- **Agent loop & tool orchestration** — battle-tested core logic
+- **60+ core tools** — Bash, Git, Read, Write, Edit, Grep, Glob, etc.
+- **MCP client** — Model Context Protocol integration
+- **Sandbox isolation** — secure process forking
+- **Permission system** — deny lists and safety checks
+- **Security hardening** — SSRF protection, input validation
+
+### 🟡 Beta (Extended)
+Functional but under active development:
+- **Multi-provider LLM support** — DeepSeek, OpenAI (alongside Anthropic)
+- **VS Code extension** — IDE integration
+- **Electron desktop app** — standalone GUI
+- **tot** (Tree-of-Thought), **a2a** (Agent-to-Agent), **closed-loop** modules
+
+### 🔴 Experimental (Research-Only)
+Proof-of-concept features, not production-ready:
+- **qt** — Query transformation (4,054 lines, research prototype)
+- **reflexion** — Self-reflection loop (831 lines, minimal tests)
+- **continual-learning** — Continuous improvement (943 lines, WIP)
+
+⚠️ Experimental modules are excluded from coverage metrics and may have breaking changes.
+
 ## Development
 
 ```bash
@@ -168,10 +194,10 @@ Coverage targets maintained by CI (see [.github/workflows/ci.yml](.github/workfl
 We welcome contributions! See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 Current priorities:
-1. **Improve test coverage** — reach 60% branches (currently 52%)
-2. **Fix environment-dependent test timeouts**
+1. **Improve test coverage** — reach 60% branches for core modules (currently 52.7%)
+2. **Fix environment-dependent test timeouts** on Windows parallel runs
 3. **Add more examples and use cases**
-4. **Performance optimizations**
+4. **Performance optimizations** (streaming for large files, test caching)
 
 Please:
 - Write tests for new features
