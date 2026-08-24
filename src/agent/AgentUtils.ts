@@ -12,10 +12,35 @@ export const MAX_SAFE_CLONE_SIZE = 100 * 1024 * 1024; // 100MB
 
 // ── Error sanitization ─────────────────────────────────────
 
-/** Sanitize error messages to prevent API key leaks. */
+/**
+ * Sanitize error messages and logs to prevent credential leaks.
+ * Redacts API keys, tokens, passwords, and email addresses.
+ */
 export function sanitizeErrorMessage(msg: string): string {
-  return msg.replace(/\b(sk-|deepseek-r-|anthropic-)[a-zA-Z0-9_-]{10,}\b/gi, '[API_KEY_REDACTED]');
+  return (
+    msg
+      // API keys (OpenAI, Anthropic, DeepSeek)
+      .replace(/\b(sk-|deepseek-r-|anthropic-)[a-zA-Z0-9_-]{10,}\b/gi, '[API_KEY_REDACTED]')
+      // AWS keys
+      .replace(/\bAKIA[0-9A-Z]{16}\b/g, '[AWS_KEY_REDACTED]')
+      .replace(/\b[0-9]{12,}-[a-zA-Z0-9]{32,}\b/g, '[AWS_SECRET_REDACTED]')
+      // GitHub tokens
+      .replace(/\b(ghp_|ghs_|github_pat_)[a-zA-Z0-9_]{30,}\b/g, '[GITHUB_TOKEN_REDACTED]')
+      // Bearer tokens
+      .replace(/\bBearer\s+[a-zA-Z0-9_\-\.]{20,}\b/gi, 'Bearer [TOKEN_REDACTED]')
+      // Slack tokens
+      .replace(/\bxox[baprs]-[a-zA-Z0-9-]{10,}\b/g, '[SLACK_TOKEN_REDACTED]')
+      // Google API keys
+      .replace(/\bAIza[0-9A-Za-z_-]{35}\b/g, '[GOOGLE_KEY_REDACTED]')
+      // Passwords in JSON
+      .replace(/"password"\s*:\s*"[^"]+"/gi, '"password":"[REDACTED]"')
+      // Email addresses
+      .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL_REDACTED]')
+  );
 }
+
+/** Alias for backward compatibility and broader use cases */
+export const sanitizeForLogging = sanitizeErrorMessage;
 
 // ── Sleep ──────────────────────────────────────────────────
 

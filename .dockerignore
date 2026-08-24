@@ -9,6 +9,20 @@ coverage
 .test-*
 *.test.ts
 
+# Security - Credentials and secrets
+*.key
+*.pem
+*.pfx
+*.p12
+*.jks
+*.keystore
+config.json
+sessions/
+.codeyang/
+*.secret
+*secret*
+*credential*
+
 # IDE
 .vscode
 .idea
