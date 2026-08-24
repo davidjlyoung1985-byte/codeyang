@@ -3,6 +3,8 @@
 [![CI](https://github.com/davidjlyoung1985-byte/codeyang/actions/workflows/ci.yml/badge.svg)](https://github.com/davidjlyoung1985-byte/codeyang/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+**中文** | [English](docs/README.en.md)
+
 An AI coding agent inspired by [Claude Code](https://github.com/anthropics/claude-code) architecture. CodeYang lets you describe coding tasks in natural language — it reads files, writes code, runs commands, manages Git, and more.
 
 **Project Status**: A- / Production-ready for personal & small-team use  
@@ -146,6 +148,21 @@ Proof-of-concept features, not production-ready:
 - **continual-learning** — Continuous improvement (943 lines, WIP)
 
 ⚠️ Experimental modules are excluded from coverage metrics and may have breaking changes.
+
+## Examples
+
+We provide 4 complete examples to get you started:
+
+- [**01-basic-agent-loop**](examples/01-basic-agent-loop/) - Core agent loop and streaming
+- [**02-custom-tool**](examples/02-custom-tool/) - Create and register custom tools
+- [**03-mcp-integration**](examples/03-mcp-integration/) - Connect to MCP servers
+- [**04-vscode-extension**](examples/04-vscode-extension/) - VS Code integration guide
+
+Each example includes:
+- Complete working code
+- Step-by-step walkthrough
+- Key concepts explained
+- Common issues and solutions
 
 ## Development
 
