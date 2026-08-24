@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+// Mock NetworkTool's validateUrl
+vi.mock('./NetworkTool.js', () => ({
+  validateUrl: vi.fn().mockResolvedValue(null), // null = no error, URL is valid
+}));
+
 // Mock fetch globally
 const mockFetch = vi.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
@@ -16,7 +21,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/plain']]),
+        headers: new Headers({ 'content-type': 'text/plain' }),
         body: null,
         text: async () => 'Hello World',
       });
@@ -31,7 +36,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/html']]),
+        headers: new Headers({ 'content-type': 'text/html' }),
         body: null,
         text: async () => html,
       });
@@ -48,7 +53,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/html']]),
+        headers: new Headers({ 'content-type': 'text/html' }),
         body: null,
         text: async () => html,
       });
@@ -81,7 +86,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/plain']]),
+        headers: new Headers({ 'content-type': 'text/plain' }),
         body: null,
         text: async () => 'OK',
       });
@@ -132,12 +137,12 @@ describe('WebFetchTool', () => {
         .mockResolvedValueOnce({
           ok: false,
           status: 301,
-          headers: new Map([['location', 'https://example.com/new']]),
+          headers: new Headers({ location: 'https://example.com/new' }),
         })
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
-          headers: new Map([['content-type', 'text/plain']]),
+          headers: new Headers({ 'content-type': 'text/plain' }),
           body: null,
           text: async () => 'Redirected',
         });
@@ -153,12 +158,12 @@ describe('WebFetchTool', () => {
         .mockResolvedValueOnce({
           ok: false,
           status: 302,
-          headers: new Map([['location', '/new']]),
+          headers: new Headers({ location: '/new' }),
         })
         .mockResolvedValueOnce({
           ok: true,
           status: 200,
-          headers: new Map([['content-type', 'text/plain']]),
+          headers: new Headers({ 'content-type': 'text/plain' }),
           body: null,
           text: async () => 'OK',
         });
@@ -172,7 +177,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: false,
         status: 301,
-        headers: new Map([['location', 'https://example.com/loop']]),
+        headers: new Headers({ location: 'https://example.com/loop' }),
       });
 
       await expect(executeWebFetch('https://example.com/start')).rejects.toThrow('Too many redirects');
@@ -182,7 +187,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: false,
         status: 302,
-        headers: new Map(),
+        headers: new Headers(),
       });
 
       await expect(executeWebFetch('https://example.com')).rejects.toThrow('Redirect 302 without Location');
@@ -231,7 +236,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/plain']]),
+        headers: new Headers({ 'content-type': 'text/plain' }),
         body: { getReader: () => mockReader },
       });
 
@@ -243,7 +248,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/plain']]),
+        headers: new Headers({ 'content-type': 'text/plain' }),
         body: null,
         text: async () => longText,
       });
@@ -261,7 +266,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/html']]),
+        headers: new Headers({ 'content-type': 'text/html' }),
         body: null,
         text: async () => html,
       });
@@ -277,7 +282,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/html']]),
+        headers: new Headers({ 'content-type': 'text/html' }),
         body: null,
         text: async () => html,
       });
@@ -293,7 +298,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/html']]),
+        headers: new Headers({ 'content-type': 'text/html' }),
         body: null,
         text: async () => html,
       });
@@ -309,7 +314,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/html']]),
+        headers: new Headers({ 'content-type': 'text/html' }),
         body: null,
         text: async () => html,
       });
@@ -327,7 +332,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/html']]),
+        headers: new Headers({ 'content-type': 'text/html' }),
         body: null,
         text: async () => html,
       });
@@ -344,7 +349,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/plain']]),
+        headers: new Headers({ 'content-type': 'text/plain' }),
         body: null,
         text: async () => html,
       });
@@ -361,7 +366,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/plain']]),
+        headers: new Headers({ 'content-type': 'text/plain' }),
         body: null,
         text: async () => '',
       });
@@ -390,7 +395,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/html']]),
+        headers: new Headers({ 'content-type': 'text/html' }),
         body: null,
         text: async () => html,
       });
@@ -405,7 +410,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/plain']]),
+        headers: new Headers({ 'content-type': 'text/plain' }),
         body: null,
         text: async () => 'OK',
       });
@@ -419,7 +424,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/plain; charset=utf-8']]),
+        headers: new Headers({ 'content-type': 'text/plain; charset=utf-8' }),
         body: null,
         text: async () => 'Hello 世界 🌍',
       });
@@ -451,7 +456,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/plain']]),
+        headers: new Headers({ 'content-type': 'text/plain' }),
         body: { getReader: () => mockReader },
       });
 
@@ -464,7 +469,7 @@ describe('WebFetchTool', () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
-        headers: new Map([['content-type', 'text/plain']]),
+        headers: new Headers({ 'content-type': 'text/plain' }),
         body: null,
         text: async () => 'OK',
       });

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 
 vi.mock('../permission/index.js', () => ({
   checkPermission: vi.fn(),
@@ -10,7 +11,8 @@ vi.mock('../permission/index.js', () => ({
 import { checkPermission } from '../permission/index.js';
 import { executeBash, clearPermissionCache } from './BashTool.js';
 
-const TEST_DIR = path.join(process.cwd(), '.test-bash-tool');
+// Use unique test directory per test run to avoid parallel conflicts
+const TEST_DIR = path.join(process.cwd(), `.test-bash-tool-${randomBytes(4).toString('hex')}`);
 const isWin = process.platform === 'win32';
 
 describe('BashTool', () => {

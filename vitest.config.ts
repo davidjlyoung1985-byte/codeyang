@@ -29,12 +29,12 @@ export default defineConfig({
         // src/tot/ and src/mcp/ have basic tests — keep included
       ],
       // Current coverage: statements 64%, branches 52%, functions 67%, lines 66%
-      // Targets set slightly below current to allow for variance
+      // Raised thresholds to industry standards (2026-08-24)
       thresholds: {
-        statements: 60,
-        branches: 50,
-        functions: 65,
-        lines: 60,
+        statements: 65,
+        branches: 55,
+        functions: 67,
+        lines: 65,
       },
       // Fail CI if thresholds not met
       reportOnFailure: true,

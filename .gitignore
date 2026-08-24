@@ -49,6 +49,17 @@ test-value
 cov.json
 cov.err
 
+# Debug artifacts (additional)
+*.svg
+cov-out.txt
+results.json
+test*.txt
+tracked.txt
+gh-repo.json
+lint-out.txt
+tsc-out.txt
+coverage-output.txt
+
 # Test artifacts
 *.svg
 !skills/**/*.svg
