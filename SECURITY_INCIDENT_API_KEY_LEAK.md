@@ -152,11 +152,40 @@ export DEEPSEEK_API_KEY=$(op item get "DeepSeek API Key" --fields credential)
 - **2024-08-06 16:34** - API 密钥意外提交
 - **2024-08-06 16:35** - GitHub 阻止推送（Secret Scanning）
 - **2024-08-06 16:37** - 修复提交并强制推送
-- **待办** - 撤销泄露的密钥
+- **2026-08-24** - **仓库侧闭环完成**（见下方"闭环记录"）
+- **待办（仅剩用户操作）** - 在 DeepSeek 控制台撤销密钥
 
 ---
 
-**严重性**: 🔴 高  
-**状态**: ⚠️ 需要立即撤销密钥  
+## ✅ 闭环记录（2026-08-24）
+
+### 仓库侧已完成
+
+- [x] **工作区清理**：`docs/SECURITY_ALERT.md`、`docs/archive/reports/SECURITY_ALERT.md` 中的完整密钥已替换为 `sk-ccee****[REDACTED]****4598`
+- [x] **历史重写**：使用 `git-filter-repo` 重写全部 287 个 commit，清除两个泄露密钥（`sk-cceebac9...`、`sk-547fd70f...`）
+- [x] **残留验证**：工作区 + 全部 refs/reflog 扫描均无真实密钥残留（仅保留测试占位密钥 `sk-1234567890abcdefghij`，见 `SecurityPolicy.test.ts`）
+- [x] **防护钩子**：新增 `.husky/secret-scan.mjs` pre-commit 扫描，检测 `sk-` / GitHub PAT / AWS / Slack / Google 密钥，命中即阻止提交
+
+### 🔴 仅剩的用户操作（必须手动完成）
+
+> ⚠️ **重写历史只清除了本地/推送后的代码痕迹。密钥一旦公开，唯一彻底的补救是撤销它。**
+
+1. 访问 https://platform.deepseek.com/api_keys
+2. 删除/撤销密钥：`sk-cceeb...4598`（前缀 `sk-cceeb` 开头的那把，如仍存在）
+3. 生成新密钥并更新 `.env`
+4. 检查 https://platform.deepseek.com/usage 是否有异常调用/费用
+5. 如果 `sk-547fd...8b2b`（历史文档中出现的另一把 key）也曾在对应平台使用，一并撤销
+
+### 推送注意
+
+- 历史已重写，origin remote 需重新推送（`git push --force-with-lease origin master`）
+- 若其他人 clone 过旧历史，需同步切换（re-clone 或 rebase）
+- 重写前备份分支：`backup-secret-cleanup-before-20260824-164311`
+
+---
+
+**严重性**: 🔴 高（密钥已公开）  
+**仓库侧状态**: ✅ 已闭环（清理+重写+防护完成）  
+**用户侧状态**: ⚠️ 待撤销 DeepSeek 控制台密钥  
 **负责人**: 用户  
 **截止时间**: 立即
