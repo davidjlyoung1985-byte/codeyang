@@ -317,3 +317,93 @@ describe('E2E: Error Recovery', () => {
     expect(content).toBe('Now it exists');
   }, 30000);
 });
+
+describe('E2E: Multi-file Refactor Workflow', () => {
+  it('should create, rename, and verify multiple files across turns', async () => {
+    const agent = new Agent();
+    let turn = 0;
+
+    mockStream.mockImplementation(() => {
+      turn++;
+      switch (turn) {
+        case 1: // Write source file
+          return makeStream(
+            toolCallStart(0, 'tc_w1', 'Write'),
+            toolCallDelta(
+              0,
+              JSON.stringify({ filePath: path.join(testDir, 'src.txt'), content: 'function oldName(){}' }),
+            ),
+            toolCallEnd(
+              0,
+              'tc_w1',
+              JSON.stringify({ filePath: path.join(testDir, 'src.txt'), content: 'function oldName(){}' }),
+            ),
+          );
+        case 2: // Write second file
+          return makeStream(
+            toolCallStart(0, 'tc_w2', 'Write'),
+            toolCallDelta(0, JSON.stringify({ filePath: path.join(testDir, 'copy.txt'), content: 'oldName()' })),
+            toolCallEnd(0, 'tc_w2', JSON.stringify({ filePath: path.join(testDir, 'copy.txt'), content: 'oldName()' })),
+          );
+        case 3: // Grep both files
+          return makeStream(
+            toolCallStart(0, 'tc_g1', 'Grep'),
+            toolCallDelta(0, JSON.stringify({ pattern: 'oldName', path: testDir })),
+            toolCallEnd(0, 'tc_g1', JSON.stringify({ pattern: 'oldName', path: testDir })),
+            textDelta('Found 2 matches.'),
+            usageEvent(50, 40),
+          );
+        default:
+          return makeStream(textDelta('Refactor complete.'));
+      }
+    });
+
+    const onToolResult = vi.fn();
+    agent.setCallbacks({ onToolResult });
+    await agent.run('refactor files');
+
+    // Both files exist
+    expect(existsSync(path.join(testDir, 'src.txt'))).toBe(true);
+    expect(existsSync(path.join(testDir, 'copy.txt'))).toBe(true);
+
+    // 2 writes + 1 grep happened in order
+    const writeCalls = onToolResult.mock.calls.filter((c) => c[0] === 'Write');
+    const grepCalls = onToolResult.mock.calls.filter((c) => c[0] === 'Grep');
+    expect(writeCalls.length).toBe(2);
+    expect(grepCalls.length).toBeGreaterThanOrEqual(1);
+    expect(grepCalls[0][1]).toContain('oldName');
+
+    // Tokens accumulated across turns
+    expect(agent.getTokenUsage().inputTokens).toBe(50);
+    expect(agent.getTokenUsage().outputTokens).toBe(40);
+  }, 30000);
+
+  it('should persist conversation context across multiple tool calls', async () => {
+    const agent = new Agent();
+    let turn = 0;
+
+    mockStream.mockImplementation(() => {
+      turn++;
+      switch (turn) {
+        case 1:
+          return makeStream(
+            toolCallStart(0, 'tc_g1', 'Glob'),
+            toolCallDelta(0, JSON.stringify({ pattern: '*.txt', path: testDir })),
+            toolCallEnd(0, 'tc_g1', JSON.stringify({ pattern: '*.txt', path: testDir })),
+            textDelta('Found files.'),
+            usageEvent(15, 10),
+          );
+        default:
+          return makeStream(textDelta('Done.'));
+      }
+    });
+
+    const onToolResult = vi.fn();
+    agent.setCallbacks({ onToolResult });
+    await agent.run('list all text files');
+
+    const globCalls = onToolResult.mock.calls.filter((c) => c[0] === 'Glob');
+    expect(globCalls.length).toBeGreaterThanOrEqual(1);
+    expect(agent.getTokenUsage().inputTokens).toBe(15);
+  }, 30000);
+});
