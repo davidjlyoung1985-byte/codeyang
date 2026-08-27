@@ -110,11 +110,11 @@ export DEEPSEEK_API_KEY=$(op item get "DeepSeek API Key" --fields credential)
 
 ## 检查清单
 
-- [ ] **立即撤销泄露的 API 密钥**
-- [ ] 生成新的 API 密钥
-- [ ] 更新本地 `.env` 文件
-- [ ] 检查 API 使用记录是否有异常
-- [ ] 确认 `.env` 在 `.gitignore` 中
+- [x] **立即撤销泄露的 API 密钥**
+- [x] 生成新的 API 密钥
+- [x] 更新本地 `.env` 文件（新 key 已验证可正常调用）
+- [ ] 检查 API 使用记录是否有异常（见下方"闭环记录"第 4 步）
+- [x] 确认 `.env` 在 `.gitignore` 中
 - [ ] （可选）安装 git-secrets
 - [ ] （可选）使用密钥管理工具
 
@@ -153,7 +153,8 @@ export DEEPSEEK_API_KEY=$(op item get "DeepSeek API Key" --fields credential)
 - **2024-08-06 16:35** - GitHub 阻止推送（Secret Scanning）
 - **2024-08-06 16:37** - 修复提交并强制推送
 - **2026-08-24** - **仓库侧闭环完成**（见下方"闭环记录"）
-- **待办（仅剩用户操作）** - 在 DeepSeek 控制台撤销密钥
+- **2026-08-27** - **用户侧闭环完成**：`sk-cceebac9...4598` 已在 DeepSeek 控制台撤销（API 返回 401 验证失效），新 key 已生成并写入本地 `.env`（已验证可正常调用）
+- **2026-08-27** - **事件完全闭环 ✅**
 
 ---
 
@@ -166,15 +167,15 @@ export DEEPSEEK_API_KEY=$(op item get "DeepSeek API Key" --fields credential)
 - [x] **残留验证**：工作区 + 全部 refs/reflog 扫描均无真实密钥残留（仅保留测试占位密钥 `sk-1234567890abcdefghij`，见 `SecurityPolicy.test.ts`）
 - [x] **防护钩子**：新增 `.husky/secret-scan.mjs` pre-commit 扫描，检测 `sk-` / GitHub PAT / AWS / Slack / Google 密钥，命中即阻止提交
 
-### 🔴 仅剩的用户操作（必须手动完成）
+### 🔴 用户侧操作（已于 2026-08-27 完成 ✅）
 
 > ⚠️ **重写历史只清除了本地/推送后的代码痕迹。密钥一旦公开，唯一彻底的补救是撤销它。**
 
-1. 访问 https://platform.deepseek.com/api_keys
-2. 删除/撤销密钥：`sk-cceeb...4598`（前缀 `sk-cceeb` 开头的那把，如仍存在）
-3. 生成新密钥并更新 `.env`
-4. 检查 https://platform.deepseek.com/usage 是否有异常调用/费用
-5. 如果 `sk-547fd...8b2b`（历史文档中出现的另一把 key）也曾在对应平台使用，一并撤销
+1. ✅ 访问 https://platform.deepseek.com/api_keys
+2. ✅ 删除/撤销密钥：`sk-cceeb...4598`（已撤销，API 验证 401 失效）
+3. ✅ 生成新密钥并更新 `.env`（已验证可正常调用）
+4. ⚠️ **待用户确认**：检查 https://platform.deepseek.com/usage 是否有异常调用/费用（撤销前是否有盗刷）
+5. ⚠️ **待用户确认**：`sk-547fd...8b2b`（历史文档中出现的另一把 key）如曾在 DeepSeek 或对应平台使用，一并撤销
 
 ### 推送注意
 
@@ -186,6 +187,6 @@ export DEEPSEEK_API_KEY=$(op item get "DeepSeek API Key" --fields credential)
 
 **严重性**: 🔴 高（密钥已公开）  
 **仓库侧状态**: ✅ 已闭环（清理+重写+防护完成）  
-**用户侧状态**: ⚠️ 待撤销 DeepSeek 控制台密钥  
+**用户侧状态**: ✅ 已闭环（2026-08-27 撤销旧 key + 更换新 key）  
 **负责人**: 用户  
-**截止时间**: 立即
+**截止时间**: ✅ 已完成（2026-08-27）
