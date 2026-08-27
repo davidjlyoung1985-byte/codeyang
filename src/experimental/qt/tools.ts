@@ -2,7 +2,7 @@
  * Qt tool factory — creates ToolDefinition[] for registration into the tool registry.
  * Conditionally called when a Qt project is detected.
  */
-import type { ToolDefinition } from '../types.js';
+import type { ToolDefinition } from '../../types.js';
 import type { QtContext } from './detector.js';
 import { executeQtBuild } from './tools/QtBuildTool.js';
 import { executeQtSignals } from './tools/QtSignalsTool.js';

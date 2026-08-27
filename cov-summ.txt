@@ -1,0 +1,106 @@
+﻿=== GLOBAL ===
+statements: 68% (6475/9564)  functions: 72% (1115/1558)  branches: 55% (3216/5812)
+
+=== BY DIRECTORY ===
+bridge               stmts   2% (  12/ 519)  fns   0%
+mcp                  stmts  29% (  54/ 185)  fns  19%
+planner              stmts  43% ( 131/ 303)  fns  54%
+closed-loop          stmts  49% ( 107/ 218)  fns  63%
+agent                stmts  56% ( 799/1415)  fns  61%
+sandbox              stmts  64% ( 144/ 225)  fns  76%
+a2a                  stmts  68% (  92/ 136)  fns  94%
+math                 stmts  72% ( 657/ 910)  fns  77%
+tools                stmts  75% (2333/3111)  fns  82%
+tracing              stmts  75% ( 129/ 172)  fns  71%
+circuit-breaker      stmts  76% ( 127/ 167)  fns  53%
+utils                stmts  82% (1161/1424)  fns  85%
+gateway              stmts  85% (  88/ 103)  fns  77%
+ui                   stmts  93% ( 343/ 370)  fns  91%
+config               stmts  94% (  32/  34)  fns 100%
+permission           stmts  98% (  40/  41)  fns 100%
+tot                  stmts  98% ( 132/ 135)  fns  97%
+security             stmts  98% (  94/  96)  fns 100%
+
+=== LOWEST BRANCH COVERAGE (top 40, stmts>0) ===
+  0%     0/  32 br  |  stmts   0%  src/agent/conversion-fns.ts
+  0%     0/  42 br  |  stmts   5%  src/bridge/client.ts
+  0%     0/  26 br  |  stmts   0%  src/planner/PlanExecutor.ts
+  0%     0/  10 br  |  stmts   0%  src/math/tools.ts
+  0%     0/  35 br  |  stmts   0%  src/sandbox/sandbox-runner.ts
+  0%     0/  73 br  |  stmts   0%  src/bridge/claude-agent.ts
+  0%     0/   6 br  |  stmts   0%  src/tools/TaskProgressTool.ts
+  1%     1/ 145 br  |  stmts   3%  src/bridge/server.ts
+  3%     1/  40 br  |  stmts   7%  src/mcp/McpClient.ts
+  7%     1/  14 br  |  stmts  70%  src/utils/fileSystem.ts
+  9%    10/ 111 br  |  stmts  12%  src/agent/LLMClient.ts
+ 11%    20/ 186 br  |  stmts  26%  src/agent/AgentContextManager.ts
+ 11%     2/  18 br  |  stmts  31%  src/tools/aliases.ts
+ 15%     6/  40 br  |  stmts  15%  src/tools/shared.ts
+ 17%     1/   6 br  |  stmts  43%  src/tools/TaskStopTool.ts
+ 19%     8/  42 br  |  stmts  20%  src/tools/LSPTool.ts
+ 20%     4/  20 br  |  stmts  28%  src/sandbox/os-isolation.ts
+ 20%     2/  10 br  |  stmts  75%  src/tools/TaskGetTool.ts
+ 21%     9/  42 br  |  stmts  26%  src/mcp/McpManager.ts
+ 25%    13/  53 br  |  stmts  47%  src/closed-loop/VerificationPipeline.ts
+ 25%     1/   4 br  |  stmts  75%  src/tools/TaskOutputTool.ts
+ 26%     6/  23 br  |  stmts  51%  src/tools/AgentTool.ts
+ 29%     4/  14 br  |  stmts  48%  src/agent/system-prompt.ts
+ 29%    21/  73 br  |  stmts  44%  src/closed-loop/WatcherSystem.ts
+ 33%     4/  12 br  |  stmts  74%  src/utils/editHistory.ts
+ 36%     4/  11 br  |  stmts  19%  src/agent/ponytail-prompt.ts
+ 37%    31/  84 br  |  stmts  61%  src/tools/WebSearchTool.ts
+ 37%    27/  73 br  |  stmts  44%  src/tools/rl-weighter.ts
+ 37%    10/  27 br  |  stmts  44%  src/tools/PowerShellTool.ts
+ 38%    86/ 228 br  |  stmts  48%  src/tools/GitTool.ts
+ 39%    27/  69 br  |  stmts  41%  src/planner/Planner.ts
+ 40%     4/  10 br  |  stmts  67%  src/tools/TaskListTool.ts
+ 41%    18/  44 br  |  stmts  54%  src/planner/PlanValidator.ts
+ 42%    27/  65 br  |  stmts  68%  src/a2a/A2AProtocol.ts
+ 42%    10/  24 br  |  stmts  87%  src/tools/definitions/core.def.ts
+ 48%    32/  67 br  |  stmts  70%  src/tools/ClaudeCodeTool.ts
+ 50%   153/ 308 br  |  stmts  60%  src/math/MathSolve.ts
+ 50%     1/   2 br  |  stmts 100%  src/tools/EnterPlanModeTool.ts
+ 50%     7/  14 br  |  stmts  59%  src/tools/TaskUpdateTool.ts
+ 50%     7/  14 br  |  stmts  70%  src/tools/WriteTool.ts
+
+=== LOWEST 40 FILES ===
+  0%     0/  41  src/agent/conversion-fns.ts
+  0%     0/  58  src/planner/PlanExecutor.ts
+  0%     0/   9  src/math/tools.ts
+  0%     0/  30  src/sandbox/sandbox-runner.ts
+  0%     0/ 180  src/bridge/claude-agent.ts
+  0%     0/  10  src/tools/TaskProgressTool.ts
+  3%     9/ 276  src/bridge/server.ts
+  5%     3/  63  src/bridge/client.ts
+  7%     4/  59  src/mcp/McpClient.ts
+ 12%    15/ 125  src/agent/LLMClient.ts
+ 15%     8/  52  src/tools/shared.ts
+ 19%     3/  16  src/agent/ponytail-prompt.ts
+ 20%    16/  79  src/tools/LSPTool.ts
+ 26%    54/ 208  src/agent/AgentContextManager.ts
+ 26%    27/ 103  src/mcp/McpManager.ts
+ 28%    11/  40  src/sandbox/os-isolation.ts
+ 31%    12/  39  src/tools/aliases.ts
+ 41%    49/ 119  src/planner/Planner.ts
+ 43%     3/   7  src/tools/TaskStopTool.ts
+ 44%    52/ 117  src/closed-loop/WatcherSystem.ts
+ 44%    11/  25  src/tools/PowerShellTool.ts
+ 44%    57/ 130  src/tools/rl-weighter.ts
+ 47%    41/  87  src/closed-loop/VerificationPipeline.ts
+ 48%    15/  31  src/agent/system-prompt.ts
+ 48%    91/ 189  src/tools/GitTool.ts
+ 51%    21/  41  src/tools/AgentTool.ts
+ 52%    15/  29  src/tools/definitions/query.def.ts
+ 52%    17/  33  src/utils/configSecurity.ts
+ 54%    48/  89  src/planner/PlanValidator.ts
+ 57%    63/ 110  src/agent/config.ts
+ 59%    10/  17  src/tools/TaskUpdateTool.ts
+ 60%   356/ 592  src/math/MathSolve.ts
+ 61%    54/  88  src/tools/WebSearchTool.ts
+ 61%    56/  92  src/utils/queryEngine.ts
+ 62%   194/ 315  src/agent/Agent.ts
+ 66%    73/ 111  src/agent/AgentUtils.ts
+ 67%     4/   6  src/tools/TaskCreateTool.ts
+ 67%     6/   9  src/tools/TaskListTool.ts
+ 67%    52/  78  src/utils/largeFileReader.ts
+ 68%    92/ 136  src/a2a/A2AProtocol.ts

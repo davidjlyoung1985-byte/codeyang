@@ -180,7 +180,7 @@ export class TreeOfThoughts {
     }
 
     // Phase 5: Generate summary
-    const summary = this.generateSummary(task, selectedPath, mergedInsights);
+    const summary = selectedPath ? this.generateSummary(task, selectedPath, mergedInsights) : '';
 
     return {
       task,
