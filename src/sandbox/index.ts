@@ -20,7 +20,7 @@
  *   ❌ 不适用于完全不可信的第三方代码
  *   ❌ 不适用于需要强隔离的多租户平台
  *
- *   详见: docs/sandbox-security-boundaries.md
+ *   详见: docs/archive/sandbox-security-boundaries.md
  *
  * 架构:
  *   Sandbox 使用 child_process.fork() 在独立进程中运行，

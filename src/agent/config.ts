@@ -1,8 +1,8 @@
 ﻿import { readFile, writeFile, mkdir, copyFile, unlink, rename } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import type { McpServerConfig } from '../mcp/types.js';
-import type { QtContext } from '../qt/index.js';
-import { buildQtPrompt } from '../qt/index.js';
+import type { QtContext } from '../experimental/qt/index.js';
+import { buildQtPrompt } from '../experimental/qt/index.js';
 import { buildBaseSystemPrompt } from './system-prompt.js';
 import { getPonytailPrompt, getPonytailLevel, type PonytailLevel } from './ponytail-prompt.js';
 import { logger } from '../utils/logger.js';
@@ -126,6 +126,27 @@ export async function saveMcpServers(servers: Record<string, McpServerConfig>): 
 
 let modelOverride: string | undefined;
 
+/**
+ * 解析环境变量为数字，缺失/空/非法时回退到默认值。
+ */
+function envNumber(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const val = Number(raw);
+  return Number.isNaN(val) ? fallback : val;
+}
+
+/**
+ * 重置所有模块级可变状态（model override / session key / local config）。
+ * 主要供测试在 beforeEach 中调用，避免单例状态在测试间泄漏。
+ */
+export function resetConfigState(): void {
+  modelOverride = undefined;
+  sessionApiKey = '';
+  localConfig = {};
+  _configVersion = 0;
+}
+
 export function setSessionApiKey(key: string) {
   sessionApiKey = key;
 }
@@ -197,10 +218,18 @@ export const config = {
     if (Number.isNaN(val)) val = 1000000;
     return val;
   },
-  maxTurns: Number(process.env['CODEYANG_MAX_TURNS'] || '40'),
-  autoVerify: (process.env['CODEYANG_AUTO_VERIFY'] || 'true') === 'true',
-  autoFixOnError: (process.env['CODEYANG_AUTO_FIX'] || 'true') === 'true',
-  watchMode: (process.env['CODEYANG_WATCH'] || 'true') === 'true',
+  get maxTurns(): number {
+    return envNumber('CODEYANG_MAX_TURNS', 40);
+  },
+  get autoVerify(): boolean {
+    return (process.env['CODEYANG_AUTO_VERIFY'] || 'true') === 'true';
+  },
+  get autoFixOnError(): boolean {
+    return (process.env['CODEYANG_AUTO_FIX'] || 'true') === 'true';
+  },
+  get watchMode(): boolean {
+    return (process.env['CODEYANG_WATCH'] || 'true') === 'true';
+  },
 
   get cwd(): string {
     return process.env['CODEYANG_CWD'] || localConfig.cwd || process.cwd();
@@ -218,20 +247,24 @@ export const config = {
   },
 
   // Reflexion configuration
-  reflexion: {
-    enabled: (process.env['CODEYANG_REFLEXION'] || 'true') === 'true',
-    failureThreshold: Number(process.env['CODEYANG_REFLEXION_THRESHOLD'] || '2'),
-    maxReflections: Number(process.env['CODEYANG_REFLEXION_MAX'] || '50'),
-    autoInject: (process.env['CODEYANG_REFLEXION_AUTO_INJECT'] || 'true') === 'true',
+  get reflexion() {
+    return {
+      enabled: (process.env['CODEYANG_REFLEXION'] || 'true') === 'true',
+      failureThreshold: envNumber('CODEYANG_REFLEXION_THRESHOLD', 2),
+      maxReflections: envNumber('CODEYANG_REFLEXION_MAX', 50),
+      autoInject: (process.env['CODEYANG_REFLEXION_AUTO_INJECT'] || 'true') === 'true',
+    };
   },
 
   // Planner configuration
-  planner: {
-    enabled: (process.env['CODEYANG_PLANNER'] || 'true') === 'true',
-    autoDetect: (process.env['CODEYANG_PLANNER_AUTO'] || 'true') === 'true',
-    complexityThreshold: Number(process.env['CODEYANG_PLANNER_THRESHOLD'] || '3'),
-    requireApproval: (process.env['CODEYANG_PLANNER_APPROVAL'] || 'true') === 'true',
-    maxRetries: Number(process.env['CODEYANG_PLANNER_RETRIES'] || '2'),
+  get planner() {
+    return {
+      enabled: (process.env['CODEYANG_PLANNER'] || 'true') === 'true',
+      autoDetect: (process.env['CODEYANG_PLANNER_AUTO'] || 'true') === 'true',
+      complexityThreshold: envNumber('CODEYANG_PLANNER_THRESHOLD', 3),
+      requireApproval: (process.env['CODEYANG_PLANNER_APPROVAL'] || 'true') === 'true',
+      maxRetries: envNumber('CODEYANG_PLANNER_RETRIES', 2),
+    };
   },
 
   getSystemPrompt(qtContext?: QtContext): string {

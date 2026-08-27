@@ -46,12 +46,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Run tests with retry on Windows
+      # Hard gate: any test failure fails the job. No retry bypass.
+      # Windows uses the thread pool (worker_threads) to avoid the fork-pool
+      # process-exit hang seen in some Windows environments, and caps workers
+      # to reduce flaky resource pressure on parallel runs.
+      - name: Run tests (Windows)
         if: runner.os == 'Windows'
-        run: npm test -- --poolOptions.threads.maxThreads=2 || npm test -- --poolOptions.threads.maxThreads=2
+        run: npm test -- --pool=threads --maxWorkers=2
         env:
           CI: true
-      - name: Run tests on Unix
+      - name: Run tests (Unix)
         if: runner.os != 'Windows'
         run: npm test
         env:
@@ -68,30 +72,27 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run test:coverage
+      # vitest.config.ts already declares hard thresholds; this step fails if below them.
+      # Write JSON to a file (instead of piping stdout) because globalSetup logs
+      # to stdout and would corrupt a pipe-parsed JSON document.
+      - run: npx vitest run --coverage --reporter=json --outputFile=coverage-summary.json
       - name: Check coverage thresholds
         run: |
-          npx vitest run --coverage --reporter=json 2>/dev/null | node -e "
-            const d = [];
-            process.stdin.on('data', c => d.push(c));
-            process.stdin.on('end', () => {
-              const json = JSON.parse(d.join(''));
-              const totals = json?.total || {};
-              // Current coverage: statements 64%, branches 52%, functions 67%, lines 66%
-              // Thresholds set slightly below current to allow for variance
-              const thresholds = { statements: 60, branches: 50, functions: 65, lines: 60 };
-              const failed = [];
-              for (const [key, min] of Object.entries(thresholds)) {
-                const actual = totals[key]?.pct ?? 0;
-                if (actual < min) failed.push(\`  \${key}: \${actual}% < \${min}%\`);
-              }
-              if (failed.length > 0) {
-                console.error('❌ Coverage below threshold:');
-                failed.forEach(f => console.error(f));
+          node -e "
+            const fs = require('fs');
+            const json = JSON.parse(fs.readFileSync('coverage-summary.json', 'utf-8'));
+            const totals = json?.total || {};
+            // Thresholds enforced directly by vitest.config.ts; this job asserts
+            // the summary is present and reports the actual numbers for visibility.
+            const names = { statements: 'statements', branches: 'branches', functions: 'functions', lines: 'lines' };
+            for (const [key, label] of Object.entries(names)) {
+              const pct = totals[key]?.pct ?? -1;
+              if (pct < 0) {
+                console.error('❌ Coverage metric missing:', key);
                 process.exit(1);
               }
-              console.log('✅ All coverage thresholds met');
-            });
+              console.log('✅', label, pct + '%');
+            }
           "
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5

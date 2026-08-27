@@ -1,4 +1,4 @@
-import { saveMemory, searchMemories, deleteMemory, listMemories, type Memory } from '../utils/memoryStore.js';
+import { saveMemory, searchMemories, deleteMemory, listMemories, type Memory } from '../../utils/memoryStore.js';
 
 export interface Reflection {
   id: string;

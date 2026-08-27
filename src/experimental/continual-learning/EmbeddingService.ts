@@ -8,7 +8,7 @@
  * - Local models (Sentence Transformers)
  */
 
-import { logger } from '../utils/logger.js';
+import { logger } from '../../utils/logger.js';
 
 import axios from 'axios';
 

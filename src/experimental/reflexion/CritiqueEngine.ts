@@ -18,8 +18,8 @@
  *   - Critique:  "Is this output good enough?" → improve output quality
  */
 
-import type { LLMClient } from '../agent/LLMClient.js';
-import { consumeStream } from '../agent/LLMClient.js';
+import type { LLMClient } from '../../agent/LLMClient.js';
+import { consumeStream } from '../../agent/LLMClient.js';
 
 export interface CritiqueResult {
   /** 0-100 quality score */

@@ -1,15 +1,26 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { config, validateConfig, saveApiSettings, getMcpServers, saveMcpServers } from './config.js';
+import {
+  config,
+  validateConfig,
+  saveApiSettings,
+  getMcpServers,
+  saveMcpServers,
+  resetConfigState,
+} from './config.js';
 
 describe('config', () => {
   let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
     originalEnv = { ...process.env };
+    // 重置单例可变状态（model override / session key / local config），
+    // 防止测试间共享状态导致断言失败。
+    resetConfigState();
   });
 
   afterEach(() => {
     process.env = originalEnv;
+    resetConfigState();
   });
 
   describe('basic properties', () => {

@@ -20,7 +20,7 @@ import { Agent } from './agent/Agent.js';
 import { config, loadLocalConfig, setSessionApiKey, getMcpServers } from './agent/config.js';
 import { setMcpManager, refreshMcpTools, registerQtTools } from './tools/registry.js';
 import { McpManager } from './mcp/McpManager.js';
-import { detectQtProject, createQtTools } from './qt/index.js';
+import { detectQtProject, createQtTools } from './experimental/qt/index.js';
 import { loadEnvFiles } from './utils/dotenv.js';
 import { saveSession } from './utils/sessionStore.js';
 

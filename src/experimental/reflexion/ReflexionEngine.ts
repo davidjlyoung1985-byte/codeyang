@@ -1,8 +1,8 @@
-import type { LLMClient } from '../agent/LLMClient.js';
+import type { LLMClient } from '../../agent/LLMClient.js';
 import { ExecutionTracker, type ExecutionRecord } from './ExecutionTracker.js';
 import { LearningStore, type Reflection } from './LearningStore.js';
 import { ReflectionPrompt } from './ReflectionPrompt.js';
-import { logger } from '../utils/logger.js';
+import { logger } from '../../utils/logger.js';
 
 export interface ReflexionConfig {
   enabled: boolean;

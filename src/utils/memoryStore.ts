@@ -235,6 +235,10 @@ export async function listMemories(): Promise<Memory[]> {
 export async function searchMemories(query: string): Promise<Memory[]> {
   const all = await getCachedMemories();
 
+  // Empty query returns nothing
+  const q = query.toLowerCase().trim();
+  if (q === '') return [];
+
   // Full-text search via inverted index (AND over tokens)
   if (!searchIndex.dirty && searchIndex.tokenMap.size > 0) {
     const allMap = new Map<string, Memory>();
@@ -246,7 +250,6 @@ export async function searchMemories(query: string): Promise<Memory[]> {
   }
 
   // Fallback: substring matching
-  const q = query.toLowerCase();
   return all.filter((m) => m.key.includes(q) || m.value.toLowerCase().includes(q) || m.type.includes(q));
 }
 

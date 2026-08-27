@@ -231,9 +231,9 @@ describe('AgentRunMethods', () => {
       const messages: LLMMessage[] = [];
       const onToolResult = vi.fn();
 
-      // Temporarily enable planner for test
-      const originalEnabled = (await import('./config.js')).config.planner.enabled;
-      (await import('./config.js')).config.planner.enabled = true;
+      // Planner is enabled by default (CODEYANG_PLANNER defaults to 'true');
+      // explicitly stub the env to keep the intent clear and independent of global state.
+      vi.stubEnv('CODEYANG_PLANNER', 'true');
 
       const result = await handlePlanner(
         mockPlanner,
@@ -244,8 +244,7 @@ describe('AgentRunMethods', () => {
         onToolResult,
       );
 
-      // Restore
-      (await import('./config.js')).config.planner.enabled = originalEnabled;
+      vi.unstubAllEnvs();
 
       expect(result).toBe('plan-123');
       expect(messages.length).toBe(1);

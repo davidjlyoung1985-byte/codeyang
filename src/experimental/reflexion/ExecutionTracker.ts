@@ -1,4 +1,4 @@
-import type { ToolCall, ToolResult } from '../types.js';
+import type { ToolCall, ToolResult } from '../../types.js';
 
 export interface ExecutionRecord {
   id: string;

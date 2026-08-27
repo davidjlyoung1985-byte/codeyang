@@ -10,7 +10,7 @@
  * This runs as a background process triggered by memory operations.
  */
 
-import { saveMemory, listMemories, deleteMemory, getMemoryCount, type Memory } from '../utils/memoryStore.js';
+import { saveMemory, listMemories, deleteMemory, getMemoryCount, type Memory } from '../../utils/memoryStore.js';
 
 // ── Types ─────────────────────────────────────────────────────────────
 

@@ -4,7 +4,7 @@
  */
 import type { LLMClient, LLMMessage } from './LLMClient.js';
 import { config } from './config.js';
-import type { QtContext } from '../qt/index.js';
+import type { QtContext } from '../experimental/qt/index.js';
 import { getMemorySummary, getMemoryVersion } from '../utils/memoryStore.js';
 import { getAllToolWeights } from '../tools/rl-weighter.js';
 import { logger } from '../utils/logger.js';

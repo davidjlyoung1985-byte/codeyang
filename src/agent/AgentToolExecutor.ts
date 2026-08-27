@@ -8,7 +8,7 @@ import { getTool } from '../tools/registry.js';
 import { recordToolOutcome } from '../tools/rl-weighter.js';
 import { cacheKey } from './AgentUtils.js';
 import { Tracer } from '../tracing/index.js';
-import { ReflexionEngine } from '../reflexion/ReflexionEngine.js';
+import { ReflexionEngine } from '../experimental/reflexion/ReflexionEngine.js';
 import { logger } from '../utils/logger.js';
 
 // ── Defaults ───────────────────────────────────────────────
