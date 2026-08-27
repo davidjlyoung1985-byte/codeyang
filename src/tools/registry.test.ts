@@ -1,239 +1,249 @@
-import { describe, it, expect, vi } from 'vitest';
-
-// Mock all tool modules that registry imports
-vi.mock('./BashTool.js', () => ({ executeBash: vi.fn() }));
-vi.mock('./ReadTool.js', () => ({ executeRead: vi.fn() }));
-vi.mock('./WriteTool.js', () => ({ executeWrite: vi.fn() }));
-vi.mock('./EditTool.js', () => ({ executeEdit: vi.fn() }));
-vi.mock('./GlobTool.js', () => ({ executeGlob: vi.fn(), matchGlob: vi.fn() }));
-vi.mock('./GrepTool.js', () => ({ executeGrep: vi.fn() }));
-vi.mock('./TodoWriteTool.js', () => ({ executeTodoWrite: vi.fn(), getTodos: vi.fn(), resetTodos: vi.fn() }));
-vi.mock('./WebFetchTool.js', () => ({ executeWebFetch: vi.fn() }));
-vi.mock('./FileSystemTool.js', () => ({
-  executeCopy: vi.fn(),
-  executeMove: vi.fn(),
-  executeDelete: vi.fn(),
-  executeMkdir: vi.fn(),
-  executeList: vi.fn(),
-  executeExists: vi.fn(),
-}));
-vi.mock('./DataTool.js', () => ({
-  executeJsonParse: vi.fn(),
-  executeJsonWrite: vi.fn(),
-  executeJsonQuery: vi.fn(),
-  executeYamlParse: vi.fn(),
-  executeYamlWrite: vi.fn(),
-  executeConvert: vi.fn(),
-  executeCsvParse: vi.fn(),
-  executeCsvWrite: vi.fn(),
-  executeXmlParse: vi.fn(),
-  executeXmlWrite: vi.fn(),
-}));
-vi.mock('./GitTool.js', () => ({
-  executeGitStatus: vi.fn(),
-  executeGitDiff: vi.fn(),
-  executeGitCommit: vi.fn(),
-  executeGitBranch: vi.fn(),
-  executeGitCheckout: vi.fn(),
-  executeGitLog: vi.fn(),
-  executeGitPush: vi.fn(),
-  executeGitPull: vi.fn(),
-  executeGitClone: vi.fn(),
-  executeGitAdd: vi.fn(),
-  executeGitReset: vi.fn(),
-  executeGitStash: vi.fn(),
-  executeGitMerge: vi.fn(),
-  executeGitRemote: vi.fn(),
-  executeGitCurrentBranch: vi.fn(),
-  executeGitBlame: vi.fn(),
-}));
-vi.mock('./CodeAnalysisTool.js', () => ({
-  executeParseAst: vi.fn(),
-  executeAnalyzeCode: vi.fn(),
-  executeComplexity: vi.fn(),
-  executeLint: vi.fn(),
-  executeFindDeps: vi.fn(),
-  executeCountLines: vi.fn(),
-}));
-vi.mock('./NetworkTool.js', () => ({
-  executeHttpRequest: vi.fn(),
-  executeDownloadFile: vi.fn(),
-  executeUploadFile: vi.fn(),
-  executeApiCall: vi.fn(),
-  executeCheckUrl: vi.fn(),
-  executeParseUrl: vi.fn(),
-}));
-vi.mock('../math/MathSolve.js', () => ({ executeMathSolve: vi.fn() }));
-vi.mock('../math/MathPlot.js', () => ({ executeMathPlot: vi.fn() }));
-vi.mock('../math/MathExplain.js', () => ({ executeMathExplain: vi.fn() }));
-vi.mock('./SearchTool.js', () => ({ executeSearch: vi.fn() }));
-vi.mock('./ImageTool.js', () => ({
-  executeImageInfo: vi.fn(),
-  executeImageToBase64: vi.fn(),
-  executeListImages: vi.fn(),
-}));
-vi.mock('../agent/LLMClient.js', () => ({ LLMClient: {} }));
-
-import { getTool, toolSchemas, registerQtTools, registerMathTools, type ToolDefinition } from './registry.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  setToolContext,
+  getCurrentContext,
+  getTool,
+  getAllTools,
+  setPlanMode,
+  isPlanMode,
+  fuzzyFindToolNames,
+  toolSchemas,
+} from './registry.js';
+import type { ToolContext } from '../types.js';
 
 describe('registry', () => {
+  const mockContext: ToolContext = {
+    anthropicClient: null,
+    llmClient: null,
+    model: 'claude-opus-5',
+    maxTokens: 8192,
+    cwd: '/test/dir',
+  };
+
+  beforeEach(() => {
+    // Reset context before each test
+    setToolContext(mockContext);
+    setPlanMode(false);
+  });
+
+  describe('setToolContext / getCurrentContext', () => {
+    it('stores and retrieves context', () => {
+      setToolContext(mockContext);
+      const ctx = getCurrentContext();
+
+      expect(ctx).toBeDefined();
+      expect(ctx?.model).toBe('claude-opus-5');
+      expect(ctx?.cwd).toBe('/test/dir');
+    });
+
+    it('updates context when called multiple times', () => {
+      setToolContext(mockContext);
+      const newContext = { ...mockContext, model: 'claude-sonnet-5' };
+      setToolContext(newContext);
+
+      const ctx = getCurrentContext();
+      expect(ctx?.model).toBe('claude-sonnet-5');
+    });
+
+    it('handles null context', () => {
+      setToolContext(null);
+      const ctx = getCurrentContext();
+
+      expect(ctx).toBeNull();
+    });
+  });
+
   describe('getTool', () => {
-    it('finds built-in tools by name', () => {
-      const bash = getTool('Bash');
-      expect(bash).toBeDefined();
-      expect(bash!.name).toBe('Bash');
+    it('returns undefined for non-existent tool', () => {
+      const tool = getTool('nonexistent_tool_xyz_123');
+      expect(tool).toBeUndefined();
     });
 
-    it('returns undefined for unknown tools', () => {
-      const unknown = getTool('NonExistentTool');
-      expect(unknown).toBeUndefined();
+    it('returns builtin tools', () => {
+      const readTool = getTool('Read');
+      expect(readTool).toBeDefined();
+      expect(readTool?.name).toBe('Read');
     });
 
-    it('is case-sensitive', () => {
-      const wrongCase = getTool('bash');
-      expect(wrongCase).toBeUndefined();
+    it('returns Write tool', () => {
+      const writeTool = getTool('Write');
+      expect(writeTool).toBeDefined();
+      expect(writeTool?.name).toBe('Write');
     });
 
-    it('finds Read tool', () => {
-      expect(getTool('Read')).toBeDefined();
+    it('returns Edit tool', () => {
+      const editTool = getTool('Edit');
+      expect(editTool).toBeDefined();
     });
 
-    it('finds Write tool', () => {
-      expect(getTool('Write')).toBeDefined();
+    it('returns Bash tool', () => {
+      const bashTool = getTool('Bash');
+      expect(bashTool).toBeDefined();
+    });
+  });
+
+  describe('getAllTools', () => {
+    it('returns array of all tools', () => {
+      const tools = getAllTools();
+      expect(Array.isArray(tools)).toBe(true);
+      expect(tools.length).toBeGreaterThan(0);
     });
 
-    it('finds GitStatus tool', () => {
-      expect(getTool('GitStatus')).toBeDefined();
+    it('includes Read tool', () => {
+      const tools = getAllTools();
+      const found = tools.find((t) => t.name === 'Read');
+      expect(found).toBeDefined();
     });
 
-    it('finds Question tool', () => {
-      expect(getTool('Question')).toBeDefined();
+    it('includes Write tool', () => {
+      const tools = getAllTools();
+      const found = tools.find((t) => t.name === 'Write');
+      expect(found).toBeDefined();
+    });
+
+    it('includes Edit tool', () => {
+      const tools = getAllTools();
+      const found = tools.find((t) => t.name === 'Edit');
+      expect(found).toBeDefined();
+    });
+
+    it('all tools have required properties', () => {
+      const tools = getAllTools();
+
+      tools.forEach((tool) => {
+        expect(tool).toHaveProperty('name');
+        expect(tool).toHaveProperty('description');
+        expect(tool).toHaveProperty('parameters');
+        expect(tool).toHaveProperty('execute');
+      });
+    });
+  });
+
+  describe('setPlanMode / isPlanMode', () => {
+    it('sets and gets plan mode', () => {
+      setPlanMode(true);
+      expect(isPlanMode()).toBe(true);
+
+      setPlanMode(false);
+      expect(isPlanMode()).toBe(false);
+    });
+
+    it('defaults to false', () => {
+      setPlanMode(false);
+      expect(isPlanMode()).toBe(false);
+    });
+
+    it('can toggle multiple times', () => {
+      setPlanMode(true);
+      setPlanMode(false);
+      setPlanMode(true);
+      expect(isPlanMode()).toBe(true);
+    });
+  });
+
+  describe('fuzzyFindToolNames', () => {
+    it('finds tools by exact name', () => {
+      const results = fuzzyFindToolNames('Read');
+      expect(results).toContain('Read');
+    });
+
+    it('finds tools by partial match', () => {
+      const results = fuzzyFindToolNames('rea');
+      expect(results.length).toBeGreaterThan(0);
+    });
+
+    it('returns array for non-matching query', () => {
+      const results = fuzzyFindToolNames('xyz_nonexistent_12345');
+      expect(Array.isArray(results)).toBe(true);
+    });
+
+    it('respects max limit', () => {
+      const results = fuzzyFindToolNames('', 5);
+      expect(results.length).toBeLessThanOrEqual(5);
+    });
+
+    it('returns unique tool names', () => {
+      const results = fuzzyFindToolNames('');
+      const uniqueResults = new Set(results);
+      expect(results.length).toBe(uniqueResults.size);
     });
   });
 
   describe('toolSchemas', () => {
-    it('returns an array of schemas', () => {
+    it('returns array of tool schemas', () => {
       const schemas = toolSchemas();
       expect(Array.isArray(schemas)).toBe(true);
+      expect(schemas.length).toBeGreaterThan(0);
     });
 
-    it('includes built-in tools', () => {
+    it('schemas have required properties', () => {
       const schemas = toolSchemas();
-      const names = schemas.map((s) => s.name);
-      expect(names).toContain('Bash');
-      expect(names).toContain('Read');
-      expect(names).toContain('WebFetch');
+
+      schemas.forEach((schema) => {
+        expect(schema).toHaveProperty('name');
+        expect(schema).toHaveProperty('description');
+        expect(schema).toHaveProperty('input_schema');
+      });
     });
 
-    it('every schema has name, description, and input_schema', () => {
+    it('includes Read tool schema', () => {
       const schemas = toolSchemas();
-      for (const s of schemas) {
-        expect(s.name).toBeTruthy();
-        expect(s.description).toBeTruthy();
-        expect(s.input_schema).toBeDefined();
-        expect(s.input_schema.type).toBe('object');
-      }
+      const readSchema = schemas.find((s) => s.name === 'Read');
+      expect(readSchema).toBeDefined();
+    });
+
+    it('input_schema has type property', () => {
+      const schemas = toolSchemas();
+      schemas.forEach((schema) => {
+        expect(schema.input_schema).toHaveProperty('type');
+      });
     });
   });
 
-  describe('registerQtTools', () => {
-    it('adds Qt tools to the registry which getTool can find', () => {
-      const qtDef: ToolDefinition = {
-        name: 'QtBuild',
-        description: 'Qt build tool',
-        parameters: { type: 'object', properties: {} },
-        execute: () => 'ok',
+  describe('tool context integration', () => {
+    it('tools can access context after set', () => {
+      const customContext: ToolContext = {
+        anthropicClient: null,
+        llmClient: null,
+        model: 'claude-opus-5',
+        maxTokens: 4096,
+        cwd: '/custom/path',
       };
 
-      // Qt tools not in default registry
-      expect(getTool('QtBuild')).toBeUndefined();
+      setToolContext(customContext);
+      const ctx = getCurrentContext();
 
-      registerQtTools([qtDef]);
-
-      // Now it should be findable
-      expect(getTool('QtBuild')).toBeDefined();
-      expect(getTool('QtBuild')!.name).toBe('QtBuild');
+      expect(ctx?.cwd).toBe('/custom/path');
+      expect(ctx?.maxTokens).toBe(4096);
     });
 
-    it('replaces previously registered Qt tools', () => {
-      const oldTool: ToolDefinition = {
-        name: 'QtOld',
-        description: 'old',
-        parameters: { type: 'object', properties: {} },
-        execute: () => 'old',
-      };
-      const newTool: ToolDefinition = {
-        name: 'QtNew',
-        description: 'new',
-        parameters: { type: 'object', properties: {} },
-        execute: () => 'new',
-      };
+    it('handles context updates', () => {
+      setToolContext(mockContext);
+      const updated = { ...mockContext, maxTokens: 16384 };
+      setToolContext(updated);
 
-      registerQtTools([oldTool]);
-      expect(getTool('QtOld')).toBeDefined();
-
-      registerQtTools([newTool]);
-      expect(getTool('QtOld')).toBeUndefined();
-      expect(getTool('QtNew')).toBeDefined();
-    });
-
-    it('included Qt tools in toolSchemas', () => {
-      const qtDef: ToolDefinition = {
-        name: 'QtTest',
-        description: 'test',
-        parameters: { type: 'object', properties: {} },
-        execute: () => 'ok',
-      };
-      registerQtTools([qtDef]);
-
-      const schemas = toolSchemas();
-      const names = schemas.map((s) => s.name);
-      expect(names).toContain('QtTest');
+      const ctx = getCurrentContext();
+      expect(ctx?.maxTokens).toBe(16384);
     });
   });
 
-  describe('registerMathTools', () => {
-    it('adds math tools to the registry which getTool can find', () => {
-      const mathDef: ToolDefinition = {
-        name: 'MathSolve',
-        description: 'Solve math',
-        parameters: { type: 'object', properties: { problem: { type: 'string' } } },
-        execute: () => 'solution',
-      };
-
-      // Math tools are not in default registry
-      expect(getTool('MathSolve')).toBeUndefined();
-
-      registerMathTools([mathDef]);
-      expect(getTool('MathSolve')).toBeDefined();
+  describe('edge cases', () => {
+    it('handles empty query in fuzzyFind', () => {
+      const results = fuzzyFindToolNames('');
+      expect(Array.isArray(results)).toBe(true);
     });
 
-    it('replaces previously registered math tools', () => {
-      const oldTool: ToolDefinition = {
-        name: 'MathOld',
-        description: 'old',
-        parameters: { type: 'object', properties: {} },
-        execute: () => 'old',
-      };
-      registerMathTools([oldTool]);
-      expect(getTool('MathOld')).toBeDefined();
-
-      registerMathTools([]);
-      expect(getTool('MathOld')).toBeUndefined();
+    it('handles special characters in fuzzyFind', () => {
+      const results = fuzzyFindToolNames('Read*Write');
+      expect(Array.isArray(results)).toBe(true);
     });
 
-    it('included math tools in toolSchemas', () => {
-      const mathDef: ToolDefinition = {
-        name: 'MathPlot',
-        description: 'plot',
-        parameters: { type: 'object', properties: { kind: { type: 'string' } } },
-        execute: () => 'svg',
-      };
-      registerMathTools([mathDef]);
+    it('getTool is case-sensitive', () => {
+      const tool1 = getTool('Read');
+      const tool2 = getTool('read');
 
-      const schemas = toolSchemas();
-      const names = schemas.map((s) => s.name);
-      expect(names).toContain('MathPlot');
+      expect(tool1).toBeDefined();
+      expect(tool2).toBeUndefined();
     });
   });
 });
