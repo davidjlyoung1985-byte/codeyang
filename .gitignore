@@ -43,6 +43,15 @@ test-output.txt
 test-output*.txt
 test-result.json
 *-result.json
+cov-*.json
+single.json
+tot.json
+plan.json
+docs.json
+test-full.json
+*-out.log
+*-err.log
+cov-summ.txt
 test_run*.log
 fail_detail.log
 test-value
