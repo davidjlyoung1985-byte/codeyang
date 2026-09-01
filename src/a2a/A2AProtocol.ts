@@ -33,7 +33,6 @@ export type AgentCapability =
   | 'memory' // Remember, Recall
   | 'data_processing' // CSV, JSON, XML parsing
   | 'image_processing' // ImageInfo, ImageToBase64
-  | 'math' // MathSolve, MathPlot
   | 'planning' // Planner, TodoWrite
   | 'verification' // Auto-verify, lint, test
   | 'custom'; // User-defined

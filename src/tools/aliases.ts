@@ -109,11 +109,6 @@ export const TOOL_ALIASES: Record<string, string> = {
   inline: 'RefactorInline',
   organize: 'RefactorOrganizeImports',
   orgimports: 'RefactorOrganizeImports',
-
-  // Math
-  solve: 'MathSolve',
-  plot: 'MathPlot',
-  explain: 'MathExplain',
 };
 
 /**

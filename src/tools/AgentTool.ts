@@ -30,7 +30,7 @@ interface AgentConfig {
  * - execute: Limited write access (still restricts dangerous operations)
  */
 const AGENT_ALLOWED_TOOLS: Record<AgentType, Set<string>> = {
-  explore: new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'GitLog', 'GitStatus', 'GitDiff', 'Math']),
+  explore: new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'GitLog', 'GitStatus', 'GitDiff']),
 
   plan: new Set([
     'Read',
@@ -41,7 +41,6 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, Set<string>> = {
     'GitLog',
     'GitStatus',
     'GitDiff',
-    'Math',
     // Planning agents can read but not write
   ]),
 

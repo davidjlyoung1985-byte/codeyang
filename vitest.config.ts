@@ -32,7 +32,6 @@ export default defineConfig({
         'src/gateway/**/*.ts',
         'src/planner/**/*.ts',
         'src/circuit-breaker/**/*.ts',
-        'src/math/**/*.ts',
         'src/bridge/**/*.ts',
         // Include experimental modules with decent test coverage
         'src/tot/**/*.ts',

@@ -38,7 +38,6 @@ const SUBAGENT_ALLOWED_TOOLS = new Set([
   'GitDiff',
 
   // Safe utilities
-  'Math',
   'Memory', // Read/Recall only
 ]);
 

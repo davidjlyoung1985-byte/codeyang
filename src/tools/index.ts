@@ -7,7 +7,6 @@ export {
   setMcpManager,
   refreshMcpTools,
   registerQtTools,
-  registerMathTools,
 } from './registry.js';
 export type { ToolContext } from './registry.js';
 

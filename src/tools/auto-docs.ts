@@ -77,10 +77,6 @@ const CATEGORY_MAP: Record<string, string> = {
   ImageInfo: 'Image',
   ImageToBase64: 'Image',
   ListImages: 'Image',
-  // Math tools (dynamic)
-  MathSolve: 'Math',
-  MathPlot: 'Math',
-  MathExplain: 'Math',
   // Search tool
   Search: 'Search',
 };

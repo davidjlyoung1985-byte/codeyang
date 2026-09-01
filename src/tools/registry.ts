@@ -22,7 +22,6 @@ let mcpManager: McpManager | null = null;
 let planMode = false;
 let mcpTools: ToolDefinition[] = []; // Replaced atomically on refresh
 let qtTools: ToolDefinition[] = [];
-let mathTools: ToolDefinition[] = [];
 
 /** Lazily-built merged tool list cache. Invalidated when any dynamic tool list changes. */
 let allToolsCache: ToolDefinition[] | null = null;
@@ -55,7 +54,7 @@ function scheduleSemanticRebuild(): void {
 
 function buildAllTools(): ToolDefinition[] {
   if (!allToolsCache) {
-    allToolsCache = [...tools, ...mcpTools, ...qtTools, ...mathTools];
+    allToolsCache = [...tools, ...mcpTools, ...qtTools];
   }
   return allToolsCache;
 }
@@ -167,12 +166,6 @@ export function registerQtTools(toolDefs: ToolDefinition[]): void {
   invalidateAllToolsCache();
 }
 
-/** Register math tools dynamically. Replaces any previously registered math tools. */
-export function registerMathTools(toolDefs: ToolDefinition[]): void {
-  mathTools = toolDefs.map(wrapToolValidation);
-  invalidateAllToolsCache();
-}
-
 export function getTool(name: string): ToolDefinition | undefined {
   const all = buildAllTools();
   let found = all.find((t) => t.name === name);
@@ -202,7 +195,7 @@ export function toolSchemas(): Array<{
   description: string;
   input_schema: { type: 'object'; properties?: unknown; required?: string[]; [k: string]: unknown };
 }> {
-  const allTools = [...tools, ...mcpTools, ...qtTools, ...mathTools];
+  const allTools = [...tools, ...mcpTools, ...qtTools];
   return allTools.map((t) => ({
     name: t.name,
     description: t.description,
