@@ -399,6 +399,16 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     },
   });
 
+  // Set up stop thinking handler
+  ui.setStopThinkingHandler(() => {
+    if (agent.isThinking) {
+      agent.stopThinking();
+      ui.showSystemMessage('💡 Thinking stopped by user');
+      running = false;
+      ui.promptUser();
+    }
+  });
+
   async function handleInput(line: string) {
     if (running) return;
     running = true;
@@ -476,6 +486,15 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     if (shuttingDown) {
       console.log('\nForce quitting...');
       process.exit(1);
+    }
+
+    // If agent is thinking (streaming), stop it first
+    if (running && agent.isThinking) {
+      agent.stopThinking();
+      ui.showSystemMessage('💡 Thinking stopped. You can continue with a new prompt.');
+      running = false;
+      ui.promptUser();
+      return;
     }
 
     // If the agent is running tool executions, cancel them but stay alive

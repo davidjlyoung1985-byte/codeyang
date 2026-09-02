@@ -71,6 +71,8 @@ export class McpClient {
   private config: McpServerConfig;
   readonly serverName: string;
   private isConnected = false;
+  /** True while an intentional shutdown is in progress — suppresses the onDisconnect/reconnect trigger */
+  private stopping = false;
   private _tools: McpToolDef[] = [];
   /** Callback invoked when the transport disconnects unexpectedly */
   onDisconnect?: (serverName: string) => void;
@@ -94,6 +96,7 @@ export class McpClient {
     if (this.isConnected) {
       return this._tools;
     }
+    this.stopping = false;
 
     const transportType: McpTransportType = this.config.transport ?? 'stdio';
 
@@ -125,7 +128,9 @@ export class McpClient {
 
     // Listen for transport close/error to detect disconnection
     this.transport.onclose = () => {
-      if (this.isConnected) {
+      // Ignore close events caused by intentional shutdown (client.close()).
+      // Only report unexpected disconnects so McpManager can schedule a reconnect.
+      if (this.isConnected && !this.stopping) {
         this.isConnected = false;
         this._tools = [];
         this.onDisconnect?.(this.serverName);
@@ -178,6 +183,9 @@ export class McpClient {
 
   /** Shutdown the server */
   async disconnect(): Promise<void> {
+    // Mark as stopping BEFORE close(): client.close() fires transport.onclose,
+    // which must not trigger onDisconnect -> McpManager.scheduleReconnect.
+    this.stopping = true;
     try {
       if (this.isConnected) {
         await this.client.close();

@@ -46,7 +46,8 @@ const STREAM_TIMEOUT_MS = parseInt(process.env.CODEYANG_STREAM_TIMEOUT || '30000
 const SIMILARITY_PREFIX_LEN = 100;
 
 type AssistantContentBlock =
-  { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown };
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; id: string; name: string; input: unknown };
 
 type ToolResultBlock = {
   type: 'tool_result';
@@ -304,6 +305,21 @@ export class Agent {
 
   cancelRunningTools() {
     if (this.abortController) this.abortController.abort();
+  }
+
+  /**
+   * Stop the current thinking/streaming process
+   */
+  stopThinking() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+      logger.info('[Agent] Thinking stopped by user');
+    }
+  }
+
+  get isThinking(): boolean {
+    return this.abortController !== null;
   }
 
   get waitingForAnswer(): boolean {

@@ -248,6 +248,7 @@ interface ToolEntry {
 export class CliUI {
   private rl: readline.Interface;
   private onInput?: (line: string) => void;
+  private onStopThinking?: () => void;
   private spinner = new Spinner();
   private progressBar = new ProgressBar();
   private streamBuf = '';
@@ -259,6 +260,7 @@ export class CliUI {
   private toolStartTimes = new Map<string, number>();
   private toolBatchTotal = 0;
   private toolResultsCount = 0;
+  private isThinkingActive = false;
 
   /** 工具调用 buffer：收集一轮中的所有调用，最后折叠展示 */
   private toolBuffer: ToolEntry[] = [];
@@ -280,6 +282,18 @@ export class CliUI {
         this.onInput(trimmed);
       }
     });
+
+    // Listen for Ctrl+C to stop thinking
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+      process.stdin.on('data', (data) => {
+        const key = data.toString();
+        // Ctrl+C (0x03) or Escape (0x1b)
+        if ((key === '' || key === '') && this.isThinkingActive && this.onStopThinking) {
+          this.onStopThinking();
+        }
+      });
+    }
   }
 
   // ─── History Display (for session resume) ───────────────────────────
@@ -389,6 +403,18 @@ export class CliUI {
     this.onInput = handler;
   }
 
+  setStopThinkingHandler(handler: () => void) {
+    this.onStopThinking = handler;
+  }
+
+  setThinkingActive(active: boolean) {
+    this.isThinkingActive = active;
+    if (active) {
+      // Show hint about stopping
+      process.stdout.write(`\n  ${c.dim('💡 按 Ctrl+C 或 ESC 停止 thinking')}\n`);
+    }
+  }
+
   // ─── Welcome ──────────────────────────────────────────────────────
 
   welcome() {
@@ -454,8 +480,9 @@ export class CliUI {
 
   showAgentStart() {
     this.isFirstResponse = true;
+    this.isThinkingActive = true;
     process.stdout.write('\n');
-    console.log(`${c.bold(c.green('  🤖 CodeYang'))}${c.dim(':')}`);
+    console.log(`${c.bold(c.green('  🤖 CodeYang'))}${c.dim(':')} ${c.dim('(Ctrl+C 或 ESC 停止 thinking)')}`);
     process.stdout.write('\n');
   }
 
@@ -468,6 +495,7 @@ export class CliUI {
       this.spinner.stop();
     }
     this.streamBuf = '';
+    this.isThinkingActive = false;
     process.stdout.write('\n');
     this.isFirstResponse = true;
   }
