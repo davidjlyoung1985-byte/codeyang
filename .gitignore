@@ -93,3 +93,15 @@ codegraph/
 .opencode/
 .codegraph/
 claude-plugins-official/coverage-output.txt
+
+# Runtime agent learning/tooling state (local only, not source)
+.learnings/
+.understand-anything/
+
+# Scratch test tooling & debris
+.test-*/
+.test-git-tools/
+startup-test*.log
+startup-test*.err
+e2e.json
+test-mcp-*.ts
