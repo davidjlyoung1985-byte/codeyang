@@ -41,9 +41,7 @@ describe('AgentRunMethods', () => {
         startTrace: vi.fn(),
       };
 
-      await expect(
-        setupRunInitialization(mockGateway, mockTracer, 'test'),
-      ).rejects.toThrow(/Gateway.*Rejected/);
+      await expect(setupRunInitialization(mockGateway, mockTracer, 'test')).rejects.toThrow(/Gateway.*Rejected/);
     });
   });
 
@@ -128,11 +126,7 @@ describe('AgentRunMethods', () => {
       await handleContextSummarization(messages, mockCtxManager, mockClient, callback);
 
       expect(mockCtxManager.llmSummarizeContext).toHaveBeenCalled();
-      expect(callback).toHaveBeenCalledWith(
-        'Context Summarizer',
-        expect.any(String),
-        false,
-      );
+      expect(callback).toHaveBeenCalledWith('Context Summarizer', expect.any(String), false);
     });
 
     it('should throw if messages become empty', async () => {
@@ -143,9 +137,7 @@ describe('AgentRunMethods', () => {
         llmSummarizeContext: vi.fn(),
       };
 
-      await expect(
-        handleContextSummarization(messages, mockCtxManager, {}),
-      ).rejects.toThrow(/empty/);
+      await expect(handleContextSummarization(messages, mockCtxManager, {})).rejects.toThrow(/empty/);
     });
   });
 
@@ -181,23 +173,12 @@ describe('AgentRunMethods', () => {
       const onAgentDelta = vi.fn();
       const onToolResult = vi.fn();
 
-      await handleTreeOfThoughts(
-        mockToT,
-        'complex task',
-        messages,
-        {},
-        onAgentDelta,
-        onToolResult,
-      );
+      await handleTreeOfThoughts(mockToT, 'complex task', messages, {}, onAgentDelta, onToolResult);
 
       expect(messages.length).toBe(1);
       expect(messages[0].content).toBe('ToT summary');
       expect(onAgentDelta).toHaveBeenCalledWith(expect.stringContaining('Tree-of-Thoughts'));
-      expect(onToolResult).toHaveBeenCalledWith(
-        'Tree-of-Thoughts',
-        expect.stringContaining('2 paths explored'),
-        false,
-      );
+      expect(onToolResult).toHaveBeenCalledWith('Tree-of-Thoughts', expect.stringContaining('2 paths explored'), false);
     });
   });
 
@@ -235,14 +216,7 @@ describe('AgentRunMethods', () => {
       // explicitly stub the env to keep the intent clear and independent of global state.
       vi.stubEnv('CODEYANG_PLANNER', 'true');
 
-      const result = await handlePlanner(
-        mockPlanner,
-        'complex task',
-        messages,
-        {},
-        undefined,
-        onToolResult,
-      );
+      const result = await handlePlanner(mockPlanner, 'complex task', messages, {}, undefined, onToolResult);
 
       vi.unstubAllEnvs();
 

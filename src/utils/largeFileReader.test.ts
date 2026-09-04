@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readLargeFileChunked, readLargeFileByLine, readFileTail, shouldUseStreaming } from './largeFileReader.js';
-import { writeFile, mkdir, rm, stat } from 'node:fs/promises';
+import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';

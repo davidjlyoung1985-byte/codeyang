@@ -46,8 +46,7 @@ const STREAM_TIMEOUT_MS = parseInt(process.env.CODEYANG_STREAM_TIMEOUT || '30000
 const SIMILARITY_PREFIX_LEN = 100;
 
 type AssistantContentBlock =
-  | { type: 'text'; text: string }
-  | { type: 'tool_use'; id: string; name: string; input: unknown };
+  { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown };
 
 type ToolResultBlock = {
   type: 'tool_result';

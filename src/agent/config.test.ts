@@ -1,12 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-  config,
-  validateConfig,
-  saveApiSettings,
-  getMcpServers,
-  saveMcpServers,
-  resetConfigState,
-} from './config.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { config, validateConfig, resetConfigState } from './config.js';
 
 describe('config', () => {
   let originalEnv: NodeJS.ProcessEnv;

@@ -58,43 +58,10 @@ const MERGE_JSON = (insights: string[]) =>
   JSON.stringify({ mergedSteps: ['m1'], insightsAdopted: insights, finalSummary: 's' });
 
 function makeExplorer() {
-  const explore = fakeClient((system) => {
-    if (system.includes('solution architect')) return EXPLORE_JSON(`Approach ${Math.random()}`, ['A', 'B']);
-    if (system.includes('impartial evaluator')) {
-      return EVALUATION_JSON([
-        { id: 'tot-a-0', score: 90, recommendation: 'select' },
-        { id: 'tot-a-1', score: 70, recommendation: 'merge' },
-        { id: 'tot-a-2', score: 40, recommendation: 'reject' },
-      ]);
-    }
-    if (system.includes('merge insights')) return MERGE_JSON(['insight-1', 'insight-2']);
-    return '{}';
-  });
   return new TreeOfThoughts({ numPaths: 3, autoSelectThreshold: 75 });
 }
 
-/**
- * Build a fake client that returns evaluation scores keyed by the REAL path ids
- * derived from the evaluation prompt (which contains them in order).
- */
-function fakeEvaluatingClient(scores: number[], recommendations: string[] = scores.map(() => 'select')) {
-  return fakeClient((system) => {
-    if (system.includes('solution architect')) {
-      return EXPLORE_JSON('Path', ['Step 1', 'Step 2']);
-    }
-    if (system.includes('impartial evaluator')) {
-      // The EVALUATION_PROMPT embeds path ids in the approach list. Extract them.
-      const idMatch = [...system.matchAll(/## Approach \d+: /g)];
-      // ids are NOT in the prompt text; they come from evaluationData. We instead
-      // reconstruct from the message body: each "Approach N" is preceded by the path's
-      // id in the JSON-serialized evaluationData. Fall back to the standard pattern.
-      const ids = scores.map((_, i) => `tot-xxxx-${i}`);
-      return EVALUATION_JSON(ids.map((id, i) => ({ id, score: scores[i], recommendation: recommendations[i] })));
-    }
-    if (system.includes('merge insights')) return MERGE_JSON(['insight-1']);
-    return '{}';
-  });
-}
+// Helper function removed as it was unused
 
 describe('TreeOfThoughts.explore', () => {
   it('runs the full pipeline and returns a selected path with merged insights', async () => {

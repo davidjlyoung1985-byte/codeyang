@@ -34,6 +34,7 @@ import { checkNodeVersion } from './utils/nodeVersionCheck.js';
 import { WatcherSystem, VerificationPipeline } from './closed-loop/index.js';
 import { Gateway } from './gateway/index.js';
 import { Tracer } from './tracing/index.js';
+import { RecoveryManager, RecoveryIntegration } from './recovery/index.js';
 
 async function promptForApiKey(): Promise<string> {
   return new Promise((resolve) => {
@@ -360,6 +361,20 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
   let running = false;
   let currentSessionId: string | undefined;
 
+  // Initialize Recovery System
+  const recoveryManager = new RecoveryManager({
+    autoSaveInterval: 30000, // 30 seconds
+    maxCheckpoints: 10,
+    enableFileSystemTracking: true,
+  });
+  const recoveryIntegration = new RecoveryIntegration({
+    agent,
+    recoveryManager,
+    autoCheckpointEnabled: true,
+    promptUserOnRecovery: true,
+  });
+  await recoveryIntegration.initialize();
+
   const resumeIdx = args.indexOf('--resume');
   if (resumeIdx !== -1 && args[resumeIdx + 1]) {
     const sessionId = args[resumeIdx + 1];
@@ -460,7 +475,7 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     }
   }
 
-  const cmdCtx: CommandContext = { ui, agent, mcpMgr, currentSessionId };
+  const cmdCtx: CommandContext = { ui, agent, mcpMgr, currentSessionId, recoveryIntegration };
 
   ui.setInputHandler(async (line) => {
     const lower = line.toLowerCase().trim();
