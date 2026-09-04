@@ -141,12 +141,11 @@ export async function readFileWithPagination(
  * Get file size and determine if streaming is recommended
  */
 export async function shouldUseStreaming(filePath: string): Promise<boolean> {
-  try {
-    const stats = await stat(filePath);
-    return stats.size > 10 * 1024 * 1024; // > 10MB
-  } catch {
-    return false;
-  }
+  // Deliberately NOT swallowing stat errors: a missing/unreadable file should
+  // surface to the caller (matching the rest of this module) instead of
+  // silently falling back to false, which would mask real path issues.
+  const stats = await stat(filePath);
+  return stats.size > 10 * 1024 * 1024; // > 10MB
 }
 
 /**
