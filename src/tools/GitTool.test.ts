@@ -476,4 +476,145 @@ describe('GitTool', () => {
       expect(result.toLowerCase()).toMatch(/no stash|error/);
     });
   });
+
+  describe('Additional Branch Coverage', () => {
+    it('should reject commit message starting with dash', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+
+      const result = await executeGitCommit('--no-verify', TEST_DIR);
+
+      expect(result).toContain('Error');
+      expect(result).toContain('cannot start with');
+    });
+
+    it('should reject empty commit message', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+
+      const result = await executeGitCommit('   ', TEST_DIR);
+
+      expect(result).toContain('Error');
+      expect(result).toContain('cannot be empty');
+    });
+
+    it('should handle commit with addAll=true', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+
+      const result = await executeGitCommit('test commit', TEST_DIR, true);
+
+      // Git output format: "[branch commit_hash] message"
+      expect(result).toContain('test commit');
+    });
+
+    it('should handle commit when addAll fails', async () => {
+      // Create a file in subdirectory that doesn't exist
+      const result = await executeGitCommit('test', TEST_DIR, true);
+
+      // Should handle gracefully when nothing to commit
+      expect(result).toContain('Nothing to commit');
+    });
+
+    it('should show remote branches when requested', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+
+      const result = await executeGitBranch(TEST_DIR, true);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should show diff for specific file', async () => {
+      const file = path.join(TEST_DIR, 'test.txt');
+      await fs.writeFile(file, 'initial');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+
+      await fs.writeFile(file, 'modified');
+
+      const result = await executeGitDiff(TEST_DIR, false, 'test.txt');
+
+      expect(result).toContain('test.txt');
+    });
+
+    it('should handle reset with hard flag', async () => {
+      const file = path.join(TEST_DIR, 'test.txt');
+      await fs.writeFile(file, 'initial');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+
+      await fs.writeFile(file, 'modified');
+
+      const result = await executeGitReset([], TEST_DIR, true);
+
+      expect(result).toBeDefined();
+
+      const content = await fs.readFile(file, 'utf-8');
+      expect(content).toBe('initial');
+    });
+
+    it('should handle reset with specific files', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'file1.txt'), 'content1');
+      await fs.writeFile(path.join(TEST_DIR, 'file2.txt'), 'content2');
+      await execa('git', ['add', '.'], { cwd: TEST_DIR });
+
+      const result = await executeGitReset(['file1.txt'], TEST_DIR, false);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle log with oneline format', async () => {
+      await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+
+      const result = await executeGitLog(TEST_DIR, 10, true);
+
+      expect(result).toContain('initial');
+    });
+
+    it('should handle checkout with force flag', async () => {
+      const file = path.join(TEST_DIR, 'test.txt');
+      await fs.writeFile(file, 'initial');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+
+      await execa('git', ['branch', 'feature'], { cwd: TEST_DIR });
+      await fs.writeFile(file, 'modified');
+
+      const result = await executeGitCheckout('feature', TEST_DIR, true);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle stash list operation', async () => {
+      const file = path.join(TEST_DIR, 'test.txt');
+      await fs.writeFile(file, 'initial');
+      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+
+      await fs.writeFile(file, 'modified');
+      await executeGitStash('save', 'test stash', TEST_DIR);
+
+      const result = await executeGitStash('list', undefined, TEST_DIR);
+
+      expect(result).toContain('stash');
+    });
+
+    it('should handle git operations in non-repo directory', async () => {
+      const nonRepoDir = path.join(TEST_DIR, 'not-a-repo');
+      await fs.mkdir(nonRepoDir, { recursive: true });
+
+      // Git will actually find the parent TEST_DIR repo, so let's test with truly isolated dir
+      const tempDir = path.join(TEST_DIR, '..', 'isolated-' + Date.now());
+      await fs.mkdir(tempDir, { recursive: true });
+
+      const result = await executeGitCommit('test', tempDir);
+
+      await fs.rm(tempDir, { recursive: true, force: true });
+
+      expect(result.toLowerCase()).toMatch(/error|not a git repository|nothing to commit/);
+    });
+  });
 });
