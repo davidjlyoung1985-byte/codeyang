@@ -280,4 +280,207 @@ const x = 1;
       expect(result).toContain('does not exist');
     });
   });
+
+  describe('Additional Branch Coverage', () => {
+    it('should handle TypeScript with interfaces and types', async () => {
+      const file = path.join(TEST_DIR, 'test.ts');
+      await fs.writeFile(
+        file,
+        `interface User {
+          name: string;
+          age: number;
+        }
+
+        type Status = 'active' | 'inactive';
+
+        function getUser(): User {
+          return { name: 'John', age: 30 };
+        }`,
+      );
+
+      const result = await executeAnalyzeCode(file, 'typescript');
+
+      expect(result).toContain('Functions:');
+      expect(result).toContain('getUser');
+    });
+
+    it('should handle JSX/React code', async () => {
+      const file = path.join(TEST_DIR, 'test.jsx');
+      await fs.writeFile(
+        file,
+        `import React from 'react';
+
+        function MyComponent({ title }) {
+          return <div>{title}</div>;
+        }
+
+        export default MyComponent;`,
+      );
+
+      const result = await executeAnalyzeCode(file, 'javascript');
+
+      expect(result).toContain('Imports:');
+      expect(result).toContain('Functions:');
+      expect(result).toContain('Exports:');
+    });
+
+    it('should handle syntax errors gracefully', async () => {
+      const file = path.join(TEST_DIR, 'invalid.js');
+      await fs.writeFile(file, 'const x = {{{');
+
+      const result = await executeParseAst(file, 'javascript');
+
+      expect(result).toContain('Error');
+    });
+
+    it('should handle empty files', async () => {
+      const file = path.join(TEST_DIR, 'empty.js');
+      await fs.writeFile(file, '');
+
+      const result = await executeAnalyzeCode(file, 'javascript');
+
+      expect(result).toContain('Imports: 0');
+      expect(result).toContain('Functions: 0');
+    });
+
+    it('should handle code with only comments', async () => {
+      const file = path.join(TEST_DIR, 'comments-only.js');
+      await fs.writeFile(
+        file,
+        `// This is a comment
+        /* Another comment */
+        // More comments`,
+      );
+
+      const result = await executeCountLines(file);
+
+      expect(result).toContain('Comment Lines:');
+      expect(result).toContain('Code Lines: 0');
+    });
+
+    it('should analyze code with nested functions', async () => {
+      const file = path.join(TEST_DIR, 'nested.js');
+      await fs.writeFile(
+        file,
+        `function outer() {
+          function inner() {
+            return 42;
+          }
+          return inner();
+        }`,
+      );
+
+      const result = await executeAnalyzeCode(file, 'javascript');
+
+      expect(result).toContain('Functions:');
+    });
+
+    it('should handle complexity with switch statements', async () => {
+      const file = path.join(TEST_DIR, 'switch.js');
+      await fs.writeFile(
+        file,
+        `function handleAction(action) {
+          switch(action) {
+            case 'create':
+              return 1;
+            case 'update':
+              return 2;
+            case 'delete':
+              return 3;
+            default:
+              return 0;
+          }
+        }`,
+      );
+
+      const result = await executeComplexity(file);
+
+      expect(result).toContain('Cyclomatic Complexity:');
+    });
+
+    it('should handle lint with strict mode', async () => {
+      const file = path.join(TEST_DIR, 'strict.js');
+      await fs.writeFile(
+        file,
+        `const x = 1;
+        const y = 2;
+        console.log(x);`,
+      );
+
+      const result = await executeLint(file, true);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should find peer dependencies', async () => {
+      const pkgJson = {
+        name: 'test-project',
+        version: '1.0.0',
+        peerDependencies: {
+          react: '^18.0.0',
+        },
+      };
+
+      await fs.writeFile(path.join(TEST_DIR, 'package.json'), JSON.stringify(pkgJson, null, 2));
+
+      const result = await executeFindDeps(TEST_DIR);
+
+      expect(result).toContain('Project: test-project');
+    });
+
+    it('should handle code with async/await', async () => {
+      const file = path.join(TEST_DIR, 'async.js');
+      await fs.writeFile(
+        file,
+        `async function fetchData() {
+          const response = await fetch('https://api.example.com');
+          return await response.json();
+        }`,
+      );
+
+      const result = await executeAnalyzeCode(file, 'javascript');
+
+      expect(result).toContain('Functions:');
+      expect(result).toContain('fetchData');
+    });
+
+    it('should handle code with generators', async () => {
+      const file = path.join(TEST_DIR, 'generator.js');
+      await fs.writeFile(
+        file,
+        `function* generateNumbers() {
+          yield 1;
+          yield 2;
+          yield 3;
+        }`,
+      );
+
+      const result = await executeAnalyzeCode(file, 'javascript');
+
+      expect(result).toContain('Functions:');
+    });
+
+    it('should analyze mixed code and comments', async () => {
+      const file = path.join(TEST_DIR, 'mixed.js');
+      await fs.writeFile(
+        file,
+        `// Function to add two numbers
+        function add(a, b) { // inline comment
+          return a + b; /* block comment */
+        }
+
+        /*
+         * Multi-line
+         * comment
+         */
+        const x = 1;`,
+      );
+
+      const result = await executeCountLines(file);
+
+      expect(result).toContain('Total Lines:');
+      expect(result).toContain('Code Lines:');
+      expect(result).toContain('Comment Lines:');
+    });
+  });
 });
