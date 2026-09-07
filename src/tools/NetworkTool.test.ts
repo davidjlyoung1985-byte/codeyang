@@ -317,4 +317,184 @@ describe('NetworkTool', () => {
       expect(result).toContain('Error parsing URL');
     });
   });
+
+  describe('Additional Branch Coverage', () => {
+    it('should reject URL that is too long', async () => {
+      const longUrl = 'https://example.com/' + 'x'.repeat(9000);
+
+      const result = await executeHttpRequest(longUrl, 'GET');
+
+      expect(result).toContain('Error: URL too long');
+    });
+
+    it('should handle PUT request with body', async () => {
+      mockedAxios.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: { updated: true },
+      });
+
+      const result = await executeHttpRequest('https://example.com/update', 'PUT', {}, { id: 1, name: 'updated' });
+
+      expect(result).toContain('"status": 200');
+      expect(mockedAxios).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'PUT',
+          data: { id: 1, name: 'updated' },
+        }),
+      );
+    });
+
+    it('should handle PATCH request with body', async () => {
+      mockedAxios.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: { patched: true },
+      });
+
+      const result = await executeHttpRequest('https://example.com/patch', 'PATCH', {}, { field: 'value' });
+
+      expect(result).toContain('"status": 200');
+      expect(mockedAxios).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'PATCH',
+          data: { field: 'value' },
+        }),
+      );
+    });
+
+    it('should handle DELETE request', async () => {
+      mockedAxios.mockResolvedValue({
+        status: 204,
+        statusText: 'No Content',
+        headers: {},
+        data: '',
+      });
+
+      const result = await executeHttpRequest('https://example.com/delete/1', 'DELETE');
+
+      expect(result).toContain('"status": 204');
+    });
+
+    it('should handle network error without response', async () => {
+      mockedAxios.mockRejectedValue(new Error('Network Error'));
+
+      const result = await executeHttpRequest('https://example.com/error', 'GET');
+
+      expect(result).toContain('Error: Network Error');
+    });
+
+    it('should handle error with custom message', async () => {
+      const customError = { message: 'Custom error message' };
+      mockedAxios.mockRejectedValue(customError);
+
+      const result = await executeHttpRequest('https://example.com/custom-error', 'GET');
+
+      expect(result).toContain('Error: Custom error message');
+    });
+
+    it('should include custom headers in request', async () => {
+      mockedAxios.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: {},
+      });
+
+      await executeHttpRequest('https://example.com/headers', 'GET', {
+        Authorization: 'Bearer token123',
+        'X-Custom-Header': 'value',
+      });
+
+      expect(mockedAxios).toHaveBeenCalledWith(
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Bearer token123',
+            'X-Custom-Header': 'value',
+          }),
+        }),
+      );
+    });
+
+    it('should handle API call with POST method', async () => {
+      mockedAxios.mockResolvedValue({
+        status: 201,
+        statusText: 'Created',
+        headers: {},
+        data: { id: 123, created: true },
+      });
+
+      const result = await executeApiCall('https://example.com/create', 'POST', {}, { name: 'test' });
+
+      const parsed = JSON.parse(result);
+      expect(parsed.success).toBe(true);
+      expect(parsed.status).toBe(201);
+      expect(parsed.data).toEqual({ id: 123, created: true });
+    });
+
+    it('should handle API call error response', async () => {
+      const err = Object.assign(new Error('Bad Request'), {
+        response: { status: 400, statusText: 'Bad Request', headers: {}, data: { error: 'Invalid input' } },
+      });
+      mockedAxios.mockRejectedValue(err);
+
+      const result = await executeApiCall('https://example.com/bad', 'POST');
+
+      const parsed = JSON.parse(result);
+      expect(parsed.success).toBe(false);
+      expect(parsed.status).toBe(400);
+      expect(parsed.error).toBeDefined();
+    });
+
+    it('should handle API call network error', async () => {
+      mockedAxios.mockRejectedValue(new Error('Connection refused'));
+
+      const result = await executeApiCall('https://example.com/refused', 'GET');
+
+      const parsed = JSON.parse(result);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error).toContain('Connection refused');
+    });
+
+    it('should handle checkUrl with HEAD request success', async () => {
+      mockedAxios.head.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: { 'content-type': 'text/html' },
+      });
+
+      const result = await executeCheckUrl('https://example.com/page', 5000);
+
+      expect(result).toContain('Status: 200');
+      expect(result).toContain('Accessible: Yes');
+      expect(result).toContain('Content-Type: text/html');
+    });
+
+    it('should handle upload with custom field name', async () => {
+      mockedAxios.post.mockResolvedValue({
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        data: { uploaded: true },
+      });
+
+      const testFile = path.join(TEST_DIR, 'custom-upload.txt');
+      await fs.writeFile(testFile, 'custom content');
+
+      const result = await executeUploadFile('https://example.com/upload', testFile, 'customFile');
+
+      expect(result).toContain('"status": 200');
+    });
+
+    it('should handle parseUrl with username and password', () => {
+      const result = executeParseUrl('https://user:pass@example.com/path');
+
+      expect(result).toContain('Protocol: https:');
+      expect(result).toContain('Host: example.com');
+      // Username/password parsing may not be displayed in output, just verify it parses
+      expect(result).toContain('Pathname: /path');
+    });
+  });
 });
