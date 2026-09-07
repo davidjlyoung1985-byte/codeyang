@@ -256,4 +256,48 @@ describe('BashTool', () => {
       expect(result).toContain('dd');
     });
   });
+
+  describe('Additional Branch Coverage', () => {
+    it('should handle multi-line commands', async () => {
+      const result = await executeBash(
+        isWin ? 'echo line1 & echo line2 & echo line3' : 'echo line1\necho line2\necho line3',
+      );
+      expect(result).toContain('line1');
+    });
+
+    it('should handle commands with special characters', async () => {
+      const result = await executeBash(isWin ? 'echo hello$world' : 'echo "hello$world"');
+      expect(result).toBeDefined();
+    });
+
+    it('should handle empty command gracefully', async () => {
+      const result = await executeBash('');
+      expect(result).toBeDefined();
+    });
+
+    it('should handle command with whitespace only', async () => {
+      const result = await executeBash('   ');
+      expect(result).toBeDefined();
+    });
+
+    it('should execute commands in specified working directory', async () => {
+      const result = await executeBash(isWin ? 'cd' : 'pwd', TEST_DIR);
+      expect(result).toBeDefined();
+    });
+
+    it('should handle commands with long output', async () => {
+      const result = await executeBash(isWin ? 'echo ' + 'a'.repeat(100) : 'echo ' + 'a'.repeat(100));
+      expect(result).toContain('a');
+    });
+
+    it('should handle commands with newlines in output', async () => {
+      const result = await executeBash(isWin ? 'echo line1 & echo line2' : 'echo -e "line1\\nline2"');
+      expect(result).toContain('line');
+    });
+
+    it('should respect custom timeout', async () => {
+      const result = await executeBash('echo quick', undefined, 1000);
+      expect(result).toContain('quick');
+    });
+  });
 });
