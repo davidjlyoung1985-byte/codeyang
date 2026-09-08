@@ -114,6 +114,29 @@ jobs:
       - run: npm run build
       - run: ls -la dist/
 
+  build-clients:
+    name: Build Web client & VS Code extension
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install root deps
+        run: npm ci
+      - name: Build React web client (vite)
+        run: npm run web:build
+      - name: Build web server bundle
+        run: npm run build
+      - name: Build VS Code extension (tsc)
+        working-directory: vscode-extension
+        run: |
+          npm ci
+          npm run compile
+          test -f out/extension.js
+
   docker:
     name: Docker
     runs-on: ubuntu-latest

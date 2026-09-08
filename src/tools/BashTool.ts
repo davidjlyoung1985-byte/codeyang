@@ -17,8 +17,10 @@ const PERMISSION_CACHE_TTL = 5_000; // 5 seconds (short TTL to avoid stale cache
 /**
  * Check if a command matches any deny-listed word.
  * Enhanced parsing to handle quotes, escapes, and obfuscation attempts.
+ *
+ * Exported for direct security testing without executing destructive commands.
  */
-function isDenied(command: string): boolean {
+export function isDenied(command: string): boolean {
   // Normalize the command: remove quotes, collapse escapes, lowercase
   const normalized = command
     .replace(/['"\\]/g, '') // Remove quotes and backslashes
@@ -54,6 +56,11 @@ function isDenied(command: string): boolean {
     /wget.*\|\s*(sh|bash)/i, // wget | sh — remote code execution
     />\s*\/dev\/sd/i, // write to raw disk device
     /mkfs/i, // format filesystem
+    // Fork bomb (`:(){ :|:& };:` / `bomb() { bomb | bomb & }; bomb`) is hard-blocked
+    // because it matches no deny-list word and would otherwise run directly and
+    // exhaust the host process table.
+    /[A-Za-z_]\w*\s*\(\s*\)\s*\{\s*[^{}]*\|[^{}]*\s*&\s*\}/,
+    /^\s*:\s*\(\s*\)\s*\{/,
   ];
 
   for (const pattern of suspiciousPatterns) {
@@ -238,8 +245,10 @@ export async function executeBash(
  *   - curl | sh, wget | sh (remote code execution)
  *   - docker, systemctl (system-level operations)
  *   - scripts (python, node) when run with user-provided input
+ *
+ * Exported for direct security testing without executing destructive commands.
  */
-function shouldUseSandbox(command: string, permissionLevel: string): boolean {
+export function shouldUseSandbox(command: string, permissionLevel: string): boolean {
   if (permissionLevel === 'deny') return false; // Already blocked, no need for sandbox
 
   const cmd = command.toLowerCase().trim();

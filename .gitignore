@@ -109,3 +109,12 @@ test-mcp-*.ts
 # Agent tool skill bundles (canonical copy lives in skills/)
 .claude/skills/
 .agents/skills/
+
+# VS Code extension build output (keep source, ignore compiled bundle)
+vscode-extension/out/
+
+# Scratch vitest eval config (local only)
+vitest.eval.config.ts
+
+# React web client production build output
+dist-web/
