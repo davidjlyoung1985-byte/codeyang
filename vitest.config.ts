@@ -13,7 +13,15 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 30_000,
     include: ['src/**/*.test.ts'],
-    exclude: ['**/node_modules/**', '**/.git/**', '**/dist/**', 'src/**/*.bench.ts'],
+    exclude: [
+      '**/node_modules/**',
+      '**/.git/**',
+      '**/dist/**',
+      'src/**/*.bench.ts',
+      // Skip integration and E2E tests that require LLM API configuration
+      'src/agent/Agent-integration.test.ts',
+      'src/e2e/e2e.test.ts',
+    ],
     globalSetup: './vitest.setup.ts',
     setupFiles: ['./vitest.isolate.ts'],
     coverage: {

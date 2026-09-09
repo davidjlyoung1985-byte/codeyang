@@ -63,7 +63,7 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
   if (lower === '/undo') return await cmdUndo(ctx);
   if (lower === '/redo') return await cmdRedo(ctx);
   if (lower === '/status') return await cmdStatus(ctx);
-  if (lower === '/reflect') return await cmdReflect(ctx);
+  if (lower.startsWith('/reflect')) return await cmdReflect(line, ctx);
   if (lower === '/matlab') return await cmdMatlab(ctx);
   if (lower === '/harness') return await cmdHarness(ctx);
   if (lower.startsWith('/recovery')) return await cmdRecovery(line, ctx);
@@ -398,39 +398,250 @@ function cmdStatus(ctx: CommandContext): DispatchResult {
   return { handled: true };
 }
 
-async function cmdReflect(ctx: CommandContext): Promise<DispatchResult> {
+async function cmdReflect(line: string, ctx: CommandContext): Promise<DispatchResult> {
+  const parts = line.trim().split(/\s+/);
+  const subcommand = parts[1]?.toLowerCase();
+
+  // /reflect (default - show recent executions)
+  if (!subcommand || subcommand === 'status') {
+    return await cmdReflectStatus(ctx);
+  }
+
+  // /reflect stats - show detailed statistics
+  if (subcommand === 'stats') {
+    return cmdReflectStats(ctx);
+  }
+
+  // /reflect history [count] - show execution history
+  if (subcommand === 'history') {
+    const count = parseInt(parts[2]) || 10;
+    return cmdReflectHistory(ctx, count);
+  }
+
+  // /reflect learned [count] - show learned patterns
+  if (subcommand === 'learned') {
+    const count = parseInt(parts[2]) || 5;
+    return await cmdReflectLearned(ctx, count);
+  }
+
+  // /reflect clear - clear execution history
+  if (subcommand === 'clear') {
+    return cmdReflectClear(ctx);
+  }
+
+  // /reflect run - force reflection now
+  if (subcommand === 'run') {
+    return await cmdReflectRun(ctx);
+  }
+
+  // /reflect list - list all saved reflections
+  if (subcommand === 'list') {
+    return await cmdReflectList(ctx);
+  }
+
+  // Unknown subcommand
+  console.log(c.yellow('  Usage:'));
+  console.log(c.gray('    /reflect              - Show recent executions and status (default)'));
+  console.log(c.gray('    /reflect stats        - Show detailed statistics'));
+  console.log(c.gray('    /reflect history [N]  - Show last N executions (default: 10)'));
+  console.log(c.gray('    /reflect learned [N]  - Show learned patterns (default: 5)'));
+  console.log(c.gray('    /reflect list         - List all saved reflections'));
+  console.log(c.gray('    /reflect run          - Force reflection now'));
+  console.log(c.gray('    /reflect clear        - Clear execution history'));
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+// /reflect (default) or /reflect status
+async function cmdReflectStatus(ctx: CommandContext): Promise<DispatchResult> {
+  const engine = ctx.agent.getReflexionEngine();
+  const recent = engine.getRecentExecutions(5);
+
+  console.log(c.bold('\n  🔄 Reflexion Status\n'));
+
+  if (recent.length === 0) {
+    console.log(c.gray('  No recent executions to reflect on.'));
+  } else {
+    console.log(c.gray(`  Recent executions (${recent.length}):\n`));
+    for (const r of recent) {
+      const icon = r.success ? c.green('✓') : c.red('✗');
+      const errorInfo = r.errorMessage ? r.errorMessage.slice(0, 60) : 'OK';
+      const toolName = r.toolCalls.map((tc) => tc.name).join(', ') || r.task;
+      const duration = r.durationMs < 1000 ? `${r.durationMs}ms` : `${(r.durationMs / 1000).toFixed(1)}s`;
+      console.log(`  ${icon} ${c.cyan(toolName)} ${c.gray(`(${duration})`)} — ${errorInfo}`);
+    }
+
+    const stats = engine.getStats();
+    console.log(
+      c.gray(`\n  Total executions: ${stats.total} | Success: ${stats.successful} | Failed: ${stats.failed}`),
+    );
+    console.log(
+      c.gray(
+        `  Success rate: ${(stats.successRate * 100).toFixed(1)}% | Avg duration: ${stats.avgDurationMs.toFixed(0)}ms`,
+      ),
+    );
+
+    if (engine.shouldReflect()) {
+      console.log(c.yellow('\n  ⚠️  Consecutive failures detected — reflection recommended'));
+      console.log(c.gray('  Run /reflect run to trigger reflection'));
+    } else {
+      console.log(c.gray('\n  No consecutive failure threshold reached yet.'));
+    }
+  }
+  console.log('');
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+// /reflect stats
+function cmdReflectStats(ctx: CommandContext): DispatchResult {
+  const engine = ctx.agent.getReflexionEngine();
+  const stats = engine.getStats();
+
+  console.log(c.bold('\n  📊 Reflexion Statistics\n'));
+  console.log(c.gray('  Execution Summary:'));
+  console.log(`    Total: ${stats.total}`);
+  console.log(`    Successful: ${c.green(stats.successful.toString())}`);
+  console.log(`    Failed: ${c.red(stats.failed.toString())}`);
+  console.log(`    Success Rate: ${(stats.successRate * 100).toFixed(1)}%`);
+  console.log(`    Avg Duration: ${stats.avgDurationMs.toFixed(0)}ms`);
+
+  console.log('');
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+// /reflect history [count]
+function cmdReflectHistory(ctx: CommandContext, count: number): DispatchResult {
+  const engine = ctx.agent.getReflexionEngine();
+  const executions = engine.getRecentExecutions(count);
+
+  console.log(c.bold(`\n  📜 Execution History (last ${count})\n`));
+
+  if (executions.length === 0) {
+    console.log(c.gray('  No executions recorded yet.'));
+  } else {
+    for (let i = executions.length - 1; i >= 0; i--) {
+      const r = executions[i];
+      const icon = r.success ? c.green('✓') : c.red('✗');
+      const toolNames = r.toolCalls.map((tc) => tc.name).join(', ') || r.task;
+      const duration = r.durationMs < 1000 ? `${r.durationMs}ms` : `${(r.durationMs / 1000).toFixed(1)}s`;
+      const timestamp = new Date(r.timestamp).toLocaleTimeString();
+
+      console.log(`  ${icon} [${c.gray(timestamp)}] ${c.cyan(toolNames)} ${c.gray(`(${duration})`)}`);
+      if (r.errorMessage) {
+        console.log(c.gray(`     Error: ${r.errorMessage.slice(0, 80)}`));
+      }
+    }
+  }
+
+  console.log('');
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+// /reflect learned [count]
+async function cmdReflectLearned(ctx: CommandContext, count: number): Promise<DispatchResult> {
+  const engine = ctx.agent.getReflexionEngine();
+  const patterns = await engine.getLearnedPatterns(count);
+
+  console.log(c.bold(`\n  🧠 Learned Patterns (last ${count})\n`));
+
+  if (!patterns || patterns.trim() === '') {
+    console.log(c.gray('  No learned patterns yet.'));
+    console.log(c.gray('  Patterns are created after reflection on failures.'));
+  } else {
+    console.log(patterns);
+  }
+
+  console.log('');
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+// /reflect clear
+function cmdReflectClear(ctx: CommandContext): DispatchResult {
+  const engine = ctx.agent.getReflexionEngine();
+  engine.clearExecutions();
+
+  console.log(c.green('\n  ✓ Execution history cleared\n'));
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+// /reflect run
+async function cmdReflectRun(ctx: CommandContext): Promise<DispatchResult> {
   const engine = ctx.agent.getReflexionEngine();
   const recent = engine.getRecentExecutions(5);
 
   if (recent.length === 0) {
-    console.log('  No recent executions to reflect on.');
+    console.log(c.yellow('\n  ⚠️  No executions to reflect on\n'));
+    ctx.ui.promptUser();
+    return { handled: true };
+  }
+
+  console.log(c.bold('\n  🔄 Running reflection...\n'));
+
+  try {
+    const reflection = await engine.reflect(ctx.agent.getLLMClient(), config.model, config.maxTokens);
+
+    if (reflection) {
+      console.log(c.bold('  Analysis:'));
+      console.log(c.gray(`  ${reflection.analysis}\n`));
+
+      if (reflection.patterns.length > 0) {
+        console.log(c.bold('  Identified Patterns:'));
+        for (const p of reflection.patterns) {
+          console.log(c.cyan(`    • ${p}`));
+        }
+        console.log('');
+      }
+
+      if (reflection.recommendations.length > 0) {
+        console.log(c.bold('  Recommendations:'));
+        for (const r of reflection.recommendations) {
+          console.log(c.green(`    • ${r}`));
+        }
+        console.log('');
+      }
+
+      console.log(c.green('  ✓ Reflection complete and saved\n'));
+    } else {
+      console.log(c.yellow('  ⚠️  Reflection failed - no insights generated\n'));
+    }
+  } catch (err) {
+    console.log(c.red(`  ✗ Reflection error: ${err instanceof Error ? err.message : String(err)}\n`));
+  }
+
+  ctx.ui.promptUser();
+  return { handled: true };
+}
+
+// /reflect list
+async function cmdReflectList(ctx: CommandContext): Promise<DispatchResult> {
+  const engine = ctx.agent.getReflexionEngine();
+  const reflections = await engine.getAllReflections();
+
+  console.log(c.bold(`\n  📋 Saved Reflections (${reflections.length})\n`));
+
+  if (reflections.length === 0) {
+    console.log(c.gray('  No reflections saved yet.'));
+    console.log(c.gray('  Reflections are created when consecutive failures are detected.'));
   } else {
-    console.log(`\n  Recent executions (${recent.length}):`);
-    for (const r of recent) {
-      const icon = r.success ? '✓' : '✗';
-      const errorInfo = r.errorMessage ? r.errorMessage.slice(0, 60) : 'OK';
-      const toolName = r.toolCalls.map((tc) => tc.name).join(', ');
-      console.log(`  ${icon} ${toolName || r.task} (${r.durationMs}ms) — ${errorInfo}`);
+    for (const ref of reflections.slice(0, 10)) {
+      const timestamp = new Date(ref.timestamp).toLocaleString();
+      console.log(c.cyan(`  [${ref.id}]`));
+      console.log(c.gray(`    Trigger: ${ref.trigger}`));
+      console.log(c.gray(`    Time: ${timestamp}`));
+      console.log(c.gray(`    Patterns: ${ref.patterns.length} | Recommendations: ${ref.recommendations.length}`));
+      console.log('');
     }
 
-    if (engine.shouldReflect()) {
-      console.log(`\n  ⚠️  Consecutive failures detected — triggering reflection...`);
-      const reflection = await engine.reflect(ctx.agent.getLLMClient(), config.model, config.maxTokens);
-      if (reflection) {
-        console.log(`\n  Analysis: ${reflection.analysis.slice(0, 200)}`);
-        if (reflection.patterns.length > 0) {
-          console.log(`  Patterns:`);
-          for (const p of reflection.patterns) console.log(`    · ${p}`);
-        }
-        if (reflection.recommendations.length > 0) {
-          console.log(`  Recommendations:`);
-          for (const r of reflection.recommendations) console.log(`    · ${r}`);
-        }
-      }
-    } else {
-      console.log('\n  No consecutive failure threshold reached yet.');
+    if (reflections.length > 10) {
+      console.log(c.gray(`  ... and ${reflections.length - 10} more reflections`));
     }
   }
+
   console.log('');
   ctx.ui.promptUser();
   return { handled: true };
