@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { execa } from 'execa';
 import {
   executeGitStatus,
@@ -16,7 +18,10 @@ import {
   executeGitCurrentBranch,
 } from './GitTool.js';
 
-const TEST_DIR = path.join(process.cwd(), '.test-git-tools');
+// Isolated repo outside the project: if a stray Windows file lock briefly hides
+// the local `.git`, a nested repo would let `git` walk up and resolve to THIS
+// repo (firing husky, committing nothing) — the source of the old flake.
+const TEST_DIR = path.join(tmpdir(), `.test-git-tools-${randomBytes(4).toString('hex')}`);
 
 describe('GitTool', () => {
   beforeEach(async () => {
