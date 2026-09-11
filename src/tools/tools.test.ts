@@ -248,7 +248,7 @@ describe('executeBash', () => {
 
   it('handles command with cwd parameter', { timeout: 10000 }, async () => {
     if (process.platform === 'win32') {
-      const result = await executeBash('Get-Location', tempDir);
+      const result = await executeBash('cd', tempDir);
       expect(result).toContain(tempDir);
     } else {
       const result = await executeBash('pwd', tempDir);

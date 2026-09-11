@@ -12,11 +12,6 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 30_000,
     hookTimeout: 30_000,
-    poolOptions: {
-      threads: {
-        isolate: false, // Fix Windows thread isolation deadlock in BashTool tests
-      },
-    },
     include: ['src/**/*.test.ts'],
     exclude: [
       '**/node_modules/**',
