@@ -74,7 +74,20 @@ CODEYANG_API_KEY=your-key npm start
 | `/sessions` | List saved sessions |
 | `/tools` | Show available tools |
 | `/model <name>` | Switch model |
+| `/ponytail [lite\|full\|ultra]` | Activate lazy senior dev mode (YAGNI) |
+| `/ponytail-debt` | List deliberate shortcuts in codebase |
+| `/ponytail-review` | Review code for over-engineering |
 | `/exit` | Quit |
+
+### Ponytail Skills — Lazy Senior Developer Methodology
+
+CodeYang includes the **ponytail** methodology for writing minimal, efficient code:
+
+- **`/ponytail`** — Enforce YAGNI principle, stdlib-first, shortest working diff
+- **`/ponytail-debt`** — Track deliberate shortcuts marked with `ponytail:` comments
+- **`/ponytail-review`** — Detect over-engineering and unnecessary complexity
+
+See [docs/ponytail-methodology.md](docs/ponytail-methodology.md) for the complete guide.
 
 ## Configuration
 
