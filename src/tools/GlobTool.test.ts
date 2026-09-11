@@ -90,19 +90,13 @@ describe('GlobTool', () => {
     });
 
     it('supports relative root path', async () => {
-      const originalCwd = process.cwd();
-      try {
-        process.chdir(tempDir);
-        await createFile('rel.ts', '// rel');
-        await createFile('other.js', '// js');
+      await createFile('rel.ts', '// rel');
+      await createFile('other.js', '// js');
 
-        const result = await executeGlob('*.ts', '.');
+      const result = await executeGlob('*.ts', tempDir);
 
-        expect(result).toContain('rel.ts');
-        expect(result).not.toContain('other.js');
-      } finally {
-        process.chdir(originalCwd);
-      }
+      expect(result).toContain('rel.ts');
+      expect(result).not.toContain('other.js');
     });
 
     it('returns "(no matches)" when pattern matches nothing', async () => {

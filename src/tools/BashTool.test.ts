@@ -17,7 +17,6 @@ import { resetRateLimit } from '../utils/rateLimiter.js';
 const TEST_DIR = path.join(process.cwd(), `.test-bash-tool-${randomBytes(4).toString('hex')}`);
 const isWin = process.platform === 'win32';
 
-// @vitest-pool forks
 describe('BashTool', () => {
   beforeEach(async () => {
     vi.clearAllMocks();

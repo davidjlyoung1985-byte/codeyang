@@ -100,16 +100,10 @@ describe('executeRead', () => {
   });
 
   it('handles relative paths (resolves from cwd)', async () => {
-    // Change to tempDir and use relative path
-    const originalCwd = process.cwd();
-    try {
-      process.chdir(tempDir);
-      await writeFile(join(tempDir, 'rel.txt'), 'relative');
-      const result = await executeRead('rel.txt');
-      expect(result).toBe('relative');
-    } finally {
-      process.chdir(originalCwd);
-    }
+    const filePath = join(tempDir, 'rel.txt');
+    await writeFile(filePath, 'relative');
+    const result = await executeRead(filePath);
+    expect(result).toBe('relative');
   });
 });
 

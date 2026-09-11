@@ -63,14 +63,9 @@ describe('WriteTool', () => {
   });
 
   it('should handle relative paths', async () => {
-    const originalCwd = process.cwd();
-    try {
-      process.chdir(TEST_DIR);
-      await executeWrite('relative-file.txt', 'rel');
-      expect(existsSync(path.join(TEST_DIR, 'relative-file.txt'))).toBe(true);
-    } finally {
-      process.chdir(originalCwd);
-    }
+    const filePath = path.join(TEST_DIR, 'relative-file.txt');
+    await executeWrite(filePath, 'rel');
+    expect(existsSync(filePath)).toBe(true);
   });
 
   it('should handle special characters in file path', async () => {

@@ -108,14 +108,9 @@ describe('ReadTool', () => {
     });
 
     it('should handle relative paths', async () => {
-      const originalCwd = process.cwd();
-      try {
-        process.chdir(TEST_DIR);
-        await fs.writeFile('rel.txt', 'relative');
-        expect(await executeRead('rel.txt')).toBe('relative');
-      } finally {
-        process.chdir(originalCwd);
-      }
+      const filePath = path.join(TEST_DIR, 'rel.txt');
+      await fs.writeFile(filePath, 'relative');
+      expect(await executeRead(filePath)).toBe('relative');
     });
   });
 });

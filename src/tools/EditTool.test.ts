@@ -122,15 +122,10 @@ describe('EditTool', () => {
     });
 
     it('should work with relative paths', async () => {
-      const originalCwd = process.cwd();
-      try {
-        process.chdir(TEST_DIR);
-        await fs.writeFile('rel.txt', 'hello world');
-        await executeEdit('rel.txt', 'hello', 'hi');
-        expect(await fs.readFile('rel.txt', 'utf-8')).toBe('hi world');
-      } finally {
-        process.chdir(originalCwd);
-      }
+      const filePath = path.join(TEST_DIR, 'rel.txt');
+      await fs.writeFile(filePath, 'hello world');
+      await executeEdit(filePath, 'hello', 'hi');
+      expect(await fs.readFile(filePath, 'utf-8')).toBe('hi world');
     });
   });
 
