@@ -48,6 +48,9 @@ export default defineConfig([
     platform: 'node',
     target: 'node18',
     shims: true,
+    // Bundle runtime deps so tools.cjs stays self-contained (the VS Code
+    // extension ships no node_modules and just require()s this one file).
+    noExternal: ['axios', 'form-data'],
     alias: {
       '@': './src',
     },
