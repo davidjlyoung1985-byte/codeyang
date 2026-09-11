@@ -22,6 +22,18 @@ export interface CommandContext {
   mcpMgr: McpManager;
   currentSessionId: string | undefined;
   recoveryIntegration?: RecoveryIntegration;
+  /**
+   * Working directory for cwd-sensitive commands (git operations). Defaults to
+   * `process.cwd()`. Must be honored so commands never operate on the process's
+   * directory instead of the session's — that bug made `/commit` run
+   * `git add -A && git commit` in the wrong repo.
+   */
+  cwd?: string;
+}
+
+/** Resolve the directory cwd-sensitive commands should operate on. */
+function resolveCwd(ctx: CommandContext): string {
+  return ctx.cwd ?? process.cwd();
 }
 
 type DispatchResult = { handled: boolean; exit?: boolean };
@@ -143,7 +155,7 @@ function cmdRewind(ctx: CommandContext): DispatchResult {
 
 async function cmdDiff(ctx: CommandContext): Promise<DispatchResult> {
   const { executeGitDiff } = await import('./tools/GitTool.js');
-  const result = await executeGitDiff(process.cwd(), false, undefined);
+  const result = await executeGitDiff(resolveCwd(ctx), false, undefined);
   console.log(`\n${result}`);
   ctx.ui.promptUser();
   return { handled: true };
@@ -155,7 +167,7 @@ async function cmdCommit(line: string, ctx: CommandContext): Promise<DispatchRes
     console.log('  Usage: /commit <message>');
   } else {
     const { executeGitCommit } = await import('./tools/GitTool.js');
-    const result = await executeGitCommit(msg, process.cwd(), true);
+    const result = await executeGitCommit(msg, resolveCwd(ctx), true);
     console.log(`\n${result}`);
   }
   ctx.ui.promptUser();
@@ -164,7 +176,7 @@ async function cmdCommit(line: string, ctx: CommandContext): Promise<DispatchRes
 
 async function cmdBranch(ctx: CommandContext): Promise<DispatchResult> {
   const { executeGitBranch } = await import('./tools/GitTool.js');
-  const result = await executeGitBranch(process.cwd(), false);
+  const result = await executeGitBranch(resolveCwd(ctx), false);
   console.log(`\n${result}`);
   ctx.ui.promptUser();
   return { handled: true };
@@ -742,7 +754,7 @@ async function cmdGenCommit(line: string, ctx: CommandContext): Promise<Dispatch
   if (msg) {
     // Custom commit message provided — delegate to existing /commit handler
     const { executeGitCommit } = await import('./tools/GitTool.js');
-    const result = await executeGitCommit(msg, process.cwd(), true);
+    const result = await executeGitCommit(msg, resolveCwd(ctx), true);
     console.log(`\n${result}`);
     ctx.ui.promptUser();
     return { handled: true };
