@@ -11,13 +11,21 @@ interface RateLimitConfig {
   windowMs: number;
 }
 
+// Helper: read limit from env or use default
+const getLimit = (category: string, defaultLimit: number): number => {
+  const envKey = `CODEYANG_${category.toUpperCase()}_LIMIT`;
+  const envValue = process.env[envKey];
+  return envValue ? parseInt(envValue, 10) : defaultLimit;
+};
+
 // Rate limits per tool category (calls per minute)
+// Can be overridden via environment variables: CODEYANG_BASH_LIMIT, etc.
 const RATE_LIMITS: Record<string, RateLimitConfig> = {
-  file: { maxCalls: 100, windowMs: 60_000 }, // 100 file ops/min
-  network: { maxCalls: 50, windowMs: 60_000 }, // 50 network requests/min
-  bash: { maxCalls: 30, windowMs: 60_000 }, // 30 shell commands/min
-  git: { maxCalls: 50, windowMs: 60_000 }, // 50 git ops/min
-  mcp: { maxCalls: 100, windowMs: 60_000 }, // 100 MCP calls/min
+  file: { maxCalls: getLimit('file', 100), windowMs: 60_000 }, // 100 file ops/min
+  network: { maxCalls: getLimit('network', 50), windowMs: 60_000 }, // 50 network requests/min
+  bash: { maxCalls: getLimit('bash', 200), windowMs: 60_000 }, // 200 shell commands/min (increased from 30)
+  git: { maxCalls: getLimit('git', 50), windowMs: 60_000 }, // 50 git ops/min
+  mcp: { maxCalls: getLimit('mcp', 100), windowMs: 60_000 }, // 100 MCP calls/min
 };
 
 /**
