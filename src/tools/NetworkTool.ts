@@ -6,6 +6,7 @@ import { isIPv4 } from 'node:net';
 import axios, { AxiosRequestConfig, Method } from 'axios';
 import FormData from 'form-data';
 import { resolveSafePath } from './shared.js';
+import { VERSION } from '../version.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 
 // 设置 axios 默认超时，防止请求卡住
@@ -211,7 +212,7 @@ async function validateUrlWithDnsCheck(url: string): Promise<string | null> {
 const MAX_DOWNLOAD_SIZE = 500 * 1024 * 1024; // 500 MB limit for downloads
 const MAX_URL_LENGTH = 8192; // 防止超长URL攻击
 const MAX_REDIRECTS = 10; // 限制重定向次数
-const USER_AGENT = 'CodeYang-Agent/0.7.0';
+const USER_AGENT = `CodeYang-Agent/${VERSION}`;
 
 export async function executeHttpRequest(
   url: string,

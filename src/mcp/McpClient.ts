@@ -3,6 +3,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { MCP_QUALIFIED_PREFIX, MCP_TOOL_SEPARATOR, type McpServerConfig, type McpTransportType } from './types.js';
+import { VERSION } from '../version.js';
 
 /**
  * SECURITY: Whitelist of allowed MCP server executables
@@ -80,7 +81,7 @@ export class McpClient {
   constructor(serverName: string, config: McpServerConfig) {
     this.serverName = serverName;
     this.config = config;
-    this.client = new Client({ name: 'codeyang', version: '0.7.0' }, { capabilities: {} });
+    this.client = new Client({ name: 'codeyang', version: VERSION }, { capabilities: {} });
   }
 
   get tools(): McpToolDef[] {

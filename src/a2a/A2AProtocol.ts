@@ -19,6 +19,7 @@
 
 import type { LLMClient, LLMMessage } from '../agent/LLMClient.js';
 import { consumeStream } from '../agent/LLMClient.js';
+import { VERSION } from '../version.js';
 
 // ── Core Types ────────────────────────────────────────────────────────
 
@@ -293,7 +294,7 @@ export class A2AProtocol {
     return {
       agentId: this.config.agentId,
       name: this.config.agentName,
-      version: '0.7.0',
+      version: VERSION,
       capabilities: [
         'file_ops',
         'shell_exec',

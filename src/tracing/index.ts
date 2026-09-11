@@ -26,6 +26,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { VERSION } from '../version.js';
 
 // ===================== 类型定义 =====================
 
@@ -493,7 +494,7 @@ export class Tracer {
       {
         resourceSpans: [
           {
-            resource: { attributes: { 'service.name': 'codeyang', 'service.version': '0.7.0' } },
+            resource: { attributes: { 'service.name': 'codeyang', 'service.version': VERSION } },
             scopeSpans: [{ scope: { name: 'codeyang.tracer' }, spans: entries }],
           },
         ],

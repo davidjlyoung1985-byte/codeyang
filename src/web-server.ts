@@ -23,6 +23,7 @@ import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './experimental/qt/index.js';
 import { loadEnvFiles } from './utils/dotenv.js';
 import { saveSession } from './utils/sessionStore.js';
+import { VERSION } from './version.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env['CODEYANG_PORT'] || 3456);
@@ -204,7 +205,7 @@ async function main() {
           model: config.model,
           provider: config.provider,
           maxTokens: config.maxTokens,
-          version: '0.7.0',
+          version: VERSION,
           hasSession: !!currentSessionId,
           sessionId: currentSessionId || null,
         }),

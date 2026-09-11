@@ -1,5 +1,7 @@
 /**
  * Single source of truth for CodeYang version.
- * Update here when cutting releases — all consumers import from this file.
+ * Derived from package.json so `npm version` / release bumps propagate everywhere.
  */
-export const VERSION = '0.7.1';
+import pkg from '../package.json' with { type: 'json' };
+
+export const VERSION: string = pkg.version;
