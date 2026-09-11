@@ -10,6 +10,7 @@ vi.mock('../permission/index.js', () => ({
 
 import { checkPermission } from '../permission/index.js';
 import { executeBash, clearPermissionCache, isDenied, shouldUseSandbox } from './BashTool.js';
+import { resetRateLimit } from '../utils/rateLimiter.js';
 
 // Use unique test directory per test run to avoid parallel conflicts
 const TEST_DIR = path.join(process.cwd(), `.test-bash-tool-${randomBytes(4).toString('hex')}`);
@@ -19,6 +20,7 @@ describe('BashTool', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     clearPermissionCache(); // Clear cache before each test
+    resetRateLimit('bash'); // Reset rate limit for fast test execution
     vi.mocked(checkPermission).mockResolvedValue({ level: 'allow' });
     if (existsSync(TEST_DIR)) await fs.rm(TEST_DIR, { recursive: true, force: true });
     await fs.mkdir(TEST_DIR, { recursive: true });
@@ -38,7 +40,7 @@ describe('BashTool', () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'content');
       // 通过 executeBash 的 cwd 参数执行，避免在命令字符串中内嵌带空格路径
-      const result = await executeBash(isWin ? 'Get-ChildItem -Name' : 'ls', TEST_DIR);
+      const result = await executeBash(isWin ? 'dir /b' : 'ls', TEST_DIR);
       expect(result).toContain('test.txt');
     });
 
@@ -212,7 +214,8 @@ describe('BashTool', () => {
 
     it('should handle commands with redirects', async () => {
       const testFile = path.join(TEST_DIR, 'redirect.txt');
-      const result = await executeBash(isWin ? `echo test > "${testFile}"` : `echo test > "${testFile}"`);
+      // Note: cmd.exe redirect doesn't need quotes around the path
+      const result = await executeBash(isWin ? `echo test > ${testFile}` : `echo test > "${testFile}"`);
       expect(result).toBeDefined();
       // Verify file was created (don't check content as it may vary)
       const exists = await fs

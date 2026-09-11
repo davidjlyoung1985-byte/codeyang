@@ -331,13 +331,20 @@ async function executeInSandbox(command: string, cwd?: string, timeoutSecs = 30)
  * Execute a command directly via execa (non-sandboxed).
  */
 async function executeDirect(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
-  const result = await execa(command, {
-    shell: process.platform === 'win32' ? 'powershell.exe' : 'bash',
-    cwd: cwd || process.cwd(),
-    timeout: timeoutSecs * 1000,
-    reject: false,
-    env: { ...process.env, CI: undefined },
-  });
+  const isWin = process.platform === 'win32';
+  const result = isWin
+    ? await execa('cmd.exe', ['/c', command], {
+        cwd: cwd || process.cwd(),
+        timeout: timeoutSecs * 1000,
+        reject: false,
+        env: { ...process.env, CI: undefined },
+      })
+    : await execa('bash', ['-c', command], {
+        cwd: cwd || process.cwd(),
+        timeout: timeoutSecs * 1000,
+        reject: false,
+        env: { ...process.env, CI: undefined },
+      });
 
   const rawStdout = result.stdout?.trim() || '';
   const rawStderr = result.stderr?.trim() || '';
