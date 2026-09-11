@@ -123,6 +123,28 @@ src/
 └── electron/       # Desktop app
 ```
 
+## Platform Support
+
+### Sandbox Isolation
+
+| Platform | Process Isolation | Network Isolation | Status |
+|----------|-------------------|-------------------|--------|
+| **Linux** | ✅ Full (fork/IPC) | ✅ Full (unshare) | Fully supported |
+| **macOS** | ✅ Full (fork/IPC) | ⚠️ Soft blocking | Process isolation only |
+| **Windows** | ✅ Full (fork/IPC) | ⚠️ Soft blocking | Process isolation only |
+
+**Notes:**
+- ✅ **Process isolation** works on all platforms via Node.js fork/IPC
+- ✅ **Linux** has full network isolation via `unshare` (network namespaces)
+- ⚠️ **macOS/Windows** use soft network blocking (environment variable marker only)
+- All platforms enforce timeouts, resource limits, and filesystem isolation
+
+### Known Limitations
+
+- **Windows**: Network isolation requires Windows Filtering Platform (not yet implemented)
+- **macOS**: Network isolation requires `sandbox-exec` (not yet implemented)
+- **Git operations**: May experience timeouts in parallel test runs on Windows (use sequential mode)
+
 ## Feature Maturity
 
 ### 🟢 Production-Ready (Core)
