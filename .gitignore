@@ -12,6 +12,11 @@ Thumbs.db
 *.vsix
 Understand-Anything/
 
+# Test artifacts and temporary files
+.test-*
+test-sandbox-debug.js
+fix_*.mjs
+
 # Debug artifacts
 debug-electron*.cjs
 debug-electron*.mjs
@@ -118,3 +123,8 @@ vitest.eval.config.ts
 
 # React web client production build output
 dist-web/
+
+# Third-party skills repo cloned for reference ¡ª never committed (was an accidental broken gitlink)
+mattpocock-skills/
+# Scratch log dir from run-chunks.ps1
+chunk-results/

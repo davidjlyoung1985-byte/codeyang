@@ -28,6 +28,13 @@ const AUTH_TOKEN_FILE = join(BRIDGE_DIR, '.token');
 
 const DEFAULT_PORT = 9876;
 
+/**
+ * Version of the bridge HTTP/WS *protocol* — the shape of `/api/info`, task and
+ * message payloads. Independent of the CodeYang app version (`VERSION`): this
+ * only changes when the bridge wire format changes.
+ */
+const BRIDGE_API_VERSION = '1.0.0';
+
 // ── State ─────────────────────────────────────────────────────────
 
 interface ServerState {
@@ -390,7 +397,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     // ── Bridge info ──────────────────────────────────────────────
     if (path === '/api/info') {
       sendJson(res, 200, {
-        version: '1.0.0',
+        version: BRIDGE_API_VERSION,
         agents: Object.fromEntries(
           Array.from(state.connectedAgents.entries()).map(([id, sockets]) => [id, sockets.size > 0]),
         ),
