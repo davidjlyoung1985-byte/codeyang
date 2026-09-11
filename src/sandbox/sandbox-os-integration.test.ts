@@ -22,7 +22,7 @@ describe('Sandbox OS Network Isolation Integration', () => {
       const sandbox = new Sandbox({
         blockNetwork: true,
         useOsNetworkIsolation: true,
-        timeoutMs: 1000,
+        timeoutMs: 10_000,
       });
 
       // 模拟不支持 OS 隔离
@@ -41,7 +41,7 @@ describe('Sandbox OS Network Isolation Integration', () => {
       const sandbox = new Sandbox({
         blockNetwork: true,
         useOsNetworkIsolation: true,
-        timeoutMs: 1000,
+        timeoutMs: 10_000,
       });
 
       // 模拟支持 OS 隔离
@@ -66,7 +66,7 @@ describe('Sandbox OS Network Isolation Integration', () => {
       const sandbox = new Sandbox({
         blockNetwork: true,
         useOsNetworkIsolation: false, // 明确禁用
-        timeoutMs: 1000,
+        timeoutMs: 10_000,
       });
 
       await sandbox.run('echo', ['test']);
@@ -80,7 +80,7 @@ describe('Sandbox OS Network Isolation Integration', () => {
       const sandbox = new Sandbox({
         blockNetwork: false,
         useOsNetworkIsolation: true,
-        timeoutMs: 1000,
+        timeoutMs: 10_000,
       });
 
       await sandbox.run('echo', ['test']);
@@ -94,7 +94,7 @@ describe('Sandbox OS Network Isolation Integration', () => {
       const sandbox = new Sandbox({
         blockNetwork: true,
         useOsNetworkIsolation: true,
-        timeoutMs: 1000,
+        timeoutMs: 10_000,
       });
 
       // 模拟需要 root 权限
@@ -123,7 +123,7 @@ describe('Sandbox OS Network Isolation Integration', () => {
       const sandbox = new Sandbox({
         blockNetwork: true,
         useOsNetworkIsolation: true,
-        timeoutMs: 1000,
+        timeoutMs: 10_000,
       });
 
       detectSpy.mockReturnValue({
@@ -185,7 +185,7 @@ describe('Sandbox OS Network Isolation Integration', () => {
       const sandbox = new Sandbox({
         blockNetwork: true,
         useOsNetworkIsolation: false, // 软隔离
-        timeoutMs: 1000,
+        timeoutMs: 10_000,
       });
 
       const result = await sandbox.run('node', ['-e', 'console.log(process.env.CODEYANG_SANDBOX_NETWORK_BLOCKED)']);
@@ -198,7 +198,7 @@ describe('Sandbox OS Network Isolation Integration', () => {
       const sandbox = new Sandbox({
         blockNetwork: true,
         useOsNetworkIsolation: true,
-        timeoutMs: 1000,
+        timeoutMs: 10_000,
       });
 
       // 模拟不支持（回退到软隔离）

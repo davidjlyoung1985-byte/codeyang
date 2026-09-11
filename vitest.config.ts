@@ -74,5 +74,10 @@ export default defineConfig({
     root: __dirname,
     // For Windows: force POSIX-style path separators in test file matching
     forceExit: true,
+    // Cap parallelism: several suites shell out to real `git`/`npx tsc`/`npx
+    // eslint` or do heavy fs I/O. Uncapped (one worker per core) starves them on
+    // Windows, causing wall-clock timeouts and flaky failures.
+    maxWorkers: 4,
+    minWorkers: 1,
   },
 });

@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { checkRateLimit, resetRateLimit, getRateLimitStats } from './rateLimiter.js';
 
+// Derive limits from the module so these tests never go stale when the
+// defaults change (they used to hardcode 30 and broke when bash moved to 200).
+const bashLimit = getRateLimitStats('bash')!.max;
+const networkLimit = getRateLimitStats('network')!.max;
+const fileLimit = getRateLimitStats('file')!.max;
+const gitLimit = getRateLimitStats('git')!.max;
+
 describe('rateLimiter', () => {
   beforeEach(() => {
     resetRateLimit();
@@ -25,8 +32,7 @@ describe('rateLimiter', () => {
     });
 
     it('throws when exceeding file category limit', () => {
-      // File limit is 100 calls per 60s
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < fileLimit; i++) {
         checkRateLimit('file');
       }
 
@@ -35,8 +41,7 @@ describe('rateLimiter', () => {
     });
 
     it('throws when exceeding bash category limit', () => {
-      // Bash limit is 30 calls per 60s
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < bashLimit; i++) {
         checkRateLimit('bash');
       }
 
@@ -44,8 +49,7 @@ describe('rateLimiter', () => {
     });
 
     it('throws when exceeding network category limit', () => {
-      // Network limit is 50 calls per 60s
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < networkLimit; i++) {
         checkRateLimit('network');
       }
 
@@ -53,7 +57,7 @@ describe('rateLimiter', () => {
     });
 
     it('error message includes wait time', () => {
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < bashLimit; i++) {
         checkRateLimit('bash');
       }
 
@@ -69,8 +73,8 @@ describe('rateLimiter', () => {
     it('respects sliding window - allows calls after window expires', async () => {
       vi.useFakeTimers();
 
-      // Make 30 calls (bash limit)
-      for (let i = 0; i < 30; i++) {
+      // Make `bashLimit` calls to hit the limit
+      for (let i = 0; i < bashLimit; i++) {
         checkRateLimit('bash');
       }
 
@@ -87,15 +91,17 @@ describe('rateLimiter', () => {
     it('handles partial window expiry correctly', async () => {
       vi.useFakeTimers();
 
-      // Make 25 calls
-      for (let i = 0; i < 25; i++) {
+      const first = bashLimit - 5;
+
+      // Make most of the calls at t=0
+      for (let i = 0; i < first; i++) {
         checkRateLimit('bash');
       }
 
       // Advance 30 seconds
       vi.advanceTimersByTime(30_000);
 
-      // Make 5 more calls (total 30, at limit)
+      // Make the remaining calls (now at limit)
       for (let i = 0; i < 5; i++) {
         checkRateLimit('bash');
       }
@@ -103,15 +109,15 @@ describe('rateLimiter', () => {
       // Should be at limit
       expect(() => checkRateLimit('bash')).toThrow();
 
-      // Advance another 31 seconds (first 25 should expire)
+      // Advance another 31 seconds (the first `first` calls should expire)
       vi.advanceTimersByTime(31_000);
 
-      // Should allow more calls (only last 5 remain in window)
+      // Should allow more calls (only the last 5 remain in window)
       expect(() => checkRateLimit('bash')).not.toThrow();
     });
 
     it('tracks different categories independently', () => {
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < bashLimit; i++) {
         checkRateLimit('bash');
       }
       expect(() => checkRateLimit('bash')).toThrow();
@@ -125,7 +131,7 @@ describe('rateLimiter', () => {
 
   describe('resetRateLimit', () => {
     it('resets specific category', () => {
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < bashLimit; i++) {
         checkRateLimit('bash');
       }
       expect(() => checkRateLimit('bash')).toThrow();
@@ -135,10 +141,10 @@ describe('rateLimiter', () => {
     });
 
     it('resets all categories when no argument', () => {
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < bashLimit; i++) {
         checkRateLimit('bash');
       }
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < networkLimit; i++) {
         checkRateLimit('network');
       }
 
@@ -166,7 +172,7 @@ describe('rateLimiter', () => {
       const stats = getRateLimitStats('file');
       expect(stats).not.toBeNull();
       expect(stats?.current).toBe(3);
-      expect(stats?.max).toBe(100);
+      expect(stats?.max).toBe(fileLimit);
       expect(stats?.windowMs).toBe(60_000);
     });
 
@@ -177,7 +183,7 @@ describe('rateLimiter', () => {
 
       const stats = getRateLimitStats('bash');
       expect(stats?.current).toBe(15);
-      expect(stats?.max).toBe(30);
+      expect(stats?.max).toBe(bashLimit);
     });
 
     it('updates after window expiry', async () => {
@@ -203,10 +209,10 @@ describe('rateLimiter', () => {
       const networkStats = getRateLimitStats('network');
       const gitStats = getRateLimitStats('git');
 
-      expect(fileStats?.max).toBe(100);
-      expect(bashStats?.max).toBe(30);
-      expect(networkStats?.max).toBe(50);
-      expect(gitStats?.max).toBe(50);
+      expect(fileStats?.max).toBe(fileLimit);
+      expect(bashStats?.max).toBe(bashLimit);
+      expect(networkStats?.max).toBe(networkLimit);
+      expect(gitStats?.max).toBe(gitLimit);
     });
   });
 
@@ -233,25 +239,27 @@ describe('rateLimiter', () => {
     it('handles rapid burst followed by pause', () => {
       vi.useFakeTimers();
 
-      // Burst 20 calls
-      for (let i = 0; i < 20; i++) {
+      const burst = bashLimit - 10;
+
+      // Burst close to the limit
+      for (let i = 0; i < burst; i++) {
         checkRateLimit('bash');
       }
 
-      expect(getRateLimitStats('bash')?.current).toBe(20);
+      expect(getRateLimitStats('bash')?.current).toBe(burst);
 
-      // Wait 30s, make 10 more
+      // Wait 30s, fill up to the limit
       vi.advanceTimersByTime(30_000);
       for (let i = 0; i < 10; i++) {
         checkRateLimit('bash');
       }
 
-      expect(getRateLimitStats('bash')?.current).toBe(30);
+      expect(getRateLimitStats('bash')?.current).toBe(bashLimit);
 
       // Should be at limit
       expect(() => checkRateLimit('bash')).toThrow();
 
-      // Wait another 31s (first burst expires)
+      // Wait another 31s (the first burst expires)
       vi.advanceTimersByTime(31_000);
       expect(getRateLimitStats('bash')?.current).toBe(10);
 
@@ -267,16 +275,16 @@ describe('rateLimiter', () => {
     });
 
     it('handles exact limit boundary', () => {
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < bashLimit; i++) {
         expect(() => checkRateLimit('bash')).not.toThrow();
       }
 
-      // 31st call should fail
+      // Next call should fail
       expect(() => checkRateLimit('bash')).toThrow();
     });
 
     it('error message includes correct limit values', () => {
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < bashLimit; i++) {
         checkRateLimit('bash');
       }
 
@@ -284,7 +292,7 @@ describe('rateLimiter', () => {
         checkRateLimit('bash');
         expect.fail('Should have thrown');
       } catch (err) {
-        expect((err as Error).message).toContain('30 calls');
+        expect((err as Error).message).toContain(`${bashLimit} calls`);
         expect((err as Error).message).toContain('60s');
       }
     });

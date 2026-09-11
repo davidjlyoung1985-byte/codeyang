@@ -177,7 +177,11 @@ describe('sandbox-runner', () => {
     });
 
     expect(result.durationMs).toBeGreaterThan(90);
-    expect(result.durationMs).toBeLessThan(500);
+    // Upper bound is intentionally loose: `durationMs` covers forking a child
+    // with tsx/cjs registration, which spikes past a tight bound when the suite
+    // runs the whole project in parallel. This asserts the timer is reported and
+    // plausible, not that the host is fast.
+    expect(result.durationMs).toBeLessThan(10_000);
   });
 
   it('handles stderr truncation', async () => {

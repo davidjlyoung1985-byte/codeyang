@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { WatcherSystem } from './WatcherSystem.js';
 import { VerificationPipeline } from './VerificationPipeline.js';
 import { FeedbackInjector } from './FeedbackInjector.js';
@@ -7,6 +7,15 @@ import { tmpdir } from 'node:os';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+
+// VerificationPipeline shells out to `npx eslint` / `npx tsc`. In an isolated
+// temp project (no local node_modules) `npx` would fetch the packages from the
+// npm registry — a slow, network-dependent call that timed out under load and
+// made these tests flaky. Mock the process boundary instead: these tests only
+// assert command *wiring*, not eslint/tsc themselves.
+vi.mock('execa', () => ({
+  execa: vi.fn(async () => ({ stdout: '', stderr: '', exitCode: 0 })),
+}));
 
 // ── WatcherSystem ───────────────────────────────────────────────────────────
 
@@ -167,9 +176,15 @@ describe('VerificationPipeline', () => {
   });
 
   it('runBatch returns results for TS files only', async () => {
-    const results = await pipeline.runBatch([join(tempDir, 'a.ts'), join(tempDir, 'b.md')]);
-    expect(results.length).toBeGreaterThanOrEqual(0);
-  }, 30000);
+    const tsFile = join(tempDir, 'a.ts');
+    const mdFile = join(tempDir, 'b.md');
+    const results = await pipeline.runBatch([tsFile, mdFile]);
+
+    // The .md file must be filtered out; the .ts file must be verified.
+    expect(results.some((r) => r.filePath === tsFile)).toBe(true);
+    expect(results.some((r) => r.filePath === mdFile)).toBe(false);
+    expect(results.every((r) => r.filePath.endsWith('.ts'))).toBe(true);
+  });
 });
 
 // ── FeedbackInjector ────────────────────────────────────────────────────────

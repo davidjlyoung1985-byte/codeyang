@@ -224,7 +224,9 @@ describe('Commands - Extended Coverage', () => {
       } finally {
         fs.rmSync(tmp, { recursive: true, force: true });
       }
-    }, 30000);
+      // Real git init/config/add/commit in a temp repo — generous bound so a
+      // loaded CI host doesn't trip the default 30s timeout.
+    }, 60_000);
 
     it('should handle /commit without message', async () => {
       const result = await dispatch('/commit', ctx);

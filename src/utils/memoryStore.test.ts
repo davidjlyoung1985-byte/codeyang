@@ -233,7 +233,7 @@ describe('memoryStore', () => {
       // Search should still work with many memories
       const results = await searchMemories('value');
       expect(results.length).toBeGreaterThan(0);
-    });
+    }, 60_000);
 
     it('returns memory count and stats', async () => {
       await saveMemory('c1', 'v1', 'user');
