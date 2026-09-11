@@ -46,7 +46,12 @@ describe('Memory Monitor', () => {
       expect(snapshot.current).toBeDefined();
       expect(snapshot.baseline).toEqual(baseline);
       expect(snapshot.delta).toBeDefined();
-      expect(snapshot.delta?.rss).toBeGreaterThanOrEqual(0);
+      // `delta` is the *change* in memory between baseline and now. RSS and heap
+      // can legitimately decrease (GC, OS page reclaim, parallel load), so it must
+      // NOT be asserted as non-negative — that made this test flaky under
+      // --pool=threads. Assert the delta was computed (a finite number) instead.
+      expect(Number.isFinite(snapshot.delta?.rss)).toBe(true);
+      expect(Number.isFinite(snapshot.delta?.heapUsed)).toBe(true);
 
       // Clean up
       largeArray.length = 0;
