@@ -7,10 +7,11 @@
 
 An AI coding agent inspired by [Claude Code](https://github.com/anthropics/claude-code) architecture. CodeYang lets you describe coding tasks in natural language — it reads files, writes code, runs commands, manages Git, and more.
 
-**Project Status**: A- / Production-ready for personal & small-team use  
-✅ Core functionality works  
-✅ CI/CD hard gates (tsc + lint + vitest) green  
-📊 Test Coverage: enforced by CI (statements 60%+ / branches 45%+ / functions 60%+)
+**Project Status**: Beta — usable for personal & small-team use, not yet hardened  
+✅ Core functionality works; `tsc --noEmit` and ESLint pass clean  
+✅ Full suite green: **2076 tests, 0 failures** (see [Testing](#testing))  
+📊 Test Coverage: enforced by CI at statements 64% / branches 52% / functions 67% / lines 65%  
+⚠️ **Evolving modules** (`src/experimental/`) ship in every build but their internal APIs may change — see [src/experimental/README.md](src/experimental/README.md)
 
 ## Architecture
 
@@ -118,22 +119,37 @@ export CODEYANG_BASH_TIMEOUT=120
 export CODEYANG_DEBUG=true
 ```
 
-See [TROUBLESHOOTING_INTERRUPTION.md](TROUBLESHOOTING_INTERRUPTION.md) for detailed diagnostics.
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed diagnostics.
 
 ## Project Structure
 
 ```
 src/
 ├── agent/          # Agent loop, streaming, tool orchestration
-├── tools/          # 80+ built-in tools (Bash, Git, Read, Write, etc.)
+├── tools/          # Built-in tools (Bash, Git, Read, Write, etc.)
 ├── mcp/            # Model Context Protocol client
 ├── sandbox/        # Process isolation (fork/IPC)
 ├── permission/     # Permission checking and deny lists
 ├── security/       # SSRF protection, input validation
+├── planner/        # Task planning
+├── tot/            # Tree-of-Thoughts reasoning
+├── a2a/            # Agent-to-agent protocol
+├── closed-loop/    # Watcher + verification pipeline
+├── circuit-breaker/# LLM failure isolation
+├── gateway/        # Request routing
+├── tracing/        # Observability
+├── recovery/       # Error recovery
+├── bridge/         # Claude Code bridge
 ├── ui/             # CLI interface
 ├── utils/          # Logging, caching, session store
-├── vscode-ext/     # VS Code extension
-└── electron/       # Desktop app
+└── experimental/   # Evolving modules (qt, reflexion, continual-learning)
+
+# Separate packages at repo root:
+vscode-extension/   # VS Code extension
+web/                # Web service wrapper
+web-ui/             # Browser client
+wps-addin/          # WPS Office add-in
+mcp-servers/        # Bundled MCP servers
 ```
 
 ## Platform Support
@@ -176,13 +192,14 @@ Functional but under active development:
 - **Electron desktop app** — standalone GUI
 - **tot** (Tree-of-Thought), **a2a** (Agent-to-Agent), **closed-loop** modules
 
-### 🔴 Experimental (Research-Only)
-Proof-of-concept features, not production-ready:
-- **qt** — Query transformation (4,054 lines, research prototype)
-- **reflexion** — Self-reflection loop (831 lines, minimal tests)
-- **continual-learning** — Continuous improvement (943 lines, WIP)
+### 🔴 Evolving (API May Change)
+Wired into the main product and covered by the test suite, but their internal
+APIs are not yet frozen — expect signature changes in minor releases:
+- **qt** — Qt framework integration (~5,000 lines). Auto-enabled when a Qt project is detected; injects Qt knowledge and registers Qt tools
+- **reflexion** — Self-reflection & critique loop (~3,200 lines). Always on; feeds learned patterns back into context
+- **continual-learning** — Memory consolidation (~1,000 lines). Runs periodically to merge related memories
 
-⚠️ Experimental modules are excluded from coverage metrics and may have breaking changes.
+⚠️ These modules are **not counted in coverage metrics** (excluded from the coverage `include` list) even though they are exercised by the suite.
 
 ## Examples
 
@@ -223,23 +240,23 @@ npm run build
 
 ## Testing
 
-Current test status: **See CI for latest metrics**
-
-Known issues:
-- BashTool: 2 timeout tests (environment-dependent)
-- Some sandbox tests require specific OS features
-
-Run tests locally:
 ```bash
 npm test              # Run all tests
 npm run test:coverage # With coverage report
 ```
 
-Coverage targets maintained by CI (see [.github/workflows/ci.yml](.github/workflows/ci.yml)):
-- Statements: 60%+ (current: 64.9%)
-- Branches: 50%+ (current: 52.0%)
-- Functions: 65%+ (current: 67.0%)
-- Lines: 60%+ (current: 66.1%)
+Current status: **2076 tests across 103 files, 0 failures** (`npm test`).
+
+Test parallelism is capped at `maxWorkers: 4` in `vitest.config.ts`. Several
+suites shell out to real `git` / `npx tsc` / `npx eslint` or do heavy filesystem
+I/O; leaving it unbounded starves those processes on Windows and produces
+wall-clock timeout flakes.
+
+Coverage thresholds enforced by CI (see `vitest.config.ts` and [.github/workflows/ci.yml](.github/workflows/ci.yml)):
+- Statements: 64%
+- Branches: 52%
+- Functions: 67%
+- Lines: 65%
 
 ## Contributing
 
@@ -284,13 +301,18 @@ This is a **functional but work-in-progress** AI agent project:
 - ✅ CI/CD with hard gates (tsc + lint + vitest)
 - ✅ Performance benchmarks and security hardening
 
-**Production readiness**: B+ (85/100)
-- Core modules: agent, tools, mcp, security (well-tested, production-ready)
-- Test coverage: 1701/1706 passing (99.7%), branches 51.8%, statements 64.7%
-- Known issues: 4 environment-dependent test timeouts on Windows (full parallel runs)
-- Experimental modules: qt, reflexion, continual-learning (excluded from coverage, research-only)
+**Production readiness**: Beta (B)
+- Core modules: agent, tools, mcp, security — well-tested, suitable for personal / small-team use
+- Full suite: **2076 tests, 0 failures**; `tsc --noEmit` and ESLint clean
+- Coverage gates: statements 64% / branches 52% / functions 67% / lines 65%
+- 81 registered tools
+- `src/experimental/` (qt, reflexion, continual-learning) ships and runs but is excluded from coverage and its APIs may change
 - SSRF protection and security best practices
-- Clean git history and organized documentation
 - Active development with regular improvements
+
+**Not yet done** (why this is Beta, not stable):
+- Windows/macOS lack OS-level network isolation for the sandbox (soft blocking only)
+- No git tags — releases are tracked by filename (`RELEASE-v0.8.0.md`)
+- Some suites still shell out to real `git`/`npx`, so a heavily loaded host can still slow the run
 
 We believe in honest documentation. If you find issues, please report them!
