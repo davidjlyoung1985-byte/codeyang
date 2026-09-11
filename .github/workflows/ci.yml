@@ -47,9 +47,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       # Hard gate: any test failure fails the job. No retry bypass.
-      # Windows uses the thread pool (worker_threads) to avoid the fork-pool
-      # process-exit hang seen in some Windows environments, and caps workers
-      # to reduce flaky resource pressure on parallel runs.
+      # Windows runs the thread pool with capped workers to limit parallel
+      # resource pressure. (Earlier flakiness was a test-isolation bug --
+      # process.chdir racing between parallel workers -- fixed in the tests.)
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
         run: npm test -- --pool=threads --maxWorkers=2
