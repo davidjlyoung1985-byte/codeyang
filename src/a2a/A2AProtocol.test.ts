@@ -7,6 +7,7 @@ import {
   type AgentCard,
   type A2AMessage,
 } from './A2AProtocol.js';
+import { VERSION } from '../version.js';
 
 describe('InProcessChannel', () => {
   let channel: InProcessChannel;
@@ -239,7 +240,7 @@ describe('A2AProtocol', () => {
 
       expect(card.agentId).toBeDefined();
       expect(card.name).toBe('CodeYang');
-      expect(card.version).toBe('0.7.0');
+      expect(card.version).toBe(VERSION);
       expect(card.capabilities).toContain('file_ops');
       expect(card.capabilities).toContain('shell_exec');
     });
