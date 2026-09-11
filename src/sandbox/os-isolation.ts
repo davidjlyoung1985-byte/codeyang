@@ -56,11 +56,11 @@ export function detectNetworkIsolationSupport(): NetworkIsolationCapabilities {
     }
   }
 
-  // Windows: 不支持（需要 Job Objects，暂未实现）
+  // Windows: 基础进程隔离支持，但无网络隔离
   if (os === 'win32') {
     return {
       supported: false,
-      error: 'Network isolation on Windows requires Job Objects (not yet implemented)',
+      error: 'Network isolation on Windows not available (would require Windows Filtering Platform or Job Objects)',
     };
   }
 

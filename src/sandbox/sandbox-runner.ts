@@ -7,12 +7,38 @@
  */
 
 import { execFile } from 'node:child_process';
+import { platform } from 'node:os';
 
 const [command, ...args] = process.argv.slice(2);
 
 if (!command) {
   process.stderr.write('[SandboxRunner] No command provided\n');
   process.exit(1);
+}
+
+// ── Windows compatibility ──────────────────────────────────────
+/**
+ * On Windows:
+ * - shell:true can find 'node' in PATH but mangles quoted arguments
+ * - shell:false preserves arguments but can't find 'node'
+ * Solution: Use shell:false and resolve common commands to full paths
+ */
+const isWindows = platform() === 'win32';
+let resolvedCommand = command;
+let useShell = false;
+
+if (isWindows) {
+  // For 'node', use the current Node.js executable
+  if (command === 'node' || command === 'node.exe') {
+    resolvedCommand = process.execPath;
+    useShell = false; // Use direct execution to preserve arguments
+  } else {
+    // For other commands, try shell (may need PATH resolution)
+    useShell = true;
+  }
+} else {
+  // Linux/macOS: direct execution works fine
+  useShell = false;
 }
 
 // ── Resource limits from environment ──────────────────────────
@@ -36,13 +62,13 @@ const execOptions: Parameters<typeof execFile>[2] = {
   },
   timeout: timeoutMs,
   maxBuffer: Math.max(maxStdoutBytes, maxStderrBytes),
-  // Don't use shell - execFile is meant to run executables directly
-  shell: false,
+  // Use shell only when necessary (see Windows compatibility section above)
+  shell: useShell,
   encoding: 'utf-8',
 };
 
 // Use callback-based execFile to get all output at once
-execFile(command, args, execOptions, (error, stdout, stderr) => {
+execFile(resolvedCommand, args, execOptions, (error, stdout, stderr) => {
   const durationMs = Date.now() - startTime;
 
   // Check if it was killed by timeout
