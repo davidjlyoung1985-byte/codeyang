@@ -253,9 +253,6 @@ export function shouldUseSandbox(command: string, permissionLevel: string): bool
 
   const cmd = command.toLowerCase().trim();
 
-  // Always sandbox permission='ask' commands
-  if (permissionLevel === 'ask') return true;
-
   // Sandbox destructive patterns
   const sandboxPatterns = [
     /^sudo /,
