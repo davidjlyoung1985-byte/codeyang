@@ -1,4 +1,4 @@
-﻿import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+﻿import { describe, test, expect, beforeEach } from 'vitest';
 import { platform } from 'node:os';
 
 // 只在Windows上运行这些测试

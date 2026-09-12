@@ -45,7 +45,7 @@ export function detectWindowsFirewall(): WindowsIsolationResult {
         error: 'Requires administrator privileges',
       };
     }
-  } catch (err) {
+  } catch {
     return {
       supported: false,
       requiresAdmin: false,

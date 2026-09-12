@@ -1,6 +1,6 @@
 ﻿import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import { buildBaseSystemPrompt, loadKnowledgeBase, BASE_SYSTEM_PROMPT } from './system-prompt.js';
-import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { codeyangPath } from '../utils/paths.js';
 
