@@ -1,132 +1,55 @@
 {
   "name": "codeyang-vscode",
-  "displayName": "CodeYang",
-  "description": "AI coding agent with inline completion and full Agent support via Bridge",
-  "version": "0.2.0",
+  "displayName": "CodeYang AI Agent",
+  "version": "0.3.1",
+  "description": "AI coding agent — chat with tool-using CodeYang inside VS Code",
   "publisher": "codeyang",
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.85.0"
   },
-  "categories": ["Programming Languages", "Machine Learning", "Snippets"],
-  "activationEvents": ["onStartupFinished"],
-  "main": "./out/extension.js",
+  "categories": [
+    "Chat",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "codeyang.inlineCompletion",
-        "title": "CodeYang: Trigger Inline Completion"
-      },
-      {
-        "command": "codeyang.refactor",
-        "title": "CodeYang: Refactor Selection"
-      },
-      {
-        "command": "codeyang.generateTests",
-        "title": "CodeYang: Generate Tests"
-      },
-      {
-        "command": "codeyang.reconnectBridge",
-        "title": "CodeYang: Reconnect to Bridge"
-      },
-      {
-        "command": "codeyang.showStats",
-        "title": "CodeYang: Show Agent Statistics"
-      },
-      {
-        "command": "codeyang.executeCustomTask",
-        "title": "CodeYang: Execute Custom Task"
+        "command": "codeyang.startChat",
+        "title": "CodeYang: Start Chat",
+        "category": "CodeYang"
       }
     ],
     "keybindings": [
       {
-        "command": "codeyang.inlineCompletion",
-        "key": "ctrl+shift+space",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "codeyang.refactor",
-        "key": "ctrl+shift+r",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "codeyang.generateTests",
-        "key": "ctrl+shift+t",
-        "when": "editorTextFocus"
+        "command": "codeyang.startChat",
+        "key": "ctrl+shift+y",
+        "mac": "cmd+shift+y"
       }
     ],
     "configuration": {
       "title": "CodeYang",
       "properties": {
-        "codeyang.useBridge": {
-          "type": "boolean",
-          "default": false,
-          "description": "Use Bridge mode to connect to CodeYang Agent (recommended for full features)",
-          "order": 1
-        },
-        "codeyang.bridgeURL": {
-          "type": "string",
-          "default": "http://localhost:9876",
-          "description": "Bridge server URL (start with: npm run bridge-server)",
-          "order": 2
-        },
         "codeyang.apiKey": {
           "type": "string",
-          "default": "",
-          "description": "Claude API Key (not needed if using Bridge mode)",
-          "order": 3
+          "description": "API Key for CodeYang AI agent (supports DeepSeek, Anthropic)",
+          "default": ""
         },
-        "codeyang.enableInlineCompletion": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable inline completion",
-          "order": 4
+        "codeyang.apiBaseUrl": {
+          "type": "string",
+          "description": "API Base URL (DeepSeek Anthropic-compatible: https://api.deepseek.com/anthropic, OpenAI-compatible: https://api.deepseek.com/v1)",
+          "default": "https://api.deepseek.com/anthropic"
         },
-        "codeyang.completionDelay": {
-          "type": "number",
-          "default": 300,
-          "description": "Delay before triggering completion (ms)",
-          "order": 5
-        },
-        "codeyang.maxCompletionLength": {
-          "type": "number",
-          "default": 500,
-          "description": "Maximum completion length in characters",
-          "order": 6
-        },
-        "codeyang.useTools": {
-          "type": "boolean",
-          "default": true,
-          "description": "Allow Agent to use tools in Bridge mode",
-          "order": 7
-        },
-        "codeyang.useRL": {
-          "type": "boolean",
-          "default": true,
-          "description": "Use RL weights for optimization in Bridge mode",
-          "order": 8
-        },
-        "codeyang.useMemory": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable project memory in Bridge mode",
-          "order": 9
+        "codeyang.model": {
+          "type": "string",
+          "description": "Model to use (deepseek-v4-pro for best quality, deepseek-v4-flash for speed, or claude model names for auto-mapping)",
+          "default": "deepseek-v4-pro"
         }
       }
     }
   },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "package": "vsce package"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.80.0",
-    "@types/node": "^18.0.0",
-    "typescript": "^5.0.0",
-    "@vscode/vsce": "^2.22.0"
-  },
-  "dependencies": {
-    "axios": "^1.6.0"
-  }
+  "dependencies": {}
 }

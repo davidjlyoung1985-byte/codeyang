@@ -12326,16 +12326,21 @@ var import_node_path = require("path");
 
 // src/utils/rateLimiter.ts
 init_cjs_shims();
+var getLimit = (category, defaultLimit) => {
+  const envKey = `CODEYANG_${category.toUpperCase()}_LIMIT`;
+  const envValue = process.env[envKey];
+  return envValue ? parseInt(envValue, 10) : defaultLimit;
+};
 var RATE_LIMITS = {
-  file: { maxCalls: 100, windowMs: 6e4 },
+  file: { maxCalls: getLimit("file", 100), windowMs: 6e4 },
   // 100 file ops/min
-  network: { maxCalls: 50, windowMs: 6e4 },
+  network: { maxCalls: getLimit("network", 50), windowMs: 6e4 },
   // 50 network requests/min
-  bash: { maxCalls: 30, windowMs: 6e4 },
-  // 30 shell commands/min
-  git: { maxCalls: 50, windowMs: 6e4 },
+  bash: { maxCalls: getLimit("bash", 200), windowMs: 6e4 },
+  // 200 shell commands/min (increased from 30)
+  git: { maxCalls: getLimit("git", 50), windowMs: 6e4 },
   // 50 git ops/min
-  mcp: { maxCalls: 100, windowMs: 6e4 }
+  mcp: { maxCalls: getLimit("mcp", 100), windowMs: 6e4 }
   // 100 MCP calls/min
 };
 var SlidingWindowTracker = class {
@@ -12966,7 +12971,7 @@ init_cjs_shims();
 // package.json
 var package_default = {
   name: "codeyang",
-  version: "0.8.0",
+  version: "0.9.0",
   description: "Terminal-based AI coding agent with 64+ tools, code refactoring, MCP support, and session persistence",
   type: "module",
   main: "./dist/index.js",
@@ -19430,4 +19435,3 @@ mime-types/index.js:
    * MIT Licensed
    *)
 */
-//# sourceMappingURL=tools.cjs.map
