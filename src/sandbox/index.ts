@@ -256,12 +256,12 @@ export class Sandbox {
     let actualArgs = args;
 
     if (this.config.blockNetwork && this.config.useOsNetworkIsolation) {
-      const capabilities = detectNetworkIsolationSupport();
+      const capabilities = await detectNetworkIsolationSupport();
 
       if (capabilities.supported && !capabilities.requiresRoot) {
         // 支持且有权限，包装命令
         try {
-          const wrapped = wrapCommandWithNetworkIsolation(command, args);
+          const wrapped = await wrapCommandWithNetworkIsolation(command, args);
           actualCommand = wrapped.command;
           actualArgs = wrapped.args;
         } catch (err) {

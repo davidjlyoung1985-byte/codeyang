@@ -3,90 +3,91 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v0.9.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
-  id-token: write
+  packages: write
 
 jobs:
-  publish:
-    name: Publish to npm
+  release:
+    name: Create Release
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: https://registry.npmjs.org
           cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  github-release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: publish
-    steps:
-      - uses: actions/checkout@v4
-      - name: Generate release notes
-        id: notes
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build
+
+      - name: Get version from tag
+        id: get_version
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          # Extract changelog for this version
-          if [ -f CHANGELOG.md ]; then
-            sed -n "/^## \[$VERSION\]/,/^## \[/p" CHANGELOG.md | sed '$d' > release-notes.md
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "TAG_NAME=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+            echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
-          if [ ! -s release-notes.md ]; then
-            echo "Release $VERSION of CodeYang" > release-notes.md
-            echo "" >> release-notes.md
-            echo "See [CHANGELOG.md](./CHANGELOG.md) for details." >> release-notes.md
-          fi
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          body_path: release-notes.md
-          generate_release_notes: false
-          files: |
-            dist/
-            LICENSE
 
-  docker:
-    name: Publish Docker Image
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: publish
-    if: success()
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            VERSION="${{ steps.get_version.outputs.VERSION }}"
+            sed -n "/## \[${VERSION#v}\]/,/## \[/p" CHANGELOG.md | sed '$d' > release_notes.md
+          else
+            git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s (%h)" > release_notes.md
+          fi
+          if [ ! -s release_notes.md ]; then
+            echo "Release ${{ steps.get_version.outputs.VERSION }}" > release_notes.md
+            echo "" >> release_notes.md
+            echo "See commit history for details." >> release_notes.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
+          tag_name: ${{ steps.get_version.outputs.TAG_NAME }}
+          name: CodeYang ${{ steps.get_version.outputs.VERSION }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.VERSION, 'alpha') || contains(steps.get_version.outputs.VERSION, 'beta') || contains(steps.get_version.outputs.VERSION, 'rc') }}
+          files: |
+            dist/**/*
+            package.json
+            README.md
+            LICENSE
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          images: codeyang/codeyang
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          name: build-${{ steps.get_version.outputs.VERSION }}
+          path: |
+            dist/
+            package.json
+          retention-days: 90

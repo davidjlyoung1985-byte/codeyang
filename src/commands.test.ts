@@ -153,13 +153,26 @@ describe('Commands', () => {
   });
 
   describe('exit commands', () => {
-    // Note: exit commands call process.exit() which is hard to test properly
-    // These are covered by integration tests
-    it.skip('should handle /exit', async () => {
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
-      const result = await dispatch('/exit', ctx);
-      expect(result.handled).toBe(true);
-      exitSpy.mockRestore();
+    it('should shut down the session and exit on /exit', async () => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+      try {
+        await dispatch('/exit', ctx);
+        expect(mockMcpMgr.shutdown).toHaveBeenCalled();
+        expect(mockUI.close).toHaveBeenCalled();
+        expect(exitSpy).toHaveBeenCalledWith(0);
+      } finally {
+        exitSpy.mockRestore();
+      }
+    });
+
+    it('should treat /quit the same as /exit', async () => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+      try {
+        await dispatch('/quit', ctx);
+        expect(exitSpy).toHaveBeenCalledWith(0);
+      } finally {
+        exitSpy.mockRestore();
+      }
     });
   });
 

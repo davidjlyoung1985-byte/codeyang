@@ -10,7 +10,7 @@ import { platform } from 'node:os';
 
 export interface NetworkIsolationCapabilities {
   supported: boolean;
-  method?: 'unshare' | 'none';
+  method?: 'unshare' | 'wfp' | 'sandbox-exec' | 'none';
   requiresRoot?: boolean;
   error?: string;
 }
@@ -18,7 +18,7 @@ export interface NetworkIsolationCapabilities {
 /**
  * 检测系统是否支持网络隔离
  */
-export function detectNetworkIsolationSupport(): NetworkIsolationCapabilities {
+export async function detectNetworkIsolationSupport(): Promise<NetworkIsolationCapabilities> {
   const os = platform();
 
   // Linux: 检查 unshare 命令
@@ -56,20 +56,74 @@ export function detectNetworkIsolationSupport(): NetworkIsolationCapabilities {
     }
   }
 
-  // Windows: 基础进程隔离支持，但无网络隔离
+  // Windows: 使用 netsh 防火墙规则
   if (os === 'win32') {
-    return {
-      supported: false,
-      error: 'Network isolation on Windows not available (would require Windows Filtering Platform or Job Objects)',
-    };
+    try {
+      const { detectWindowsFirewall } = await import('./os-isolation-windows.js');
+      const result = detectWindowsFirewall();
+
+      if (!result.supported) {
+        return {
+          supported: false,
+          error: result.error || 'Windows Firewall not available',
+        };
+      }
+
+      if (result.requiresAdmin) {
+        return {
+          supported: true,
+          method: 'wfp' as const,
+          requiresRoot: true,
+          error: 'Requires administrator privileges to create firewall rules',
+        };
+      }
+
+      return {
+        supported: true,
+        method: 'wfp' as const,
+        requiresRoot: false,
+      };
+    } catch {
+      return {
+        supported: false,
+        error: 'Network isolation on Windows requires Windows Filtering Platform',
+      };
+    }
   }
 
-  // macOS: 不支持（需要 sandbox-exec，复杂且限制多）
+  // macOS: 使用 sandbox-exec
   if (os === 'darwin') {
-    return {
-      supported: false,
-      error: 'Network isolation on macOS requires sandbox-exec (not yet implemented)',
-    };
+    try {
+      const { detectMacOSSandbox } = await import('./os-isolation-macos.js');
+      const result = detectMacOSSandbox();
+
+      if (!result.supported) {
+        return {
+          supported: false,
+          error: result.error || 'sandbox-exec not available',
+        };
+      }
+
+      if (result.requiresSIPDisabled) {
+        return {
+          supported: true,
+          method: 'sandbox-exec' as const,
+          requiresRoot: false,
+          error: 'System Integrity Protection (SIP) may restrict sandbox-exec usage',
+        };
+      }
+
+      return {
+        supported: true,
+        method: 'sandbox-exec' as const,
+        requiresRoot: false,
+      };
+    } catch {
+      return {
+        supported: false,
+        error: 'Network isolation on macOS requires sandbox-exec (not available)',
+      };
+    }
   }
 
   return {
@@ -85,8 +139,11 @@ export function detectNetworkIsolationSupport(): NetworkIsolationCapabilities {
  * @param args - 原始参数
  * @returns 包装后的命令和参数
  */
-export function wrapCommandWithNetworkIsolation(command: string, args: string[]): { command: string; args: string[] } {
-  const capabilities = detectNetworkIsolationSupport();
+export async function wrapCommandWithNetworkIsolation(
+  command: string,
+  args: string[],
+): Promise<{ command: string; args: string[] }> {
+  const capabilities = await detectNetworkIsolationSupport();
 
   if (!capabilities.supported) {
     throw new Error(`Network isolation not supported: ${capabilities.error}`);
@@ -110,7 +167,7 @@ export function wrapCommandWithNetworkIsolation(command: string, args: string[])
  */
 export async function testNetworkIsolation(): Promise<boolean> {
   try {
-    const { command, args } = wrapCommandWithNetworkIsolation('ping', ['-c', '1', '8.8.8.8']);
+    const { command, args } = await wrapCommandWithNetworkIsolation('ping', ['-c', '1', '8.8.8.8']);
 
     execSync(`${command} ${args.join(' ')}`, {
       stdio: 'ignore',
@@ -129,8 +186,8 @@ export async function testNetworkIsolation(): Promise<boolean> {
 /**
  * 获取网络隔离状态的人类可读描述
  */
-export function getNetworkIsolationStatus(): string {
-  const capabilities = detectNetworkIsolationSupport();
+export async function getNetworkIsolationStatus(): Promise<string> {
+  const capabilities = await detectNetworkIsolationSupport();
 
   if (!capabilities.supported) {
     return `❌ Network isolation not supported: ${capabilities.error}`;
@@ -152,8 +209,8 @@ export const NETWORK_ISOLATION_EXAMPLE = {
   useOsNetworkIsolation: true, // 新选项
 
   // 检测和启用逻辑：
-  checkBeforeRun: () => {
-    const capabilities = detectNetworkIsolationSupport();
+  checkBeforeRun: async () => {
+    const capabilities = await detectNetworkIsolationSupport();
     if (!capabilities.supported) {
       console.warn('OS-level network isolation not available, using soft blocking');
       return false;
