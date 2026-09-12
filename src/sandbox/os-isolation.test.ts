@@ -6,10 +6,14 @@ import {
 } from './os-isolation.js';
 import { platform } from 'node:os';
 
+// NOTE: the detection/wrap/status helpers are async (they probe for `unshare`
+// on Linux), so every call site here must await them. This file previously
+// called them synchronously, which silently broke when the implementation
+// became async.
 describe('OS Isolation', () => {
   describe('detectNetworkIsolationSupport', () => {
-    test('should detect platform capabilities', () => {
-      const capabilities = detectNetworkIsolationSupport();
+    test('should detect platform capabilities', async () => {
+      const capabilities = await detectNetworkIsolationSupport();
 
       expect(capabilities).toHaveProperty('supported');
 
@@ -20,8 +24,8 @@ describe('OS Isolation', () => {
       }
     });
 
-    test('should return correct capabilities for current platform', () => {
-      const capabilities = detectNetworkIsolationSupport();
+    test('should return correct capabilities for current platform', async () => {
+      const capabilities = await detectNetworkIsolationSupport();
       const os = platform();
 
       if (os === 'linux') {
@@ -29,15 +33,25 @@ describe('OS Isolation', () => {
         if (capabilities.supported) {
           expect(capabilities.method).toBe('unshare');
         }
-      } else if (os === 'win32' || os === 'darwin') {
-        // Windows 和 macOS 当前不支持
-        expect(capabilities.supported).toBe(false);
-        expect(capabilities.error).toBeDefined();
+      } else if (os === 'win32') {
+        // Windows 通过 WFP（Windows Filtering Platform）支持，可能需要管理员权限
+        if (capabilities.supported) {
+          expect(capabilities.method).toBe('wfp');
+        } else {
+          expect(capabilities.error).toBeDefined();
+        }
+      } else if (os === 'darwin') {
+        // macOS 通过 sandbox-exec 支持
+        if (capabilities.supported) {
+          expect(capabilities.method).toBe('sandbox-exec');
+        } else {
+          expect(capabilities.error).toBeDefined();
+        }
       }
     });
 
-    test('should handle missing unshare gracefully', () => {
-      const capabilities = detectNetworkIsolationSupport();
+    test('should handle missing unshare gracefully', async () => {
+      const capabilities = await detectNetworkIsolationSupport();
 
       // 无论是否支持，都不应该抛出异常
       expect(capabilities).toBeDefined();
@@ -45,33 +59,33 @@ describe('OS Isolation', () => {
   });
 
   describe('wrapCommandWithNetworkIsolation', () => {
-    test('should throw on unsupported platforms', () => {
-      const capabilities = detectNetworkIsolationSupport();
+    test('should throw on unsupported platforms', async () => {
+      const capabilities = await detectNetworkIsolationSupport();
 
       if (!capabilities.supported) {
-        expect(() => {
-          wrapCommandWithNetworkIsolation('echo', ['hello']);
-        }).toThrow('Network isolation not supported');
+        await expect(wrapCommandWithNetworkIsolation('echo', ['hello'])).rejects.toThrow(
+          'Network isolation not supported',
+        );
       }
     });
 
-    test('should wrap command with unshare on Linux (if supported)', () => {
-      const capabilities = detectNetworkIsolationSupport();
+    test('should wrap command with unshare on Linux (if supported)', async () => {
+      const capabilities = await detectNetworkIsolationSupport();
 
       if (capabilities.supported && capabilities.method === 'unshare' && !capabilities.requiresRoot) {
-        const { command, args } = wrapCommandWithNetworkIsolation('node', ['-v']);
+        const { command, args } = await wrapCommandWithNetworkIsolation('node', ['-v']);
 
         expect(command).toBe('unshare');
         expect(args).toEqual(['--net', '--', 'node', '-v']);
       }
     });
 
-    test('should preserve all original arguments', () => {
-      const capabilities = detectNetworkIsolationSupport();
+    test('should preserve all original arguments', async () => {
+      const capabilities = await detectNetworkIsolationSupport();
 
       if (capabilities.supported && capabilities.method === 'unshare' && !capabilities.requiresRoot) {
         const originalArgs = ['arg1', 'arg2', '--flag', 'value'];
-        const { args } = wrapCommandWithNetworkIsolation('cmd', originalArgs);
+        const { args } = await wrapCommandWithNetworkIsolation('cmd', originalArgs);
 
         // 应该包含所有原始参数
         expect(args.slice(3)).toEqual(originalArgs);
@@ -80,8 +94,8 @@ describe('OS Isolation', () => {
   });
 
   describe('getNetworkIsolationStatus', () => {
-    test('should return human-readable status', () => {
-      const status = getNetworkIsolationStatus();
+    test('should return human-readable status', async () => {
+      const status = await getNetworkIsolationStatus();
 
       expect(status).toBeDefined();
       expect(typeof status).toBe('string');
@@ -91,9 +105,9 @@ describe('OS Isolation', () => {
       expect(status).toMatch(/^[✅⚠️❌]/);
     });
 
-    test('should reflect actual capabilities', () => {
-      const status = getNetworkIsolationStatus();
-      const capabilities = detectNetworkIsolationSupport();
+    test('should reflect actual capabilities', async () => {
+      const status = await getNetworkIsolationStatus();
+      const capabilities = await detectNetworkIsolationSupport();
 
       if (capabilities.supported) {
         expect(status).toContain(capabilities.method);
@@ -112,9 +126,9 @@ describe('OS Isolation', () => {
   });
 
   describe('Platform-specific behavior', () => {
-    test('Linux should attempt unshare detection', () => {
+    test('Linux should attempt unshare detection', async () => {
       if (platform() === 'linux') {
-        const capabilities = detectNetworkIsolationSupport();
+        const capabilities = await detectNetworkIsolationSupport();
 
         // 在 Linux 上应该检测 unshare
         if (capabilities.supported) {
@@ -126,44 +140,50 @@ describe('OS Isolation', () => {
       }
     });
 
-    test('Windows should report unsupported', () => {
+    test('Windows should report WFP capabilities or a reason', async () => {
       if (platform() === 'win32') {
-        const capabilities = detectNetworkIsolationSupport();
+        const capabilities = await detectNetworkIsolationSupport();
 
-        expect(capabilities.supported).toBe(false);
-        expect(capabilities.error).toContain('Windows');
+        if (capabilities.supported) {
+          // Windows isolates the network via WFP firewall rules.
+          expect(capabilities.method).toBe('wfp');
+        } else {
+          // If unavailable, there must be a non-empty explanation.
+          expect(typeof capabilities.error).toBe('string');
+          expect(capabilities.error!.length).toBeGreaterThan(0);
+        }
       }
     });
 
-    test('macOS should report unsupported', () => {
+    test('macOS should report sandbox-exec capabilities or a reason', async () => {
       if (platform() === 'darwin') {
-        const capabilities = detectNetworkIsolationSupport();
+        const capabilities = await detectNetworkIsolationSupport();
 
-        expect(capabilities.supported).toBe(false);
-        expect(capabilities.error).toContain('macOS');
+        if (capabilities.supported) {
+          expect(capabilities.method).toBe('sandbox-exec');
+        } else {
+          expect(typeof capabilities.error).toBe('string');
+          expect(capabilities.error!.length).toBeGreaterThan(0);
+        }
       }
     });
   });
 
   describe('CI environment compatibility', () => {
-    test('should not fail in CI without root', () => {
+    test('should not fail in CI without root', async () => {
       const isCI = process.env.CI === 'true';
 
       if (isCI) {
         // 在 CI 中检测能力不应该抛出异常
-        expect(() => {
-          detectNetworkIsolationSupport();
-        }).not.toThrow();
+        await expect(detectNetworkIsolationSupport()).resolves.toBeDefined();
 
         // 状态应该正常返回
-        expect(() => {
-          getNetworkIsolationStatus();
-        }).not.toThrow();
+        await expect(getNetworkIsolationStatus()).resolves.toBeTypeOf('string');
       }
     });
 
-    test('should gracefully handle permission errors', () => {
-      const capabilities = detectNetworkIsolationSupport();
+    test('should gracefully handle permission errors', async () => {
+      const capabilities = await detectNetworkIsolationSupport();
 
       // 无论是否有权限，都应该有清晰的状态
       if (capabilities.requiresRoot) {

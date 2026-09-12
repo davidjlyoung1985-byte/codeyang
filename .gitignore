@@ -128,3 +128,9 @@ dist-web/
 mattpocock-skills/
 # Scratch log dir from run-chunks.ps1
 chunk-results/
+
+# Coverage/test scratch artifacts (do not commit)
+.covtmp/
+full.json
+full*.json
+
