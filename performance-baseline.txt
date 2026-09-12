@@ -1,0 +1,396 @@
+﻿
+> codeyang@0.9.0 bench
+> vitest bench --reporter=verbose
+
+node.exe : Benchmarking is an experimental feature.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Benchmarking is an experimental feature.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Breaking changes might not follow SemVer, please pin Vitest's version when using it.
+
+ RUN  v3.2.7 C:/Users/Ehua/codeyang
+
+
+ RUN  v3.2.7 C:/Users/Ehua/codeyang
+
+[Test Setup] Cleaning test environment...
+[Test Setup] Test environment cleaned
+
+ ✓ src/benchmark/performance.bench.ts > File Operations Performance 3061ms
+     name                           hz     min      max    mean     p75     p99     p995     p999     rme  samples
+   · read small file (1KB)      237.38  2.7109  10.6312  4.2127  4.8650  9.7651  10.6312  10.6312  ±6.13%      119
+   · read medium file (100KB)   281.72  2.6320   6.0193  3.5496  4.0092  5.9235   6.0193   6.0193  ±3.88%      142
+   · read large file (1MB)      215.90  3.3236   6.9701  4.6318  5.2806  6.7139   6.9701   6.9701  ±3.85%      108
+   · write small file (1KB)     284.84  2.3439   8.0646  3.5107  4.1068  7.6252   8.0646   8.0646  ±5.36%      143
+   · write medium file (100KB)  292.81  2.4716   8.6600  3.4151  3.9439  7.7023   8.6600   8.6600  ±4.63%      147
+
+ ✓ src/benchmark/performance.bench.ts > File Operations Performance 3061ms
+     name                           hz     min      max    mean     p75     p99     p995     p999     rme  samples
+   · read small file (1KB)      237.38  2.7109  10.6312  4.2127  4.8650  9.7651  10.6312  10.6312  ±6.13%      119
+   · read medium file (100KB)   281.72  2.6320   6.0193  3.5496  4.0092  5.9235   6.0193   6.0193  ±3.88%      142
+   · read large file (1MB)      215.90  3.3236   6.9701  4.6318  5.2806  6.7139   6.9701   6.9701  ±3.85%      108
+   · write small file (1KB)     284.84  2.3439   8.0646  3.5107  4.1068  7.6252   8.0646   8.0646  ±5.36%      143
+   · write medium file (100KB)  292.81  2.4716   8.6600  3.4151  3.9439  7.7023   8.6600   8.6600  ±4.63%      147
+
+ ✓ src/benchmark/performance.bench.ts > String Operations Performance 6626ms
+     name                                    hz     min     max    mean     p75     p99    p995    p999     rme  samples
+   · JSON.parse small object       3,297,887.34  0.0002  0.2491  0.0003  0.0003  0.0006  0.0008  0.0013  ±0.19%  1648944
+   · JSON.parse medium object        518,974.13  0.0016  0.7168  0.0019  0.0019  0.0044  0.0054  0.0091  ±0.48%   259488
+   · JSON.stringify small object   5,048,667.98  0.0001  0.1373  0.0002  0.0002  0.0004  0.0006  0.0012  ±0.12%  2524335
+   · JSON.stringify medium object  1,200,546.32  0.0007  1.2871  0.0008  0.0008  0.0015  0.0018  0.0028  ±0.70%   600274
+   · string split and join            12,382.80  0.0682  1.5545  0.0808  0.0758  0.1686  0.1980  0.4255  ±1.02%     6192
+   · regex match                   1,658,804.67  0.0005  0.1085  0.0006  0.0006  0.0010  0.0011  0.0014  ±0.07%   829403
+
+ ✓ src/benchmark/performance.bench.ts > String Operations Performance 6626ms
+     name                                    hz     min     max    mean     p75     p99    p995    p999     rme  samples
+   · JSON.parse small object       3,297,887.34  0.0002  0.2491  0.0003  0.0003  0.0006  0.0008  0.0013  ±0.19%  1648944
+   · JSON.parse medium object        518,974.13  0.0016  0.7168  0.0019  0.0019  0.0044  0.0054  0.0091  ±0.48%   259488
+   · JSON.stringify small object   5,048,667.98  0.0001  0.1373  0.0002  0.0002  0.0004  0.0006  0.0012  ±0.12%  2524335
+   · JSON.stringify medium object  1,200,546.32  0.0007  1.2871  0.0008  0.0008  0.0015  0.0018  0.0028  ±0.70%   600274
+   · string split and join            12,382.80  0.0682  1.5545  0.0808  0.0758  0.1686  0.1980  0.4255  ±1.02%     6192
+   · regex match                   1,658,804.67  0.0005  0.1085  0.0006  0.0006  0.0010  0.0011  0.0014  ±0.07%   829403
+
+ ✓ src/benchmark/performance.bench.ts > Array Operations Performance 10117ms
+     name                                 hz     min      max    mean     p75     p99    p995    p999      rme  samples
+   · array map (100 items)      4,470,957.53  0.0001   0.3178  0.0002  0.0002  0.0007  0.0009  0.0015   ±0.15%  2235481
+   · array map (1000 items)       456,348.54  0.0014   0.8044  0.0022  0.0021  0.0058  0.0079  0.0107   ±0.87%   228175
+   · array filter (100 items)   3,174,415.37  0.0002   0.6011  0.0003  0.0003  0.0012  0.0016  0.0031   ±0.76%  1587208
+   · array filter (1000 items)    282,936.81  0.0019  30.0601  0.0035  0.0032  0.0140  0.0180  0.0281  ±11.82%   141469
+   · array reduce (100 items)   8,558,494.00  0.0001   0.1130  0.0001  0.0001  0.0002  0.0003  0.0006   ±0.09%  4279247
+   · array reduce (1000 items)  1,602,363.36  0.0005   7.6198  0.0006  0.0006  0.0010  0.0011  0.0015   ±2.99%   801182
+   · array sort (1000 items)       63,905.81  0.0140   3.7312  0.0156  0.0153  0.0249  0.0272  0.0371   ±1.50%    31953
+   · array find (1000 items)    3,796,489.72  0.0002   0.0380  0.0003  0.0003  0.0005  0.0006  0.0011   ±0.06%  1898246
+
+ ✓ src/benchmark/performance.bench.ts > Array Operations Performance 10117ms
+     name                                 hz     min      max    mean     p75     p99    p995    p999      rme  samples
+   · array map (100 items)      4,470,957.53  0.0001   0.3178  0.0002  0.0002  0.0007  0.0009  0.0015   ±0.15%  2235481
+   · array map (1000 items)       456,348.54  0.0014   0.8044  0.0022  0.0021  0.0058  0.0079  0.0107   ±0.87%   228175
+   · array filter (100 items)   3,174,415.37  0.0002   0.6011  0.0003  0.0003  0.0012  0.0016  0.0031   ±0.76%  1587208
+   · array filter (1000 items)    282,936.81  0.0019  30.0601  0.0035  0.0032  0.0140  0.0180  0.0281  ±11.82%   141469
+   · array reduce (100 items)   8,558,494.00  0.0001   0.1130  0.0001  0.0001  0.0002  0.0003  0.0006   ±0.09%  4279247
+   · array reduce (1000 items)  1,602,363.36  0.0005   7.6198  0.0006  0.0006  0.0010  0.0011  0.0015   ±2.99%   801182
+   · array sort (1000 items)       63,905.81  0.0140   3.7312  0.0156  0.0153  0.0249  0.0272  0.0371   ±1.50%    31953
+   · array find (1000 items)    3,796,489.72  0.0002   0.0380  0.0003  0.0003  0.0005  0.0006  0.0011   ±0.06%  1898246
+
+ ✓ src/benchmark/performance.bench.ts > Object Operations Performance 15584ms
+     name                                       hz     min      max    mean     p75     p99    p995    p999     rme  samples
+   · Object.keys small object        14,774,181.05  0.0000  12.9077  0.0001  0.0001  0.0002  0.0003  0.0006  ±5.06%  7387092
+   · Object.keys medium object        7,842,850.43  0.0000   0.4085  0.0001  0.0001  0.0006  0.0008  0.0015  ±0.22%  3921426
+   · Object.entries medium object       729,072.25  0.0005   0.9323  0.0014  0.0014  0.0065  0.0082  0.0131  ±1.19%   364537
+   · Object.assign small objects      7,365,694.00  0.0001   0.0926  0.0001  0.0002  0.0003  0.0004  0.0007  ±0.08%  3682847
+   · spread operator small objects   13,725,388.00  0.0000   0.0628  0.0001  0.0001  0.0002  0.0004  0.0007  ±0.10%  6862694
+   · Object.assign medium objects       244,302.78  0.0033   1.0019  0.0041  0.0039  0.0099  0.0117  0.0169  ±0.73%   122152
+   · spread operator medium objects   3,271,154.07  0.0002   1.8331  0.0003  0.0003  0.0012  0.0015  0.0027  ±1.18%  1635579
+
+ ✓ src/benchmark/performance.bench.ts > Object Operations Performance 15584ms
+     name                                       hz     min      max    mean     p75     p99    p995    p999     rme  samples
+   · Object.keys small object        14,774,181.05  0.0000  12.9077  0.0001  0.0001  0.0002  0.0003  0.0006  ±5.06%  7387092
+   · Object.keys medium object        7,842,850.43  0.0000   0.4085  0.0001  0.0001  0.0006  0.0008  0.0015  ±0.22%  3921426
+   · Object.entries medium object       729,072.25  0.0005   0.9323  0.0014  0.0014  0.0065  0.0082  0.0131  ±1.19%   364537
+   · Object.assign small objects      7,365,694.00  0.0001   0.0926  0.0001  0.0002  0.0003  0.0004  0.0007  ±0.08%  3682847
+   · spread operator small objects   13,725,388.00  0.0000   0.0628  0.0001  0.0001  0.0002  0.0004  0.0007  ±0.10%  6862694
+   · Object.assign medium objects       244,302.78  0.0033   1.0019  0.0041  0.0039  0.0099  0.0117  0.0169  ±0.73%   122152
+   · spread operator medium objects   3,271,154.07  0.0002   1.8331  0.0003  0.0003  0.0012  0.0015  0.0027  ±1.18%  1635579
+
+ ✓ src/benchmark/performance.bench.ts > Cache Operations Performance 25705ms
+     name                                  hz     min      max    mean     p75     p99    p995    p999     rme  samples
+   · Map set                    15,637,808.00  0.0000   0.7745  0.0001  0.0001  0.0002  0.0003  0.0006  ±0.37%  7818904
+   · Map get (hit)              15,061,950.99  0.0000   0.0972  0.0001  0.0001  0.0001  0.0002  0.0005  ±0.09%  7530977
+   · Map get (miss)             16,861,986.00  0.0000   0.1754  0.0001  0.0001  0.0001  0.0002  0.0005  ±0.16%  8430993
+   · Map has                    14,373,002.25  0.0000   0.6795  0.0001  0.0001  0.0002  0.0004  0.0009  ±0.34%  7186504
+   · Map delete                  7,007,441.80  0.0000   8.4405  0.0001  0.0001  0.0005  0.0008  0.0017  ±5.77%  3503723
+   · Object property access     15,786,517.06  0.0000   0.2717  0.0001  0.0001  0.0002  0.0003  0.0006  ±0.21%  7893268
+   · Map vs Object: 100 writes      66,159.27  0.0059  13.5647  0.0151  0.0137  0.0721  0.1567  0.6882  ±7.32%    33080
+   · Object vs Map: 100 writes      61,069.82  0.0090   3.6723  0.0164  0.0177  0.0773  0.1080  0.4443  ±2.62%    30535
+
+ ✓ src/benchmark/performance.bench.ts > Cache Operations Performance 25705ms
+     name                                  hz     min      max    mean     p75     p99    p995    p999     rme  samples
+   · Map set                    15,637,808.00  0.0000   0.7745  0.0001  0.0001  0.0002  0.0003  0.0006  ±0.37%  7818904
+   · Map get (hit)              15,061,950.99  0.0000   0.0972  0.0001  0.0001  0.0001  0.0002  0.0005  ±0.09%  7530977
+   · Map get (miss)             16,861,986.00  0.0000   0.1754  0.0001  0.0001  0.0001  0.0002  0.0005  ±0.16%  8430993
+   · Map has                    14,373,002.25  0.0000   0.6795  0.0001  0.0001  0.0002  0.0004  0.0009  ±0.34%  7186504
+   · Map delete                  7,007,441.80  0.0000   8.4405  0.0001  0.0001  0.0005  0.0008  0.0017  ±5.77%  3503723
+   · Object property access     15,786,517.06  0.0000   0.2717  0.0001  0.0001  0.0002  0.0003  0.0006  ±0.21%  7893268
+   · Map vs Object: 100 writes      66,159.27  0.0059  13.5647  0.0151  0.0137  0.0721  0.1567  0.6882  ±7.32%    33080
+   · Object vs Map: 100 writes      61,069.82  0.0090   3.6723  0.0164  0.0177  0.0773  0.1080  0.4443  ±2.62%    30535
+
+ ✓ src/benchmark/performance.bench.ts > Async Operations Performance 4795ms
+     name                                        hz     min      max     mean      p75      p99     p995     p999      rme  samples
+   · Promise.resolve                   1,284,985.63  0.0001  14.5278   0.0008   0.0006   0.0052   0.0071   0.0164   ±7.67%   642495
+   · Promise.all (3 promises)          1,266,971.21  0.0004   2.1480   0.0008   0.0008   0.0034   0.0043   0.0072   ±1.57%   633487
+   · Promise.all (10 promises)           398,607.04  0.0017   0.9072   0.0025   0.0024   0.0086   0.0106   0.0211   ±0.91%   199304
+   · sequential awaits (3 operations)  1,972,401.51  0.0002   1.9685   0.0005   0.0005   0.0023   0.0028   0.0051   ±1.49%   986812
+   · setTimeout promise wrapper             90.1312  0.0977  16.6746  11.0949  14.8276  16.6746  16.6746  16.6746  ±11.62%       46
+
+ ✓ src/benchmark/performance.bench.ts > Async Operations Performance 4795ms
+     name                                        hz     min      max     mean      p75      p99     p995     p999      rme  samples
+   · Promise.resolve                   1,284,985.63  0.0001  14.5278   0.0008   0.0006   0.0052   0.0071   0.0164   ±7.67%   642495
+   · Promise.all (3 promises)          1,266,971.21  0.0004   2.1480   0.0008   0.0008   0.0034   0.0043   0.0072   ±1.57%   633487
+   · Promise.all (10 promises)           398,607.04  0.0017   0.9072   0.0025   0.0024   0.0086   0.0106   0.0211   ±0.91%   199304
+   · sequential awaits (3 operations)  1,972,401.51  0.0002   1.9685   0.0005   0.0005   0.0023   0.0028   0.0051   ±1.49%   986812
+   · setTimeout promise wrapper             90.1312  0.0977  16.6746  11.0949  14.8276  16.6746  16.6746  16.6746  ±11.62%       46
+
+ ✓ src/performance.bench.ts > Agent Performance Benchmarks > Prompt Processing 8521ms
+     name                                  hz     min     max    mean     p75     p99    p995    p999     rme  samples
+   · isComplexPrompt - simple    7,682,306.46  0.0001  0.2720  0.0001  0.0001  0.0004  0.0006  0.0011  ±0.26%  3841154
+   · isComplexPrompt - complex   4,094,758.72  0.0001  3.5474  0.0002  0.0002  0.0013  0.0016  0.0026  ±2.47%  2047381
+   · formatComplexPrompt        13,511,460.00  0.0000  0.4983  0.0001  0.0001  0.0003  0.0004  0.0008  ±0.23%  6755730
+
+ ✓ src/performance.bench.ts > Agent Performance Benchmarks > Prompt Processing 8521ms
+     name                                  hz     min     max    mean     p75     p99    p995    p999     rme  samples
+   · isComplexPrompt - simple    7,682,306.46  0.0001  0.2720  0.0001  0.0001  0.0004  0.0006  0.0011  ±0.26%  3841154
+   · isComplexPrompt - complex   4,094,758.72  0.0001  3.5474  0.0002  0.0002  0.0013  0.0016  0.0026  ±2.47%  2047381
+   · formatComplexPrompt        13,511,460.00  0.0000  0.4983  0.0001  0.0001  0.0003  0.0004  0.0008  ±0.23%  6755730
+
+ ✓ src/performance.bench.ts > Agent Performance Benchmarks > Message Handling 5474ms
+     name                                  hz     min     max    mean     p75     p99    p995    p999     rme  samples
+   · validateMessages - small   12,833,132.00  0.0000  4.7257  0.0001  0.0001  0.0003  0.0004  0.0009  ±1.88%  6416566
+   · jsonClone - small history     329,859.67  0.0027  0.5087  0.0030  0.0030  0.0053  0.0064  0.0103  ±0.33%   164930
+   · jsonClone - large history      13,489.34  0.0704  0.6952  0.0741  0.0728  0.1209  0.1334  0.1969  ±0.43%     6745
+
+ ✓ src/performance.bench.ts > Agent Performance Benchmarks > Message Handling 5474ms
+     name                                  hz     min     max    mean     p75     p99    p995    p999     rme  samples
+   · validateMessages - small   12,833,132.00  0.0000  4.7257  0.0001  0.0001  0.0003  0.0004  0.0009  ±1.88%  6416566
+   · jsonClone - small history     329,859.67  0.0027  0.5087  0.0030  0.0030  0.0053  0.0064  0.0103  ±0.33%   164930
+   · jsonClone - large history      13,489.34  0.0704  0.6952  0.0741  0.0728  0.1209  0.1334  0.1969  ±0.43%     6745
+
+ ✓ src/performance.bench.ts > Agent Performance Benchmarks > Security Validation 4967ms
+     name                                          hz     min      max    mean     p75     p99    p995    p999     rme  samples
+   · validateUrl - valid URL               718,810.85  0.0011   0.5777  0.0014  0.0014  0.0026  0.0031  0.0072  ±0.35%   359406
+   · validateUrl - private IP (blocked)     80,783.00  0.0107  10.4708  0.0124  0.0123  0.0205  0.0230  0.0371  ±4.10%    40392
+   · isPrivateIP - public                3,221,330.07  0.0002   0.0880  0.0003  0.0003  0.0005  0.0006  0.0010  ±0.08%  1610666
+   · isPrivateIP - private               6,647,986.67  0.0001   0.2543  0.0002  0.0002  0.0002  0.0003  0.0007  ±0.12%  3323994
+
+ ✓ src/performance.bench.ts > Agent Performance Benchmarks > Security Validation 4967ms
+     name                                          hz     min      max    mean     p75     p99    p995    p999     rme  samples
+   · validateUrl - valid URL               718,810.85  0.0011   0.5777  0.0014  0.0014  0.0026  0.0031  0.0072  ±0.35%   359406
+   · validateUrl - private IP (blocked)     80,783.00  0.0107  10.4708  0.0124  0.0123  0.0205  0.0230  0.0371  ±4.10%    40392
+   · isPrivateIP - public                3,221,330.07  0.0002   0.0880  0.0003  0.0003  0.0005  0.0006  0.0010  ±0.08%  1610666
+   · isPrivateIP - private               6,647,986.67  0.0001   0.2543  0.0002  0.0002  0.0002  0.0003  0.0007  ±0.12%  3323994
+
+ ✓ src/performance.bench.ts > String Operations Benchmarks 21117ms
+     name                                    hz     min     max    mean     p75     p99    p995    p999     rme  samples
+   · String length check - short  17,775,870.44  0.0000  0.0862  0.0001  0.0001  0.0001  0.0001  0.0004  ±0.10%  8887937
+   · String length check - long   17,854,604.43  0.0000  0.0429  0.0001  0.0001  0.0001  0.0001  0.0004  ±0.08%  8927304
+   · Regex match - short           9,783,304.00  0.0000  0.0894  0.0001  0.0001  0.0002  0.0004  0.0008  ±0.08%  4891652
+   · Regex match - long            1,375,498.35  0.0006  0.1441  0.0007  0.0007  0.0012  0.0014  0.0021  ±0.09%   687750
+   · String includes - short      17,289,638.54  0.0000  0.2651  0.0001  0.0001  0.0001  0.0001  0.0004  ±0.14%  8644821
+   · String includes - long       17,037,566.89  0.0000  0.1849  0.0001  0.0001  0.0001  0.0002  0.0006  ±0.12%  8518809
+
+ ✓ src/performance.bench.ts > String Operations Benchmarks 21117ms
+     name                                    hz     min     max    mean     p75     p99    p995    p999     rme  samples
+   · String length check - short  17,775,870.44  0.0000  0.0862  0.0001  0.0001  0.0001  0.0001  0.0004  ±0.10%  8887937
+   · String length check - long   17,854,604.43  0.0000  0.0429  0.0001  0.0001  0.0001  0.0001  0.0004  ±0.08%  8927304
+   · Regex match - short           9,783,304.00  0.0000  0.0894  0.0001  0.0001  0.0002  0.0004  0.0008  ±0.08%  4891652
+   · Regex match - long            1,375,498.35  0.0006  0.1441  0.0007  0.0007  0.0012  0.0014  0.0021  ±0.09%   687750
+   · String includes - short      17,289,638.54  0.0000  0.2651  0.0001  0.0001  0.0001  0.0001  0.0004  ±0.14%  8644821
+   · String includes - long       17,037,566.89  0.0000  0.1849  0.0001  0.0001  0.0001  0.0002  0.0006  ±0.12%  8518809
+
+ ✓ src/performance.bench.ts > Array Operations Benchmarks 10652ms
+     name                             hz     min      max    mean     p75     p99    p995    p999      rme  samples
+   · Array filter - small  10,425,820.00  0.0000   0.4741  0.0001  0.0001  0.0003  0.0005  0.0009   ±0.23%  5212910
+   · Array filter - large     246,908.00  0.0023  66.8803  0.0041  0.0034  0.0105  0.0127  0.0219  ±26.22%   123454
+   · Array map - small      3,447,193.31  0.0001   0.0841  0.0003  0.0003  0.0015  0.0019  0.0029   ±0.17%  1723597
+   · Array map - large         38,033.25  0.0134   0.5581  0.0263  0.0254  0.1155  0.1416  0.3374   ±1.31%    19017
+   · Array reduce - small  15,033,650.99  0.0000   0.0425  0.0001  0.0001  0.0001  0.0002  0.0005   ±0.08%  7516827
+   · Array reduce - large     969,648.51  0.0009   0.0941  0.0010  0.0010  0.0021  0.0025  0.0035   ±0.10%   484826
+
+ ✓ src/performance.bench.ts > Array Operations Benchmarks 10652ms
+     name                             hz     min      max    mean     p75     p99    p995    p999      rme  samples
+   · Array filter - small  10,425,820.00  0.0000   0.4741  0.0001  0.0001  0.0003  0.0005  0.0009   ±0.23%  5212910
+   · Array filter - large     246,908.00  0.0023  66.8803  0.0041  0.0034  0.0105  0.0127  0.0219  ±26.22%   123454
+   · Array map - small      3,447,193.31  0.0001   0.0841  0.0003  0.0003  0.0015  0.0019  0.0029   ±0.17%  1723597
+   · Array map - large         38,033.25  0.0134   0.5581  0.0263  0.0254  0.1155  0.1416  0.3374   ±1.31%    19017
+   · Array reduce - small  15,033,650.99  0.0000   0.0425  0.0001  0.0001  0.0001  0.0002  0.0005   ±0.08%  7516827
+   · Array reduce - large     969,648.51  0.0009   0.0941  0.0010  0.0010  0.0021  0.0025  0.0035   ±0.10%   484826
+
+ ✓ src/performance.bench.ts > JSON Operations Benchmarks 5632ms
+     name                                 hz     min     max    mean     p75     p99    p995    p999     rme  samples
+   · JSON.stringify - simple    4,315,001.14  0.0002  0.0926  0.0002  0.0003  0.0004  0.0005  0.0010  ±0.10%  2157501
+   · JSON.stringify - complex     115,061.01  0.0082  0.5699  0.0087  0.0086  0.0134  0.0148  0.0183  ±0.34%    57531
+   · JSON.parse - simple        2,764,453.45  0.0003  0.0425  0.0004  0.0004  0.0006  0.0008  0.0013  ±0.07%  1382227
+   · JSON.parse - complex          30,772.83  0.0305  0.4832  0.0325  0.0318  0.0536  0.0579  0.0954  ±0.35%    15387
+   · structuredClone - simple     612,991.39  0.0014  0.5782  0.0016  0.0016  0.0032  0.0038  0.0075  ±0.43%   306496
+   · structuredClone - complex     15,862.42  0.0598  0.7638  0.0630  0.0621  0.1008  0.1086  0.1394  ±0.40%     7932
+
+ ✓ src/performance.bench.ts > JSON Operations Benchmarks 5632ms
+     name                                 hz     min     max    mean     p75     p99    p995    p999     rme  samples
+   · JSON.stringify - simple    4,315,001.14  0.0002  0.0926  0.0002  0.0003  0.0004  0.0005  0.0010  ±0.10%  2157501
+   · JSON.stringify - complex     115,061.01  0.0082  0.5699  0.0087  0.0086  0.0134  0.0148  0.0183  ±0.34%    57531
+   · JSON.parse - simple        2,764,453.45  0.0003  0.0425  0.0004  0.0004  0.0006  0.0008  0.0013  ±0.07%  1382227
+   · JSON.parse - complex          30,772.83  0.0305  0.4832  0.0325  0.0318  0.0536  0.0579  0.0954  ±0.35%    15387
+   · structuredClone - simple     612,991.39  0.0014  0.5782  0.0016  0.0016  0.0032  0.0038  0.0075  ±0.43%   306496
+   · structuredClone - complex     15,862.42  0.0598  0.7638  0.0630  0.0621  0.1008  0.1086  0.1394  ±0.40%     7932
+
+ BENCH  Summary
+
+  formatComplexPrompt - src/performance.bench.ts > Agent Performance Benchmarks > Prompt Processing
+    1.76x faster than isComplexPrompt - simple
+    3.30x faster than isComplexPrompt - complex
+
+  validateMessages - small - src/performance.bench.ts > Agent Performance Benchmarks > Message Handling
+    38.90x faster than jsonClone - small history
+    951.35x faster than jsonClone - large history
+
+  isPrivateIP - private - src/performance.bench.ts > Agent Performance Benchmarks > Security Validation
+    2.06x faster than isPrivateIP - public
+    9.25x faster than validateUrl - valid URL
+    82.29x faster than validateUrl - private IP (blocked)
+
+  loadConfig - src/performance.bench.ts > Agent Performance Benchmarks > Configuration
+
+  String length check - long - src/performance.bench.ts > String Operations Benchmarks
+    1.00x faster than String length check - short
+    1.03x faster than String includes - short
+    1.05x faster than String includes - long
+    1.83x faster than Regex match - short
+    12.98x faster than Regex match - long
+
+  Array reduce - small - src/performance.bench.ts > Array Operations Benchmarks
+    1.44x faster than Array filter - small
+    4.36x faster than Array map - small
+    15.50x faster than Array reduce - large
+    60.89x faster than Array filter - large
+    395.28x faster than Array map - large
+
+  JSON.stringify - simple - src/performance.bench.ts > JSON Operations Benchmarks
+    1.56x faster than JSON.parse - simple
+    7.04x faster than structuredClone - simple
+    37.50x faster than JSON.stringify - complex
+    140.22x faster than JSON.parse - complex
+    272.03x faster than structuredClone - complex
+
+  write medium file (100KB) - src/benchmark/performance.bench.ts > File Operations Performance
+    1.03x faster than write small file (1KB)
+    1.04x faster than read medium file (100KB)
+    1.23x faster than read small file (1KB)
+    1.36x faster than read large file (1MB)
+
+  JSON.stringify small object - src/benchmark/performance.bench.ts > String Operations Performance
+    1.53x faster than JSON.parse small object
+    3.04x faster than regex match
+    4.21x faster than JSON.stringify medium object
+    9.73x faster than JSON.parse medium object
+    407.72x faster than string split and join
+
+  array reduce (100 items) - src/benchmark/performance.bench.ts > Array Operations Performance
+    1.91x faster than array map (100 items)
+    2.25x faster than array find (1000 items)
+    2.70x faster than array filter (100 items)
+    5.34x faster than array reduce (1000 items)
+    18.75x faster than array map (1000 items)
+    30.25x faster than array filter (1000 items)
+    133.92x faster than array sort (1000 items)
+
+  Object.keys small object - src/benchmark/performance.bench.ts > Object Operations Performance
+    1.08x faster than spread operator small objects
+    1.88x faster than Object.keys medium object
+    2.01x faster than Object.assign small objects
+    4.52x faster than spread operator medium objects
+    20.26x faster than Object.entries medium object
+    60.47x faster than Object.assign medium objects
+
+  Map get (miss) - src/benchmark/performance.bench.ts > Cache Operations Performance
+    1.07x faster than Object property access
+    1.08x faster than Map set
+    1.12x faster than Map get (hit)
+    1.17x faster than Map has
+    2.41x faster than Map delete
+    254.87x faster than Map vs Object: 100 writes
+    276.11x faster than Object vs Map: 100 writes
+
+  sequential awaits (3 operations) - src/benchmark/performance.bench.ts > Async Operations Performance
+    1.53x faster than Promise.resolve
+    1.56x faster than Promise.all (3 promises)
+    4.95x faster than Promise.all (10 promises)
+    21883.67x faster than setTimeout promise wrapper
+
+
+ BENCH  Summary
+
+  formatComplexPrompt - src/performance.bench.ts > Agent Performance Benchmarks > Prompt Processing
+    1.76x faster than isComplexPrompt - simple
+    3.30x faster than isComplexPrompt - complex
+
+  validateMessages - small - src/performance.bench.ts > Agent Performance Benchmarks > Message Handling
+    38.90x faster than jsonClone - small history
+    951.35x faster than jsonClone - large history
+
+  isPrivateIP - private - src/performance.bench.ts > Agent Performance Benchmarks > Security Validation
+    2.06x faster than isPrivateIP - public
+    9.25x faster than validateUrl - valid URL
+    82.29x faster than validateUrl - private IP (blocked)
+
+  loadConfig - src/performance.bench.ts > Agent Performance Benchmarks > Configuration
+
+  String length check - long - src/performance.bench.ts > String Operations Benchmarks
+    1.00x faster than String length check - short
+    1.03x faster than String includes - short
+    1.05x faster than String includes - long
+    1.83x faster than Regex match - short
+    12.98x faster than Regex match - long
+
+  Array reduce - small - src/performance.bench.ts > Array Operations Benchmarks
+    1.44x faster than Array filter - small
+    4.36x faster than Array map - small
+    15.50x faster than Array reduce - large
+    60.89x faster than Array filter - large
+    395.28x faster than Array map - large
+
+  JSON.stringify - simple - src/performance.bench.ts > JSON Operations Benchmarks
+    1.56x faster than JSON.parse - simple
+    7.04x faster than structuredClone - simple
+    37.50x faster than JSON.stringify - complex
+    140.22x faster than JSON.parse - complex
+    272.03x faster than structuredClone - complex
+
+  write medium file (100KB) - src/benchmark/performance.bench.ts > File Operations Performance
+    1.03x faster than write small file (1KB)
+    1.04x faster than read medium file (100KB)
+    1.23x faster than read small file (1KB)
+    1.36x faster than read large file (1MB)
+
+  JSON.stringify small object - src/benchmark/performance.bench.ts > String Operations Performance
+    1.53x faster than JSON.parse small object
+    3.04x faster than regex match
+    4.21x faster than JSON.stringify medium object
+    9.73x faster than JSON.parse medium object
+    407.72x faster than string split and join
+
+  array reduce (100 items) - src/benchmark/performance.bench.ts > Array Operations Performance
+    1.91x faster than array map (100 items)
+    2.25x faster than array find (1000 items)
+    2.70x faster than array filter (100 items)
+    5.34x faster than array reduce (1000 items)
+    18.75x faster than array map (1000 items)
+    30.25x faster than array filter (1000 items)
+    133.92x faster than array sort (1000 items)
+
+  Object.keys small object - src/benchmark/performance.bench.ts > Object Operations Performance
+    1.08x faster than spread operator small objects
+    1.88x faster than Object.keys medium object
+    2.01x faster than Object.assign small objects
+    4.52x faster than spread operator medium objects
+    20.26x faster than Object.entries medium object
+    60.47x faster than Object.assign medium objects
+
+  Map get (miss) - src/benchmark/performance.bench.ts > Cache Operations Performance
+    1.07x faster than Object property access
+    1.08x faster than Map set
+    1.12x faster than Map get (hit)
+    1.17x faster than Map has
+    2.41x faster than Map delete
+    254.87x faster than Map vs Object: 100 writes
+    276.11x faster than Object vs Map: 100 writes
+
+  sequential awaits (3 operations) - src/benchmark/performance.bench.ts > Async Operations Performance
+    1.53x faster than Promise.resolve
+    1.56x faster than Promise.all (3 promises)
+    4.95x faster than Promise.all (10 promises)
+    21883.67x faster than setTimeout promise wrapper
+
+[Test Teardown] Final cleanup...
+[Test Teardown] Cleanup complete
