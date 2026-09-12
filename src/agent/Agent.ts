@@ -37,6 +37,7 @@ import { AgentToolExecutor } from './AgentToolExecutor.js';
 import { jsonClone, withRetry, checkExactRepeat } from './AgentUtils.js';
 import { StateManager } from './managers/StateManager.js';
 import { ConversationManager } from './managers/ConversationManager.js';
+import { ConnectionMonitor } from '../utils/connectionMonitor.js';
 
 // ── Constants ──────────────────────────────────────────────
 
@@ -470,60 +471,77 @@ export class Agent {
               const toolCallsInner: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
               const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
 
+              // 启动连接监控
+              const monitor = new ConnectionMonitor({
+                idleTimeout: STREAM_TIMEOUT_MS,
+                heartbeatInterval: 30000,
+                onIdle: () => {
+                  this.cbs.onError?.('⚠️ 长时间无响应，请检查网络连接或增加超时时间');
+                },
+              });
+              monitor.start();
+
               const consumeStream = async () => {
-                for await (const event of this.client.stream({
-                  model: config.model,
-                  maxTokens: config.maxTokens,
-                  temperature: 0.5,
-                  system: systemPrompt,
-                  messages,
-                  tools: toolSchemas(),
-                })) {
-                  if (event.type === 'text_delta' && event.text) {
-                    this.cbs.onAgentDelta?.(event.text);
-                    textParts.push(event.text);
-                  } else if (event.type === 'tool_call_start') {
-                    toolCallsAccum.set(event.toolCallIndex!, {
-                      id: event.toolCallId,
-                      name: event.toolCallName,
-                      args: '',
-                    });
-                  } else if (event.type === 'tool_call_delta') {
-                    const accum = toolCallsAccum.get(event.toolCallIndex!);
-                    if (accum) accum.args += event.toolCallArgs || '';
-                  } else if (event.type === 'tool_call_end') {
-                    const accum = toolCallsAccum.get(event.toolCallIndex!);
-                    if (accum) {
-                      try {
-                        toolCallsInner.push({
-                          id: accum.id!,
-                          name: accum.name!,
-                          input: JSON.parse(accum.args || '{}'),
-                        });
-                      } catch (err) {
-                        toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
-                        if (process.env.CODEYANG_DEBUG) logger.warn('[Agent] Failed to parse tool args:', err);
+                try {
+                  for await (const event of this.client.stream({
+                    model: config.model,
+                    maxTokens: config.maxTokens,
+                    temperature: 0.5,
+                    system: systemPrompt,
+                    messages,
+                    tools: toolSchemas(),
+                  })) {
+                    // 记录活动，重置空闲计时器
+                    monitor.recordActivity();
+
+                    if (event.type === 'text_delta' && event.text) {
+                      this.cbs.onAgentDelta?.(event.text);
+                      textParts.push(event.text);
+                    } else if (event.type === 'tool_call_start') {
+                      toolCallsAccum.set(event.toolCallIndex!, {
+                        id: event.toolCallId,
+                        name: event.toolCallName,
+                        args: '',
+                      });
+                    } else if (event.type === 'tool_call_delta') {
+                      const accum = toolCallsAccum.get(event.toolCallIndex!);
+                      if (accum) accum.args += event.toolCallArgs || '';
+                    } else if (event.type === 'tool_call_end') {
+                      const accum = toolCallsAccum.get(event.toolCallIndex!);
+                      if (accum) {
+                        try {
+                          toolCallsInner.push({
+                            id: accum.id!,
+                            name: accum.name!,
+                            input: JSON.parse(accum.args || '{}'),
+                          });
+                        } catch (err) {
+                          toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
+                          if (process.env.CODEYANG_DEBUG) logger.warn('[Agent] Failed to parse tool args:', err);
+                        }
+                      }
+                    } else if (event.type === 'usage') {
+                      if (event.inputTokens !== undefined || event.outputTokens !== undefined) {
+                        this.stateManager.updateTokenUsage(event.inputTokens ?? 0, event.outputTokens ?? 0);
                       }
                     }
-                  } else if (event.type === 'usage') {
-                    if (event.inputTokens !== undefined || event.outputTokens !== undefined) {
-                      this.stateManager.updateTokenUsage(event.inputTokens ?? 0, event.outputTokens ?? 0);
-                    }
                   }
+                  return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
+                } finally {
+                  // 停止监控
+                  monitor.stop();
                 }
-                return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
               };
 
               const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(
-                  () =>
-                    reject(
-                      new Error(
-                        `Stream timed out after ${STREAM_TIMEOUT_MS / 1000}s. The model may be stuck or the connection was interrupted.`,
-                      ),
+                setTimeout(() => {
+                  monitor.stop();
+                  reject(
+                    new Error(
+                      `Stream timed out after ${STREAM_TIMEOUT_MS / 1000}s. Increase CODEYANG_STREAM_TIMEOUT if needed.`,
                     ),
-                  STREAM_TIMEOUT_MS,
-                );
+                  );
+                }, STREAM_TIMEOUT_MS);
               });
 
               return Promise.race([consumeStream(), timeoutPromise]);
