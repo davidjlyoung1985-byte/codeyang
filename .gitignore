@@ -143,4 +143,5 @@ btest.json
 sub.json
 run_batches.ps1
 vitest_*.txt
+coverage-report.txt
 

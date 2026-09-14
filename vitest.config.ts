@@ -59,8 +59,8 @@ export default defineConfig({
         'src/utils/testHelpers.ts',
       ],
       // Current coverage (core modules only, experimental excluded):
-      // statements 64.92%, branches 52.66%, functions 68.08%, lines 66.38%
-      // Set thresholds at achievable levels with room for improvement
+      // statements 76.77%, branches 80.16%, functions 86.09%, lines 76.77%
+      // Thresholds set below actual values to ensure CI stability
       thresholds: {
         statements: 64,
         branches: 52,
