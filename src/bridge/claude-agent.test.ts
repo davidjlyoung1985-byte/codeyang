@@ -18,8 +18,9 @@ describe('claude-agent configuration', () => {
 
   afterEach(() => {
     // Restore argv
-    if ((global as any).originalArgv) {
-      process.argv = (global as any).originalArgv;
+    const globals = globalThis as typeof globalThis & { originalArgv?: string[] };
+    if (globals.originalArgv) {
+      process.argv = globals.originalArgv;
     }
     vi.clearAllMocks();
   });

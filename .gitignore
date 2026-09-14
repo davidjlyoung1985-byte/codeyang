@@ -124,7 +124,7 @@ vitest.eval.config.ts
 # React web client production build output
 dist-web/
 
-# Third-party skills repo cloned for reference ¡ª never committed (was an accidental broken gitlink)
+# Third-party skills repo cloned for reference ï¿½ï¿½ never committed (was an accidental broken gitlink)
 mattpocock-skills/
 # Scratch log dir from run-chunks.ps1
 chunk-results/
@@ -133,4 +133,14 @@ chunk-results/
 .covtmp/
 full.json
 full*.json
+
+# Batch test artifacts and debugging files
+batch_*.json
+batch_*.txt
+b[0-9]*.json
+b[0-9]*_*.txt
+btest.json
+sub.json
+run_batches.ps1
+vitest_*.txt
 

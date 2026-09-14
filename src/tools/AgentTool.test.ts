@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { executeAgent, type AgentType } from './AgentTool.js';
+import { executeAgent } from './AgentTool.js';
 import * as registry from './registry.js';
+import type { StreamEvent, LLMClient } from '../agent/LLMClient.js';
 
 // Mock dependencies
 vi.mock('./registry.js', async () => {
@@ -13,44 +14,60 @@ vi.mock('./registry.js', async () => {
   };
 });
 
-describe('AgentTool', () => {
-  const mockLLMClient = {
-    chat: vi.fn(),
+/** Build a fake stream that emits a single text delta. */
+function textStream(text: string): () => AsyncIterable<StreamEvent> {
+  return async function* () {
+    yield { type: 'text_delta', text };
   };
+}
+
+/** Build a fake stream that emits a single tool call. */
+function toolCallStream(id: string, name: string, input: Record<string, unknown>): () => AsyncIterable<StreamEvent> {
+  return async function* () {
+    yield { type: 'tool_call_start', toolCallIndex: 0, toolCallId: id, toolCallName: name };
+    yield { type: 'tool_call_delta', toolCallIndex: 0, toolCallArgs: JSON.stringify(input) };
+    yield { type: 'tool_call_end', toolCallIndex: 0 };
+  };
+}
+
+const TOOL_SCHEMAS: ReturnType<typeof registry.toolSchemas> = [
+  { name: 'Read', description: 'Read a file', input_schema: { type: 'object' } },
+  { name: 'Write', description: 'Write a file', input_schema: { type: 'object' } },
+  { name: 'Glob', description: 'Find files', input_schema: { type: 'object' } },
+  { name: 'Grep', description: 'Search in files', input_schema: { type: 'object' } },
+  { name: 'Bash', description: 'Execute bash', input_schema: { type: 'object' } },
+  { name: 'GitAdd', description: 'Git add', input_schema: { type: 'object' } },
+  { name: 'GitCommit', description: 'Git commit', input_schema: { type: 'object' } },
+  { name: 'GitStatus', description: 'Git status', input_schema: { type: 'object' } },
+  { name: 'GitDiff', description: 'Git diff', input_schema: { type: 'object' } },
+  { name: 'GitLog', description: 'Git log', input_schema: { type: 'object' } },
+  { name: 'WebFetch', description: 'Fetch URL', input_schema: { type: 'object' } },
+  { name: 'WebSearch', description: 'Search web', input_schema: { type: 'object' } },
+];
+
+type MockedContext = ReturnType<typeof registry.getCurrentContext>;
+
+describe('AgentTool', () => {
+  const mockStream = vi.fn<LLMClient['stream']>();
+  const mockLLMClient = { stream: mockStream } as unknown as LLMClient;
 
   const mockContext = {
+    anthropicClient: null,
     llmClient: mockLLMClient,
     model: 'test-model',
     maxTokens: 1000,
-  };
+    cwd: process.cwd(),
+  } as unknown as MockedContext;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(registry.getCurrentContext).mockReturnValue(mockContext as any);
-    vi.mocked(registry.toolSchemas).mockReturnValue([
-      { name: 'Read', description: 'Read a file' },
-      { name: 'Write', description: 'Write a file' },
-      { name: 'Glob', description: 'Find files' },
-      { name: 'Grep', description: 'Search in files' },
-      { name: 'Bash', description: 'Execute bash' },
-      { name: 'GitAdd', description: 'Git add' },
-      { name: 'GitCommit', description: 'Git commit' },
-      { name: 'GitStatus', description: 'Git status' },
-      { name: 'GitDiff', description: 'Git diff' },
-      { name: 'GitLog', description: 'Git log' },
-      { name: 'WebFetch', description: 'Fetch URL' },
-      { name: 'WebSearch', description: 'Search web' },
-    ] as any);
+    vi.mocked(registry.getCurrentContext).mockReturnValue(mockContext);
+    vi.mocked(registry.toolSchemas).mockReturnValue(TOOL_SCHEMAS);
   });
 
   describe('Agent Type: explore', () => {
     it('should create explorer agent with correct prompt', async () => {
-      mockLLMClient.chat.mockImplementation(async function* () {
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Exploration complete' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
-      });
+      mockStream.mockImplementation(textStream('Exploration complete'));
 
       const result = await executeAgent({
         type: 'explore',
@@ -59,29 +76,25 @@ describe('AgentTool', () => {
 
       expect(result).toContain('Explore Agent');
       expect(result).toContain('Exploration complete');
-      expect(mockLLMClient.chat).toHaveBeenCalledWith(
+      expect(mockStream).toHaveBeenCalledWith(
         expect.objectContaining({
           system: expect.stringContaining('explorer agent'),
-          messages: [{ role: 'user', content: 'Investigate the codebase' }],
+          // The source reuses (and later mutates) the messages array, so match
+          // the initial user turn rather than the whole array.
+          messages: expect.arrayContaining([
+            expect.objectContaining({ role: 'user', content: 'Investigate the codebase' }),
+          ]),
         }),
       );
     });
 
     it('should only allow read-only tools for explore agent', async () => {
-      mockLLMClient.chat.mockImplementation(async function* () {
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
-      });
+      mockStream.mockImplementation(textStream('Done'));
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test' });
 
-      const toolsArg = mockLLMClient.chat.mock.calls[0][0].tools;
-      const toolNames = toolsArg.map((t: any) => t.name);
+      const toolsArg = mockStream.mock.calls[0][0].tools;
+      const toolNames = toolsArg.map((t) => t.name);
 
       // Should have read-only tools
       expect(toolNames).toContain('Read');
@@ -99,12 +112,7 @@ describe('AgentTool', () => {
 
   describe('Agent Type: plan', () => {
     it('should create planner agent with correct prompt', async () => {
-      mockLLMClient.chat.mockImplementation(async function* () {
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Plan created' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
-      });
+      mockStream.mockImplementation(textStream('Plan created'));
 
       const result = await executeAgent({
         type: 'plan',
@@ -113,7 +121,7 @@ describe('AgentTool', () => {
 
       expect(result).toContain('Plan Agent');
       expect(result).toContain('Plan created');
-      expect(mockLLMClient.chat).toHaveBeenCalledWith(
+      expect(mockStream).toHaveBeenCalledWith(
         expect.objectContaining({
           system: expect.stringContaining('planner agent'),
         }),
@@ -121,20 +129,12 @@ describe('AgentTool', () => {
     });
 
     it('should only allow read and design tools for plan agent', async () => {
-      mockLLMClient.chat.mockImplementation(async function* () {
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
-      });
+      mockStream.mockImplementation(textStream('Done'));
 
-      await executeAgent({
-        type: 'plan',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'plan', prompt: 'Test' });
 
-      const toolsArg = mockLLMClient.chat.mock.calls[0][0].tools;
-      const toolNames = toolsArg.map((t: any) => t.name);
+      const toolsArg = mockStream.mock.calls[0][0].tools;
+      const toolNames = toolsArg.map((t) => t.name);
 
       // Should have read tools
       expect(toolNames).toContain('Read');
@@ -148,12 +148,7 @@ describe('AgentTool', () => {
 
   describe('Agent Type: execute', () => {
     it('should create execution agent with correct prompt', async () => {
-      mockLLMClient.chat.mockImplementation(async function* () {
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Implementation complete' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
-      });
+      mockStream.mockImplementation(textStream('Implementation complete'));
 
       const result = await executeAgent({
         type: 'execute',
@@ -162,7 +157,7 @@ describe('AgentTool', () => {
 
       expect(result).toContain('Execute Agent');
       expect(result).toContain('Implementation complete');
-      expect(mockLLMClient.chat).toHaveBeenCalledWith(
+      expect(mockStream).toHaveBeenCalledWith(
         expect.objectContaining({
           system: expect.stringContaining('execution agent'),
         }),
@@ -170,20 +165,12 @@ describe('AgentTool', () => {
     });
 
     it('should allow write tools for execute agent', async () => {
-      mockLLMClient.chat.mockImplementation(async function* () {
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
-      });
+      mockStream.mockImplementation(textStream('Done'));
 
-      await executeAgent({
-        type: 'execute',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'execute', prompt: 'Test' });
 
-      const toolsArg = mockLLMClient.chat.mock.calls[0][0].tools;
-      const toolNames = toolsArg.map((t: any) => t.name);
+      const toolsArg = mockStream.mock.calls[0][0].tools;
+      const toolNames = toolsArg.map((t) => t.name);
 
       // Should have read tools
       expect(toolNames).toContain('Read');
@@ -199,43 +186,22 @@ describe('AgentTool', () => {
 
   describe('Memory sharing', () => {
     it('should include memory from previous agents', async () => {
-      mockLLMClient.chat.mockImplementation(async function* () {
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
-      });
+      mockStream.mockImplementation(textStream('Done'));
 
       const memory = 'Previous findings: Bug in auth.ts line 42';
+      await executeAgent({ type: 'execute', prompt: 'Fix the bug', memory });
 
-      await executeAgent({
-        type: 'execute',
-        prompt: 'Fix the bug',
-        memory,
-      });
-
-      expect(mockLLMClient.chat).toHaveBeenCalledWith(
-        expect.objectContaining({
-          system: expect.stringContaining('Context from previous agents'),
-          system: expect.stringContaining(memory),
-        }),
-      );
+      const systemPrompt = mockStream.mock.calls[0][0].system;
+      expect(systemPrompt).toContain('Context from previous agents');
+      expect(systemPrompt).toContain(memory);
     });
 
     it('should work without memory', async () => {
-      mockLLMClient.chat.mockImplementation(async function* () {
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
-      });
+      mockStream.mockImplementation(textStream('Done'));
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Investigate',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Investigate' });
 
-      const systemPrompt = mockLLMClient.chat.mock.calls[0][0].system;
+      const systemPrompt = mockStream.mock.calls[0][0].system;
       expect(systemPrompt).not.toContain('Context from previous agents');
     });
   });
@@ -243,25 +209,17 @@ describe('AgentTool', () => {
   describe('Max turns', () => {
     it('should respect default max turns (15)', async () => {
       let callCount = 0;
-      mockLLMClient.chat.mockImplementation(async function* () {
+      mockStream.mockImplementation(async function* () {
         callCount++;
-        yield {
-          type: 'content_block_start',
-          index: 0,
-          content_block: { type: 'tool_use', id: 'tc1', name: 'Read', input: {} },
-        };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
+        yield { type: 'tool_call_start', toolCallIndex: 0, toolCallId: 'tc1', toolCallName: 'Read' };
+        yield { type: 'tool_call_end', toolCallIndex: 0 };
       });
 
       vi.mocked(registry.getTool).mockReturnValue({
         execute: vi.fn().mockResolvedValue('file content'),
-      } as any);
+      } as unknown as ReturnType<typeof registry.getTool>);
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test' });
 
       // Should stop after maxTurns (15)
       expect(callCount).toBeLessThanOrEqual(15);
@@ -269,45 +227,29 @@ describe('AgentTool', () => {
 
     it('should respect custom max turns', async () => {
       let callCount = 0;
-      mockLLMClient.chat.mockImplementation(async function* () {
+      mockStream.mockImplementation(async function* () {
         callCount++;
-        yield {
-          type: 'content_block_start',
-          index: 0,
-          content_block: { type: 'tool_use', id: 'tc1', name: 'Read', input: {} },
-        };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
+        yield { type: 'tool_call_start', toolCallIndex: 0, toolCallId: 'tc1', toolCallName: 'Read' };
+        yield { type: 'tool_call_end', toolCallIndex: 0 };
       });
 
       vi.mocked(registry.getTool).mockReturnValue({
         execute: vi.fn().mockResolvedValue('file content'),
-      } as any);
+      } as unknown as ReturnType<typeof registry.getTool>);
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-        maxTurns: 3,
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test', maxTurns: 3 });
 
       expect(callCount).toBeLessThanOrEqual(3);
     });
 
     it('should stop when no tool calls are made', async () => {
       let callCount = 0;
-      mockLLMClient.chat.mockImplementation(async function* () {
+      mockStream.mockImplementation(async function* () {
         callCount++;
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
+        yield { type: 'text_delta', text: 'Done' };
       });
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-        maxTurns: 10,
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test', maxTurns: 10 });
 
       // Should stop after first turn (no tool calls)
       expect(callCount).toBe(1);
@@ -318,180 +260,84 @@ describe('AgentTool', () => {
     it('should execute allowed tools', async () => {
       const mockToolExecute = vi.fn().mockResolvedValue('file content');
 
-      mockLLMClient.chat
-        .mockImplementationOnce(async function* () {
-          yield {
-            type: 'content_block_start',
-            index: 0,
-            content_block: { type: 'tool_use', id: 'tc1', name: 'Read', input: { path: 'test.ts' } },
-          };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        })
-        .mockImplementationOnce(async function* () {
-          yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-          yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        });
+      mockStream
+        .mockImplementationOnce(toolCallStream('tc1', 'Read', { path: 'test.ts' }))
+        .mockImplementationOnce(textStream('Done'));
 
       vi.mocked(registry.getTool).mockReturnValue({
         execute: mockToolExecute,
-      } as any);
+      } as unknown as ReturnType<typeof registry.getTool>);
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Read test.ts',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Read test.ts' });
 
       expect(mockToolExecute).toHaveBeenCalledWith({ path: 'test.ts' });
     });
 
     it('should block Question tool in sub-agents', async () => {
-      mockLLMClient.chat
-        .mockImplementationOnce(async function* () {
-          yield {
-            type: 'content_block_start',
-            index: 0,
-            content_block: { type: 'tool_use', id: 'tc1', name: 'Question', input: {} },
-          };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        })
-        .mockImplementationOnce(async function* () {
-          yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-          yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        });
+      mockStream
+        .mockImplementationOnce(toolCallStream('tc1', 'Question', {}))
+        .mockImplementationOnce(textStream('Done'));
 
-      const result = await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test' });
 
-      // Question tool should be blocked
-      const secondCall = mockLLMClient.chat.mock.calls[1][0];
-      const toolResults = secondCall.messages[1].content;
+      // Turn 2's message history: [user, assistant, toolResults]
+      const secondCall = mockStream.mock.calls[1][0];
+      const toolResults = secondCall.messages[2].content as Array<{ content: string }>;
       expect(toolResults[0].content).toContain('not available in sub-agents');
     });
 
     it('should block Task tool in sub-agents', async () => {
-      mockLLMClient.chat
-        .mockImplementationOnce(async function* () {
-          yield {
-            type: 'content_block_start',
-            index: 0,
-            content_block: { type: 'tool_use', id: 'tc1', name: 'Task', input: {} },
-          };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        })
-        .mockImplementationOnce(async function* () {
-          yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-          yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        });
+      mockStream.mockImplementationOnce(toolCallStream('tc1', 'Task', {})).mockImplementationOnce(textStream('Done'));
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test' });
 
-      const secondCall = mockLLMClient.chat.mock.calls[1][0];
-      const toolResults = secondCall.messages[1].content;
+      const secondCall = mockStream.mock.calls[1][0];
+      const toolResults = secondCall.messages[2].content as Array<{ content: string }>;
       expect(toolResults[0].content).toContain('not available in sub-agents');
     });
 
     it('should block Agent tool in sub-agents', async () => {
-      mockLLMClient.chat
-        .mockImplementationOnce(async function* () {
-          yield {
-            type: 'content_block_start',
-            index: 0,
-            content_block: { type: 'tool_use', id: 'tc1', name: 'Agent', input: {} },
-          };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        })
-        .mockImplementationOnce(async function* () {
-          yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-          yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        });
+      mockStream.mockImplementationOnce(toolCallStream('tc1', 'Agent', {})).mockImplementationOnce(textStream('Done'));
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test' });
 
-      const secondCall = mockLLMClient.chat.mock.calls[1][0];
-      const toolResults = secondCall.messages[1].content;
+      const secondCall = mockStream.mock.calls[1][0];
+      const toolResults = secondCall.messages[2].content as Array<{ content: string }>;
       expect(toolResults[0].content).toContain('not available in sub-agents');
     });
 
     it('should handle unknown tools gracefully', async () => {
-      mockLLMClient.chat
-        .mockImplementationOnce(async function* () {
-          yield {
-            type: 'content_block_start',
-            index: 0,
-            content_block: { type: 'tool_use', id: 'tc1', name: 'UnknownTool', input: {} },
-          };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        })
-        .mockImplementationOnce(async function* () {
-          yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-          yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        });
+      mockStream
+        .mockImplementationOnce(toolCallStream('tc1', 'UnknownTool', {}))
+        .mockImplementationOnce(textStream('Done'));
 
-      vi.mocked(registry.getTool).mockReturnValue(null);
+      vi.mocked(registry.getTool).mockReturnValue(undefined);
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test' });
 
-      const secondCall = mockLLMClient.chat.mock.calls[1][0];
-      const toolResults = secondCall.messages[1].content;
+      const secondCall = mockStream.mock.calls[1][0];
+      const toolResults = secondCall.messages[2].content as Array<{
+        content: string;
+        is_error: boolean;
+      }>;
       expect(toolResults[0].content).toContain('Unknown tool');
       expect(toolResults[0].is_error).toBe(true);
     });
 
     it('should handle tool execution errors', async () => {
-      mockLLMClient.chat
-        .mockImplementationOnce(async function* () {
-          yield {
-            type: 'content_block_start',
-            index: 0,
-            content_block: { type: 'tool_use', id: 'tc1', name: 'Read', input: {} },
-          };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        })
-        .mockImplementationOnce(async function* () {
-          yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-          yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-          yield { type: 'content_block_stop', index: 0 };
-          yield { type: 'message_stop' };
-        });
+      mockStream.mockImplementationOnce(toolCallStream('tc1', 'Read', {})).mockImplementationOnce(textStream('Done'));
 
       vi.mocked(registry.getTool).mockReturnValue({
         execute: vi.fn().mockRejectedValue(new Error('File not found')),
-      } as any);
+      } as unknown as ReturnType<typeof registry.getTool>);
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test' });
 
-      const secondCall = mockLLMClient.chat.mock.calls[1][0];
-      const toolResults = secondCall.messages[1].content;
+      const secondCall = mockStream.mock.calls[1][0];
+      const toolResults = secondCall.messages[2].content as Array<{
+        content: string;
+        is_error: boolean;
+      }>;
       expect(toolResults[0].content).toContain('File not found');
       expect(toolResults[0].is_error).toBe(true);
     });
@@ -499,12 +345,11 @@ describe('AgentTool', () => {
 
   describe('Error handling', () => {
     it('should handle LLM errors gracefully', async () => {
-      mockLLMClient.chat.mockRejectedValue(new Error('API error'));
-
-      const result = await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
+      mockStream.mockImplementation(() => {
+        throw new Error('API error');
       });
+
+      const result = await executeAgent({ type: 'explore', prompt: 'Test' });
 
       expect(result).toContain('Error');
       expect(result).toContain('API error');
@@ -513,10 +358,7 @@ describe('AgentTool', () => {
     it('should return error message when no LLM client', async () => {
       vi.mocked(registry.getCurrentContext).mockReturnValue(null);
 
-      const result = await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      const result = await executeAgent({ type: 'explore', prompt: 'Test' });
 
       expect(result).toContain('not available');
       expect(result).toContain('no LLM client');
@@ -526,12 +368,9 @@ describe('AgentTool', () => {
       vi.mocked(registry.getCurrentContext).mockReturnValue({
         model: 'test',
         maxTokens: 1000,
-      } as any);
+      } as unknown as MockedContext);
 
-      const result = await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      const result = await executeAgent({ type: 'explore', prompt: 'Test' });
 
       expect(result).toContain('not available');
     });
@@ -539,19 +378,11 @@ describe('AgentTool', () => {
 
   describe('Configuration', () => {
     it('should use temperature 0.3 for deterministic execution', async () => {
-      mockLLMClient.chat.mockImplementation(async function* () {
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
-      });
+      mockStream.mockImplementation(textStream('Done'));
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test' });
 
-      expect(mockLLMClient.chat).toHaveBeenCalledWith(
+      expect(mockStream).toHaveBeenCalledWith(
         expect.objectContaining({
           temperature: 0.3,
         }),
@@ -559,19 +390,11 @@ describe('AgentTool', () => {
     });
 
     it('should use context model and maxTokens', async () => {
-      mockLLMClient.chat.mockImplementation(async function* () {
-        yield { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } };
-        yield { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: 'Done' } };
-        yield { type: 'content_block_stop', index: 0 };
-        yield { type: 'message_stop' };
-      });
+      mockStream.mockImplementation(textStream('Done'));
 
-      await executeAgent({
-        type: 'explore',
-        prompt: 'Test',
-      });
+      await executeAgent({ type: 'explore', prompt: 'Test' });
 
-      expect(mockLLMClient.chat).toHaveBeenCalledWith(
+      expect(mockStream).toHaveBeenCalledWith(
         expect.objectContaining({
           model: 'test-model',
           maxTokens: 1000,

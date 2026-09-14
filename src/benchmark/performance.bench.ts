@@ -6,7 +6,7 @@
  */
 
 import { describe, bench } from 'vitest';
-import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -55,7 +55,6 @@ describe('File Operations Performance', () => {
 // ─── String Operations Benchmarks ──────────────────────────────────
 
 describe('String Operations Performance', () => {
-  const shortText = 'Hello, world!';
   const mediumText = 'x'.repeat(1000);
   const longText = 'x'.repeat(10000);
 
@@ -90,7 +89,6 @@ describe('String Operations Performance', () => {
 describe('Array Operations Performance', () => {
   const smallArray = Array.from({ length: 100 }, (_, i) => i);
   const mediumArray = Array.from({ length: 1000 }, (_, i) => i);
-  const largeArray = Array.from({ length: 10000 }, (_, i) => i);
 
   bench('array map (100 items)', () => {
     smallArray.map((x) => x * 2);
@@ -130,7 +128,6 @@ describe('Array Operations Performance', () => {
 describe('Object Operations Performance', () => {
   const smallObj = { a: 1, b: 2, c: 3 };
   const mediumObj = Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`key${i}`, i]));
-  const largeObj = Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`key${i}`, i]));
 
   bench('Object.keys small object', () => {
     Object.keys(smallObj);
@@ -149,7 +146,7 @@ describe('Object Operations Performance', () => {
   });
 
   bench('spread operator small objects', () => {
-    ({ ...smallObj, d: 4 });
+    void { ...smallObj, d: 4 };
   });
 
   bench('Object.assign medium objects', () => {
@@ -157,7 +154,7 @@ describe('Object Operations Performance', () => {
   });
 
   bench('spread operator medium objects', () => {
-    ({ ...mediumObj, extra: 'value' });
+    void { ...mediumObj, extra: 'value' };
   });
 });
 
@@ -191,7 +188,7 @@ describe('Cache Operations Performance', () => {
 
   bench('Object property access', () => {
     const obj: Record<string, string> = { key: 'value' };
-    obj.key;
+    void obj.key;
   });
 
   bench('Map vs Object: 100 writes', () => {

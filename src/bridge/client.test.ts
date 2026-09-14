@@ -107,7 +107,6 @@ describe('Bridge Client - Configuration', () => {
 
   it('should cache config after first load', async () => {
     // Need to import fresh to reset cache
-    const config = { serverUrl: 'http://localhost:9876', token: 'cached-token' };
     const mockReadFile = vi.mocked(readFile);
 
     // Clear any existing cache by setting env token first
