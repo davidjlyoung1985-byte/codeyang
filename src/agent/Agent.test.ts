@@ -394,14 +394,15 @@ describe('Agent', () => {
       expect(mockStream).toHaveBeenCalled();
     });
 
-    it.skip('handles stream interruption', async () => {
-      // Skip: Error propagation through run-loop needs refactoring
+    it('handles stream interruption', async () => {
       async function* brokenStream() {
         yield textDelta('Start');
         throw new Error('Stream interrupted');
       }
 
-      mockStream.mockReturnValue(brokenStream());
+      // Return a fresh (failing) generator per call so retries keep failing
+      // instead of silently consuming an already-exhausted generator.
+      mockStream.mockImplementation(() => brokenStream());
 
       await expect(agent.run('test')).rejects.toThrow();
     });

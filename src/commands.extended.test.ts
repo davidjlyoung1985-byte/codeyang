@@ -157,11 +157,20 @@ describe('Commands - Extended Coverage', () => {
 
   describe('/reload', () => {
     it('should reload configuration', async () => {
-      // Skip this test as it requires actual config file
-      // The reload functionality is tested in integration tests
-      const result = await dispatch('/reload', ctx).catch(() => ({ handled: false }));
-      // Just verify the command is recognized
-      expect(result).toBeDefined();
+      // Self-contained: write a config.json into the (isolated) CODEYANG_HOME so
+      // reloadConfig has a real file to read, then clean it up.
+      const { getCodeyangHome } = await import('./utils/paths.js');
+      const { writeFile, rm } = await import('node:fs/promises');
+      const home = getCodeyangHome();
+      const cfgPath = path.join(home, 'config.json');
+      fs.mkdirSync(home, { recursive: true });
+      await writeFile(cfgPath, JSON.stringify({ model: 'claude-3-5-sonnet-20241022' }), 'utf-8');
+      try {
+        const result = await dispatch('/reload', ctx);
+        expect(result.handled).toBe(true);
+      } finally {
+        await rm(cfgPath, { force: true });
+      }
     });
   });
 
