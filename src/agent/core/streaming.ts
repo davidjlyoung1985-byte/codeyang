@@ -78,6 +78,9 @@ export async function streamLLM(
         if (event.type === 'text_delta' && event.text) {
           cbs.onAgentDelta?.(event.text);
           textParts.push(event.text);
+        } else if (event.type === 'thinking_delta' && event.text) {
+          // Chain-of-thought: show progress, but never fold it into the answer.
+          cbs.onThinkingDelta?.(event.text);
         } else if (event.type === 'tool_call_start') {
           toolCallsAccum.set(event.toolCallIndex!, {
             id: event.toolCallId,

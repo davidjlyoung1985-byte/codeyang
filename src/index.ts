@@ -397,6 +397,9 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
     onAgentDelta(text) {
       ui.showAgentDelta(text);
     },
+    onThinkingDelta(text) {
+      ui.showThinkingDelta(text);
+    },
     onToolBatch(total) {
       ui.setToolProgressTotal(total);
     },

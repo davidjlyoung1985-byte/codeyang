@@ -89,7 +89,7 @@ describe('config', () => {
 
     it('handles invalid CODEYANG_MAX_TOKENS gracefully', () => {
       process.env['CODEYANG_MAX_TOKENS'] = 'invalid';
-      expect(config.maxTokens).toBe(1000000); // fallback to default
+      expect(config.maxTokens).toBe(8192); // fallback to default
     });
 
     it('uses CODEYANG_CWD when set', () => {

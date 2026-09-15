@@ -36,6 +36,8 @@ export interface AgentCallbacks {
   onUserMessage?: (text: string) => void;
   onAgentText?: (text: string) => void;
   onAgentDelta?: (text: string) => void;
+  /** Reasoning-model chain-of-thought. Displayed separately from the answer. */
+  onThinkingDelta?: (text: string) => void;
   onToolBatch?: (total: number) => void;
   onToolStart?: (name: string, args: Record<string, unknown>) => void;
   onToolResult?: (name: string, output: string, isError: boolean) => void;

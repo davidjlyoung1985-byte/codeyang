@@ -254,6 +254,9 @@ export class CliUI {
   private streamBuf = '';
   private streamBatch: string[] = [];
   private batchTimer: ReturnType<typeof setTimeout> | null = null;
+  private thinkingBatch: string[] = [];
+  private thinkingTimer: ReturnType<typeof setTimeout> | null = null;
+  private thinkingShown = false;
   private readonly BATCH_DELAY_MS = 50;
   private turnCount = 0;
   private isFirstResponse = true;
@@ -481,6 +484,7 @@ export class CliUI {
   showAgentStart() {
     this.isFirstResponse = true;
     this.isThinkingActive = true;
+    this.thinkingShown = false;
     process.stdout.write('\n');
     console.log(`${c.bold(c.green('  🤖 CodeYang'))}${c.dim(':')} ${c.dim('(Ctrl+C 或 ESC 停止 thinking)')}`);
     process.stdout.write('\n');
@@ -488,6 +492,16 @@ export class CliUI {
 
   showAgentDone() {
     this.clearBatch();
+    // Flush any pending dimmed thinking output before finishing.
+    if (this.thinkingTimer) {
+      clearTimeout(this.thinkingTimer);
+      this.thinkingTimer = null;
+    }
+    this.flushThinking();
+    if (this.thinkingShown) {
+      process.stdout.write('\n');
+      this.thinkingShown = false;
+    }
     // 工具 buffer 未 flush（如单工具无 toolBatchTotal 场景），兜底 flush
     if (this.toolBuffering && this.toolBuffer.length > 0) {
       this.flushToolBatch();
@@ -503,6 +517,16 @@ export class CliUI {
   showAgentText(text: string) {
     this.clearBatch();
     this.spinner.stop();
+    // Close out any dimmed thinking output before the final answer renders.
+    if (this.thinkingTimer) {
+      clearTimeout(this.thinkingTimer);
+      this.thinkingTimer = null;
+    }
+    this.flushThinking();
+    if (this.thinkingShown) {
+      process.stdout.write('\n');
+      this.thinkingShown = false;
+    }
     if (this.streamBuf) {
       // Streaming was in progress — text already shown via showAgentDelta
       process.stdout.write('\n');
@@ -524,6 +548,17 @@ export class CliUI {
       this.isFirstResponse = false;
     }
 
+    // Close the dimmed thinking line before the answer streams in.
+    if (this.thinkingShown) {
+      if (this.thinkingTimer) {
+        clearTimeout(this.thinkingTimer);
+        this.thinkingTimer = null;
+      }
+      this.flushThinking();
+      process.stdout.write('\n');
+      this.thinkingShown = false;
+    }
+
     // Batch tokens for smoother display
     this.streamBatch.push(text);
     if (!this.batchTimer) {
@@ -537,6 +572,34 @@ export class CliUI {
     this.streamBatch = [];
     process.stdout.write(batch.replace(/\n/g, '\n  '));
     this.streamBuf += batch;
+  }
+
+  /**
+   * Reasoning-model chain-of-thought. Rendered dimmed and separately so it never
+   * masquerades as the final answer, but the user can see the agent is working.
+   */
+  showThinkingDelta(text: string) {
+    if (this.spinner.active) {
+      this.spinner.stop();
+      process.stdout.write('\n');
+    }
+    if (!this.thinkingShown) {
+      this.thinkingShown = true;
+      process.stdout.write(c.dim('  💭 '));
+    }
+
+    this.thinkingBatch.push(text);
+    if (!this.thinkingTimer) {
+      this.thinkingTimer = setTimeout(() => this.flushThinking(), this.BATCH_DELAY_MS);
+    }
+  }
+
+  private flushThinking() {
+    this.thinkingTimer = null;
+    if (this.thinkingBatch.length === 0) return;
+    const batch = this.thinkingBatch.join('');
+    this.thinkingBatch = [];
+    process.stdout.write(c.dim(batch.replace(/\n/g, '\n    ')));
   }
 
   private clearBatch() {

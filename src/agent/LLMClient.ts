@@ -39,7 +39,7 @@ async function withLLMRetry<T>(fn: () => Promise<T>, label: string, maxRetries =
 }
 
 export interface StreamEvent {
-  type: 'text_delta' | 'tool_call_start' | 'tool_call_delta' | 'tool_call_end' | 'usage';
+  type: 'text_delta' | 'thinking_delta' | 'tool_call_start' | 'tool_call_delta' | 'tool_call_end' | 'usage';
   text?: string;
   toolCallIndex?: number;
   toolCallId?: string;
@@ -227,18 +227,26 @@ class AnthropicClient implements LLMClient {
           }
           break;
 
-        case 'content_block_delta':
-          if (event.delta?.type === 'text_delta' && event.delta.text) {
-            yield { type: 'text_delta', text: event.delta.text };
-          } else if (event.delta?.type === 'input_json_delta' && event.delta.partial_json) {
-            blocks[blockIdx].input_json = (blocks[blockIdx].input_json || '') + event.delta.partial_json;
+        case 'content_block_delta': {
+          // The installed SDK predates extended-thinking types, so read the delta loosely.
+          const delta = event.delta as
+            { type?: string; text?: string; partial_json?: string; thinking?: string } | undefined;
+          if (delta?.type === 'text_delta' && delta.text) {
+            yield { type: 'text_delta', text: delta.text };
+          } else if (delta?.type === 'input_json_delta' && delta.partial_json) {
+            blocks[blockIdx].input_json = (blocks[blockIdx].input_json || '') + delta.partial_json;
             yield {
               type: 'tool_call_delta',
               toolCallIndex: blockIdx,
-              toolCallArgs: event.delta.partial_json,
+              toolCallArgs: delta.partial_json,
             };
+          } else if (delta?.type === 'thinking_delta' && delta.thinking) {
+            // Reasoning models (e.g. deepseek-v4-*) stream chain-of-thought here.
+            // Surface it instead of silently dropping it.
+            yield { type: 'thinking_delta', text: delta.thinking };
           }
           break;
+        }
 
         case 'content_block_stop':
           if (blocks[blockIdx]?.type === 'tool_use') {
@@ -395,8 +403,15 @@ class OpenAICompatClient implements LLMClient {
         };
       }
 
-      const delta = chunk.choices[0]?.delta;
-      if (!delta) continue;
+      const rawDelta = chunk.choices[0]?.delta;
+      if (!rawDelta) continue;
+      // Some providers (DeepSeek et al.) emit chain-of-thought as reasoning_content,
+      // which is not in the OpenAI type. Read it without losing the known fields.
+      const delta = rawDelta as typeof rawDelta & { reasoning_content?: string };
+
+      if (delta.reasoning_content) {
+        yield { type: 'thinking_delta', text: delta.reasoning_content };
+      }
 
       if (delta.content) {
         yield { type: 'text_delta', text: delta.content };

@@ -260,6 +260,9 @@ async function main() {
           onAgentDelta(text: string) {
             res.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`);
           },
+          onThinkingDelta(text: string) {
+            res.write(`data: ${JSON.stringify({ type: 'thinking', text })}\n\n`);
+          },
           onToolStart(name: string, args: Record<string, unknown>) {
             toolCalls.push({ name, args });
             const argStr = JSON.stringify(args).slice(0, 200);

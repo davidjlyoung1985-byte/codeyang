@@ -214,8 +214,8 @@ export const config = {
   },
   get maxTokens() {
     const rawTokens = process.env['CODEYANG_MAX_TOKENS'];
-    let val = rawTokens ? Number(rawTokens) : 1000000;
-    if (Number.isNaN(val)) val = 1000000;
+    let val = rawTokens ? Number(rawTokens) : 8192;
+    if (Number.isNaN(val)) val = 8192;
     return val;
   },
   get maxTurns(): number {

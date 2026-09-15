@@ -116,6 +116,24 @@ describe('CliUI', () => {
     });
   });
 
+  describe('showThinkingDelta', () => {
+    it('shows reasoning separately from the answer', () => {
+      ui.showAgentStart();
+      ui.showThinkingDelta('weighing the options');
+      // The answer flushes any pending thinking output.
+      ui.showAgentText('Final answer');
+      const output = capturedOutput();
+      expect(output).toContain('weighing the options');
+      expect(output).toContain('Final answer');
+    });
+
+    it('is a no-op when no thinking is streamed', () => {
+      ui.showAgentStart();
+      ui.showAgentText('plain answer');
+      expect(capturedOutput()).toContain('plain answer');
+    });
+  });
+
   describe('showAgentText', () => {
     it('renders plain text', () => {
       ui.showAgentText('Hello world');
