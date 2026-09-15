@@ -3,128 +3,66 @@
  *
  * Responsibilities:
  * - User-facing API (run, reset, sessions, checkpoints)
- * - Main run loop (LLM streaming, tool execution orchestration)
  * - Harness components (Gateway, Tracer, CircuitBreaker)
- * - Planners & thinkers (Planner, TreeOfThoughts, Reflexion, SelfCritique)
  * - Closed-loop (auto-verify, watcher)
  *
  * Delegates to:
  * - AgentContextManager → system prompt, memory, context summarization
  * - AgentToolExecutor → tool caching, batch execution, RL recording
- * - AgentUtils → pure helper functions
+ * - StateManager → repetition tracking, token usage, question state
+ * - ConversationManager → message history
+ * - core/run-loop.ts → main orchestration loop
+ * - core/streaming.ts → LLM streaming with timeout protection
+ * - core/tool-execution.ts → tool batch execution and repetition checks
+ * - core/verification.ts → auto-verify, reflexion, self-critique
+ * - core/context.ts → context preparation and planning enrichment
  */
 import type { Message, ToolCall, ToolResult } from '../types.js';
 import { config } from './config.js';
-import { toolSchemas, setToolContext } from '../tools/registry.js';
 import type { QtContext } from '../experimental/qt/index.js';
-import { createLLMClient, type LLMClient, type LLMMessage } from './LLMClient.js';
-import { logger } from '../utils/logger.js';
-import { VerificationPipeline, type VerificationResult } from '../closed-loop/VerificationPipeline.js';
+import { createLLMClient, type LLMClient } from './LLMClient.js';
+import { VerificationPipeline } from '../closed-loop/VerificationPipeline.js';
 import { FeedbackInjector } from '../closed-loop/FeedbackInjector.js';
 import type { WatcherSystem } from '../closed-loop/WatcherSystem.js';
 import { ReflexionEngine } from '../experimental/reflexion/ReflexionEngine.js';
 import { CritiqueEngine } from '../experimental/reflexion/CritiqueEngine.js';
 import { Planner } from '../planner/Planner.js';
 import { TreeOfThoughts } from '../tot/TreeOfThoughts.js';
-import { runConsolidation } from '../experimental/continual-learning/MemoryManager.js';
 import { A2AProtocol, globalAgentRegistry } from '../a2a/A2AProtocol.js';
 import { Tracer } from '../tracing/index.js';
-import { CircuitBreakerManager, type CircuitBreakerStats } from '../circuit-breaker/index.js';
+import { CircuitBreakerManager } from '../circuit-breaker/index.js';
 import { Gateway } from '../gateway/index.js';
 import { getAllToolWeights } from '../tools/rl-weighter.js';
 import { AgentContextManager } from './AgentContextManager.js';
 import { AgentToolExecutor } from './AgentToolExecutor.js';
-import { jsonClone, withRetry, checkExactRepeat } from './AgentUtils.js';
 import { StateManager } from './managers/StateManager.js';
 import { ConversationManager } from './managers/ConversationManager.js';
-import { ConnectionMonitor } from '../utils/connectionMonitor.js';
+import { runLoop } from './core/run-loop.js';
+import type { AgentState, AssistantContentBlock, ToolResultBlock, AgentCallbacks } from './core/types.js';
 
-// ── Constants ──────────────────────────────────────────────
-
-// Stream timeout: configurable via env var, default 5 minutes (was 2 min)
-// Increase if you experience frequent "Stream timed out" errors
-const STREAM_TIMEOUT_MS = parseInt(process.env.CODEYANG_STREAM_TIMEOUT || '300000', 10); // 5 min default
-const SIMILARITY_PREFIX_LEN = 100;
-
-type AssistantContentBlock =
-  { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown };
-
-type ToolResultBlock = {
-  type: 'tool_result';
-  tool_use_id: string;
-  content: string;
-  is_error: boolean;
-};
-
-export interface AgentCallbacks {
-  onUserMessage?: (text: string) => void;
-  onAgentText?: (text: string) => void;
-  onAgentDelta?: (text: string) => void;
-  onToolBatch?: (total: number) => void;
-  onToolStart?: (name: string, args: Record<string, unknown>) => void;
-  onToolResult?: (name: string, output: string, isError: boolean) => void;
-  onQuestion?: (question: string, options?: Array<{ label: string; description: string }>) => void;
-  onError?: (err: string) => void;
-}
+export type { AgentCallbacks };
 
 export class Agent {
   // ── Instance state ───────────────────────────────────────
-  private client: LLMClient;
-  private cbs: AgentCallbacks = {};
-  private maxRetries: number;
-
-  // Streaming timeout
-  private abortController: AbortController | null = null;
-
-  // Delegated managers
-  private ctxManager: AgentContextManager;
-  private toolExecutor: AgentToolExecutor;
-  private stateManager: StateManager;
-  private conversationManager: ConversationManager;
-
-  // Closed-loop
-  private verificationPipeline: VerificationPipeline | null = null;
-  private feedbackInjector = new FeedbackInjector();
-  private watcher: WatcherSystem | null = null;
-
-  // Reflexion & Critique
-  private reflexionEngine: ReflexionEngine;
-  private critiqueEngine: CritiqueEngine;
-
-  // Planner & Tree-of-Thoughts
-  private planner: Planner;
-  private treeOfThoughts: TreeOfThoughts;
-
-  // A2A
-  private a2aProtocol: A2AProtocol;
-
-  // Continual Learning
-  private consolidationCounter = 0;
-
-  // Harness
-  private tracer: Tracer;
-  private currentTraceId = '';
-  private circuitBreakerManager: CircuitBreakerManager;
-  private gateway: Gateway;
+  private state: AgentState;
 
   constructor(private qtContext?: QtContext) {
-    this.client = createLLMClient(config.provider, config.apiKey, config.baseURL);
-    this.reflexionEngine = new ReflexionEngine(config.reflexion);
-    this.critiqueEngine = new CritiqueEngine();
-    this.planner = new Planner(config.planner);
-    this.treeOfThoughts = new TreeOfThoughts();
-    this.a2aProtocol = new A2AProtocol({}, globalAgentRegistry);
-    this.maxRetries = config.maxRetries ?? 3;
+    const client = createLLMClient(config.provider, config.apiKey, config.baseURL);
+    const reflexionEngine = new ReflexionEngine(config.reflexion);
+    const critiqueEngine = new CritiqueEngine();
+    const planner = new Planner(config.planner);
+    const treeOfThoughts = new TreeOfThoughts();
+    const a2aProtocol = new A2AProtocol({}, globalAgentRegistry);
 
-    this.ctxManager = new AgentContextManager((max) => this.reflexionEngine.getLearnedPatterns(max));
-    this.toolExecutor = new AgentToolExecutor(this.reflexionEngine);
-    this.stateManager = new StateManager();
-    this.conversationManager = new ConversationManager();
+    const ctxManager = new AgentContextManager((max) => reflexionEngine.getLearnedPatterns(max));
+    const toolExecutor = new AgentToolExecutor(reflexionEngine);
+    const stateManager = new StateManager();
+    const conversationManager = new ConversationManager();
 
     // Harness
-    this.tracer = Tracer.getInstance();
-    this.circuitBreakerManager = new CircuitBreakerManager();
-    this.circuitBreakerManager.setDefaultConfig({
+    const tracer = Tracer.getInstance();
+    const circuitBreakerManager = new CircuitBreakerManager();
+    circuitBreakerManager.setDefaultConfig({
       failureThreshold: Number(process.env['CODEYANG_CB_THRESHOLD'] || '5'),
       resetTimeoutMs: Number(process.env['CODEYANG_CB_RESET_MS'] || '30000'),
       slowCallThresholdMs: Number(process.env['CODEYANG_CB_SLOW_MS'] || '30000'),
@@ -132,66 +70,95 @@ export class Agent {
       failureRateThreshold: Number(process.env['CODEYANG_CB_RATE'] || '0.5'),
       minRequestCount: Number(process.env['CODEYANG_CB_MIN_REQ'] || '10'),
     });
-    this.circuitBreakerManager.create('llm-api', {
+    circuitBreakerManager.create('llm-api', {
       failureThreshold: 5,
       resetTimeoutMs: 30_000,
       slowCallThresholdMs: 30_000,
     });
-    this.circuitBreakerManager.create('tool-execute', {
+    circuitBreakerManager.create('tool-execute', {
       failureThreshold: 10,
       resetTimeoutMs: 15_000,
       slowCallThresholdMs: 60_000,
     });
-    this.gateway = Gateway.getInstance();
+    const gateway = Gateway.getInstance();
 
-    globalAgentRegistry.register(this.a2aProtocol.getMyCard());
-    this.a2aProtocol.setLLMClient(this.client, config.model, config.maxTokens);
+    globalAgentRegistry.register(a2aProtocol.getMyCard());
+    a2aProtocol.setLLMClient(client, config.model, config.maxTokens);
+
+    // Assemble state
+    this.state = {
+      client,
+      cbs: {},
+      maxRetries: config.maxRetries ?? 3,
+      abortController: null,
+      ctxManager,
+      toolExecutor,
+      stateManager,
+      conversationManager,
+      verificationPipeline: null,
+      feedbackInjector: new FeedbackInjector(),
+      watcher: null,
+      reflexionEngine,
+      critiqueEngine,
+      planner,
+      treeOfThoughts,
+      a2aProtocol,
+      consolidationCounter: 0,
+      tracer,
+      currentTraceId: '',
+      circuitBreakerManager,
+      gateway,
+    };
   }
 
   // ── Public API ───────────────────────────────────────────
 
+  setCallbacks(cbs: AgentCallbacks): void {
+    this.state.cbs = cbs;
+  }
+
   setWatcher(watcher: WatcherSystem | null): void {
-    this.watcher = watcher;
+    this.state.watcher = watcher;
   }
   setVerificationPipeline(pipeline: VerificationPipeline | null): void {
-    this.verificationPipeline = pipeline;
+    this.state.verificationPipeline = pipeline;
   }
 
   get pendingFeedback(): boolean {
-    return this.feedbackInjector.hasPending();
+    return this.state.feedbackInjector.hasPending();
   }
 
   getLLMClient(): LLMClient {
-    return this.client;
+    return this.state.client;
   }
   getReflexionEngine(): ReflexionEngine {
-    return this.reflexionEngine;
+    return this.state.reflexionEngine;
   }
   getPlanner(): Planner {
-    return this.planner;
+    return this.state.planner;
   }
 
   // Harness accessors
   getTracer(): Tracer {
-    return this.tracer;
+    return this.state.tracer;
   }
   getCircuitBreakerManager(): CircuitBreakerManager {
-    return this.circuitBreakerManager;
+    return this.state.circuitBreakerManager;
   }
   getGateway(): Gateway {
-    return this.gateway;
+    return this.state.gateway;
   }
   getCurrentTraceId(): string {
-    return this.currentTraceId;
+    return this.state.currentTraceId;
   }
 
   getHarnessStatus(): Record<string, unknown> {
-    const cbStats = this.circuitBreakerManager.getAllStats();
-    const traces = this.tracer.getTraces(5);
+    const cbStats = this.state.circuitBreakerManager.getAllStats();
+    const traces = this.state.tracer.getTraces(5);
     let auditOps = 0;
     let auditReqs = 0;
     try {
-      const auditLogger = this.gateway.getAuditLogger() as unknown as {
+      const auditLogger = this.state.gateway.getAuditLogger() as unknown as {
         getStats: () => Record<string, { total: number; failed: number; avgMs: number }>;
       };
       if (typeof auditLogger.getStats === 'function') {
@@ -199,30 +166,63 @@ export class Agent {
         auditOps = Object.keys(auditStats).length;
         auditReqs = Object.values(auditStats).reduce((sum, s) => sum + s.total, 0);
       }
-    } catch (err) {
-      if (process.env.CODEYANG_DEBUG) logger.warn('[Agent] Failed to collect audit stats:', err);
+    } catch {
+      // Ignore if audit logger doesn't have getStats
     }
+
     return {
+      circuitBreakers: cbStats,
       tracing: {
-        enabled: this.tracer.isEnabled(),
-        recentTraces: traces.length,
-        totalSpans: traces.reduce((s, t) => s + t.spanCount, 0),
+        totalTraces: traces.length,
+        recentTraces: traces.slice(0, 3).map((t) => ({
+          id: t.id,
+          name: t.name,
+          status: t.status,
+        })),
       },
-      circuitBreakers: (cbStats as CircuitBreakerStats[]).map((s) => ({
-        name: s.name,
-        state: s.state,
-        failureRate: s.failureRate,
-        totalCalls: s.totalCalls,
-        openCount: s.openCount,
-        isDegraded: s.isDegraded,
-      })),
-      gateway: { operations: auditOps, totalRequests: auditReqs },
+      gateway: {
+        auditOps,
+        auditReqs,
+      },
     };
   }
 
+  getStats(): {
+    tokens: { input: number; output: number; total: number };
+    turns: number;
+    toolWeights: Array<{ name: string; weight: number; successRate: number; calls: number }>;
+  } {
+    const tokenUsage = this.state.stateManager.getTokenUsage();
+    return {
+      tokens: {
+        input: tokenUsage.inputTokens,
+        output: tokenUsage.outputTokens,
+        total: tokenUsage.inputTokens + tokenUsage.outputTokens,
+      },
+      turns: this.state.conversationManager.getHistory().length,
+      toolWeights: getAllToolWeights() as Array<{ name: string; weight: number; successRate: number; calls: number }>,
+    };
+  }
+
+  getMessages(): Message[] {
+    return this.exportMessages();
+  }
+
+  reset(): void {
+    this.state.conversationManager.resetAll();
+    this.state.stateManager.resetAll();
+    this.state.critiqueEngine.reset();
+    // ReflexionEngine and FeedbackInjector don't have reset methods
+  }
+
+  /** Main entry point: run a user message through the agent loop. */
+  async run(userMsg: string): Promise<void> {
+    await runLoop(this.state, userMsg, this.qtContext as unknown as string | undefined);
+  }
+
   getClosedLoopStatus(): Record<string, unknown> {
-    const reflexionStats = this.reflexionEngine.getStats();
-    const recentExecs = this.reflexionEngine.getRecentExecutions(3);
+    const reflexionStats = this.state.reflexionEngine.getStats();
+    const recentExecs = this.state.reflexionEngine.getRecentExecutions(3);
     const consecutiveFails =
       recentExecs.length >= 2 && recentExecs.every((r) => !r.success)
         ? recentExecs.filter((r) => !r.success).length
@@ -239,9 +239,9 @@ export class Agent {
       }));
 
     return {
-      autoVerify: config.autoVerify && !!this.verificationPipeline,
+      autoVerify: config.autoVerify && !!this.state.verificationPipeline,
       autoFixOnError: config.autoFixOnError,
-      watchMode: config.watchMode && !!this.watcher,
+      watchMode: config.watchMode && !!this.state.watcher,
       reflexion: {
         enabled: config.reflexion.enabled,
         consecutiveFailures: consecutiveFails,
@@ -250,8 +250,8 @@ export class Agent {
       },
       planner: {
         enabled: config.planner.enabled,
-        activePlans: this.planner.getActivePlans().length,
-        totalPlans: this.planner.getAllPlans().length,
+        activePlans: this.state.planner.getActivePlans().length,
+        totalPlans: this.state.planner.getAllPlans().length,
       },
       rlWeights: {
         enabled: true,
@@ -261,557 +261,79 @@ export class Agent {
     };
   }
 
-  setCallbacks(cbs: AgentCallbacks) {
-    this.cbs = cbs;
-  }
   get apiKeySet(): boolean {
     return config.apiKey.length > 0;
   }
+
   getTokenUsage(): { inputTokens: number; outputTokens: number } {
-    return this.stateManager.getTokenUsage();
+    return this.state.stateManager.getTokenUsage();
   }
 
   saveCheckpoint(): number {
-    this.conversationManager.saveCheckpoint();
-    return this.conversationManager.getCheckpointCount() - 1;
+    this.state.conversationManager.saveCheckpoint();
+    return this.state.conversationManager.getCheckpointCount() - 1;
   }
 
   restoreCheckpoint(): boolean {
-    const count = this.conversationManager.getCheckpointCount();
+    const count = this.state.conversationManager.getCheckpointCount();
     if (count === 0) return false;
-    this.conversationManager.restoreCheckpoint(count - 1);
+    this.state.conversationManager.restoreCheckpoint(count - 1);
     return true;
   }
 
-  get checkpointCount(): number {
-    return this.conversationManager.getCheckpointCount();
+  listCheckpoints(): Array<{ index: number; messageCount: number }> {
+    return this.state.conversationManager.listCheckpoints();
   }
 
-  reset() {
-    this.conversationManager.resetAll();
-    this.toolExecutor.invalidateCache();
-    this.stateManager.resetAll();
-    this.toolExecutor = new AgentToolExecutor(this.reflexionEngine);
-    this.ctxManager.invalidateCache();
+  // ── Tool stats (delegate) ────────────────────────────────
+
+  getToolStats() {
+    return this.state.toolExecutor.getToolStats();
+  }
+
+  get checkpointCount(): number {
+    return this.state.conversationManager.getCheckpointCount();
   }
 
   answerQuestion(answer: string) {
-    this.stateManager.answerQuestion(answer);
+    this.state.stateManager.answerQuestion(answer);
   }
 
   cancelQuestion() {
-    this.stateManager.cancelQuestion();
+    this.state.stateManager.cancelQuestion();
   }
 
   cancelRunningTools() {
-    if (this.abortController) this.abortController.abort();
+    if (this.state.abortController) this.state.abortController.abort();
   }
 
   /**
    * Stop the current thinking/streaming process
    */
   stopThinking() {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
-      logger.info('[Agent] Thinking stopped by user');
+    if (this.state.abortController) {
+      this.state.abortController.abort();
+      this.state.abortController = null;
     }
   }
 
   get isThinking(): boolean {
-    return this.abortController !== null;
+    return this.state.abortController !== null;
   }
 
   get waitingForAnswer(): boolean {
-    return this.stateManager.hasPendingQuestion();
+    return this.state.stateManager.hasPendingQuestion();
   }
-
-  // ── Tool stats (delegate) ────────────────────────────────
 
   recordToolCall(name: string, ms: number, isError: boolean): void {
-    this.toolExecutor.recordToolCall(name, ms, isError);
-  }
-
-  getToolStats(): ReadonlyMap<string, { calls: number; totalMs: number; errors: number }> {
-    return this.toolExecutor.getToolStats();
-  }
-
-  // ── Main run loop ────────────────────────────────────────
-
-  async run(prompt: string): Promise<void> {
-    // Gateway (L1)
-    const gatewayRequest = this.gateway.createRequest({
-      source: 'cli',
-      operation: 'agent.run',
-      payload: { prompt: prompt.slice(0, 200) },
-      auth: { apiKey: config.apiKey },
-    });
-    const gatewayResponse = await this.gateway.handle(gatewayRequest);
-    if (!gatewayResponse.success) {
-      throw new Error(`[Gateway] ${gatewayResponse.error || 'Request rejected by gateway'}`);
-    }
-
-    // Tracer (L5)
-    this.currentTraceId = this.tracer.startTrace({
-      name: prompt.slice(0, 60),
-      source: 'cli',
-      rootOperation: 'agent.run',
-    });
-    const traceId = this.currentTraceId;
-
-    this.abortController = new AbortController();
-    const messages = jsonClone(this.conversationManager.getHistory());
-
-    const isComplex = prompt.length > 200 || (prompt.match(/[。；;.!?？]/g) || []).length >= 2 || prompt.includes('\n');
-    const userMsg = isComplex
-      ? `Task: ${prompt}\n\nFirst: briefly outline your approach (what you'll do step by step).\nThen: execute.`
-      : prompt;
-    messages.push({ role: 'user', content: userMsg });
-    this.cbs.onUserMessage?.(prompt);
-
-    setToolContext({
-      anthropicClient: null,
-      llmClient: this.client,
-      model: config.model,
-      maxTokens: config.maxTokens,
-      cwd: process.cwd(),
-      signal: this.abortController?.signal,
-    });
-
-    // Context summarization (rule-based)
-    const summarized = this.ctxManager.summarizeContext(messages);
-    if (summarized !== messages) {
-      messages.length = 0;
-      messages.push(...summarized);
-    }
-
-    // LLM-based summarization for extremely large contexts
-    if (messages.length > 200 * 2) {
-      const llmSummarized = await this.ctxManager.llmSummarizeContext(
-        messages,
-        this.client,
-        config.model,
-        config.maxTokens,
-      );
-      if (llmSummarized !== messages) {
-        messages.length = 0;
-        messages.push(...llmSummarized);
-        this.cbs.onToolResult?.('Context Summarizer', 'LLM summarized older turns into a concise narrative', false);
-      }
-    }
-
-    if (messages.length === 0) {
-      logger.error(
-        `[run] messages is empty! history.length=${this.conversationManager.getHistoryLength()}, prompt="${prompt}"`,
-      );
-      throw new Error('Internal error: messages array is empty after summarization');
-    }
-
-    // Tree-of-Thoughts
-    if (this.treeOfThoughts.shouldUseToT(prompt)) {
-      this.cbs.onAgentDelta?.('\n\n_[🌳 Tree-of-Thoughts: exploring alternative approaches...]_');
-      const totResult = await this.treeOfThoughts.explore(this.client, config.model, config.maxTokens, prompt);
-      if (totResult.selected && totResult.selected.steps.length > 0) {
-        messages.push({ role: 'user', content: totResult.summary });
-        this.cbs.onToolResult?.(
-          'Tree-of-Thoughts',
-          `${totResult.explored.length} paths explored, selected: ${totResult.selected.approach} (${totResult.selected.evaluation.score}/100)`,
-          false,
-        );
-      }
-    }
-
-    // Planner
-    if (config.planner.enabled && this.planner.shouldPlan(prompt)) {
-      this.cbs.onAgentDelta?.('\n\n_[Planning: breaking down complex task...]_');
-      const plan = await this.planner.generatePlan(this.client, config.model, config.maxTokens, prompt);
-      if (plan && plan.steps.length > 0) {
-        const planNotice = [
-          '## Generated Plan',
-          '',
-          `Task: **${plan.task}**`,
-          `Total steps: ${plan.steps.length}`,
-          '',
-          ...plan.steps.map((s, i) => {
-            const deps = s.dependencies.length > 0 ? ` (depends on: ${s.dependencies.join(', ')})` : '';
-            return `**Step ${i + 1}:** ${s.description}${deps}`;
-          }),
-          '',
-          'Execute this plan step by step. Complete each step before moving to the next.',
-        ].join('\n');
-        messages.push({ role: 'user', content: planNotice });
-        this.cbs.onToolResult?.('Planner', `${plan.steps.length} steps generated`, false);
-        this.planner.activatePlan(plan.id);
-      }
-    }
-
-    let currentPlanId = this.planner.getLatestActivePlanId();
-
-    // ── Main turn loop ──
-    const maxTurns = config.maxTurns;
-
-    for (let turn = 0; turn < maxTurns; turn++) {
-      logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
-      if (messages.length === 0) throw new Error('[Agent] Internal error: messages empty at turn ' + turn);
-
-      // Context window protection
-      this.ctxManager.truncateIfNeeded(messages, config.maxTokens);
-
-      const systemPrompt = await this.ctxManager.getSystemPrompt(this.qtContext);
-
-      // LLM call with CircuitBreaker (L6) + Tracer (L5)
-      const streamResult = await this.tracer.traceAsync(traceId, 'llm.stream', 'llm', async (span) => {
-        span.tags.model = config.model;
-        span.tags.maxTokens = config.maxTokens;
-
-        const cbResult = await this.circuitBreakerManager.get('llm-api').call(async () => {
-          return await withRetry(
-            async () => {
-              const textParts: string[] = [];
-              const toolCallsInner: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
-              const toolCallsAccum: Map<number, { id?: string; name?: string; args: string }> = new Map();
-
-              // 启动连接监控
-              const monitor = new ConnectionMonitor({
-                idleTimeout: STREAM_TIMEOUT_MS,
-                heartbeatInterval: 30000,
-                onIdle: () => {
-                  this.cbs.onError?.('⚠️ 长时间无响应，请检查网络连接或增加超时时间');
-                },
-              });
-              monitor.start();
-
-              const consumeStream = async () => {
-                try {
-                  for await (const event of this.client.stream({
-                    model: config.model,
-                    maxTokens: config.maxTokens,
-                    temperature: 0.5,
-                    system: systemPrompt,
-                    messages,
-                    tools: toolSchemas(),
-                  })) {
-                    // 记录活动，重置空闲计时器
-                    monitor.recordActivity();
-
-                    if (event.type === 'text_delta' && event.text) {
-                      this.cbs.onAgentDelta?.(event.text);
-                      textParts.push(event.text);
-                    } else if (event.type === 'tool_call_start') {
-                      toolCallsAccum.set(event.toolCallIndex!, {
-                        id: event.toolCallId,
-                        name: event.toolCallName,
-                        args: '',
-                      });
-                    } else if (event.type === 'tool_call_delta') {
-                      const accum = toolCallsAccum.get(event.toolCallIndex!);
-                      if (accum) accum.args += event.toolCallArgs || '';
-                    } else if (event.type === 'tool_call_end') {
-                      const accum = toolCallsAccum.get(event.toolCallIndex!);
-                      if (accum) {
-                        try {
-                          toolCallsInner.push({
-                            id: accum.id!,
-                            name: accum.name!,
-                            input: JSON.parse(accum.args || '{}'),
-                          });
-                        } catch (err) {
-                          toolCallsInner.push({ id: accum.id!, name: accum.name!, input: {} });
-                          if (process.env.CODEYANG_DEBUG) logger.warn('[Agent] Failed to parse tool args:', err);
-                        }
-                      }
-                    } else if (event.type === 'usage') {
-                      if (event.inputTokens !== undefined || event.outputTokens !== undefined) {
-                        this.stateManager.updateTokenUsage(event.inputTokens ?? 0, event.outputTokens ?? 0);
-                      }
-                    }
-                  }
-                  return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
-                } finally {
-                  // 停止监控
-                  monitor.stop();
-                }
-              };
-
-              const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => {
-                  monitor.stop();
-                  reject(
-                    new Error(
-                      `Stream timed out after ${STREAM_TIMEOUT_MS / 1000}s. Increase CODEYANG_STREAM_TIMEOUT if needed.`,
-                    ),
-                  );
-                }, STREAM_TIMEOUT_MS);
-              });
-
-              return Promise.race([consumeStream(), timeoutPromise]);
-            },
-            'LLM streaming API call',
-            this.maxRetries,
-            (err) => this.cbs.onError?.(err),
-          );
-        });
-
-        if (!cbResult.success) throw new Error(`LLM API circuit breaker: ${cbResult.error}`);
-        return cbResult.data!;
-      });
-
-      const { toolCalls, assistantText } = streamResult as {
-        toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>;
-        assistantText: string;
-      };
-      const assistantContent: AssistantContentBlock[] = [];
-
-      if (assistantText) assistantContent.push({ type: 'text', text: assistantText });
-      for (const tc of toolCalls) {
-        assistantContent.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input });
-      }
-      messages.push({ role: 'assistant', content: assistantContent });
-
-      // Anti-repetition
-      if (assistantText) {
-        const lastText = this.stateManager.getLastAssistantText();
-        const repeatCount = this.stateManager.getRepeatCount();
-        const exactCheck = checkExactRepeat(assistantText, lastText, repeatCount, 2);
-        this.stateManager.updateRepeatCount(exactCheck.isRepeat);
-
-        if (exactCheck.isRepeat) {
-          this.cbs.onError?.('Agent loop detected (exact repeat) — stopping');
-          this.pushCancelledToolResults(messages, toolCalls);
-          this.conversationManager.setHistory(messages);
-          break;
-        }
-
-        if (this.stateManager.checkFuzzyRepeat(assistantText, SIMILARITY_PREFIX_LEN)) {
-          this.cbs.onError?.('Agent loop detected (similar repeat) — stopping');
-          this.pushCancelledToolResults(messages, toolCalls);
-          this.conversationManager.setHistory(messages);
-          break;
-        }
-
-        this.stateManager.updateLastAssistantText(assistantText);
-        this.stateManager.recordAssistantText(assistantText);
-      }
-
-      if (toolCalls.length === 0) {
-        this.conversationManager.setHistory(messages);
-        break;
-      }
-
-      // Execute tools
-      this.abortController = this.abortController ?? new AbortController();
-      const signal = this.abortController.signal;
-      setToolContext({
-        anthropicClient: null,
-        llmClient: this.client,
-        model: config.model,
-        maxTokens: config.maxTokens,
-        cwd: process.cwd(),
-        signal,
-      });
-
-      const { results: toolResults, ids: toolResultIds } = await this.toolExecutor.executeToolBatch(
-        toolCalls,
-        signal,
-        this.cbs,
-        traceId,
-        this.tracer,
-        () => this.stateManager.askQuestion(), // 使用 StateManager
-      );
-      this.abortController = null;
-
-      const toolResultContent: ToolResultBlock[] = toolResults.map((tr, i) => ({
-        type: 'tool_result',
-        tool_use_id: toolResultIds[i] ?? 'unknown',
-        content: tr.output,
-        is_error: tr.isError,
-      }));
-      messages.push({ role: 'user', content: toolResultContent });
-
-      // Closed-loop: auto-verify
-      await this.runAutoVerify(toolCalls, messages);
-
-      // Watcher: post-tool triggers
-      if (this.watcher) {
-        for (const tc of toolCalls) {
-          this.watcher.checkPostTool({
-            filePath: String((tc.input as Record<string, unknown>)?.filePath ?? ''),
-            toolName: tc.name,
-            toolInput: tc.input as Record<string, unknown>,
-          });
-        }
-      }
-
-      // Reflexion
-      if (config.reflexion.enabled && this.reflexionEngine.shouldReflect()) {
-        await this.runReflexion(messages);
-      }
-
-      // Planner step advancement
-      if (currentPlanId) {
-        const progress = this.planner.advanceStep(currentPlanId);
-        if (progress) {
-          this.cbs.onToolResult?.('Planner', progress, false);
-          if (progress.includes('✅')) {
-            currentPlanId = null;
-          } else if (turn % 2 === 1) {
-            messages.push({ role: 'user', content: progress });
-          }
-        }
-      }
-
-      // Self-Critique
-      await this.runSelfCritique(assistantText, toolCalls, toolResults, messages);
-
-      // Continual Learning
-      this.consolidationCounter++;
-      if (this.consolidationCounter >= 10) {
-        this.consolidationCounter = 0;
-        runConsolidation()
-          .then((report) => {
-            if (report.consolidated > 0) {
-              logger.debug(`[ContinualLearning] Consolidated ${report.consolidated} memories`);
-            }
-          })
-          .catch((err) =>
-            logger.warn('[ContinualLearning] Consolidation failed:', err instanceof Error ? err.message : err),
-          );
-      }
-
-      this.conversationManager.setHistory(messages);
-    }
-
-    setToolContext(null);
-
-    if (this.currentTraceId) {
-      this.tracer.endTrace(this.currentTraceId);
-      this.currentTraceId = '';
-    }
-  }
-
-  // ── Private helpers ──────────────────────────────────────
-
-  private pushCancelledToolResults(
-    messages: LLMMessage[],
-    toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>,
-  ): void {
-    if (toolCalls.length > 0) {
-      messages.push({
-        role: 'user',
-        content: toolCalls.map((tc) => ({
-          type: 'tool_result' as const,
-          tool_use_id: tc.id,
-          content: '[Cancelled by anti-repetition guard]',
-          is_error: true,
-        })),
-      });
-    }
-  }
-
-  private async runAutoVerify(
-    toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>,
-    messages: LLMMessage[],
-  ): Promise<void> {
-    if (!config.autoVerify || !this.verificationPipeline) return;
-
-    const writtenFiles = toolCalls
-      .filter(
-        (tc) =>
-          (tc.name === 'Write' || tc.name === 'Edit') && tc.input && (tc.input as Record<string, unknown>).filePath,
-      )
-      .map((tc) => String((tc.input as Record<string, unknown>).filePath));
-
-    if (writtenFiles.length === 0) return;
-
-    const allResults: VerificationResult[] = [];
-    await Promise.all(
-      writtenFiles.map(async (fp) => {
-        if (config.autoFixOnError) {
-          const { results } = await this.verificationPipeline!.verifyWithFix(fp);
-          allResults.push(...results);
-        } else {
-          const results = await this.verificationPipeline!.run(fp);
-          allResults.push(...results);
-        }
-      }),
-    );
-
-    const failed = allResults.filter((r) => !r.passed);
-    const summary = this.verificationPipeline.formatSummary(allResults);
-
-    this.feedbackInjector.push({ summary, source: 'auto-verify', passed: failed.length === 0, results: allResults });
-
-    if (failed.length > 0) {
-      const injectMsg = FeedbackInjector.formatAutoVerify(summary);
-      messages.push({ role: 'user', content: injectMsg });
-      this.cbs.onToolResult?.('Auto-Verify', summary, true);
-    } else {
-      this.cbs.onToolResult?.('Auto-Verify', allResults.map((r) => r.tool).join(', ') + ' passed', false);
-    }
-  }
-
-  private async runReflexion(messages: LLMMessage[]): Promise<void> {
-    this.cbs.onAgentDelta?.('\n\n_[Self-reflection triggered: analyzing recent failures...]_');
-    const reflection = await this.reflexionEngine.reflect(this.client, config.model, config.maxTokens);
-    if (reflection) {
-      const injectMsg = [
-        '## Self-Reflection Notice',
-        '',
-        'The system detected a pattern of repeated failures and performed self-reflection.',
-        '',
-        `**Analysis:** ${reflection.analysis}`,
-        '',
-        ...(reflection.patterns.length > 0
-          ? [`**Identified patterns:**\n${reflection.patterns.map((p: string) => `- ${p}`).join('\n')}`]
-          : []),
-        '',
-        ...(reflection.recommendations.length > 0
-          ? [`**Recommendations:**\n${reflection.recommendations.map((r: string) => `- ${r}`).join('\n')}`]
-          : []),
-        '',
-        'Please apply these learnings to avoid repeating the same mistakes.',
-      ]
-        .filter(Boolean)
-        .join('\n');
-      messages.push({ role: 'user', content: injectMsg });
-      this.cbs.onToolResult?.('Reflexion', reflection.analysis, false);
-    }
-  }
-
-  private async runSelfCritique(
-    assistantText: string,
-    toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>,
-    toolResults: ToolResult[],
-    messages: LLMMessage[],
-  ): Promise<void> {
-    if (!assistantText || this.critiqueEngine.getIterationCount()) return;
-
-    const critiqueResult = await this.critiqueEngine.checkAndImprove(
-      this.client,
-      config.model,
-      config.maxTokens,
-      assistantText,
-      toolCalls,
-      toolResults,
-    );
-
-    if (!critiqueResult.passed && critiqueResult.critiqueMessage) {
-      messages.push({ role: 'user', content: critiqueResult.critiqueMessage });
-      this.cbs.onToolResult?.(
-        'Self-Critique',
-        `Quality score: ${critiqueResult.critique?.score}/100 — issues found`,
-        false,
-      );
-    } else if (critiqueResult.critique) {
-      this.cbs.onToolResult?.('Self-Critique', `Quality score: ${critiqueResult.critique?.score}/100 — passed`, false);
-    }
+    this.state.toolExecutor.recordToolCall(name, ms, isError);
   }
 
   // ── Session serialization ────────────────────────────────
 
   /** Restore history from saved messages including tool_result blocks. */
   loadMessages(msgs: Message[]) {
-    this.stateManager.resetRepetition(); // 使用 StateManager
+    this.state.stateManager.resetRepetition();
 
     for (const m of msgs) {
       if (m.role === 'user') {
@@ -822,9 +344,9 @@ export class Agent {
             content: tr.output,
             is_error: tr.isError,
           }));
-          this.conversationManager.addMessage({ role: 'user', content: blocks });
+          this.state.conversationManager.addMessage({ role: 'user', content: blocks });
         } else {
-          this.conversationManager.addMessage({ role: 'user', content: m.content });
+          this.state.conversationManager.addMessage({ role: 'user', content: m.content });
         }
       } else if (m.role === 'assistant') {
         const blocks: AssistantContentBlock[] = [];
@@ -834,14 +356,14 @@ export class Agent {
             blocks.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.args });
           }
         }
-        this.conversationManager.addMessage({ role: 'assistant', content: blocks });
+        this.state.conversationManager.addMessage({ role: 'assistant', content: blocks });
       }
     }
   }
 
   /** Serialize history preserving tool_result blocks for session persistence. */
   exportMessages(): Message[] {
-    return this.conversationManager.getHistory().map((m) => {
+    return this.state.conversationManager.getHistory().map((m) => {
       if (typeof m.content === 'string') {
         return { role: m.role as 'user' | 'assistant', content: m.content };
       }

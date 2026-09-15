@@ -8,18 +8,16 @@ import { config } from '../config.js';
 import { logger } from '../../utils/logger.js';
 import { jsonClone } from '../AgentUtils.js';
 
-export async function prepareContext(
-  state: AgentState,
-  prompt: string,
-): Promise<{ messages: LLMMessage[]; userMsg: string }> {
+export async function prepareContext(state: AgentState, userMsg: string, _qtContext?: string): Promise<LLMMessage[]> {
   const messages = jsonClone(state.conversationManager.getHistory());
 
-  const isComplex = prompt.length > 200 || (prompt.match(/[。；;.!?？]/g) || []).length >= 2 || prompt.includes('\n');
-  const userMsg = isComplex
-    ? `Task: ${prompt}\n\nFirst: briefly outline your approach (what you'll do step by step).\nThen: execute.`
-    : prompt;
-  messages.push({ role: 'user', content: userMsg });
-  state.cbs.onUserMessage?.(prompt);
+  const isComplex =
+    userMsg.length > 200 || (userMsg.match(/[。；;.!?？]/g) || []).length >= 2 || userMsg.includes('\n');
+  const prompt = isComplex
+    ? `Task: ${userMsg}\n\nFirst: briefly outline your approach (what you'll do step by step).\nThen: execute.`
+    : userMsg;
+  messages.push({ role: 'user', content: prompt });
+  state.cbs.onUserMessage?.(userMsg);
 
   // Context summarization (rule-based)
   const summarized = state.ctxManager.summarizeContext(messages);
@@ -45,19 +43,15 @@ export async function prepareContext(
 
   if (messages.length === 0) {
     logger.error(
-      `[run] messages is empty! history.length=${state.conversationManager.getHistoryLength()}, prompt="${prompt}"`,
+      `[run] messages is empty! history.length=${state.conversationManager.getHistoryLength()}, prompt="${userMsg}"`,
     );
     throw new Error('Internal error: messages array is empty after summarization');
   }
 
-  return { messages, userMsg };
-}
-
-export async function enrichWithPlanning(state: AgentState, prompt: string, messages: LLMMessage[]): Promise<void> {
   // Tree-of-Thoughts
-  if (state.treeOfThoughts.shouldUseToT(prompt)) {
+  if (state.treeOfThoughts.shouldUseToT(userMsg)) {
     state.cbs.onAgentDelta?.('\n\n_[🌳 Tree-of-Thoughts: exploring alternative approaches...]_');
-    const totResult = await state.treeOfThoughts.explore(state.client, config.model, config.maxTokens, prompt);
+    const totResult = await state.treeOfThoughts.explore(state.client, config.model, config.maxTokens, userMsg);
     if (totResult.selected && totResult.selected.steps.length > 0) {
       messages.push({ role: 'user', content: totResult.summary });
       state.cbs.onToolResult?.(
@@ -69,9 +63,9 @@ export async function enrichWithPlanning(state: AgentState, prompt: string, mess
   }
 
   // Planner
-  if (config.planner.enabled && state.planner.shouldPlan(prompt)) {
+  if (config.planner.enabled && state.planner.shouldPlan(userMsg)) {
     state.cbs.onAgentDelta?.('\n\n_[Planning: breaking down complex task...]_');
-    const plan = await state.planner.generatePlan(state.client, config.model, config.maxTokens, prompt);
+    const plan = await state.planner.generatePlan(state.client, config.model, config.maxTokens, userMsg);
     if (plan && plan.steps.length > 0) {
       const planNotice = [
         '## Generated Plan',
@@ -84,10 +78,13 @@ export async function enrichWithPlanning(state: AgentState, prompt: string, mess
           return `**Step ${i + 1}:** ${s.description}${deps}`;
         }),
         '',
-        'Follow this plan step-by-step. After each step, report progress.',
+        'Execute this plan step by step. Complete each step before moving to the next.',
       ].join('\n');
       messages.push({ role: 'user', content: planNotice });
-      state.cbs.onToolResult?.('Planner', `Generated ${plan.steps.length}-step plan`, false);
+      state.cbs.onToolResult?.('Planner', `${plan.steps.length} steps generated`, false);
+      state.planner.activatePlan(plan.id);
     }
   }
+
+  return messages;
 }
