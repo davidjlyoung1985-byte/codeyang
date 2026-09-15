@@ -1,3 +1,30 @@
+/**
+ * Main Run Loop Module
+ *
+ * Agent 的核心编排循环，协调所有子系统：
+ * - Gateway 权限检查（L1）
+ * - Tracer 分布式追踪（L5）
+ * - Circuit Breaker 熔断保护（L6）
+ * - LLM 流式调用和重试
+ * - 工具批量执行
+ * - 自动验证（Auto-Verify）
+ * - 反思机制（Reflexion）
+ * - 自我批评（Self-Critique）
+ * - 规划器集成（Planner）
+ * - 持续学习（Continual Learning）
+ *
+ * 主循环流程：
+ * 1. Gateway 检查 → 准备上下文
+ * 2. 开始追踪 → 启动多轮对话
+ * 3. 每轮：LLM调用 → 工具执行 → 验证反馈
+ * 4. 反循环检测 → 清理资源
+ *
+ * 集成的高级特性：
+ * - Tree-of-Thoughts: 探索多种解决方案
+ * - Planner: 自动分步规划
+ * - Watcher: 文件修改监控
+ * - Memory consolidation: 每10轮合并记忆
+ */
 import type { AgentState, AssistantContentBlock } from './types.js';
 import { config } from '../config.js';
 import { streamLLM } from './streaming.js';
@@ -18,6 +45,18 @@ import { runConsolidation } from '../../experimental/continual-learning/MemoryMa
  * Main agent run loop handling LLM streaming, tool execution, and feedback cycles.
  */
 export async function runLoop(state: AgentState, userMsg: string, qtContext?: string): Promise<void> {
+  // Gateway (L1) - Check access before proceeding
+  const gatewayRequest = state.gateway.createRequest({
+    source: 'cli',
+    operation: 'agent.run',
+    payload: { prompt: userMsg.slice(0, 200) },
+    auth: { apiKey: config.apiKey },
+  });
+  const gatewayResponse = await state.gateway.handle(gatewayRequest);
+  if (!gatewayResponse.success) {
+    throw new Error(`[Gateway] ${gatewayResponse.error || 'Request rejected by gateway'}`);
+  }
+
   const messages = await prepareContext(state, userMsg, qtContext);
 
   const traceId = state.tracer.startTrace({

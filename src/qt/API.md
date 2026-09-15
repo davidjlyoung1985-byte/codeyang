@@ -1,4 +1,4 @@
-# Qt Module API Documentation
+﻿# Qt Module API Documentation
 
 **Version**: 1.0.0-beta  
 **Stability**: 2 (Unstable - API may change in minor versions)  
@@ -12,14 +12,14 @@ The Qt module provides specialized tools and context-aware assistance for Qt/QML
 
 ### Key Features
 
-- 🔍 **Auto-detection** - Detects Qt projects automatically
-- 🛠️ **Qt-specific tools** - Build, QML, .pro files, signals/slots
-- 📚 **Qt knowledge injection** - Qt API documentation and patterns
-- 🧪 **Testing support** - Qt Test framework integration
-- 🎨 **UI tools** - Qt Widgets, QML, Graphics View
-- 🧵 **Threading** - QThread and concurrent programming
-- 📊 **Data visualization** - Qt Charts integration
-- 🔄 **Migration helpers** - Qt 5 → Qt 6 migration
+- 馃攳 **Auto-detection** - Detects Qt projects automatically
+- 馃洜锔?**Qt-specific tools** - Build, QML, .pro files, signals/slots
+- 馃摎 **Qt knowledge injection** - Qt API documentation and patterns
+- 馃И **Testing support** - Qt Test framework integration
+- 馃帹 **UI tools** - Qt Widgets, QML, Graphics View
+- 馃У **Threading** - QThread and concurrent programming
+- 馃搳 **Data visualization** - Qt Charts integration
+- 馃攧 **Migration helpers** - Qt 5 鈫?Qt 6 migration
 
 ---
 
@@ -31,7 +31,7 @@ import {
   buildQtPrompt,
   createQtTools,
   QT_API_VERSION,
-} from './experimental/qt/index.js';
+} from './qt/index.js';
 ```
 
 ---
@@ -159,7 +159,7 @@ agent.registerTools(qtTools);
 7. `QtCharts` - Charts integration
 8. `QtGraphics` - Graphics View
 9. `QtModelView` - Model/View patterns
-10. `QtMigration` - Qt 5 → 6 migration
+10. `QtMigration` - Qt 5 鈫?6 migration
 11. `QtTest` - Test generation/running
 
 ---
@@ -387,7 +387,7 @@ Generate and run Qt tests.
 ### Example 1: Detect and Configure
 
 ```typescript
-import { detectQtProject, buildQtPrompt, createQtTools } from './experimental/qt/index.js';
+import { detectQtProject, buildQtPrompt, createQtTools } from './qt/index.js';
 
 async function setupQtProject() {
   // Detect Qt project
@@ -470,7 +470,7 @@ if (qt) {
 
 ```typescript
 import { Agent } from './agent/Agent.js';
-import { detectQtProject, buildQtPrompt, createQtTools } from './experimental/qt/index.js';
+import { detectQtProject, buildQtPrompt, createQtTools } from './qt/index.js';
 
 async function createQtAwareAgent(config) {
   const agent = new Agent(config);
@@ -479,7 +479,7 @@ async function createQtAwareAgent(config) {
   const qt = await detectQtProject(config.cwd || process.cwd());
 
   if (qt) {
-    console.log(`✓ Qt ${qt.version} project detected`);
+    console.log(`鉁?Qt ${qt.version} project detected`);
 
     // Inject Qt knowledge
     const qtPrompt = buildQtPrompt(qt);
@@ -489,7 +489,7 @@ async function createQtAwareAgent(config) {
     const qtTools = createQtTools();
     agent.registerTools(qtTools);
 
-    console.log(`✓ Registered ${qtTools.length} Qt tools`);
+    console.log(`鉁?Registered ${qtTools.length} Qt tools`);
   }
 
   return agent;

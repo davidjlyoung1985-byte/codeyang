@@ -1,8 +1,8 @@
 ﻿import { readFile, writeFile, mkdir, copyFile, unlink, rename } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import type { McpServerConfig } from '../mcp/types.js';
-import type { QtContext } from '../experimental/qt/index.js';
-import { buildQtPrompt } from '../experimental/qt/index.js';
+import type { QtContext } from '../qt/index.js';
+import { buildQtPrompt } from '../qt/index.js';
 import { buildBaseSystemPrompt } from './system-prompt.js';
 import { getPonytailPrompt, getPonytailLevel, type PonytailLevel } from './ponytail-prompt.js';
 import { logger } from '../utils/logger.js';

@@ -1,3 +1,25 @@
+/**
+ * Tool Execution Module
+ *
+ * 负责工具批量执行和重复检测，包括：
+ * - 工具调用批处理
+ * - 精确和模糊重复检测
+ * - 工具结果格式化
+ * - Watcher 集成（文件修改监控）
+ * - 中断信号处理
+ *
+ * 核心功能：
+ * - executeToolBatch(): 批量执行工具并返回结果
+ * - checkRepetition(): 检测 Agent 循环（精确+模糊）
+ * - formatToolResults(): 格式化工具结果为 LLM 消息
+ * - triggerWatcherChecks(): 触发文件修改监控
+ * - pushCancelledToolResults(): 推送取消的工具结果
+ *
+ * 反循环机制：
+ * - 精确重复：连续两次相同的文本输出
+ * - 模糊重复：前100字符相似度检查
+ * - 自动中止并注入取消消息
+ */
 import type { LLMMessage } from '../LLMClient.js';
 import type { ToolResult } from '../../types.js';
 import type { AgentState, ToolResultBlock } from './types.js';

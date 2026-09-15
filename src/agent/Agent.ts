@@ -19,7 +19,7 @@
  */
 import type { Message, ToolCall, ToolResult } from '../types.js';
 import { config } from './config.js';
-import type { QtContext } from '../experimental/qt/index.js';
+import type { QtContext } from '../qt/index.js';
 import { createLLMClient, type LLMClient } from './LLMClient.js';
 import { VerificationPipeline } from '../closed-loop/VerificationPipeline.js';
 import { FeedbackInjector } from '../closed-loop/FeedbackInjector.js';
@@ -181,8 +181,8 @@ export class Agent {
         })),
       },
       gateway: {
-        auditOps,
-        auditReqs,
+        operations: auditOps,
+        totalRequests: auditReqs,
       },
     };
   }

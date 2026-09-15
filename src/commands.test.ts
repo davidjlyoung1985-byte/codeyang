@@ -101,6 +101,7 @@ describe('Commands', () => {
       ]);
 
       mockAgent.getStats = vi.fn(() => ({ toolStats }));
+      mockAgent.getTokenUsage = vi.fn(() => ({ inputTokens: 100, outputTokens: 50 }));
 
       const result = await dispatch('/stats', ctx);
 

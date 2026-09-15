@@ -1,3 +1,28 @@
+/**
+ * LLM Streaming Module
+ *
+ * 负责处理 LLM 流式响应，包括：
+ * - 文本增量处理
+ * - 工具调用累积和解析
+ * - Token 使用统计
+ * - 连接超时监控
+ * - 活动检测和心跳机制
+ *
+ * 核心功能：
+ * - streamLLM(): 主要流式处理函数，带超时保护
+ * - 自动监控连接空闲状态
+ * - 解析工具调用参数（支持容错）
+ * - 实时报告 token 使用情况
+ *
+ * 使用示例：
+ * ```typescript
+ * const result = await streamLLM(
+ *   client, model, maxTokens, systemPrompt, messages,
+ *   callbacks,
+ *   (input, output) => console.log(`Tokens: ${input}/${output}`)
+ * );
+ * ```
+ */
 import type { LLMClient, LLMMessage } from '../LLMClient.js';
 import type { AgentCallbacks } from './types.js';
 import { toolSchemas } from '../../tools/index.js';

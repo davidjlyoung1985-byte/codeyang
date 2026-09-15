@@ -2,6 +2,42 @@
  * Agent verification and feedback handling
  * Handles auto-verify, reflexion, and self-critique
  */
+/**
+ * Verification and Feedback Module
+ *
+ * 闭环验证和自我改进机制，包括：
+ * - 自动代码验证（Auto-Verify）
+ * - 反思引擎（Reflexion）
+ * - 自我批评（Self-Critique）
+ * - 工具取消处理
+ *
+ * 核心功能：
+ *
+ * 1. runAutoVerify():
+ *    - 自动验证 Write/Edit 操作的文件
+ *    - 运行 ESLint/Prettier/TypeScript 检查
+ *    - 支持自动修复模式
+ *    - 失败时注入反馈到对话
+ *
+ * 2. runReflexion():
+ *    - 检测重复失败模式
+ *    - 生成失败分析和建议
+ *    - 学习避免相同错误
+ *
+ * 3. runSelfCritique():
+ *    - 评估输出质量（0-100分）
+ *    - 识别潜在问题
+ *    - 质量不达标时要求改进
+ *
+ * 4. pushCancelledToolResults():
+ *    - 反循环时取消工具调用
+ *    - 注入错误标记到消息
+ *
+ * 使用场景：
+ * - 每次工具执行后自动验证
+ * - 连续失败时触发反思
+ * - 低质量输出时自我批评
+ */
 import type { LLMMessage } from '../LLMClient.js';
 import type { ToolResult } from '../../types.js';
 import type { AgentState } from './types.js';

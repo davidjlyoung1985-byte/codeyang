@@ -1,6 +1,43 @@
 /**
- * Context preparation and enrichment
- * Handles planning, Tree-of-Thoughts, and context summarization
+ * Context Preparation and Enrichment Module
+ *
+ * 负责准备和丰富 Agent 上下文，包括：
+ * - 用户消息格式化
+ * - 上下文摘要（规则和 LLM 两种模式）
+ * - Tree-of-Thoughts 集成
+ * - Planner 集成
+ * - 复杂任务检测和引导
+ *
+ * 核心功能：
+ *
+ * 1. prepareContext():
+ *    - 克隆对话历史
+ *    - 检测复杂任务（长度、标点、换行）
+ *    - 自动添加"先规划后执行"提示
+ *    - 触发上下文摘要（规则+LLM）
+ *    - 集成 Tree-of-Thoughts 探索
+ *    - 集成 Planner 自动规划
+ *
+ * 上下文摘要策略：
+ * - 规则摘要：基于启发式规则快速压缩
+ * - LLM摘要：当消息超过400条时使用 LLM
+ * - 保留重要上下文，压缩历史对话
+ *
+ * Tree-of-Thoughts:
+ * - 自动检测需要探索的任务
+ * - 生成多种解决方案
+ * - 选择最佳路径
+ *
+ * Planner:
+ * - 复杂任务自动分步
+ * - 生成依赖关系
+ * - 逐步推进执行
+ *
+ * 使用示例：
+ * ```typescript
+ * const messages = await prepareContext(state, "实现用户认证", qtContext);
+ * // 自动添加规划提示、触发 Tree-of-Thoughts、生成执行计划
+ * ```
  */
 import type { LLMMessage } from '../LLMClient.js';
 import type { AgentState } from './types.js';
