@@ -9,6 +9,7 @@
 
 import type { Agent } from '../agent/Agent.js';
 import { RecoveryManager, type Checkpoint } from './RecoveryManager.js';
+import { randomUUID } from 'node:crypto';
 import type { Message, ToolCall, ToolResult } from '../types.js';
 
 export interface RecoveryIntegrationOptions {
@@ -158,7 +159,7 @@ export class RecoveryIntegration {
 
       if (msg.toolCalls && msg.toolCalls.length > 0) {
         message.toolCalls = msg.toolCalls.map((tc) => ({
-          id: `restored-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+          id: `restored-${randomUUID()}`,
           name: tc.name,
           args: tc.args,
         }));
@@ -210,7 +211,7 @@ export class RecoveryIntegration {
    * 生成会话 ID
    */
   private generateSessionId(): string {
-    return `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    return `session-${randomUUID()}`;
   }
 
   /**

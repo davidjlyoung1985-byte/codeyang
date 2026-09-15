@@ -9,6 +9,7 @@
  */
 
 import type { ReflexionEngine } from './ReflexionEngine.js';
+import { randomUUID } from 'node:crypto';
 import type { ExecutionRecord } from './ExecutionTracker.js';
 import type { LLMClient } from '../../agent/LLMClient.js';
 import { logger } from '../../utils/logger.js';
@@ -45,7 +46,7 @@ export class ReflexionIntegration {
    * Start tracking a new task context
    */
   startTask(userPrompt: string): string {
-    const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const taskId = `task_${randomUUID()}`;
     this.currentTask = {
       taskId,
       userPrompt,

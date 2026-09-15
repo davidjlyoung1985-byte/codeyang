@@ -3,6 +3,7 @@ import { ExecutionTracker, type ExecutionRecord } from './ExecutionTracker.js';
 import { LearningStore, type Reflection } from './LearningStore.js';
 import { ReflectionPrompt } from './ReflectionPrompt.js';
 import { logger } from '../../utils/logger.js';
+import { randomUUID } from 'node:crypto';
 
 export interface ReflexionConfig {
   enabled: boolean;
@@ -103,7 +104,7 @@ export class ReflexionEngine {
       const data = JSON.parse(jsonStr);
 
       return {
-        id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        id: randomUUID(),
         timestamp: Date.now(),
         trigger,
         executionIds: records.map((r) => r.id),
@@ -119,7 +120,7 @@ export class ReflexionEngine {
         `  Response preview: ${content.slice(0, 200)}...`,
       );
       return {
-        id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        id: randomUUID(),
         timestamp: Date.now(),
         trigger,
         executionIds: records.map((r) => r.id),

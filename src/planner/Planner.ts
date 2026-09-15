@@ -3,6 +3,7 @@ import type { Plan, PlanStep } from './PlanStore.js';
 import { PlanStore } from './PlanStore.js';
 import { PlanValidator } from './PlanValidator.js';
 import { logger } from '../utils/logger.js';
+import { randomUUID } from 'node:crypto';
 
 export interface PlannerConfig {
   enabled: boolean;
@@ -182,7 +183,7 @@ export class Planner {
           dependencies?: string[];
           estimatedDurationMs?: number;
         }) => ({
-          id: s.id || `step_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+          id: s.id || `step_${randomUUID()}`,
           description: s.description || '',
           tools: Array.isArray(s.tools) ? s.tools : [],
           dependencies: Array.isArray(s.dependencies) ? s.dependencies : [],
@@ -194,7 +195,7 @@ export class Planner {
       );
 
       const plan: Plan = {
-        id: `plan_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        id: `plan_${randomUUID()}`,
         task,
         createdAt: Date.now(),
         updatedAt: Date.now(),

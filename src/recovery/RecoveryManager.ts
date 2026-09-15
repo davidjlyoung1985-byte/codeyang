@@ -12,6 +12,7 @@ import { writeFile, readFile, mkdir, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
+import { randomUUID } from 'node:crypto';
 
 export interface Checkpoint {
   id: string;
@@ -270,7 +271,7 @@ export class RecoveryManager {
    * 生成检查点 ID
    */
   private generateCheckpointId(): string {
-    return `ckpt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    return `ckpt-${randomUUID()}`;
   }
 
   /**

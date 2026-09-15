@@ -27,7 +27,7 @@ describe('ReflexionIntegration', () => {
   describe('Task Context Management', () => {
     it('starts a new task context', () => {
       const taskId = integration.startTask('Test user prompt');
-      expect(taskId).toMatch(/^task_\d+_[a-z0-9]+$/);
+      expect(taskId).toMatch(/^task_[0-9a-f-]{36}$/);
     });
 
     it('records tool executions within task context', () => {

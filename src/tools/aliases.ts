@@ -102,13 +102,6 @@ export const TOOL_ALIASES: Record<string, string> = {
   websearch: 'WebSearch',
   google: 'WebSearch',
   ddg: 'WebSearch',
-
-  // Refactor
-  rename: 'RefactorRename',
-  extract: 'RefactorExtract',
-  inline: 'RefactorInline',
-  organize: 'RefactorOrganizeImports',
-  orgimports: 'RefactorOrganizeImports',
 };
 
 /**

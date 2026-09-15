@@ -1,5 +1,6 @@
 import { writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { resolveSafePath } from './shared.js';
 import { toolError } from './errors.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
@@ -99,7 +100,7 @@ export async function executeWrite(filePath: string, content: string): Promise<s
 
   // Atomic write: write to a temporary file first, then rename to target path.
   // This prevents data loss if the write is interrupted (crash, power loss, etc.).
-  const tmpPath = resolve(dir, `.tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  const tmpPath = resolve(dir, `.tmp-${randomUUID()}`);
   try {
     await writeFile(tmpPath, content, 'utf-8');
     await rename(tmpPath, resolved);

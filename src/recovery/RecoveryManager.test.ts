@@ -61,7 +61,7 @@ describe('RecoveryManager', () => {
       const checkpointId = await recoveryManager.createCheckpoint(checkpointData);
 
       expect(checkpointId).toBeTruthy();
-      expect(checkpointId).toMatch(/^ckpt-\d+-[a-z0-9]+$/);
+      expect(checkpointId).toMatch(/^ckpt-[0-9a-f-]{36}$/);
     });
 
     it('should save checkpoint to disk', async () => {

@@ -1,10 +1,12 @@
 import type { ToolDefinition } from '../../types.js';
-import { executeTaskCreate } from '../TaskCreateTool.js';
-import { executeTaskGet } from '../TaskGetTool.js';
-import { executeTaskUpdate } from '../TaskUpdateTool.js';
-import { executeTaskList } from '../TaskListTool.js';
-import { executeTaskStop } from '../TaskStopTool.js';
-import { executeTaskOutput } from '../TaskOutputTool.js';
+import {
+  executeTaskCreate,
+  executeTaskGet,
+  executeTaskUpdate,
+  executeTaskList,
+  executeTaskStop,
+  executeTaskOutput,
+} from '../task-tools.js';
 
 export const definitions: ToolDefinition[] = [
   {
