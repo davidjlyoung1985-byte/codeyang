@@ -58,14 +58,15 @@ export default defineConfig({
         'src/tools/semantic-index.ts',
         'src/utils/testHelpers.ts',
       ],
-      // Current coverage (core modules only, experimental excluded):
-      // statements 76.77%, branches 80.16%, functions 86.09%, lines 76.77%
-      // Thresholds set below actual values to ensure CI stability
+      // Current coverage (core + selected extended modules, see `include`):
+      // statements 76.6%, branches 80.0%, functions 86.0%, lines 76.6%
+      // Thresholds sit ~1-2 points below actual to gate real regressions
+      // without flaking on minor variance.
       thresholds: {
-        statements: 64,
-        branches: 52,
-        functions: 67,
-        lines: 65,
+        statements: 75,
+        branches: 78,
+        functions: 84,
+        lines: 75,
       },
       // Fail CI if thresholds not met
       reportOnFailure: true,

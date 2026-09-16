@@ -9,7 +9,7 @@ An AI coding agent inspired by [Claude Code](https://github.com/anthropics/claud
 
 **Project Status**: Beta — approaching production-ready for v1.0 release  
 ✅ Core functionality works; `tsc --noEmit` and ESLint pass clean  
-✅ Full suite green: **2276 tests, 7 skipped** (see [Testing](#testing))  
+✅ Full suite green: **2137 tests, 7 skipped** (see [Testing](#testing))  
 📊 Test Coverage: statements **77%** / branches **80%** / functions **86%** / lines **77%**  
 🎯 **Project Quality Score**: 90/100  
 ⚠️ **Evolving modules** (`src/experimental/`) ship in every build but their internal APIs may change — see [src/experimental/README.md](src/experimental/README.md)
@@ -246,7 +246,7 @@ npm test              # Run all tests
 npm run test:coverage # With coverage report
 ```
 
-Current status: **2076 tests across 103 files, 0 failures** (`npm test`).
+Current status: **2137 tests across 110 files, 0 failures** (`npm test`).
 
 Test parallelism is capped at `maxWorkers: 4` in `vitest.config.ts`. Several
 suites shell out to real `git` / `npx tsc` / `npx eslint` or do heavy filesystem
@@ -254,17 +254,17 @@ I/O; leaving it unbounded starves those processes on Windows and produces
 wall-clock timeout flakes.
 
 Coverage thresholds enforced by CI (see `vitest.config.ts` and [.github/workflows/ci.yml](.github/workflows/ci.yml)):
-- Statements: 64%
-- Branches: 52%
-- Functions: 67%
-- Lines: 65%
+- Statements: 75%
+- Branches: 78%
+- Functions: 84%
+- Lines: 75%
 
 ## Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 Current priorities:
-1. **Improve test coverage** — reach 60% branches for core modules (currently 52.7%)
+1. **Improve test coverage** — extend branch coverage on core modules while staying above the CI gate (currently 80%)
 2. **Fix environment-dependent test timeouts** on Windows parallel runs
 3. **Add more examples and use cases**
 4. **Performance optimizations** (streaming for large files, test caching)
@@ -304,8 +304,8 @@ This is a **functional but work-in-progress** AI agent project:
 
 **Production readiness**: Beta (B)
 - Core modules: agent, tools, mcp, security — well-tested, suitable for personal / small-team use
-- Full suite: **2076 tests, 0 failures**; `tsc --noEmit` and ESLint clean
-- Coverage gates: statements 64% / branches 52% / functions 67% / lines 65%
+- Full suite: **2137 tests, 0 failures**; `tsc --noEmit` and ESLint clean
+- Coverage gates: statements 75% / branches 78% / functions 84% / lines 75%
 - 81 registered tools
 - `src/experimental/` (qt, reflexion, continual-learning) ships and runs but is excluded from coverage and its APIs may change
 - SSRF protection and security best practices

@@ -33,7 +33,7 @@ export async function executeSearch(
       const idx = await getProjectIndex(rootDir);
       for (const filePath of idx.files) {
         const base = path.basename(filePath);
-        // 直接用正则匹�?basename，避�?includes �?test 两轮不一致的过滤
+        // 直接用正则匹配 basename，避免 includes 与 test 两轮不一致的过滤
         if (re.test(base)) {
           results.push({ type: 'name', path: filePath });
           if (results.length >= maxResults) break;

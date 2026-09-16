@@ -1,5 +1,5 @@
 /**
- * Bridge Server �?HTTP + WebSocket server for CodeYang �?Claude Code communication.
+ * Bridge Server — HTTP + WebSocket server for CodeYang ↔ Claude Code communication.
  *
  * Usage (standalone):
  *   npx tsx src/bridge/server.ts
@@ -426,7 +426,7 @@ function handleWebSocket(ws: WebSocket, req: IncomingMessage): void {
   let authenticated = false;
   const agent: AgentId = agentParam === 'claude-code' ? 'claude-code' : 'codeyang';
 
-  // 先发送一�?ping 等待认证
+  // 先发送一个 ping 等待认证
   const authTimer = setTimeout(() => {
     if (!authenticated) {
       ws.close(4001, 'Authentication timeout');
@@ -580,12 +580,12 @@ export async function startBridgeServer(config?: Partial<BridgeConfig>): Promise
     server.listen(port, state.config.host, () => {
       console.log('');
       console.log('  ╔══════════════════════════════════════════╗');
-      console.log('  �U     CodeYang ? Claude Code Bridge       �U');
+      console.log('  ║      CodeYang ↔ Claude Code Bridge       ║');
       console.log('  ╠══════════════════════════════════════════╣');
-      console.log(`  �? Server:  http://${state.config.host}:${port}      ║`);
-      console.log(`  �? WS:      ws://${state.config.host}:${port}        ║`);
-      console.log(`  �? Token:   ${state.authToken.slice(0, 16)}...        ║`);
-      console.log(`  �? Shared:  ${SHARED_DIR}  ║`);
+      console.log(`  ║ Server:  http://${state.config.host}:${port}      ║`);
+      console.log(`  ║ WS:      ws://${state.config.host}:${port}        ║`);
+      console.log(`  ║ Token:   ${state.authToken.slice(0, 16)}...        ║`);
+      console.log(`  ║ Shared:  ${SHARED_DIR}  ║`);
       console.log('  ╚══════════════════════════════════════════╝');
       console.log('');
 

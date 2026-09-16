@@ -98,6 +98,8 @@ codegraph/
 .opencode/
 .codegraph/
 claude-plugins-official/coverage-output.txt
+browser-cpp/
+spacey/
 
 # Runtime agent learning/tooling state (local only, not source)
 .learnings/

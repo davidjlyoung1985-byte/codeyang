@@ -1,5 +1,5 @@
 /**
- * Bridge Client �?used by CodeYang to communicate with Claude Code.
+ * Bridge Client — used by CodeYang to communicate with Claude Code.
  *
  * Provides functions to:
  * - Send tasks to Claude Code
@@ -106,10 +106,11 @@ export async function checkBridgeHealth(): Promise<{
     return await res.json();
   } catch (err) {
     if (err instanceof TypeError && err.message.includes('fetch')) {
-      // 网络错误（服务未启动、连接拒绝等）�?返回 null 表示不可�?      return null;
+      // 网络错误（服务未启动、连接拒绝等）— 返回 null 表示不可用
+      return null;
     }
     if (err instanceof Error && err.message.includes('Authentication failed')) {
-      // 认证错误 �?重新抛出让调用方知晓配置问题
+      // 认证错误 — 重新抛出让调用方知晓配置问题
       throw err;
     }
     // 其他网络错误
