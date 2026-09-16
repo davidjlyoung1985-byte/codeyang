@@ -126,7 +126,7 @@ vitest.eval.config.ts
 # React web client production build output
 dist-web/
 
-# Third-party skills repo cloned for reference �� never committed (was an accidental broken gitlink)
+# Third-party skills repo cloned for reference — never committed (was an accidental broken gitlink)
 mattpocock-skills/
 # Scratch log dir from run-chunks.ps1
 chunk-results/

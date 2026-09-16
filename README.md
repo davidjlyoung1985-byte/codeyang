@@ -159,20 +159,22 @@ mcp-servers/        # Bundled MCP servers
 
 | Platform | Process Isolation | Network Isolation | Status |
 |----------|-------------------|-------------------|--------|
-| **Linux** | ✅ Full (fork/IPC) | ✅ Full (unshare) | Fully supported |
-| **macOS** | ✅ Full (fork/IPC) | ⚠️ Soft blocking | Process isolation only |
-| **Windows** | ✅ Full (fork/IPC) | ⚠️ Soft blocking | Process isolation only |
+| **Linux** | ✅ Full (fork/IPC) | ✅ Full (`unshare --net`) | Fully supported |
+| **macOS** | ✅ Full (fork/IPC) | ✅ Full (`sandbox-exec`) | Fully supported |
+| **Windows** | ✅ Full (fork/IPC) | ✅ Full (WFP firewall rule) | Requires admin for network isolation |
 
 **Notes:**
 - ✅ **Process isolation** works on all platforms via Node.js fork/IPC
-- ✅ **Linux** has full network isolation via `unshare` (network namespaces)
-- ⚠️ **macOS/Windows** use soft network blocking (environment variable marker only)
+- ✅ **Linux** uses `unshare --net` (network namespaces)
+- ✅ **macOS** uses `sandbox-exec` with a generated deny-network profile
+- ✅ **Windows** blocks the target image's outbound traffic with a temporary
+  Windows Filtering Platform (WFP) firewall rule, removed when the run ends
+- Network isolation requires elevated privileges on macOS/Windows (SIP /
+  admin); without them the sandbox falls back to soft blocking (a marker env var)
 - All platforms enforce timeouts, resource limits, and filesystem isolation
 
 ### Known Limitations
 
-- **Windows**: Network isolation requires Windows Filtering Platform (not yet implemented)
-- **macOS**: Network isolation requires `sandbox-exec` (not yet implemented)
 - **Git operations**: May experience timeouts in parallel test runs on Windows (use sequential mode)
 
 ## Feature Maturity
@@ -312,8 +314,8 @@ This is a **functional but work-in-progress** AI agent project:
 - Active development with regular improvements
 
 **Not yet done** (why this is Beta, not stable):
-- Windows/macOS lack OS-level network isolation for the sandbox (soft blocking only)
-- No git tags — releases are tracked by filename (`RELEASE-v0.8.0.md`)
+- Network isolation on macOS/Windows needs elevated privileges (SIP / admin); without them it degrades to soft blocking
+- Releases are tagged (latest `v0.9.0`); see the tags page: https://github.com/davidjlyoung1985-byte/codeyang/tags
 - Some suites still shell out to real `git`/`npx`, so a heavily loaded host can still slow the run
 
 We believe in honest documentation. If you find issues, please report them!
