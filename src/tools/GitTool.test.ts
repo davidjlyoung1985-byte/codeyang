@@ -22,6 +22,39 @@ import {
 // the local `.git`, a nested repo would let `git` walk up and resolve to THIS
 // repo (firing husky, committing nothing) — the source of the old flake.
 const TEST_DIR = path.join(tmpdir(), `.test-git-tools-${randomBytes(4).toString('hex')}`);
+// Empty stand-in for the user's global/system gitconfig (portable across OSes —
+// `/dev/null` does not exist on Windows). MUST live *outside* TEST_DIR, or the
+// stray file shows up in `git status --porcelain` and breaks "nothing to
+// commit" assertions.
+const EMPTY_CONFIG = path.join(tmpdir(), `.test-git-tools-empty-${randomBytes(4).toString('hex')}.gitconfig`);
+
+/**
+ * Run git with a fully isolated configuration so the suite cannot be perturbed
+ * by the developer's global/system gitconfig, hooks, GPG signing, or a parent
+ * repository. Also caps each call so a starved CI runner fails fast instead of
+ * hanging the whole file.
+ */
+function git(args: string[]): ReturnType<typeof execa> {
+  // Ensure the empty config file exists before every call.
+  fs.writeFile(EMPTY_CONFIG, '').catch(() => {});
+  return execa('git', args, {
+    cwd: TEST_DIR,
+    env: {
+      ...process.env,
+      GIT_CONFIG_GLOBAL: EMPTY_CONFIG,
+      GIT_CONFIG_SYSTEM: EMPTY_CONFIG,
+      GIT_CONFIG_NOSYSTEM: '1',
+      GIT_TERMINAL_PROMPT: '0',
+      // Avoid husky / user hooks firing in the temp repo.
+      HUSKY: '0',
+      GIT_AUTHOR_NAME: 'Test User',
+      GIT_AUTHOR_EMAIL: 'test@example.com',
+      GIT_COMMITTER_NAME: 'Test User',
+      GIT_COMMITTER_EMAIL: 'test@example.com',
+    },
+    timeout: 20_000,
+  });
+}
 
 describe('GitTool', () => {
   beforeEach(async () => {
@@ -32,15 +65,18 @@ describe('GitTool', () => {
     await fs.mkdir(TEST_DIR, { recursive: true });
 
     // Initialize git repo
-    await execa('git', ['init'], { cwd: TEST_DIR });
-    await execa('git', ['config', 'user.name', 'Test User'], { cwd: TEST_DIR });
-    await execa('git', ['config', 'user.email', 'test@example.com'], { cwd: TEST_DIR });
+    await git(['init']);
+    await git(['config', 'user.name', 'Test User']);
+    await git(['config', 'user.email', 'test@example.com']);
   });
 
   afterEach(async () => {
     // Clean up test directory
     if (existsSync(TEST_DIR)) {
       await fs.rm(TEST_DIR, { recursive: true, force: true });
+    }
+    if (existsSync(EMPTY_CONFIG)) {
+      await fs.rm(EMPTY_CONFIG, { force: true });
     }
   });
 
@@ -63,8 +99,8 @@ describe('GitTool', () => {
     it('should show modified files', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'initial');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       await fs.writeFile(file, 'modified');
 
@@ -93,7 +129,7 @@ describe('GitTool', () => {
 
       expect(result).toContain('Staged 2 file(s)');
 
-      const status = await execa('git', ['status', '-s'], { cwd: TEST_DIR });
+      const status = await git(['status', '-s']);
       expect(status.stdout).toContain('A  file1.txt');
       expect(status.stdout).toContain('A  file2.txt');
     });
@@ -108,13 +144,13 @@ describe('GitTool', () => {
   describe('executeGitCommit', () => {
     it('should create commit with staged files', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
 
       const result = await executeGitCommit('Test commit', TEST_DIR);
 
       expect(result).toContain('Test commit');
 
-      const log = await execa('git', ['log', '--oneline'], { cwd: TEST_DIR });
+      const log = await git(['log', '--oneline']);
       expect(log.stdout).toContain('Test commit');
     });
 
@@ -137,8 +173,8 @@ describe('GitTool', () => {
     it('should list branches', async () => {
       // Create initial commit to establish main branch
       await fs.writeFile(path.join(TEST_DIR, 'init.txt'), 'init');
-      await execa('git', ['add', 'init.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'init'], { cwd: TEST_DIR });
+      await git(['add', 'init.txt']);
+      await git(['commit', '-m', 'init']);
 
       const result = await executeGitBranch(TEST_DIR);
 
@@ -147,9 +183,9 @@ describe('GitTool', () => {
 
     it('should show multiple branches', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'init.txt'), 'init');
-      await execa('git', ['add', 'init.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'init'], { cwd: TEST_DIR });
-      await execa('git', ['branch', 'feature'], { cwd: TEST_DIR });
+      await git(['add', 'init.txt']);
+      await git(['commit', '-m', 'init']);
+      await git(['branch', 'feature']);
 
       const result = await executeGitBranch(TEST_DIR);
 
@@ -160,8 +196,8 @@ describe('GitTool', () => {
   describe('executeGitCheckout', () => {
     it('should create and switch to new branch', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'init.txt'), 'init');
-      await execa('git', ['add', 'init.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'init'], { cwd: TEST_DIR });
+      await git(['add', 'init.txt']);
+      await git(['commit', '-m', 'init']);
 
       const result = await executeGitCheckout('feature', TEST_DIR, true);
 
@@ -173,9 +209,9 @@ describe('GitTool', () => {
 
     it('should switch to existing branch', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'init.txt'), 'init');
-      await execa('git', ['add', 'init.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'init'], { cwd: TEST_DIR });
-      await execa('git', ['branch', 'feature'], { cwd: TEST_DIR });
+      await git(['add', 'init.txt']);
+      await git(['commit', '-m', 'init']);
+      await git(['branch', 'feature']);
 
       const result = await executeGitCheckout('feature', TEST_DIR, false);
 
@@ -186,8 +222,8 @@ describe('GitTool', () => {
   describe('executeGitLog', () => {
     it('should show commit history', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'First commit'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'First commit']);
 
       const result = await executeGitLog(TEST_DIR);
 
@@ -197,8 +233,8 @@ describe('GitTool', () => {
     it('should limit commit count', async () => {
       for (let i = 0; i < 5; i++) {
         await fs.writeFile(path.join(TEST_DIR, `file${i}.txt`), 'content');
-        await execa('git', ['add', `file${i}.txt`], { cwd: TEST_DIR });
-        await execa('git', ['commit', '-m', `Commit ${i}`], { cwd: TEST_DIR });
+        await git(['add', `file${i}.txt`]);
+        await git(['commit', '-m', `Commit ${i}`]);
       }
 
       const result = await executeGitLog(TEST_DIR, 3);
@@ -209,8 +245,8 @@ describe('GitTool', () => {
 
     it('should show oneline format', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'Test commit'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'Test commit']);
 
       const result = await executeGitLog(TEST_DIR, 10, true);
 
@@ -230,8 +266,8 @@ describe('GitTool', () => {
     it('should show unstaged changes', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'initial');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       await fs.writeFile(file, 'modified');
 
@@ -245,11 +281,11 @@ describe('GitTool', () => {
     it('should show staged changes', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'initial');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       await fs.writeFile(file, 'modified');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
 
       const result = await executeGitDiff(TEST_DIR, true);
 
@@ -262,13 +298,13 @@ describe('GitTool', () => {
   describe('executeGitReset', () => {
     it('should unstage files', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
 
       const result = await executeGitReset(['test.txt'], TEST_DIR, false);
 
       expect(result).toContain('Reset completed');
 
-      const status = await execa('git', ['status', '-s'], { cwd: TEST_DIR });
+      const status = await git(['status', '-s']);
       expect(status.stdout).toContain('??');
     });
   });
@@ -277,8 +313,8 @@ describe('GitTool', () => {
     it('should stash changes', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'initial');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       await fs.writeFile(file, 'modified');
 
@@ -293,11 +329,11 @@ describe('GitTool', () => {
     it('should list stashes', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'initial');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       await fs.writeFile(file, 'modified');
-      await execa('git', ['stash', 'push', '-m', 'my stash'], { cwd: TEST_DIR });
+      await git(['stash', 'push', '-m', 'my stash']);
 
       const result = await executeGitStash('list', undefined, TEST_DIR);
 
@@ -308,8 +344,8 @@ describe('GitTool', () => {
   describe('executeGitCurrentBranch', () => {
     it('should return current branch', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'init.txt'), 'init');
-      await execa('git', ['add', 'init.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'init'], { cwd: TEST_DIR });
+      await git(['add', 'init.txt']);
+      await git(['commit', '-m', 'init']);
 
       const result = await executeGitCurrentBranch(TEST_DIR);
 
@@ -327,8 +363,8 @@ describe('GitTool', () => {
 
     it('should handle invalid branch name on checkout', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'init.txt'), 'init');
-      await execa('git', ['add', 'init.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'init'], { cwd: TEST_DIR });
+      await git(['add', 'init.txt']);
+      await git(['commit', '-m', 'init']);
 
       // Try to checkout non-existent branch without create flag
       const result = await executeGitCheckout('non-existent-branch', TEST_DIR, false);
@@ -337,7 +373,7 @@ describe('GitTool', () => {
 
     it('should handle commit with empty message', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
 
       const result = await executeGitCommit('', TEST_DIR);
 
@@ -365,10 +401,10 @@ describe('GitTool', () => {
     it('should handle checkout with uncommitted changes', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'initial');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
-      await execa('git', ['branch', 'feature'], { cwd: TEST_DIR });
+      await git(['branch', 'feature']);
 
       // Make uncommitted changes
       await fs.writeFile(file, 'modified');
@@ -388,8 +424,8 @@ describe('GitTool', () => {
 
     it('should handle stash when there are no changes', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       const result = await executeGitStash('save', 'empty stash', TEST_DIR);
 
@@ -424,7 +460,7 @@ describe('GitTool', () => {
 
     it('should handle special characters in commit message', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
 
       const message = 'Test: "quotes" & <special> chars $VAR';
       const result = await executeGitCommit(message, TEST_DIR);
@@ -434,7 +470,7 @@ describe('GitTool', () => {
 
     it('should handle very long commit messages', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
 
       const longMessage = 'A'.repeat(1000);
       const result = await executeGitCommit(longMessage, TEST_DIR);
@@ -455,8 +491,8 @@ describe('GitTool', () => {
 
     it('should handle branch names with special characters', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'init.txt'), 'init');
-      await execa('git', ['add', 'init.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'init'], { cwd: TEST_DIR });
+      await git(['add', 'init.txt']);
+      await git(['commit', '-m', 'init']);
 
       const branchName = 'feature/test-123';
       const result = await executeGitCheckout(branchName, TEST_DIR, true);
@@ -473,8 +509,8 @@ describe('GitTool', () => {
 
     it('should handle stash pop when no stashes exist', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       const result = await executeGitStash('pop', undefined, TEST_DIR).catch((e) => e.message);
 
@@ -485,7 +521,7 @@ describe('GitTool', () => {
   describe('Additional Branch Coverage', () => {
     it('should reject commit message starting with dash', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
 
       const result = await executeGitCommit('--no-verify', TEST_DIR);
 
@@ -495,7 +531,7 @@ describe('GitTool', () => {
 
     it('should reject empty commit message', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
 
       const result = await executeGitCommit('   ', TEST_DIR);
 
@@ -522,8 +558,8 @@ describe('GitTool', () => {
 
     it('should show remote branches when requested', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       const result = await executeGitBranch(TEST_DIR, true);
 
@@ -533,8 +569,8 @@ describe('GitTool', () => {
     it('should show diff for specific file', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'initial');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       await fs.writeFile(file, 'modified');
 
@@ -546,8 +582,8 @@ describe('GitTool', () => {
     it('should handle reset with hard flag', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'initial');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       await fs.writeFile(file, 'modified');
 
@@ -562,7 +598,7 @@ describe('GitTool', () => {
     it('should handle reset with specific files', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'file1.txt'), 'content1');
       await fs.writeFile(path.join(TEST_DIR, 'file2.txt'), 'content2');
-      await execa('git', ['add', '.'], { cwd: TEST_DIR });
+      await git(['add', '.']);
 
       const result = await executeGitReset(['file1.txt'], TEST_DIR, false);
 
@@ -571,8 +607,8 @@ describe('GitTool', () => {
 
     it('should handle log with oneline format', async () => {
       await fs.writeFile(path.join(TEST_DIR, 'test.txt'), 'content');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       const result = await executeGitLog(TEST_DIR, 10, true);
 
@@ -582,10 +618,10 @@ describe('GitTool', () => {
     it('should handle checkout with force flag', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'initial');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
-      await execa('git', ['branch', 'feature'], { cwd: TEST_DIR });
+      await git(['branch', 'feature']);
       await fs.writeFile(file, 'modified');
 
       const result = await executeGitCheckout('feature', TEST_DIR, true);
@@ -596,8 +632,8 @@ describe('GitTool', () => {
     it('should handle stash list operation', async () => {
       const file = path.join(TEST_DIR, 'test.txt');
       await fs.writeFile(file, 'initial');
-      await execa('git', ['add', 'test.txt'], { cwd: TEST_DIR });
-      await execa('git', ['commit', '-m', 'initial'], { cwd: TEST_DIR });
+      await git(['add', 'test.txt']);
+      await git(['commit', '-m', 'initial']);
 
       await fs.writeFile(file, 'modified');
       await executeGitStash('save', 'test stash', TEST_DIR);
