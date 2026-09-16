@@ -249,6 +249,8 @@ export class CliUI {
   private rl: readline.Interface;
   private onInput?: (line: string) => void;
   private onStopThinking?: () => void;
+  private onClose?: () => void;
+  private closed = false;
   private spinner = new Spinner();
   private progressBar = new ProgressBar();
   private streamBuf = '';
@@ -284,6 +286,14 @@ export class CliUI {
       if (trimmed && this.onInput) {
         this.onInput(trimmed);
       }
+    });
+
+    // stdin can hit EOF (piped input, Ctrl+D). Mark the interface closed so
+    // later prompt() calls don't throw ERR_USE_AFTER_CLOSE, and tell the host
+    // to shut down gracefully.
+    this.rl.on('close', () => {
+      this.closed = true;
+      this.onClose?.();
     });
 
     // Listen for Ctrl+C to stop thinking
@@ -410,6 +420,11 @@ export class CliUI {
     this.onStopThinking = handler;
   }
 
+  /** Called when stdin reaches EOF / the readline interface closes. */
+  setCloseHandler(handler: () => void) {
+    this.onClose = handler;
+  }
+
   setThinkingActive(active: boolean) {
     this.isThinkingActive = active;
     if (active) {
@@ -454,6 +469,7 @@ export class CliUI {
   }
 
   promptUser() {
+    if (this.closed) return;
     this.rl.prompt();
   }
 
@@ -770,6 +786,7 @@ export class CliUI {
   }
 
   promptForAnswer() {
+    if (this.closed) return;
     this.rl.prompt(true);
   }
 
@@ -782,6 +799,7 @@ export class CliUI {
   }
 
   close() {
+    this.closed = true;
     this.spinner.stop();
     this.rl.close();
   }

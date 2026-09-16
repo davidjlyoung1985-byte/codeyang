@@ -2,15 +2,17 @@
  * Configuration commands: /model, /config, /reload, /mcp
  */
 import type { CommandContext, DispatchResult } from './types.js';
-import { config, getMcpServers, reloadConfig } from '../agent/config.js';
+import { config, getMcpServers, reloadConfig, saveModel } from '../agent/config.js';
 
-export function cmdModel(line: string, ctx: CommandContext): DispatchResult {
+export async function cmdModel(line: string, ctx: CommandContext): Promise<DispatchResult> {
   const model = line.slice(7).trim();
   if (!model) {
     console.log(`  Current model: ${config.model}`);
   } else {
     config.model = model;
-    console.log(`  Model set to: ${model}`);
+    // Persist so the choice survives a restart.
+    await saveModel(model);
+    console.log(`  Model set to: ${model} (saved)`);
   }
   ctx.ui.promptUser();
   return { handled: true };

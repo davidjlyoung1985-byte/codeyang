@@ -116,6 +116,14 @@ describe('CliUI', () => {
     });
   });
 
+  describe('prompt after close', () => {
+    it('does not throw when prompting after the interface closed (stdin EOF)', () => {
+      ui.close();
+      expect(() => ui.promptUser()).not.toThrow();
+      expect(() => ui.promptForAnswer()).not.toThrow();
+    });
+  });
+
   describe('showThinkingDelta', () => {
     it('shows reasoning separately from the answer', () => {
       ui.showAgentStart();

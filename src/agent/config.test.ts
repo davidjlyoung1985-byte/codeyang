@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { config, validateConfig, resetConfigState } from './config.js';
+import { config, validateConfig, resetConfigState, loadLocalConfig } from './config.js';
 
 describe('config', () => {
   let originalEnv: NodeJS.ProcessEnv;
@@ -197,6 +197,24 @@ describe('config', () => {
       process.env['CODEYANG_MODEL'] = 'env-model';
       config.model = 'override-model';
       expect(config.model).toBe('override-model');
+    });
+
+    it('reads model from the local config file when no override/env is set', async () => {
+      const { getCodeyangHome } = await import('../utils/paths.js');
+      const { writeFile, mkdir, rm } = await import('node:fs/promises');
+      const { join } = await import('node:path');
+      const home = getCodeyangHome();
+      const cfgPath = join(home, 'config.json');
+      await mkdir(home, { recursive: true });
+      await writeFile(cfgPath, JSON.stringify({ model: 'from-config-file' }), 'utf-8');
+      delete process.env['CODEYANG_MODEL'];
+      try {
+        await loadLocalConfig();
+        expect(config.model).toBe('from-config-file');
+      } finally {
+        await rm(cfgPath, { force: true });
+        resetConfigState();
+      }
     });
   });
 

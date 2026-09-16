@@ -543,6 +543,9 @@ Keys entered interactively can be saved to ~/.codeyang/config.json`);
   process.on('SIGINT', sigintHandler);
   process.on('SIGTERM', sigintHandler);
 
+  // stdin EOF (piped input / Ctrl+D): shut down gracefully instead of crashing.
+  ui.setCloseHandler(sigintHandler);
+
   ui.welcome();
   ui.promptUser();
 }

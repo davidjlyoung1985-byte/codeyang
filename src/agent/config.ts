@@ -46,6 +46,7 @@ interface LocalConfig {
   apiKey?: string;
   apiBaseURL?: string;
   apiProvider?: string;
+  model?: string;
   mcpServers?: Record<string, McpServerConfig>;
   cwd?: string;
   maxRetries?: number;
@@ -106,11 +107,20 @@ export async function saveApiSettings(settings: {
   apiKey: string;
   apiBaseURL?: string;
   apiProvider?: string;
+  model?: string;
 }): Promise<void> {
   await mkdir(CONFIG_DIR, { recursive: true });
   localConfig.apiKey = settings.apiKey;
   if (settings.apiBaseURL) localConfig.apiBaseURL = settings.apiBaseURL;
   if (settings.apiProvider) localConfig.apiProvider = settings.apiProvider;
+  if (settings.model) localConfig.model = settings.model;
+  await atomicWriteConfig(localConfig);
+}
+
+/** Persist the selected model so it survives restarts (used by /model). */
+export async function saveModel(model: string): Promise<void> {
+  await mkdir(CONFIG_DIR, { recursive: true });
+  localConfig.model = model;
   await atomicWriteConfig(localConfig);
 }
 
@@ -196,10 +206,11 @@ export async function reloadConfig(): Promise<void> {
 export const config = {
   get model() {
     if (modelOverride) return modelOverride;
-    return process.env['CODEYANG_MODEL'] || 'deepseek-chat';
+    return process.env['CODEYANG_MODEL'] || localConfig.model || 'deepseek-chat';
   },
   set model(v: string) {
     modelOverride = v;
+    localConfig.model = v;
   },
   get apiKey() {
     return (
