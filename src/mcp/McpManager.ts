@@ -1,5 +1,6 @@
 import { MCP_TOOL_SEPARATOR, MCP_QUALIFIED_PREFIX, validateMcpConfig, type McpServerConfig } from './types.js';
 import { McpClient, type McpToolDef } from './McpClient.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Manages multiple MCP server connections.
@@ -29,7 +30,7 @@ export class McpManager {
       // Validate config at runtime — skip invalid configs with a warning
       const errors = validateMcpConfig(cfg);
       if (errors.length > 0) {
-        console.warn(`[McpManager] Skipping server "${name}" — invalid config: ${errors.join('; ')}`);
+        logger.warn(`[McpManager] Skipping server "${name}" — invalid config: ${errors.join('; ')}`);
         continue;
       }
       this.serverConfigs.set(name, cfg);
@@ -98,13 +99,13 @@ export class McpManager {
     state.attempts++;
 
     if (state.attempts > this.MAX_RECONNECT) {
-      console.warn(`[MCP] ${name}: max reconnects reached, giving up`);
+      logger.warn(`[MCP] ${name}: max reconnects reached, giving up`);
       this.reconnectState.delete(name);
       return;
     }
 
     const delay = this.RECONNECT_BASE_MS * Math.pow(2, state.attempts - 1);
-    console.log(`[MCP] ${name}: reconnect in ${delay}ms (attempt ${state.attempts}/${this.MAX_RECONNECT})`);
+    logger.info(`[MCP] ${name}: reconnect in ${delay}ms (attempt ${state.attempts}/${this.MAX_RECONNECT})`);
 
     state.timer = setTimeout(async () => {
       const cfg = this.serverConfigs.get(name);
@@ -114,7 +115,7 @@ export class McpManager {
         const tools = await cl.connect();
         this.clients.set(name, cl);
         this._allTools = this.collectTools();
-        console.log(`[MCP] ${name}: reconnected, ${tools.length} tools`);
+        logger.info(`[MCP] ${name}: reconnected, ${tools.length} tools`);
         this.reconnectState.delete(name);
       } catch {
         this.scheduleReconnect(name);
@@ -131,7 +132,7 @@ export class McpManager {
     const results = await Promise.allSettled(Array.from(this.clients.values()).map((c) => c.refreshTools()));
     for (const r of results) {
       if (r.status === 'rejected') {
-        console.debug(`[MCP] Tool refresh failed: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
+        logger.debug(`[MCP] Tool refresh failed: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
       }
     }
     this._allTools = this.collectTools();

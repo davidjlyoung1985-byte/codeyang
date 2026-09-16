@@ -2,6 +2,8 @@
  * Connection Monitor - 监控长时间运行的操作并提供心跳反馈
  */
 
+import { logger } from './logger.js';
+
 export class ConnectionMonitor {
   private lastActivity: number = Date.now();
   private healthCheckTimer: NodeJS.Timeout | null = null;
@@ -36,8 +38,8 @@ export class ConnectionMonitor {
       const idleTime = Date.now() - this.lastActivity;
 
       if (idleTime > this.idleTimeout) {
-        console.warn(`\n⚠️ ${Math.floor(idleTime / 1000)}秒无响应，可能出现问题`);
-        console.warn('提示：按 Ctrl+C 中断，或继续等待');
+        logger.warn(`\n⚠️ ${Math.floor(idleTime / 1000)}秒无响应，可能出现问题`);
+        logger.warn('提示：按 Ctrl+C 中断，或继续等待');
 
         if (this.onIdleCallback) {
           this.onIdleCallback();

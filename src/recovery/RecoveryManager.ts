@@ -13,6 +13,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
+import { logger } from '../utils/logger.js';
 
 export interface Checkpoint {
   id: string;
@@ -109,7 +110,7 @@ export class RecoveryManager {
     const filePath = join(this.checkpointDir, `${checkpoint.id}.json`);
     await writeFile(filePath, JSON.stringify(checkpoint, null, 2), 'utf-8');
 
-    console.log(`[Recovery] Checkpoint saved: ${checkpoint.id}`);
+    logger.info(`[Recovery] Checkpoint saved: ${checkpoint.id}`);
     return checkpoint.id;
   }
 
@@ -126,7 +127,7 @@ export class RecoveryManager {
         const data = getCheckpointData();
         await this.createCheckpoint(data);
       } catch (error) {
-        console.error('[Recovery] Auto-save failed:', error);
+        logger.error('[Recovery] Auto-save failed:', error);
       }
     }, this.autoSaveInterval);
   }
@@ -180,7 +181,7 @@ export class RecoveryManager {
     const checkpoint: Checkpoint = JSON.parse(content);
 
     this.currentCheckpoint = checkpoint;
-    console.log(`[Recovery] Restored from checkpoint: ${checkpointId}`);
+    logger.info(`[Recovery] Restored from checkpoint: ${checkpointId}`);
 
     return checkpoint;
   }
@@ -206,7 +207,7 @@ export class RecoveryManager {
         const checkpoint: Checkpoint = JSON.parse(content);
         checkpoints.push(checkpoint);
       } catch (error) {
-        console.warn(`[Recovery] Failed to load checkpoint: ${file}`, error);
+        logger.warn(`[Recovery] Failed to load checkpoint: ${file}`, error);
       }
     }
 
@@ -221,7 +222,7 @@ export class RecoveryManager {
 
     if (existsSync(filePath)) {
       await unlink(filePath);
-      console.log(`[Recovery] Deleted checkpoint: ${checkpointId}`);
+      logger.info(`[Recovery] Deleted checkpoint: ${checkpointId}`);
     }
   }
 
@@ -241,7 +242,7 @@ export class RecoveryManager {
       await this.deleteCheckpoint(checkpoint.id);
     }
 
-    console.log(`[Recovery] Cleaned up ${toDelete.length} old checkpoints`);
+    logger.info(`[Recovery] Cleaned up ${toDelete.length} old checkpoints`);
   }
 
   /**

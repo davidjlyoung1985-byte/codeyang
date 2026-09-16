@@ -9,6 +9,7 @@
 
 import type { Agent } from '../agent/Agent.js';
 import { RecoveryManager, type Checkpoint } from './RecoveryManager.js';
+import { logger } from '../utils/logger.js';
 import { randomUUID } from 'node:crypto';
 import type { Message, ToolCall, ToolResult } from '../types.js';
 
@@ -45,11 +46,11 @@ export class RecoveryIntegration {
     const unfinishedSessions = await this.recoveryManager.detectUnfinishedSessions();
 
     if (unfinishedSessions.length > 0) {
-      console.log(`\n[Recovery] Found ${unfinishedSessions.length} unfinished session(s).`);
+      logger.info(`[Recovery] Found ${unfinishedSessions.length} unfinished session(s).`);
 
       if (this.promptUserOnRecovery) {
         // 在实际使用中，这里应该通过 UI 提示用户
-        console.log('[Recovery] Use /recovery list to view and /recovery restore <id> to resume.');
+        logger.info('[Recovery] Use /recovery list to view and /recovery restore <id> to resume.');
       }
     }
 
@@ -181,7 +182,7 @@ export class RecoveryIntegration {
     this.sessionId = checkpoint.sessionId;
     this.currentTurnIndex = checkpoint.turnIndex;
 
-    console.log(`[Recovery] Restored session ${checkpoint.sessionId} at turn ${checkpoint.turnIndex}`);
+    logger.info(`[Recovery] Restored session ${checkpoint.sessionId} at turn ${checkpoint.turnIndex}`);
   }
 
   /**

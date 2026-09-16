@@ -118,7 +118,7 @@ function createTask(params: {
     updatedAt: now,
   };
   state.tasks.push(task);
-  saveTasks().catch((err) => console.error('Failed to persist tasks:', err));
+  saveTasks().catch((err) => logger.error('Failed to persist tasks:', err));
   return task;
 }
 
@@ -126,7 +126,7 @@ function updateTask(id: string, updates: Partial<BridgeTask>): BridgeTask | null
   const task = state.tasks.find((t) => t.id === id);
   if (!task) return null;
   Object.assign(task, updates, { updatedAt: new Date().toISOString() });
-  saveTasks().catch((err) => console.error('Failed to persist tasks:', err));
+  saveTasks().catch((err) => logger.error('Failed to persist tasks:', err));
   return task;
 }
 
@@ -147,7 +147,7 @@ function addMessage(msg: Omit<BridgeMessage, 'id' | 'timestamp'>): BridgeMessage
   if (state.messages.length > 1000) {
     state.messages = state.messages.slice(-500);
   }
-  saveMessages().catch((err) => console.error('Failed to persist messages:', err));
+  saveMessages().catch((err) => logger.error('Failed to persist messages:', err));
   return full;
 }
 
@@ -610,7 +610,7 @@ const isMain = process.argv[1]?.replace(/\\/g, '/').endsWith('server.ts');
 if (isMain) {
   const port = Number(process.env['BRIDGE_PORT']) || DEFAULT_PORT;
   startBridgeServer({ port }).catch((err) => {
-    console.error('Failed to start bridge server:', err);
+    logger.error('Failed to start bridge server:', err);
     process.exit(1);
   });
 }

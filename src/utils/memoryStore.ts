@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, readdir, unlink, rename } from 'node:fs/pro
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { codeyangPath } from './paths.js';
+import { logger } from './logger.js';
 
 const MEMORY_DIR = codeyangPath('memory');
 
@@ -203,7 +204,7 @@ export async function saveMemory(
   } catch (err) {
     // Clean up temp file on failure
     await unlink(tmpFile).catch((err) =>
-      console.warn('⚠️ [MemoryStore] Failed to clean up temp file:', err instanceof Error ? err.message : err),
+      logger.warn('[MemoryStore] Failed to clean up temp file:', err instanceof Error ? err.message : err),
     );
     throw err;
   }
@@ -280,7 +281,7 @@ export async function clearAllMemories(): Promise<number> {
   const all = await getCachedMemories();
   for (const m of all) {
     await unlink(join(MEMORY_DIR, `${m.id}.json`)).catch((err) =>
-      console.warn('⚠️ [MemoryStore] Failed to delete memory file:', err instanceof Error ? err.message : err),
+      logger.warn('[MemoryStore] Failed to delete memory file:', err instanceof Error ? err.message : err),
     );
   }
   invalidateCache();

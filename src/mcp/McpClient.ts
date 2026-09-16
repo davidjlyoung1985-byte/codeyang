@@ -4,6 +4,7 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { MCP_QUALIFIED_PREFIX, MCP_TOOL_SEPARATOR, type McpServerConfig, type McpTransportType } from './types.js';
 import { VERSION } from '../version.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * SECURITY: Whitelist of allowed MCP server executables
@@ -32,7 +33,7 @@ const UNSAFE_MCP_COMMANDS = new Set(['npx', 'python', 'python3', 'docker', 'deno
 const MCP_ALLOW_UNSAFE = process.env['CODEYANG_MCP_ALLOW_UNSAFE'] === 'true';
 
 if (MCP_ALLOW_UNSAFE) {
-  console.warn('[SECURITY WARNING] MCP unsafe commands enabled. This allows npx, python, docker, etc.');
+  logger.warn('[SECURITY WARNING] MCP unsafe commands enabled. This allows npx, python, docker, etc.');
   for (const cmd of UNSAFE_MCP_COMMANDS) {
     ALLOWED_MCP_COMMANDS.add(cmd);
   }

@@ -7,6 +7,8 @@
  * - User-friendly error messages
  */
 
+import { logger } from './logger.js';
+
 export interface ErrorContext {
   operation: string;
   timestamp: number;
@@ -197,8 +199,8 @@ export function withErrorBoundary<T extends (...args: never[]) => Promise<unknow
     } catch (error) {
       const report = globalErrorHandler.handle(error, { operation });
 
-      // Log to console for debugging
-      console.error(`[${operation}] Error:`, report.message);
+      // Log for debugging
+      logger.error(`[${operation}] Error:`, report.message);
 
       // Re-throw if not recoverable
       if (!report.recoverable) {

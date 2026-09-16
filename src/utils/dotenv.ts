@@ -7,6 +7,7 @@
  */
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { logger } from './logger.js';
 
 function parseDotEnv(content: string): Array<{ key: string; value: string }> {
   const entries: Array<{ key: string; value: string }> = [];
@@ -51,9 +52,7 @@ export function loadEnvFiles(cwd: string = process.cwd()): void {
           const mode = stats.mode & 0o777;
           // Warn if file is world-readable (mode & 0o004)
           if (mode & 0o004) {
-            console.warn(
-              `[SECURITY WARNING] ${name} is world-readable (mode ${mode.toString(8)}). Consider chmod 600.`,
-            );
+            logger.warn(`[SECURITY WARNING] ${name} is world-readable (mode ${mode.toString(8)}). Consider chmod 600.`);
           }
         }
 
