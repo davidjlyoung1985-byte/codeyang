@@ -5,6 +5,7 @@
 
 import { execSync } from 'node:child_process';
 import { platform } from 'node:os';
+import { logger } from '../utils/logger.js';
 
 export interface WindowsIsolationResult {
   supported: boolean;
@@ -95,7 +96,7 @@ export function removeNetworkBlockRule(ruleId: string): void {
     });
   } catch (err) {
     // 忽略删除失败（规则可能已不存在）
-    console.warn(`Failed to remove firewall rule ${ruleName}:`, err);
+    logger.warn(`Failed to remove firewall rule ${ruleName}:`, err);
   }
 }
 

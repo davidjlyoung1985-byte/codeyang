@@ -254,6 +254,7 @@ export class Sandbox {
     // ── OS 级网络隔离（如果启用） ──
     let actualCommand = command;
     let actualArgs = args;
+    let isolationCleanup: (() => void) | undefined;
 
     if (this.config.blockNetwork && this.config.useOsNetworkIsolation) {
       const capabilities = await detectNetworkIsolationSupport();
@@ -264,6 +265,7 @@ export class Sandbox {
           const wrapped = await wrapCommandWithNetworkIsolation(command, args);
           actualCommand = wrapped.command;
           actualArgs = wrapped.args;
+          isolationCleanup = wrapped.cleanup;
         } catch (err) {
           // 包装失败，回退到软隔离
           logger.warn(
@@ -284,6 +286,7 @@ export class Sandbox {
     // ── 路径安全检查 ──
     const commandPath = resolve(actualCommand);
     if (!this.pathValidator.isAllowed(commandPath) && !this.isBuiltinCommand(actualCommand)) {
+      isolationCleanup?.();
       return {
         success: false,
         stdout: '',
@@ -302,6 +305,7 @@ export class Sandbox {
     try {
       this.workDir = opts?.cwd || (await this.createTempDir());
     } catch (err) {
+      isolationCleanup?.();
       return {
         success: false,
         stdout: '',
@@ -324,6 +328,7 @@ export class Sandbox {
           await mkdir(join(fullPath, '..'), { recursive: true });
           await writeFile(fullPath, file.content, 'utf-8');
         } catch (err) {
+          isolationCleanup?.();
           return {
             success: false,
             stdout: '',
@@ -346,6 +351,7 @@ export class Sandbox {
         await hook(this.id, this.workDir);
       }
     } catch (err) {
+      isolationCleanup?.();
       return {
         success: false,
         stdout: '',
@@ -378,6 +384,18 @@ export class Sandbox {
       // 清理函数（先在作用域中声明，因为在 try-catch 和 exit handler 中都会用到）
       const doCleanup = () => {
         this.childProcess = null;
+        // Release OS-level isolation resources (firewall rule, sandbox profile).
+        if (isolationCleanup) {
+          const fn = isolationCleanup;
+          isolationCleanup = undefined;
+          try {
+            fn();
+          } catch (err) {
+            logger.warn(
+              `[Sandbox ${this.id}] Failed to release network isolation: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        }
       };
 
       try {

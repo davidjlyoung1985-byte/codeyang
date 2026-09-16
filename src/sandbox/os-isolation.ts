@@ -15,6 +15,13 @@ export interface NetworkIsolationCapabilities {
   error?: string;
 }
 
+export interface WrappedNetworkCommand {
+  command: string;
+  args: string[];
+  /** Release any OS resources allocated for isolation (profile file, firewall rule). */
+  cleanup?: () => void;
+}
+
 /**
  * 检测系统是否支持网络隔离
  */
@@ -137,12 +144,9 @@ export async function detectNetworkIsolationSupport(): Promise<NetworkIsolationC
  *
  * @param command - 原始命令
  * @param args - 原始参数
- * @returns 包装后的命令和参数
+ * @returns 包装后的命令、参数，以及可选的清理函数
  */
-export async function wrapCommandWithNetworkIsolation(
-  command: string,
-  args: string[],
-): Promise<{ command: string; args: string[] }> {
+export async function wrapCommandWithNetworkIsolation(command: string, args: string[]): Promise<WrappedNetworkCommand> {
   const capabilities = await detectNetworkIsolationSupport();
 
   if (!capabilities.supported) {
@@ -156,8 +160,56 @@ export async function wrapCommandWithNetworkIsolation(
     };
   }
 
-  // 不应该到达这里
+  // macOS: sandbox-exec with a deny-network profile.
+  if (capabilities.method === 'sandbox-exec') {
+    const { wrapCommandWithSandbox, cleanupSandboxProfile } = await import('./os-isolation-macos.js');
+    const wrapped = wrapCommandWithSandbox(command, args, true);
+    return {
+      command: wrapped.command,
+      args: wrapped.args,
+      cleanup: wrapped.profilePath ? () => cleanupSandboxProfile(wrapped.profilePath!) : undefined,
+    };
+  }
+
+  // Windows: block the target executable's outbound traffic via a WFP
+  // firewall rule for the duration of the run.
+  if (capabilities.method === 'wfp') {
+    const { createNetworkBlockRule, removeNetworkBlockRule } = await import('./os-isolation-windows.js');
+    const programPath = resolveExecutablePath(command);
+    if (!programPath) {
+      throw new Error(`Cannot resolve executable path for "${command}" to apply a firewall rule`);
+    }
+    const ruleId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    createNetworkBlockRule(programPath, ruleId);
+    return {
+      command,
+      args,
+      cleanup: () => removeNetworkBlockRule(ruleId),
+    };
+  }
+
   throw new Error('No network isolation method available');
+}
+
+/**
+ * Resolve an executable name to an absolute path (best effort).
+ * Used so a firewall rule can target the exact program image.
+ */
+function resolveExecutablePath(command: string): string | null {
+  try {
+    if (platform() === 'win32') {
+      const out = execSync(`where ${command}`, { encoding: 'utf-8', timeout: 3000 });
+      const first = out
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)[0];
+      return first || null;
+    }
+    const out = execSync(`command -v ${command}`, { encoding: 'utf-8', timeout: 3000 });
+    return out.trim() || null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -212,7 +264,7 @@ export const NETWORK_ISOLATION_EXAMPLE = {
   checkBeforeRun: async () => {
     const capabilities = await detectNetworkIsolationSupport();
     if (!capabilities.supported) {
-      console.warn('OS-level network isolation not available, using soft blocking');
+      console.warn('OS-level network isolation not available, using soft blocking'); // eslint-disable-line no-console -- sample snippet
       return false;
     }
     return true;
