@@ -26,6 +26,7 @@
  * - Memory consolidation: 每10轮合并记忆
  */
 import type { AgentState, AssistantContentBlock } from './types.js';
+import type { QtContext } from '../../qt/index.js';
 import { config } from '../config.js';
 import { streamLLM } from './streaming.js';
 import {
@@ -44,7 +45,7 @@ import { runConsolidation } from '../../experimental/continual-learning/MemoryMa
 /**
  * Main agent run loop handling LLM streaming, tool execution, and feedback cycles.
  */
-export async function runLoop(state: AgentState, userMsg: string, qtContext?: string): Promise<void> {
+export async function runLoop(state: AgentState, userMsg: string, qtContext?: QtContext | string): Promise<void> {
   // Gateway (L1) - Check access before proceeding
   const gatewayRequest = state.gateway.createRequest({
     source: 'cli',
@@ -57,7 +58,7 @@ export async function runLoop(state: AgentState, userMsg: string, qtContext?: st
     throw new Error(`[Gateway] ${gatewayResponse.error || 'Request rejected by gateway'}`);
   }
 
-  const messages = await prepareContext(state, userMsg, qtContext);
+  const messages = await prepareContext(state, userMsg, typeof qtContext === 'string' ? qtContext : undefined);
 
   const traceId = state.tracer.startTrace({
     name: userMsg.slice(0, 60),
@@ -71,6 +72,9 @@ export async function runLoop(state: AgentState, userMsg: string, qtContext?: st
   // ── Main turn loop ──
   const maxTurns = config.maxTurns;
 
+  // Prepare QT context for system prompt
+  const qtContextForPrompt = typeof qtContext === 'string' ? undefined : qtContext;
+
   for (let turn = 0; turn < maxTurns; turn++) {
     logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
     if (messages.length === 0) throw new Error('[Agent] Internal error: messages empty at turn ' + turn);
@@ -78,7 +82,7 @@ export async function runLoop(state: AgentState, userMsg: string, qtContext?: st
     // Context window protection
     state.ctxManager.truncateIfNeeded(messages, config.maxTokens);
 
-    const systemPrompt = await state.ctxManager.getSystemPrompt(qtContext as unknown as undefined);
+    const systemPrompt = await state.ctxManager.getSystemPrompt(qtContextForPrompt);
 
     // LLM call with CircuitBreaker + Tracer
     const streamResult = await state.tracer.traceAsync(traceId, 'llm.stream', 'llm', async (span) => {

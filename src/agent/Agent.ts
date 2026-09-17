@@ -217,7 +217,7 @@ export class Agent {
 
   /** Main entry point: run a user message through the agent loop. */
   async run(userMsg: string): Promise<void> {
-    await runLoop(this.state, userMsg, this.qtContext as unknown as string | undefined);
+    await runLoop(this.state, userMsg, this.qtContext);
   }
 
   getClosedLoopStatus(): Record<string, unknown> {
