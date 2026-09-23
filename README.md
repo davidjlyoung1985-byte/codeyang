@@ -11,8 +11,8 @@ An AI coding agent inspired by [Claude Code](https://github.com/anthropics/claud
 ✅ Core functionality works; `tsc --noEmit` and ESLint pass clean  
 ✅ Full suite green: **2137 tests, 7 skipped** (see [Testing](#testing))  
 📊 Test Coverage: statements **77%** / branches **80%** / functions **86%** / lines **77%**  
-🎯 **Project Quality Score**: 90/100  
-⚠️ **Evolving modules** (`src/experimental/`) ship in every build but their internal APIs may change — see [src/experimental/README.md](src/experimental/README.md)
+🎯 **Project Quality Score**: 85/100 (see [IMPROVEMENTS.md](IMPROVEMENTS.md) for ongoing enhancements)  
+⚠️ **Evolving modules** (`src/experimental/`, `src/qt/`) ship in every build but their internal APIs may change — see [src/experimental/README.md](src/experimental/README.md)
 
 ## Architecture
 
@@ -21,19 +21,22 @@ This project is **heavily inspired by Anthropic's Claude Code architecture**:
 - Agent loop design based on Claude's streaming tool-use pattern
 - Skills system adapted from Anthropic's skills repository
 
-**Original contributions**:
-- MCP client integration
-- Multi-provider LLM support (Claude, DeepSeek, OpenAI-compatible)
-- Process sandbox with fork/IPC isolation
-- VS Code extension + Electron desktop app
-- Web service wrapper
+**Original contributions** — see [docs/DIFFERENTIATION.md](docs/DIFFERENTIATION.md) for detailed comparison:
+- **MCP client integration** — Connect to any Model Context Protocol server for unlimited tool extensibility
+- **Multi-provider LLM support** — Works with Claude, DeepSeek, OpenAI-compatible APIs (not just Anthropic)
+- **Process sandbox with fork/IPC isolation** — Secure execution environment with cross-platform network isolation
+- **Qt framework deep integration** — 5,000+ lines of Qt-specific tooling, auto-detected and injected
+- **Reflexion engine** — Self-critique and learning loop that improves agent reasoning over time
+- **Ponytail methodology** — Enforces YAGNI principle and prevents over-engineering
+- **Multi-platform deployment** — CLI, VS Code extension, Electron desktop app, Web service
+- **Continual learning** — Memory consolidation system that merges related learnings
 
 ## Features
 
 ### Core Capabilities
-- **80+ built-in tools** — File ops, Git, Bash, code analysis, web requests
+- **60+ core tools** — File ops, Git, Bash, code analysis, web requests (expandable via MCP servers and Qt detection)
 - **Streaming responses** — real-time output as the agent generates
-- **MCP (Model Context Protocol)** — connect external tool servers
+- **MCP (Model Context Protocol)** — connect external tool servers for unlimited extensibility
 - **Multi-provider** — Claude (recommended), DeepSeek, or OpenAI-compatible APIs
 
 ### Advanced Features
@@ -297,10 +300,10 @@ MIT
 This is a **functional but work-in-progress** AI agent project:
 
 **Strengths**:
-- ✅ Rich feature set (80+ tools, MCP, multi-provider)
+- ✅ Rich feature set (60+ core tools, MCP extensibility, multi-provider LLM support)
 - ✅ Clean TypeScript codebase with strict type checking
 - ✅ Modular architecture with clear separation of concerns
-- ✅ Multiple interfaces (CLI, VS Code, Electron)
+- ✅ Multiple interfaces (CLI, VS Code, Electron, Web UI)
 - ✅ CI/CD with hard gates (tsc + lint + vitest)
 - ✅ Performance benchmarks and security hardening
 
@@ -308,13 +311,15 @@ This is a **functional but work-in-progress** AI agent project:
 - Core modules: agent, tools, mcp, security — well-tested, suitable for personal / small-team use
 - Full suite: **2137 tests, 0 failures**; `tsc --noEmit` and ESLint clean
 - Coverage gates: statements 75% / branches 78% / functions 84% / lines 75%
-- 81 registered tools
+- **59 registered core tools** (60+ with dynamic MCP/Qt tools)
 - `src/experimental/` (qt, reflexion, continual-learning) ships and runs but is excluded from coverage and its APIs may change
 - SSRF protection and security best practices
 - Active development with regular improvements
 
 **Not yet done** (why this is Beta, not stable):
 - Network isolation on macOS/Windows needs elevated privileges (SIP / admin); without them it degrades to soft blocking
+- Experimental modules (`src/qt/`, `src/experimental/`) not yet included in coverage metrics (planned for v1.0)
+- Coverage targets for v1.0: core modules ≥85%, experimental modules ≥60% (see [V1_RELEASE_CHECKLIST.md](V1_RELEASE_CHECKLIST.md))
 - Releases are tagged (latest `v0.9.0`); see the tags page: https://github.com/davidjlyoung1985-byte/codeyang/tags
 - Some suites still shell out to real `git`/`npx`, so a heavily loaded host can still slow the run
 

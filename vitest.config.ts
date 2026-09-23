@@ -45,6 +45,9 @@ export default defineConfig({
         'src/tot/**/*.ts',
         'src/a2a/**/*.ts',
         'src/closed-loop/**/*.ts',
+        // TODO: Add experimental modules once coverage reaches 60%
+        // 'src/qt/**/*.ts',              // ~4078 lines, 1657 test lines (~40% coverage)
+        // 'src/experimental/**/*.ts',    // ~1227 lines, 711 test lines (~58% coverage)
       ],
       exclude: [
         'src/**/*.test.ts',
@@ -59,14 +62,14 @@ export default defineConfig({
         'src/utils/testHelpers.ts',
       ],
       // Current coverage (core + selected extended modules, see `include`):
-      // statements 76.6%, branches 80.0%, functions 86.0%, lines 76.6%
-      // Thresholds sit ~1-2 points below actual to gate real regressions
-      // without flaking on minor variance.
+      // statements 76.7%, branches 79.8%, functions 86.1%, lines 76.6%
+      // Thresholds raised to improve regression detection (留 ~1% 缓冲区)
+      // Target: gradually increase to 85%+ for core modules
       thresholds: {
-        statements: 75,
-        branches: 78,
-        functions: 84,
-        lines: 75,
+        statements: 76,
+        branches: 79,
+        functions: 85,
+        lines: 76,
       },
       // Fail CI if thresholds not met
       reportOnFailure: true,
