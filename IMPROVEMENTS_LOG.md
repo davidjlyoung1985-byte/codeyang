@@ -160,6 +160,35 @@ export const tools: ToolDefinition[] = new Proxy([] as ToolDefinition[], {
 
 ---
 
+## 2026年1月改进记录（第二轮）
+
+### ✅ 已完成的改进（2026-01-XX 第二轮）
+
+#### 4. 为 LLMClient 补充流式处理测试
+**问题**：LLMClient.ts 覆盖率仅 47%，缺少对核心流式处理逻辑的测试。
+
+**解决方案**：
+- 新增 `src/agent/LLMClient.stream.test.ts` 测试文件
+- 为 `consumeStream()` 函数补充 11 个测试用例
+- 覆盖文本收集、工具调用、混合场景、边界情况等
+
+**文件修改**：
+- 新增：`src/agent/LLMClient.stream.test.ts` (11 个测试用例)
+
+**测试验证**：
+```bash
+npm test -- src/agent/LLMClient.stream.test.ts
+✓ All 11 tests passed
+```
+
+**覆盖率变化**：
+- LLMClient.ts: 47.00% → 47.63% (+0.63%)
+- 总测试数: 2156 → 2167 (+11)
+
+**备注**：覆盖率提升较小，因为主要的未覆盖代码在实际的 API 客户端实现部分（AnthropicClient、OpenAIClient），这些需要 mock 外部 API 才能测试。
+
+---
+
 **最后更新**：2026年1月
 **责任人**：项目维护者
-**状态**：✅ P0 任务完成，进行中 P1 任务
+**状态**：✅ P0 任务完成，✅ P1 部分完成（McpManager + LLMClient stream），进行中
