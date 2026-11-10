@@ -3,6 +3,7 @@ import { executeBash } from '../BashTool.js';
 import { executeRead } from '../ReadTool.js';
 import { executeWrite } from '../WriteTool.js';
 import { executeEdit } from '../EditTool.js';
+import { executeMultiEdit } from '../MultiEditTool.js';
 import { executeGlob } from '../GlobTool.js';
 import { executeGrep } from '../GrepTool.js';
 import { executeTodoWrite } from '../TodoWriteTool.js';
@@ -117,6 +118,50 @@ export const definitions: ToolDefinition[] = [
       const newString = requiredString(args, 'newString');
       const replaceAll = args['replaceAll'] === true;
       return executeEdit(filePath, oldString, newString, replaceAll);
+    },
+  },
+  {
+    name: 'MultiEdit',
+    description:
+      'Apply several exact-text replacements to ONE file in a single atomic operation. Prefer this over multiple Edit calls when changing 2+ separated regions of the same file: it saves round-trips and cannot leave the file half-edited. Edits are applied in order, so each oldString must match the file state left by the previous edits.',
+    parameters: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Path to the file to edit' },
+        edits: {
+          type: 'array',
+          description: 'Edits to apply in order. All must succeed or nothing is written.',
+          items: {
+            type: 'object',
+            properties: {
+              oldString: { type: 'string', description: 'The exact text to replace' },
+              newString: { type: 'string', description: 'The replacement text' },
+              replaceAll: { type: 'boolean', description: 'Replace every occurrence (default: false)' },
+            },
+            required: ['oldString', 'newString'],
+          },
+        },
+      },
+      required: ['filePath', 'edits'],
+    },
+    execute: async (args) => {
+      const filePath = requiredString(args, 'filePath');
+      const rawEdits = args['edits'];
+      if (!Array.isArray(rawEdits)) {
+        throw new Error('MultiEdit requires an `edits` array');
+      }
+      const edits = rawEdits.map((e, i) => {
+        const entry = e as Record<string, unknown>;
+        if (typeof entry['oldString'] !== 'string' || typeof entry['newString'] !== 'string') {
+          throw new Error(`MultiEdit edits[${i}] must have string oldString and newString`);
+        }
+        return {
+          oldString: entry['oldString'],
+          newString: entry['newString'],
+          replaceAll: entry['replaceAll'] === true,
+        };
+      });
+      return executeMultiEdit(filePath, edits);
     },
   },
   {
