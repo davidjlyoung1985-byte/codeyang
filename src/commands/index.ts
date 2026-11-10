@@ -9,7 +9,7 @@ import { cmdClear, cmdRewind, cmdTag, cmdCtxViz, cmdPlan } from './session.js';
 import { cmdSessions, cmdTools, cmdStats, cmdTasks, cmdStatus } from './info.js';
 import { cmdDiff, cmdCommit, cmdBranch, cmdGenCommit } from './git.js';
 import { cmdModel, cmdConfig, cmdReload, cmdMcp } from './config.js';
-import { cmdUndo, cmdRedo } from './edit.js';
+import { cmdUndo, cmdRedo, cmdHistory } from './edit.js';
 import { cmdPonytail } from './ponytail.js';
 import { cmdReview, cmdFix } from './quality.js';
 
@@ -60,6 +60,7 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
   // Edit history
   if (lower === '/undo') return await cmdUndo(ctx);
   if (lower === '/redo') return await cmdRedo(ctx);
+  if (lower === '/history') return await cmdHistory(ctx);
 
   // Features
   if (lower.startsWith('/ponytail')) return cmdPonytail(line, ctx);
@@ -104,6 +105,7 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
       '/commit',
       '/undo',
       '/redo',
+      '/history',
       '/branch',
       '/ctx_viz',
       '/rewind',

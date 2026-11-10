@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, readdir, stat, rm, access, rename } from 'n
 import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 import { resolveSafePath } from './shared.js';
+import { captureFile, captureMove, captureTree } from '../utils/snapshot.js';
 
 // 防止误删项目根目录或关键系统路径
 const PROTECTED_PATHS = [
@@ -132,6 +133,11 @@ export async function executeMove(sourcePath: string, destPath: string, overwrit
   // Ensure parent directory exists
   await mkdir(path.dirname(absDest), { recursive: true });
 
+  // Record the move so /undo can move it back.
+  await captureMove(absSource, absDest, 'Move').catch((err: unknown) => {
+    console.warn(`⚠️  Could not snapshot move for undo: ${err instanceof Error ? err.message : String(err)}`);
+  });
+
   // Try atomic rename first (fast if same filesystem)
   try {
     await rename(absSource, absDest);
@@ -171,6 +177,18 @@ export async function executeDelete(targetPath: string, recursive = false, force
   }
 
   const stats = await stat(absPath);
+
+  // Snapshot BEFORE deleting — this is the only thing that makes a delete
+  // recoverable. Directories get a bounded subtree copy.
+  try {
+    if (stats.isDirectory()) {
+      await captureTree(absPath, 'Delete');
+    } else {
+      await captureFile(absPath, 'Delete');
+    }
+  } catch (err) {
+    console.warn(`⚠️  Could not snapshot ${targetPath} for undo: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   if (stats.isDirectory()) {
     if (!recursive) {

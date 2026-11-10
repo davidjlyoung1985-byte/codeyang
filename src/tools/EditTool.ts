@@ -1,18 +1,7 @@
-import { readFile, writeFile, stat, mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readFile, writeFile, stat } from 'node:fs/promises';
 import { resolveSafePath } from './shared.js';
 import { fileNotFound, toolError } from './errors.js';
-import { editHistory } from '../utils/editHistory.js';
-
-/** 在 .codeyang/undo/ 下创建修改前的磁盘备份，防止进程崩溃丢失撤销历史 */
-async function saveDiskBackup(filePath: string, content: string): Promise<void> {
-  const undoDir = join(process.cwd(), '.codeyang', 'undo');
-  await mkdir(undoDir, { recursive: true });
-  // 使用文件路径的哈希+时间戳来创建唯一备份名
-  const safeName = filePath.replace(/[\\/:*?"<>|]/g, '_') + '.' + Date.now() + '.backup';
-  const backupPath = join(undoDir, safeName);
-  await writeFile(backupPath, content, 'utf-8');
-}
+import { captureFile } from '../utils/snapshot.js';
 
 // 基于文件路径的异步互斥锁，防止同一文件并发编辑导致竞态条件
 const editLocks = new Map<string, Promise<void>>();
@@ -58,11 +47,10 @@ export async function executeEdit(
       throw new Error(fileNotFound(filePath));
     }
 
-    // Save current content to undo history before modifying
+    // Save current content to the unified snapshot layer before modifying,
+    // so /undo works uniformly for Edit/Write/Delete/Move and survives restarts.
     const currentContent = await readFile(resolved, 'utf-8');
-    // Disk backup ensures undo survives process crashes
-    await saveDiskBackup(resolved, currentContent);
-    editHistory.push(resolved, currentContent);
+    await captureFile(resolved, 'Edit');
 
     const content = currentContent;
 

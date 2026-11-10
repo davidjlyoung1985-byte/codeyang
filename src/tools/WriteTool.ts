@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { resolveSafePath } from './shared.js';
 import { toolError } from './errors.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
+import { captureFile } from '../utils/snapshot.js';
 
 const MAX_WRITE_SIZE = 100 * 1024 * 1024; // 100 MB limit for writes
 
@@ -97,6 +98,15 @@ export async function executeWrite(filePath: string, content: string): Promise<s
 
   const dir = dirname(resolved);
   await mkdir(dir, { recursive: true });
+
+  // Snapshot before mutating so /undo covers Write (creates and overwrites alike).
+  try {
+    await captureFile(resolved, 'Write');
+  } catch (err) {
+    // A failed snapshot must not block the write, but it must be visible:
+    // subsequent /undo for this change will not be available.
+    console.warn(`⚠️  Could not snapshot ${filePath} for undo: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   // Atomic write: write to a temporary file first, then rename to target path.
   // This prevents data loss if the write is interrupted (crash, power loss, etc.).

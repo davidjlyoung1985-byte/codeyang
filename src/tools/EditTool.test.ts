@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
 import { executeEdit } from './EditTool.js';
-import { editHistory } from '../utils/editHistory.js';
+import * as snapshot from '../utils/snapshot.js';
 
 const TEST_DIR = path.join(process.cwd(), '.test-edit-tool');
 
@@ -11,12 +11,13 @@ describe('EditTool', () => {
   beforeEach(async () => {
     if (existsSync(TEST_DIR)) await fs.rm(TEST_DIR, { recursive: true, force: true });
     await fs.mkdir(TEST_DIR, { recursive: true });
-    editHistory.clear();
+    // Fresh snapshot session so undo history from other suites cannot leak in.
+    await snapshot.startNewSnapshotSession();
   });
 
   afterEach(async () => {
     if (existsSync(TEST_DIR)) await fs.rm(TEST_DIR, { recursive: true, force: true });
-    editHistory.clear();
+    await snapshot.startNewSnapshotSession().catch(() => {});
   });
 
   describe('single replace', () => {
@@ -42,11 +43,11 @@ describe('EditTool', () => {
       expect(await fs.readFile(fp, 'utf-8')).toBe('beforeafter');
     });
 
-    it('should save previous content to edit history', async () => {
+    it('should record a snapshot so the edit can be undone', async () => {
       const fp = path.join(TEST_DIR, 'history.txt');
       await fs.writeFile(fp, 'original content');
       await executeEdit(fp, 'original', 'modified');
-      expect(editHistory.canUndo).toBe(true);
+      expect(await snapshot.canUndo()).toBe(true);
     });
   });
 
@@ -129,14 +130,16 @@ describe('EditTool', () => {
     });
   });
 
-  describe('undo via editHistory', () => {
-    it('should allow undo after edit', async () => {
+  describe('undo via snapshot layer', () => {
+    it('should restore the original content after an edit', async () => {
       const fp = path.join(TEST_DIR, 'undo.txt');
       await fs.writeFile(fp, 'original');
       await executeEdit(fp, 'original', 'changed');
-      const entry = editHistory.undo();
-      expect(entry).not.toBeNull();
-      expect(entry!.previousContent).toBe('original');
+      expect(await fs.readFile(fp, 'utf-8')).toBe('changed');
+
+      const res = await snapshot.undo();
+      expect(res.ok).toBe(true);
+      expect(await fs.readFile(fp, 'utf-8')).toBe('original');
     });
   });
 });
