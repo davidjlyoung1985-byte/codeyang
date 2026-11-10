@@ -147,3 +147,11 @@ run_batches.ps1
 vitest_*.txt
 coverage-report.txt
 
+
+# ad-hoc vitest/e2e runs
+tools-out.txt
+*-out.txt
+
+
+# Runtime memory graph (generated per-user, never committed)
+memory/

@@ -18,37 +18,18 @@ export default defineConfig({
       '**/.git/**',
       '**/dist/**',
       'src/**/*.bench.ts',
-      // Skip integration and E2E tests that require LLM API configuration
+      // Integration test that needs a live LLM API configuration.
+      // (e2e.test.ts is fully mocked, so it runs in CI — do not exclude it.)
       'src/agent/Agent-integration.test.ts',
-      'src/e2e/e2e.test.ts',
     ],
     globalSetup: './vitest.setup.ts',
     setupFiles: ['./vitest.isolate.ts'],
     coverage: {
       provider: 'v8',
-      include: [
-        'src/agent/**/*.ts',
-        'src/tools/**/*.ts',
-        'src/mcp/**/*.ts',
-        'src/sandbox/**/*.ts',
-        'src/security/**/*.ts',
-        'src/permission/**/*.ts',
-        'src/ui/**/*.ts',
-        'src/utils/**/*.ts',
-        'src/config/**/*.ts',
-        'src/tracing/**/*.ts',
-        'src/gateway/**/*.ts',
-        'src/planner/**/*.ts',
-        'src/circuit-breaker/**/*.ts',
-        'src/bridge/**/*.ts',
-        // Include experimental modules with decent test coverage
-        'src/tot/**/*.ts',
-        'src/a2a/**/*.ts',
-        'src/closed-loop/**/*.ts',
-        // TODO: Add experimental modules once coverage reaches 60%
-        // 'src/qt/**/*.ts',              // ~4078 lines, 1657 test lines (~40% coverage)
-        // 'src/experimental/**/*.ts',    // ~1227 lines, 711 test lines (~58% coverage)
-      ],
+      // Include EVERYTHING under src/. Excluding the modules with weak tests
+      // (qt, experimental) made the headline number flattering but meaningless.
+      // An honest 65% is worth more than a curated 77%.
+      include: ['src/**/*.ts'],
       exclude: [
         'src/**/*.test.ts',
         'src/**/*.bench.ts',
@@ -61,15 +42,21 @@ export default defineConfig({
         'src/tools/semantic-index.ts',
         'src/utils/testHelpers.ts',
       ],
-      // Current coverage (core + selected extended modules, see `include`):
-      // statements 76.7%, branches 79.8%, functions 86.1%, lines 76.6%
-      // Thresholds raised to improve regression detection (留 ~1% 缓冲区)
-      // Target: gradually increase to 85%+ for core modules
+      // Measured over ALL of src/ (including qt and experimental):
+      //   statements 75.95%, branches 79.14%, functions 86.33%, lines 75.95%
+      //
+      // Earlier configs excluded qt/ and experimental/ from `include`, which
+      // reported a flattering 76.7%. With them included the real number is very
+      // close (75.95%) — those modules had more tests than the old TODO comment
+      // claimed. Never re-exclude a directory just to hit a target.
+      //
+      // Thresholds sit ~1% below measured values: enough to catch regressions,
+      // loose enough not to fail on incidental drift.
       thresholds: {
-        statements: 76,
-        branches: 79,
+        statements: 75,
+        branches: 78,
         functions: 85,
-        lines: 76,
+        lines: 75,
       },
       // Fail CI if thresholds not met
       reportOnFailure: true,
