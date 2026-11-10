@@ -52,6 +52,37 @@ describe('config', () => {
       expect(config.maxTurns).toBeGreaterThan(0);
     });
 
+    it('defaults temperature to a coding-friendly low value', () => {
+      const saved = process.env['CODEYANG_TEMPERATURE'];
+      delete process.env['CODEYANG_TEMPERATURE'];
+      expect(config.temperature).toBe(0.2);
+      if (saved === undefined) delete process.env['CODEYANG_TEMPERATURE'];
+      else process.env['CODEYANG_TEMPERATURE'] = saved;
+    });
+
+    it('reads temperature from CODEYANG_TEMPERATURE', () => {
+      const saved = process.env['CODEYANG_TEMPERATURE'];
+      process.env['CODEYANG_TEMPERATURE'] = '0.7';
+      expect(config.temperature).toBe(0.7);
+      if (saved === undefined) delete process.env['CODEYANG_TEMPERATURE'];
+      else process.env['CODEYANG_TEMPERATURE'] = saved;
+    });
+
+    it('clamps temperature to the API range and ignores garbage', () => {
+      const saved = process.env['CODEYANG_TEMPERATURE'];
+      process.env['CODEYANG_TEMPERATURE'] = '5';
+      expect(config.temperature).toBe(2);
+
+      process.env['CODEYANG_TEMPERATURE'] = '-3';
+      expect(config.temperature).toBe(0);
+
+      process.env['CODEYANG_TEMPERATURE'] = 'not-a-number';
+      expect(config.temperature).toBe(0.2);
+
+      if (saved === undefined) delete process.env['CODEYANG_TEMPERATURE'];
+      else process.env['CODEYANG_TEMPERATURE'] = saved;
+    });
+
     it('has getSystemPrompt function', () => {
       expect(typeof config.getSystemPrompt).toBe('function');
       const prompt = config.getSystemPrompt();

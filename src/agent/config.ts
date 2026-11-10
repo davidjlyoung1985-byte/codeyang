@@ -232,6 +232,18 @@ export const config = {
   get maxTurns(): number {
     return envNumber('CODEYANG_MAX_TURNS', 40);
   },
+
+  /**
+   * Sampling temperature. Coding tasks benefit from lower values, so the
+   * default is 0.2 rather than the 0.5 that used to be hardcoded in
+   * streaming.ts. Range is clamped to [0, 2] (the API limit).
+   */
+  get temperature(): number {
+    const raw = process.env['CODEYANG_TEMPERATURE'];
+    const val = raw === undefined || raw === '' ? Number.NaN : Number(raw);
+    if (Number.isNaN(val)) return 0.2;
+    return Math.min(2, Math.max(0, val));
+  },
   get autoVerify(): boolean {
     return (process.env['CODEYANG_AUTO_VERIFY'] || 'true') === 'true';
   },
