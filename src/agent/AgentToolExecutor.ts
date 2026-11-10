@@ -10,6 +10,44 @@ import { cacheKey } from './AgentUtils.js';
 import { Tracer } from '../tracing/index.js';
 import { ReflexionEngine } from '../experimental/reflexion/ReflexionEngine.js';
 import { logger } from '../utils/logger.js';
+import { checkPermission } from '../permission/index.js';
+import { categoryOf, gitSubject, permissionSubject } from '../permission/tool-categories.js';
+
+/**
+ * Enforce permission rules for a tool call.
+ *
+ * Returns an error message when the call must not proceed, or `null` to allow it.
+ * `deny` blocks outright; `ask` fails closed with actionable guidance, matching
+ * the existing Bash semantics (the agent must surface it to the user rather than
+ * silently performing a destructive action).
+ */
+async function checkToolPermission(toolName: string, input: Record<string, unknown>): Promise<string | null> {
+  const category = categoryOf(toolName);
+  if (!category) return null;
+
+  const subject = toolName.startsWith('Git') ? gitSubject(toolName, input) : permissionSubject(toolName, input);
+  if (!subject) return null;
+
+  let result: { level: 'allow' | 'deny' | 'ask'; reason?: string };
+  try {
+    result = await checkPermission(category, subject);
+  } catch (err) {
+    // A broken permissions.json must not silently widen access.
+    logger.warn(`[permission] check failed for ${toolName}, denying:`, err);
+    return `[PERMISSION DENIED] Could not evaluate permission rules for ${toolName}.`;
+  }
+
+  if (result.level === 'deny') {
+    return `[PERMISSION DENIED] ${result.reason || `${toolName} is not permitted on ${subject}`}`;
+  }
+  if (result.level === 'ask') {
+    return (
+      `[PERMISSION REQUIRED] ${result.reason || `${toolName} on ${subject} needs confirmation`}. ` +
+      `Ask the user to approve this, or set an explicit allow rule in ~/.codeyang/permissions.json.`
+    );
+  }
+  return null;
+}
 
 // ── Defaults ───────────────────────────────────────────────
 
@@ -173,6 +211,18 @@ export class AgentToolExecutor {
             cbs.onToolResult?.(tc.name, `Unknown: ${tc.name}`, true);
             return;
           }
+
+          // Permission gate — enforced here rather than inside individual tools,
+          // so `file` and `network` rules actually apply (they were previously
+          // declared but never checked; only Bash/PowerShell checked 'bash').
+          const denied = await checkToolPermission(tc.name, tc.input);
+          if (denied) {
+            toolResults[i] = { tool: tc.name, input: tc.input, output: denied, isError: true };
+            cbs.onToolResult?.(tc.name, denied, true);
+            this.recordToolCall(tc.name, 0, true);
+            return;
+          }
+
           cbs.onToolStart?.(tc.name, tc.input);
 
           // Check cache for Read/Glob

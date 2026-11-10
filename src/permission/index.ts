@@ -44,10 +44,17 @@ const DEFAULT_CONFIG: PermissionConfig = {
     { pattern: 'curl*|*bash', level: 'deny', category: 'bash', reason: 'Piping curl to shell is dangerous' },
     { pattern: '> /dev/sd*', level: 'deny', category: 'bash', reason: 'Direct disk write' },
     { pattern: 'mkfs*', level: 'deny', category: 'bash', reason: 'Filesystem creation blocked' },
-    // File operations — allow by default
-    { pattern: '*', level: 'allow', category: 'file', reason: 'File operations allowed' },
-    // Network — allow by default
-    { pattern: '*', level: 'allow', category: 'network', reason: 'Network allowed' },
+    // File operations — bulk deletes and sensitive paths need confirmation.
+    // Patterns use `**` (not `*`) because a single `*` never matches a path
+    // containing separators.
+    { pattern: '**/node_modules', level: 'ask', category: 'file', reason: 'Deleting node_modules' },
+    { pattern: '**/node_modules/**', level: 'ask', category: 'file', reason: 'Writing inside node_modules' },
+    { pattern: '**/.git/**', level: 'ask', category: 'file', reason: 'Writing inside .git' },
+    { pattern: '**/.ssh/**', level: 'deny', category: 'file', reason: 'SSH keys are off-limits' },
+    { pattern: '**/.env', level: 'ask', category: 'file', reason: 'Environment file with secrets' },
+    { pattern: '**', level: 'allow', category: 'file', reason: 'File operations allowed' },
+    // Network — allowed by default, but the category is now actually enforced
+    { pattern: '**', level: 'allow', category: 'network', reason: 'Network allowed' },
   ],
 };
 
@@ -94,6 +101,9 @@ export async function checkPermission(
     .filter((r) => r.category === category)
     .sort((a, b) => b.pattern.length - a.pattern.length); // more specific first
 
+  // Normalize Windows separators so glob patterns written with `/` still match.
+  const subject = category === 'bash' ? input.trim() : input.trim().replace(/\\/g, '/');
+
   for (const rule of categoryRules) {
     try {
       // For bash commands, use simple wildcard matching (not file-path based)
@@ -106,10 +116,10 @@ export async function checkPermission(
           .replace(/[.+^${}()|[\]\\]/g, '\\$&') // escape special regex chars
           .replace(/\*/g, '.*') // * matches any characters
           .replace(/\?/g, '.'); // ? matches single char
-        matched = new RegExp(`^${regex}$`, 'i').test(input.trim());
+        matched = new RegExp(`^${regex}$`, 'i').test(subject);
       } else {
         // Use minimatch for file paths and URLs
-        matched = minimatch(input.trim(), rule.pattern, { nocase: true, dot: true });
+        matched = minimatch(subject, rule.pattern, { nocase: true, dot: true });
       }
 
       if (matched) {
