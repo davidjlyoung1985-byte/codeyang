@@ -10,11 +10,15 @@
 export interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
+  /** Prompt-cache reads (Anthropic only; billed at ~10% of input price). */
+  cacheReadTokens: number;
+  /** Prompt-cache writes (Anthropic only; billed at ~125% of input price). */
+  cacheCreationTokens: number;
 }
 
 export class StateManager {
   // ── Token 使用追踪 ──
-  private tokenUsage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
+  private tokenUsage: TokenUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0 };
 
   // ── 反重复检测 ──
   private lastAssistantText = '';
@@ -27,17 +31,29 @@ export class StateManager {
 
   // ── Token 管理 ──
 
-  updateTokenUsage(inputTokens: number, outputTokens: number): void {
+  updateTokenUsage(inputTokens: number, outputTokens: number, cacheReadTokens = 0, cacheCreationTokens = 0): void {
     this.tokenUsage.inputTokens += inputTokens;
     this.tokenUsage.outputTokens += outputTokens;
+    this.tokenUsage.cacheReadTokens += cacheReadTokens;
+    this.tokenUsage.cacheCreationTokens += cacheCreationTokens;
   }
 
   getTokenUsage(): TokenUsage {
     return { ...this.tokenUsage };
   }
 
+  /**
+   * Share of input tokens served from the prompt cache (0-1).
+   * Returns 0 when caching is disabled or the provider does not report it.
+   */
+  getCacheHitRate(): number {
+    const { inputTokens, cacheReadTokens } = this.tokenUsage;
+    const totalInput = inputTokens + cacheReadTokens;
+    return totalInput > 0 ? cacheReadTokens / totalInput : 0;
+  }
+
   resetTokenUsage(): void {
-    this.tokenUsage = { inputTokens: 0, outputTokens: 0 };
+    this.tokenUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0 };
   }
 
   // ── 重复检测 ──

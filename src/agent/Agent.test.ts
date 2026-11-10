@@ -311,11 +311,11 @@ describe('Agent', () => {
     it('accumulates token usage from usage events', async () => {
       mockStream.mockReturnValue(makeStream(textDelta('Hello'), usageEvent(10, 20)));
       await agent.run('prompt 1');
-      expect(agent.getTokenUsage()).toEqual({ inputTokens: 10, outputTokens: 20 });
+      expect(agent.getTokenUsage()).toMatchObject({ inputTokens: 10, outputTokens: 20 });
 
       mockStream.mockReturnValue(makeStream(textDelta('World'), usageEvent(5, 15)));
       await agent.run('prompt 2');
-      expect(agent.getTokenUsage()).toEqual({ inputTokens: 15, outputTokens: 35 });
+      expect(agent.getTokenUsage()).toMatchObject({ inputTokens: 15, outputTokens: 35 });
     });
 
     it('resets token usage on agent reset', async () => {
@@ -324,7 +324,25 @@ describe('Agent', () => {
       expect(agent.getTokenUsage().inputTokens).toBe(10);
 
       agent.reset();
-      expect(agent.getTokenUsage()).toEqual({ inputTokens: 0, outputTokens: 0 });
+      expect(agent.getTokenUsage()).toMatchObject({ inputTokens: 0, outputTokens: 0 });
+    });
+
+    it('tracks prompt-cache reads separately from billed input', async () => {
+      mockStream.mockReturnValue(
+        makeStream(textDelta('Hello'), {
+          type: 'usage',
+          inputTokens: 100,
+          outputTokens: 20,
+          cacheReadTokens: 900,
+          cacheCreationTokens: 50,
+        }),
+      );
+      await agent.run('prompt');
+
+      const usage = agent.getTokenUsage();
+      expect(usage.inputTokens).toBe(100);
+      expect(usage.cacheReadTokens).toBe(900);
+      expect(usage.cacheCreationTokens).toBe(50);
     });
   });
 

@@ -1,6 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { convertToAnthropicMessages, convertToAnthropicTools, convertToOpenAIMessages } from './conversion-fns.js';
+import {
+  applyMessageCache,
+  applyToolCache,
+  buildCachedSystem,
+  getPromptCacheOptions,
+  stripCacheControl,
+  type PromptCacheOptions,
+} from './prompt-cache.js';
 import { logger } from '../utils/logger.js';
 
 /** Shared retry wrapper for LLM API calls (handles rate limits and transient errors). */
@@ -48,6 +56,10 @@ export interface StreamEvent {
   /** Token usage (emitted at end of stream) */
   inputTokens?: number;
   outputTokens?: number;
+  /** Prompt-cache reads (billed at ~10% of input price). Absent when caching is off. */
+  cacheReadTokens?: number;
+  /** Prompt-cache writes (billed at ~125% of input price). Absent when caching is off. */
+  cacheCreationTokens?: number;
 }
 
 export interface LLMMessage {
@@ -63,6 +75,11 @@ export interface LLMMessage {
         tool_use_id?: string;
         content?: string;
         is_error?: boolean;
+        /**
+         * Prompt-cache breakpoint. Only meaningful for Anthropic-provider
+         * requests; other providers ignore it (see prompt-cache.ts).
+         */
+        cache_control?: { type: 'ephemeral'; ttl?: '5m' | '1h' };
       }>;
 }
 
@@ -82,15 +99,19 @@ export interface StreamResult {
   toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }>;
 }
 
+export interface StreamParams {
+  model: string;
+  maxTokens: number;
+  temperature: number;
+  system: string;
+  messages: LLMMessage[];
+  tools: ToolSchema[];
+  /** Override prompt-cache behaviour; defaults to `getPromptCacheOptions()`. */
+  cache?: PromptCacheOptions;
+}
+
 export interface LLMClient {
-  stream(params: {
-    model: string;
-    maxTokens: number;
-    temperature: number;
-    system: string;
-    messages: LLMMessage[];
-    tools: ToolSchema[];
-  }): AsyncIterable<StreamEvent>;
+  stream(params: StreamParams): AsyncIterable<StreamEvent>;
 
   chat?(params: {
     model: string;
@@ -189,25 +210,37 @@ class AnthropicClient implements LLMClient {
     return { content: textBlock && 'text' in textBlock ? textBlock.text : '' };
   }
 
-  async *stream(params: {
-    model: string;
-    maxTokens: number;
-    temperature: number;
-    system: string;
-    messages: LLMMessage[];
-    tools: ToolSchema[];
-  }): AsyncIterable<StreamEvent> {
+  async *stream(params: StreamParams): AsyncIterable<StreamEvent> {
     // Note: client.messages.stream() is synchronous (returns MessageStream, not a Promise),
     // so withLLMRetry is not applicable here. Transient errors during streaming
     // are caught by the caller's outer withRetry in Agent.ts.
-    const stream = this.client.messages.stream({
-      model: params.model,
-      max_tokens: params.maxTokens,
-      temperature: params.temperature,
-      system: params.system,
-      messages: convertToAnthropicMessages(params.messages),
-      tools: convertToAnthropicTools(params.tools),
-    });
+    const cache = params.cache ?? getPromptCacheOptions();
+
+    const buildRequest = (useCache: boolean) => {
+      const effective: PromptCacheOptions = useCache ? cache : { ...cache, enabled: false, cacheMessages: false };
+      const system = buildCachedSystem(params.system, effective);
+      const messages = applyMessageCache(params.messages, effective);
+      const tools = applyToolCache(params.tools, effective);
+      return {
+        model: params.model,
+        max_tokens: params.maxTokens,
+        temperature: params.temperature,
+        system: system as string,
+        messages: convertToAnthropicMessages(messages),
+        tools: convertToAnthropicTools(tools),
+      };
+    };
+
+    let stream: ReturnType<Anthropic['messages']['stream']>;
+    try {
+      stream = this.client.messages.stream(buildRequest(cache.enabled) as never);
+    } catch (err) {
+      // Some Anthropic-compatible gateways reject `cache_control` outright.
+      // Retry once without it rather than failing the turn.
+      if (!cache.enabled) throw err;
+      logger.warn('[PromptCache] request rejected, retrying without cache_control:', err);
+      stream = this.client.messages.stream(stripCacheControl(buildRequest(false)) as never);
+    }
 
     let blockIdx = -1;
     const blocks: Array<{ type: string; id?: string; name?: string; input_json?: string }> = [];
@@ -260,11 +293,23 @@ class AnthropicClient implements LLMClient {
           break;
 
         case 'message_start':
-          yield {
-            type: 'usage',
-            inputTokens: event.message.usage.input_tokens,
-            outputTokens: event.message.usage.output_tokens,
-          };
+          {
+            // The SDK's published MessageUsage predates prompt caching, so read
+            // the cache counters loosely instead of dropping them.
+            const usage = event.message.usage as typeof event.message.usage & {
+              cache_read_input_tokens?: number | null;
+              cache_creation_input_tokens?: number | null;
+            };
+            const cacheRead = usage.cache_read_input_tokens ?? undefined;
+            const cacheCreate = usage.cache_creation_input_tokens ?? undefined;
+            yield {
+              type: 'usage',
+              inputTokens: usage.input_tokens,
+              outputTokens: usage.output_tokens,
+              ...(cacheRead !== undefined ? { cacheReadTokens: cacheRead } : {}),
+              ...(cacheCreate !== undefined ? { cacheCreationTokens: cacheCreate } : {}),
+            };
+          }
           break;
 
         case 'message_delta':
@@ -308,14 +353,9 @@ class OpenAICompatClient implements LLMClient {
     return { content: response.choices[0]?.message?.content || '' };
   }
 
-  async *stream(params: {
-    model: string;
-    maxTokens: number;
-    temperature: number;
-    system: string;
-    messages: LLMMessage[];
-    tools: ToolSchema[];
-  }): AsyncIterable<StreamEvent> {
+  async *stream(params: StreamParams): AsyncIterable<StreamEvent> {
+    // OpenAI-compatible endpoints cache stable prefixes automatically; there is
+    // no cache_control field to send, so `params.cache` is intentionally unused.
     const openaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [{ role: 'system', content: params.system }];
 
     for (const msg of params.messages) {

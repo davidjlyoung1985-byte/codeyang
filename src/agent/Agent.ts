@@ -188,7 +188,7 @@ export class Agent {
   }
 
   getStats(): {
-    tokens: { input: number; output: number; total: number };
+    tokens: { input: number; output: number; total: number; cacheRead?: number; cacheCreation?: number };
     turns: number;
     toolWeights: Array<{ name: string; weight: number; successRate: number; calls: number }>;
   } {
@@ -197,7 +197,9 @@ export class Agent {
       tokens: {
         input: tokenUsage.inputTokens,
         output: tokenUsage.outputTokens,
-        total: tokenUsage.inputTokens + tokenUsage.outputTokens,
+        total: tokenUsage.inputTokens + tokenUsage.outputTokens + tokenUsage.cacheReadTokens,
+        cacheRead: tokenUsage.cacheReadTokens,
+        cacheCreation: tokenUsage.cacheCreationTokens,
       },
       turns: this.state.conversationManager.getHistory().length,
       toolWeights: getAllToolWeights() as Array<{ name: string; weight: number; successRate: number; calls: number }>,
@@ -265,8 +267,13 @@ export class Agent {
     return config.apiKey.length > 0;
   }
 
-  getTokenUsage(): { inputTokens: number; outputTokens: number } {
+  getTokenUsage(): { inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheCreationTokens: number } {
     return this.state.stateManager.getTokenUsage();
+  }
+
+  /** Share of input tokens served from the prompt cache (0-1); 0 when caching is off. */
+  getCacheHitRate(): number {
+    return this.state.stateManager.getCacheHitRate();
   }
 
   saveCheckpoint(): number {

@@ -63,7 +63,9 @@ export async function cmdTools(ctx: CommandContext): Promise<DispatchResult> {
 export function cmdStats(ctx: CommandContext): DispatchResult {
   const msgs = ctx.agent.exportMessages();
   const usage = ctx.agent.getTokenUsage();
-  const totalTokens = usage.inputTokens + usage.outputTokens;
+  const cacheRead = usage.cacheReadTokens ?? 0;
+  const cacheCreate = usage.cacheCreationTokens ?? 0;
+  const totalTokens = usage.inputTokens + usage.outputTokens + cacheRead;
   const toolUses = msgs.filter((m) => {
     if (m.role === 'assistant' && Array.isArray(m.content)) {
       return m.content.some((c: { type: string }) => c.type === 'tool_use');
@@ -79,6 +81,19 @@ export function cmdStats(ctx: CommandContext): DispatchResult {
   console.log(
     `  Tokens: ${totalTokens.toLocaleString()} (in: ${usage.inputTokens.toLocaleString()}, out: ${usage.outputTokens.toLocaleString()})`,
   );
+
+  // Prompt cache: show the savings so the benefit is observable, not theoretical.
+  if (cacheRead > 0 || cacheCreate > 0) {
+    const totalInput = usage.inputTokens + cacheRead;
+    const hitRate = totalInput > 0 ? (cacheRead / totalInput) * 100 : 0;
+    // Cached reads bill at ~10% of input price, so these tokens cost 90% less.
+    const savedTokens = Math.round(cacheRead * 0.9);
+    console.log(
+      `  Prompt cache: ${cacheRead.toLocaleString()} read / ${cacheCreate.toLocaleString()} written ` +
+        `(${hitRate.toFixed(1)}% hit rate, ~${savedTokens.toLocaleString()} tokens saved)`,
+    );
+  }
+
   console.log('');
   ctx.ui.promptUser();
   return { handled: true };

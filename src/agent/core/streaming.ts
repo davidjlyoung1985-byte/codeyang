@@ -46,7 +46,13 @@ export async function streamLLM(
   systemPrompt: string,
   messages: LLMMessage[],
   cbs: AgentCallbacks,
-  onTokenUsage: (inputTokens: number, outputTokens: number) => void,
+  onTokenUsage: (
+    inputTokens: number,
+    outputTokens: number,
+    cacheReadTokens?: number,
+    cacheCreationTokens?: number,
+  ) => void,
+  temperature = 0.2,
 ): Promise<StreamResult> {
   const textParts: string[] = [];
   const toolCallsInner: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
@@ -67,7 +73,7 @@ export async function streamLLM(
       for await (const event of client.stream({
         model,
         maxTokens,
-        temperature: 0.5,
+        temperature,
         system: systemPrompt,
         messages,
         tools: toolSchemas(),
@@ -105,8 +111,18 @@ export async function streamLLM(
             }
           }
         } else if (event.type === 'usage') {
-          if (event.inputTokens !== undefined || event.outputTokens !== undefined) {
-            onTokenUsage(event.inputTokens ?? 0, event.outputTokens ?? 0);
+          if (
+            event.inputTokens !== undefined ||
+            event.outputTokens !== undefined ||
+            event.cacheReadTokens !== undefined ||
+            event.cacheCreationTokens !== undefined
+          ) {
+            onTokenUsage(
+              event.inputTokens ?? 0,
+              event.outputTokens ?? 0,
+              event.cacheReadTokens ?? 0,
+              event.cacheCreationTokens ?? 0,
+            );
           }
         }
       }

@@ -79,8 +79,8 @@ export async function runLoop(state: AgentState, userMsg: string, qtContext?: Qt
     logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
     if (messages.length === 0) throw new Error('[Agent] Internal error: messages empty at turn ' + turn);
 
-    // Context window protection
-    state.ctxManager.truncateIfNeeded(messages, config.maxTokens);
+    // Context window protection (budget derived from the model's real window)
+    state.ctxManager.truncateIfNeeded(messages, config.model, config.maxTokens);
 
     const systemPrompt = await state.ctxManager.getSystemPrompt(qtContextForPrompt);
 
@@ -99,7 +99,9 @@ export async function runLoop(state: AgentState, userMsg: string, qtContext?: Qt
               systemPrompt,
               messages,
               state.cbs,
-              (inputTokens, outputTokens) => state.stateManager.updateTokenUsage(inputTokens, outputTokens),
+              (inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens) =>
+                state.stateManager.updateTokenUsage(inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens),
+              config.temperature,
             );
           },
           { maxRetries: state.maxRetries },

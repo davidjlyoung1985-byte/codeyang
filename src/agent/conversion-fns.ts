@@ -17,30 +17,50 @@ export function convertToAnthropicMessages(messages: LLMMessage[]): Anthropic.Me
         input?: unknown;
         tool_use_id?: string;
         content?: string;
+        cache_control?: { type: 'ephemeral'; ttl?: '5m' | '1h' };
       }) => {
-        if (b.type === 'text') return { type: 'text' as const, text: b.text ?? '' };
-        if (b.type === 'tool_use') return { type: 'tool_use' as const, id: b.id!, name: b.name!, input: b.input ?? {} };
+        // `cache_control` is a beta field in SDK 0.32, so it is forwarded via a
+        // widened return type rather than the published block interfaces.
+        const cc = b.cache_control;
+        if (b.type === 'text') {
+          const block: Record<string, unknown> = { type: 'text', text: b.text ?? '' };
+          if (cc) block['cache_control'] = cc;
+          return block;
+        }
+        if (b.type === 'tool_use') {
+          const block: Record<string, unknown> = { type: 'tool_use', id: b.id!, name: b.name!, input: b.input ?? {} };
+          if (cc) block['cache_control'] = cc;
+          return block;
+        }
         if (b.type === 'tool_result') {
-          return {
-            type: 'tool_result' as const,
+          const block: Record<string, unknown> = {
+            type: 'tool_result',
             tool_use_id: b.tool_use_id!,
             content: b.content ?? '',
           };
+          if (cc) block['cache_control'] = cc;
+          return block;
         }
-        return { type: 'text' as const, text: '' };
+        return { type: 'text', text: '' };
       },
     );
     return { role: m.role, content: blocks };
-  }) as Anthropic.MessageParam[];
+  }) as unknown as Anthropic.MessageParam[];
 }
 
 /** Convert internal ToolSchema[] to Anthropic.Tool[] */
 export function convertToAnthropicTools(tools: ToolSchema[]): Anthropic.Tool[] {
-  return tools.map((t) => ({
-    name: t.name,
-    description: t.description,
-    input_schema: t.input_schema as Anthropic.Tool.InputSchema,
-  })) as Anthropic.Tool[];
+  return tools.map((t) => {
+    const tool: Record<string, unknown> = {
+      name: t.name,
+      description: t.description,
+      input_schema: t.input_schema,
+    };
+    // Forward the cache breakpoint when present (see prompt-cache.ts).
+    const cc = (t as ToolSchema & { cache_control?: unknown }).cache_control;
+    if (cc) tool['cache_control'] = cc;
+    return tool;
+  }) as unknown as Anthropic.Tool[];
 }
 
 /** Convert internal LLMMessage[] to OpenAI ChatCompletionMessageParam[] */
