@@ -185,10 +185,29 @@ npm test -- src/agent/LLMClient.stream.test.ts
 - LLMClient.ts: 47.00% → 47.63% (+0.63%)
 - 总测试数: 2156 → 2167 (+11)
 
-**备注**：覆盖率提升较小，因为主要的未覆盖代码在实际的 API 客户端实现部分（AnthropicClient、OpenAIClient），这些需要 mock 外部 API 才能测试。
+#### 5. 为 os-isolation 补充边界测试
+**问题**：os-isolation.ts 覆盖率仅 46.73%，缺少对边界情况和错误处理的测试。
+
+**解决方案**：
+- 新增 `src/sandbox/os-isolation.coverage.test.ts` 测试文件
+- 补充 21 个测试用例覆盖边界情况
+- 测试跨平台行为、错误处理、并发调用等场景
+
+**文件修改**：
+- 新增：`src/sandbox/os-isolation.coverage.test.ts` (21 个测试用例)
+
+**测试验证**：
+```bash
+npm test -- src/sandbox/os-isolation.coverage.test.ts
+✓ All 21 tests passed
+```
+
+**覆盖率变化**：
+- os-isolation.ts: 46.73% → 48.91% (+2.18%)
+- 总测试数: 2264 → 2285 (+21)
 
 ---
 
 **最后更新**：2026年1月
 **责任人**：项目维护者
-**状态**：✅ P0 任务完成，✅ P1 部分完成（McpManager + LLMClient stream），进行中
+**状态**：✅ P0 任务完成，✅ P1 部分完成（McpManager + LLMClient + os-isolation），进行中
