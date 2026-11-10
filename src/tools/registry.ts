@@ -77,9 +77,6 @@ function validatedExecute(
   };
 }
 
-/** Default built-in tools (all categories except math, which is dynamic). */
-export const tools: ToolDefinition[] = [...builtinDefinitions.map(wrapToolValidation), claudeCodeTool];
-
 /** Apply schema-validation wrapper to a single tool definition. */
 function wrapToolValidation(t: ToolDefinition): ToolDefinition {
   return {
@@ -87,6 +84,38 @@ function wrapToolValidation(t: ToolDefinition): ToolDefinition {
     execute: validatedExecute(t.execute, t.parameters),
   };
 }
+
+/**
+ * Default built-in tools (all categories except math, which is dynamic).
+ * Lazily initialized to avoid circular dependency issues.
+ */
+let _tools: ToolDefinition[] | null = null;
+
+function initializeTools(): ToolDefinition[] {
+  if (!_tools) {
+    _tools = [...(builtinDefinitions || []).map(wrapToolValidation), claudeCodeTool];
+  }
+  return _tools;
+}
+
+export const tools: ToolDefinition[] = new Proxy([] as ToolDefinition[], {
+  get(_target, prop) {
+    const initialized = initializeTools();
+    return Reflect.get(initialized, prop);
+  },
+  has(_target, prop) {
+    const initialized = initializeTools();
+    return Reflect.has(initialized, prop);
+  },
+  ownKeys() {
+    const initialized = initializeTools();
+    return Reflect.ownKeys(initialized);
+  },
+  getOwnPropertyDescriptor(_target, prop) {
+    const initialized = initializeTools();
+    return Reflect.getOwnPropertyDescriptor(initialized, prop);
+  },
+});
 
 /** Retrieve the current tool context (used by Task tool definition). */
 export function getCurrentContext(): ToolContext | null {

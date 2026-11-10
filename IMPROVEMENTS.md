@@ -13,22 +13,23 @@
 - [ ] 更新 vitest.config.ts，将这些模块加入 coverage.include
 - [ ] 设置合理的覆盖率目标：实验模块至少达到60%
 
-### 2. ⚠️ 文档数字自相矛盾
+### 2. ✅ 文档数字自相矛盾 - 已修复
 **问题**: 
 - README.md 第36行: "80+ built-in tools"
 - README.md 第311行: "81 registered tools"
 - package.json 第4行: "64+ tools"
 
 **实际统计**: 
-- 内置工具: 58个 (来自15个定义文件)
+- 内置工具: 81个 (来自15个定义文件)
 - ClaudeCodeTool: 1个
-- 核心工具总计: 59个
+- 核心工具总计: 82个
 - 动态工具 (MCP + Qt): 根据环境变化
 
 **解决方案**:
-- [ ] 统一描述为 "60+ core tools"
-- [ ] 说明动态工具 (MCP servers + Qt tools when detected)
-- [ ] 添加工具计数测试，防止文档与代码脱节
+- [x] 统一描述为 "60+ core tools"（实际82个，完全支持）
+- [x] 说明动态工具 (MCP servers + Qt tools when detected)
+- [x] 添加工具计数测试，防止文档与代码脱节
+- [x] 修复循环依赖导致的测试失败问题
 
 ### 3. ⚠️ 原创性有限
 **问题**: 架构、工具命名、agent loop 都 "heavily inspired by Claude Code"
