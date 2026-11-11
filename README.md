@@ -9,9 +9,9 @@ An AI coding agent inspired by [Claude Code](https://github.com/anthropics/claud
 
 **Project Status**: Beta — approaching production-ready for v1.0 release  
 ✅ Core functionality works; `tsc --noEmit` and ESLint pass clean  
-✅ Full suite green: **2471 tests, 7 skipped** (see [Testing](#testing))  
-📊 Test Coverage: statements **77%** / branches **80%** / functions **86%** / lines **77%**  
-🎯 **Project Quality Score**: 85/100 (see [IMPROVEMENTS.md](IMPROVEMENTS.md) for ongoing enhancements)  
+✅ Full suite green: **2498 tests, 7 skipped** (see [Testing](#testing))  
+📊 Test Coverage: statements **75.9%** / branches **79.7%** / functions **85.9%** / lines **75.9%**  
+🎯 **Project Quality Score**: 85/100 (see [IMPROVEMENT_REPORT.md](IMPROVEMENT_REPORT.md) for the scored breakdown)  
 ⚠️ **Evolving modules** (`src/experimental/`, `src/qt/`) ship in every build but their internal APIs may change — see [src/experimental/README.md](src/experimental/README.md)
 
 ## Architecture
