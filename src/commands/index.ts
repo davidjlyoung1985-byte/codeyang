@@ -12,6 +12,8 @@ import { cmdModel, cmdConfig, cmdReload, cmdMcp } from './config.js';
 import { cmdUndo, cmdRedo, cmdHistory } from './edit.js';
 import { cmdPonytail } from './ponytail.js';
 import { cmdReview, cmdFix } from './quality.js';
+import { cmdMetrics } from './metrics.js';
+import { cmdDiagnostics } from './diagnostics.js';
 
 export type { CommandContext, DispatchResult } from './types.js';
 export { resolveCwd } from './types.js';
@@ -44,6 +46,8 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
   if (lower === '/stats') return cmdStats(ctx);
   if (lower === '/tasks') return await cmdTasks(ctx);
   if (lower === '/status') return cmdStatus(ctx);
+  if (lower.startsWith('/metrics')) return cmdMetrics(line, ctx);
+  if (lower === '/diagnose' || lower === '/health') return await cmdDiagnostics(ctx);
 
   // Git operations
   if (lower === '/diff') return await cmdDiff(ctx);
@@ -96,6 +100,8 @@ export async function dispatch(line: string, ctx: CommandContext): Promise<Dispa
       '/mcp',
       '/stats',
       '/status',
+      '/metrics',
+      '/diagnose',
       '/reflect',
       '/review',
       '/fix',

@@ -214,6 +214,8 @@ export class Agent {
     this.state.conversationManager.resetAll();
     this.state.stateManager.resetAll();
     this.state.critiqueEngine.reset();
+    // Per-session tool counters and the tool cache must not survive /clear.
+    this.state.toolExecutor.resetStats();
     // ReflexionEngine and FeedbackInjector don't have reset methods
   }
 

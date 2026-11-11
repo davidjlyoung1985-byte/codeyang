@@ -1,28 +1,24 @@
 /**
- * Performance monitoring and metrics collection.
+ * Legacy metrics facade - DEPRECATED.
  *
- * Tracks:
- * - Tool execution time
- * - LLM API latency
- * - Memory usage
- * - Error rates
+ * The real implementation lives in `src/metrics/ToolMetrics.ts`. This module
+ * used to carry a second, independent collector; keeping two stores meant
+ * `/metrics` could show empty data while `utils/metrics` had numbers. It now
+ * delegates everything to the single canonical store and only adapts field
+ * names for older call sites.
  *
- * Usage:
- *   import { metrics } from './metrics.js';
- *   metrics.recordToolExecution('Read', 45.2, true);
- *   metrics.getReport();
+ * Prefer importing from `../metrics/index.js` in new code:
+ *
+ *   import { recordToolExecution, getToolMetrics } from '../metrics/index.js';
+ *
+ * Kept for backward compatibility with `utils/metrics.test.ts` and any external
+ * consumer that used the `metrics` singleton.
  */
 
-import { performance } from 'node:perf_hooks';
+import { ToolMetrics, type ToolMetric } from '../metrics/ToolMetrics.js';
 
-interface MetricEntry {
-  timestamp: number;
-  value: number;
-  success: boolean;
-  metadata?: Record<string, unknown>;
-}
-
-interface ToolMetrics {
+/** Legacy per-tool metric shape (different field names, percentile ms suffix). */
+export interface LegacyToolMetrics {
   name: string;
   totalCalls: number;
   successCount: number;
@@ -37,131 +33,77 @@ interface ToolMetrics {
   errorRate: number;
 }
 
+function toLegacy(m: ToolMetric): LegacyToolMetrics {
+  return {
+    name: m.tool,
+    totalCalls: m.calls,
+    successCount: m.successCount,
+    failureCount: m.errorCount,
+    totalDurationMs: m.totalTime,
+    avgDurationMs: m.avgTime,
+    minDurationMs: m.minTime,
+    maxDurationMs: m.maxTime,
+    p50Ms: m.p50Time,
+    p95Ms: m.p95Time,
+    p99Ms: m.p99Time,
+    errorRate: m.errorRate,
+  };
+}
+
+/**
+ * Backward-compatible view over {@link ToolMetrics}. Holds no state of its own.
+ */
 class MetricsCollector {
-  private toolMetrics = new Map<string, MetricEntry[]>();
-  private llmMetrics: MetricEntry[] = [];
-  private startTime = Date.now();
+  private get store(): ToolMetrics {
+    return ToolMetrics.getInstance();
+  }
 
   /**
-   * Record tool execution.
+   * Record a tool execution.
+   * @deprecated use `recordToolExecution` from `../metrics/index.js`.
+   * The `metadata` argument is accepted for compatibility but not stored.
    */
   recordToolExecution(
     toolName: string,
     durationMs: number,
     success: boolean,
-    metadata?: Record<string, unknown>,
+    _metadata?: Record<string, unknown>,
   ): void {
-    if (!this.toolMetrics.has(toolName)) {
-      this.toolMetrics.set(toolName, []);
-    }
-
-    this.toolMetrics.get(toolName)!.push({
-      timestamp: Date.now(),
-      value: durationMs,
-      success,
-      metadata,
-    });
+    this.store.record(toolName, durationMs, success);
   }
 
   /**
-   * Record LLM API call.
+   * Record an LLM API call.
+   * @deprecated use `recordLLMCall` from `../metrics/index.js`.
    */
-  recordLLMCall(durationMs: number, success: boolean, metadata?: Record<string, unknown>): void {
-    this.llmMetrics.push({
-      timestamp: Date.now(),
-      value: durationMs,
-      success,
-      metadata,
-    });
+  recordLLMCall(durationMs: number, success: boolean, _metadata?: Record<string, unknown>): void {
+    this.store.recordLLMCall(durationMs, success);
+  }
+
+  /** Metrics for one tool, or null when it was never called. */
+  getToolMetrics(toolName: string): LegacyToolMetrics | null {
+    const metric = this.store.getToolMetric(toolName);
+    return metric ? toLegacy(metric) : null;
+  }
+
+  /** All tool metrics, sorted by call count descending. */
+  getAllToolMetrics(): LegacyToolMetrics[] {
+    return this.store.getAllMetrics().map(toLegacy);
+  }
+
+  /** Aggregated LLM API metrics. Zeroed when nothing was recorded. */
+  getLLMMetrics(): LegacyToolMetrics {
+    return toLegacy(this.store.getLLMCallMetric());
+  }
+
+  /** Process uptime and memory usage. */
+  getSystemMetrics(): { uptime: number; memoryUsageMB: number; heapUsedMB: number; heapTotalMB: number } {
+    return this.store.getSystemMetrics();
   }
 
   /**
-   * Get metrics for specific tool.
-   */
-  getToolMetrics(toolName: string): ToolMetrics | null {
-    const entries = this.toolMetrics.get(toolName);
-    if (!entries || entries.length === 0) return null;
-
-    const durations = entries.map((e) => e.value).sort((a, b) => a - b);
-    const successCount = entries.filter((e) => e.success).length;
-    const failureCount = entries.length - successCount;
-    const totalDurationMs = durations.reduce((a, b) => a + b, 0);
-
-    return {
-      name: toolName,
-      totalCalls: entries.length,
-      successCount,
-      failureCount,
-      totalDurationMs,
-      avgDurationMs: totalDurationMs / entries.length,
-      minDurationMs: durations[0],
-      maxDurationMs: durations[durations.length - 1],
-      p50Ms: durations[Math.floor(durations.length * 0.5)],
-      p95Ms: durations[Math.floor(durations.length * 0.95)],
-      p99Ms: durations[Math.floor(durations.length * 0.99)],
-      errorRate: failureCount / entries.length,
-    };
-  }
-
-  /**
-   * Get metrics for all tools.
-   */
-  getAllToolMetrics(): ToolMetrics[] {
-    const results: ToolMetrics[] = [];
-
-    for (const toolName of this.toolMetrics.keys()) {
-      const metrics = this.getToolMetrics(toolName);
-      if (metrics) results.push(metrics);
-    }
-
-    return results.sort((a, b) => b.totalCalls - a.totalCalls);
-  }
-
-  /**
-   * Get LLM metrics.
-   */
-  getLLMMetrics(): ToolMetrics {
-    const durations = this.llmMetrics.map((e) => e.value).sort((a, b) => a - b);
-    const successCount = this.llmMetrics.filter((e) => e.success).length;
-    const failureCount = this.llmMetrics.length - successCount;
-    const totalDurationMs = durations.reduce((a, b) => a + b, 0);
-
-    return {
-      name: 'LLM API',
-      totalCalls: this.llmMetrics.length,
-      successCount,
-      failureCount,
-      totalDurationMs,
-      avgDurationMs: this.llmMetrics.length > 0 ? totalDurationMs / this.llmMetrics.length : 0,
-      minDurationMs: durations[0] || 0,
-      maxDurationMs: durations[durations.length - 1] || 0,
-      p50Ms: durations[Math.floor(durations.length * 0.5)] || 0,
-      p95Ms: durations[Math.floor(durations.length * 0.95)] || 0,
-      p99Ms: durations[Math.floor(durations.length * 0.99)] || 0,
-      errorRate: this.llmMetrics.length > 0 ? failureCount / this.llmMetrics.length : 0,
-    };
-  }
-
-  /**
-   * Get system metrics (memory, uptime).
-   */
-  getSystemMetrics(): {
-    uptime: number;
-    memoryUsageMB: number;
-    heapUsedMB: number;
-    heapTotalMB: number;
-  } {
-    const mem = process.memoryUsage();
-    return {
-      uptime: Date.now() - this.startTime,
-      memoryUsageMB: mem.rss / 1024 / 1024,
-      heapUsedMB: mem.heapUsed / 1024 / 1024,
-      heapTotalMB: mem.heapTotal / 1024 / 1024,
-    };
-  }
-
-  /**
-   * Generate full report.
+   * Legacy report layout (system + LLM + tools, 100ms slow-tool threshold).
+   * `/metrics` renders its own report from the canonical data instead.
    */
   getReport(): string {
     const tools = this.getAllToolMetrics();
@@ -170,63 +112,60 @@ class MetricsCollector {
 
     let report = '=== Performance Report ===\n\n';
 
-    // System
-    report += '┌─ System Metrics ──────────────────────────────────\n';
-    report += `│ Uptime:       ${(system.uptime / 1000).toFixed(0)}s\n`;
-    report += `│ Memory:       ${system.memoryUsageMB.toFixed(1)} MB\n`;
-    report += `│ Heap Used:    ${system.heapUsedMB.toFixed(1)} MB\n`;
-    report += `│ Heap Total:   ${system.heapTotalMB.toFixed(1)} MB\n`;
-    report += '└───────────────────────────────────────────────────\n\n';
+    report += '--- System Metrics ---\n';
+    report += `Uptime:       ${(system.uptime / 1000).toFixed(0)}s\n`;
+    report += `Memory:       ${system.memoryUsageMB.toFixed(1)} MB\n`;
+    report += `Heap Used:    ${system.heapUsedMB.toFixed(1)} MB\n`;
+    report += `Heap Total:   ${system.heapTotalMB.toFixed(1)} MB\n\n`;
 
-    // LLM
     if (llm.totalCalls > 0) {
-      report += '┌─ LLM API Metrics ─────────────────────────────────\n';
-      report += `│ Total Calls:  ${llm.totalCalls}\n`;
-      report += `│ Success:      ${llm.successCount} (${((llm.successCount / llm.totalCalls) * 100).toFixed(1)}%)\n`;
-      report += `│ Failures:     ${llm.failureCount}\n`;
-      report += `│ Avg Latency:  ${llm.avgDurationMs.toFixed(0)}ms\n`;
-      report += `│ P50:          ${llm.p50Ms.toFixed(0)}ms\n`;
-      report += `│ P95:          ${llm.p95Ms.toFixed(0)}ms\n`;
-      report += `│ P99:          ${llm.p99Ms.toFixed(0)}ms\n`;
-      report += '└───────────────────────────────────────────────────\n\n';
+      report += '--- LLM API Metrics ---\n';
+      report += `Total Calls:  ${llm.totalCalls}\n`;
+      report += `Success:      ${llm.successCount} (${((llm.successCount / llm.totalCalls) * 100).toFixed(1)}%)\n`;
+      report += `Failures:     ${llm.failureCount}\n`;
+      report += `Avg Latency:  ${llm.avgDurationMs.toFixed(0)}ms\n`;
+      report += `P50:          ${llm.p50Ms.toFixed(0)}ms\n`;
+      report += `P95:          ${llm.p95Ms.toFixed(0)}ms\n`;
+      report += `P99:          ${llm.p99Ms.toFixed(0)}ms\n\n`;
     }
 
-    // Top Tools
     if (tools.length > 0) {
-      report += '┌─ Top Tools (by call count) ──────────────────────\n';
+      report += '--- Top Tools (by call count) ---\n';
       for (const tool of tools.slice(0, 10)) {
         const successRate = ((tool.successCount / tool.totalCalls) * 100).toFixed(0);
-        report += `│ ${tool.name.padEnd(20)} ${String(tool.totalCalls).padStart(5)} calls  ${tool.avgDurationMs.toFixed(0).padStart(5)}ms avg  ${successRate}% ok\n`;
+        report +=
+          `${tool.name.padEnd(20)} ${String(tool.totalCalls).padStart(5)} calls  ` +
+          `${tool.avgDurationMs.toFixed(0).padStart(5)}ms avg  ${successRate}% ok\n`;
       }
-      report += '└───────────────────────────────────────────────────\n\n';
+      report += '\n';
     }
 
-    // Slow Tools
     const slowTools = tools.filter((t) => t.avgDurationMs > 100).slice(0, 5);
     if (slowTools.length > 0) {
-      report += '┌─ Slowest Tools (>100ms avg) ─────────────────────\n';
+      report += '--- Slowest Tools (>100ms avg) ---\n';
       for (const tool of slowTools) {
-        report += `│ ${tool.name.padEnd(20)} ${tool.avgDurationMs.toFixed(0).padStart(6)}ms avg  (p95: ${tool.p95Ms.toFixed(0)}ms)\n`;
+        report +=
+          `${tool.name.padEnd(20)} ${tool.avgDurationMs.toFixed(0).padStart(6)}ms avg  ` +
+          `(p95: ${tool.p95Ms.toFixed(0)}ms)\n`;
       }
-      report += '└───────────────────────────────────────────────────\n\n';
+      report += '\n';
     }
 
-    // Error-prone Tools
     const errorTools = tools.filter((t) => t.errorRate > 0.1).slice(0, 5);
     if (errorTools.length > 0) {
-      report += '┌─ Error-Prone Tools (>10% failure) ───────────────\n';
+      report += '--- Error-Prone Tools (>10% failure) ---\n';
       for (const tool of errorTools) {
-        report += `│ ${tool.name.padEnd(20)} ${(tool.errorRate * 100).toFixed(1)}% error rate  (${tool.failureCount}/${tool.totalCalls})\n`;
+        report +=
+          `${tool.name.padEnd(20)} ${(tool.errorRate * 100).toFixed(1)}% error rate  ` +
+          `(${tool.failureCount}/${tool.totalCalls})\n`;
       }
-      report += '└───────────────────────────────────────────────────\n';
+      report += '\n';
     }
 
     return report;
   }
 
-  /**
-   * Export metrics as JSON.
-   */
+  /** Metrics as a JSON string. */
   exportJSON(): string {
     return JSON.stringify(
       {
@@ -239,23 +178,17 @@ class MetricsCollector {
     );
   }
 
-  /**
-   * Clear all metrics.
-   */
+  /** Clear every recorded metric. */
   clear(): void {
-    this.toolMetrics.clear();
-    this.llmMetrics = [];
-    this.startTime = Date.now();
+    this.store.reset();
   }
 }
 
-// Global singleton
+/** Backward-compatible singleton. Delegates to {@link ToolMetrics}. */
 export const metrics = new MetricsCollector();
 
-/**
- * Timer utility for measuring operations.
- */
-export function createTimer() {
+/** Timer utility for measuring operations. */
+export function createTimer(): { end: () => number } {
   const start = performance.now();
   return {
     end: () => performance.now() - start,

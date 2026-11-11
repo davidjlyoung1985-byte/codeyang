@@ -226,7 +226,9 @@ export class WatcherSystem {
     for (const hook of hooks) {
       if (hook.pattern.test(relPath)) {
         // Fire and forget — don't block the watcher
-        execa(hook.command, { shell: true, cwd: projectDir })
+        // Parse command into executable and args to avoid shell injection
+        const [cmd, ...args] = hook.command.split(/\s+/);
+        execa(cmd, args, { shell: false, cwd: projectDir })
           .then((result) => {
             if (result.stdout?.trim()) {
               logger.info(`[Hook] ${hook.command}: ${result.stdout.trim().slice(0, 200)}`);

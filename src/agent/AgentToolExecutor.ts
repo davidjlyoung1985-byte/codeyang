@@ -12,6 +12,27 @@ import { ReflexionEngine } from '../experimental/reflexion/ReflexionEngine.js';
 import { logger } from '../utils/logger.js';
 import { checkPermission } from '../permission/index.js';
 import { categoryOf, gitSubject, permissionSubject } from '../permission/tool-categories.js';
+import { recordToolExecution } from '../metrics/index.js';
+import { ErrorCode, wrapError } from '../errors/index.js';
+
+/**
+ * Classify a tool failure and produce the message handed back to the LLM.
+ *
+ * The raw error text is preserved (callers and tests rely on it), but the error
+ * is routed through `CodeYangError` so that the failure carries a stable
+ * `ErrorCode` plus a retry policy. Retryable failures say so explicitly, which
+ * lets the agent retry instead of giving up after one bad turn.
+ */
+function describeToolError(toolName: string, err: unknown): { message: string; retryable: boolean; code: ErrorCode } {
+  const original = err instanceof Error ? err : new Error(String(err));
+  const wrapped = wrapError(original, { operation: 'tool.execute', tool: toolName });
+
+  let message = original.message;
+  if (wrapped.recovery.canRetry) {
+    message += `\n[${wrapped.code}] This failure looks transient (retryable, up to ${wrapped.recovery.maxRetries} attempt(s)).`;
+  }
+  return { message, retryable: wrapped.recovery.canRetry, code: wrapped.code };
+}
 
 /**
  * Enforce permission rules for a tool call.
@@ -135,13 +156,16 @@ export class AgentToolExecutor {
     }
   }
 
-  /** Record a tool call for usage statistics and RL weighting. */
+  /** Record a tool call for usage statistics, RL weighting, and `/metrics`. */
   recordToolCall(name: string, ms: number, isError: boolean): void {
     const s = this.toolStats.get(name) || { calls: 0, totalMs: 0, errors: 0 };
     s.calls++;
     s.totalMs += ms;
     if (isError) s.errors++;
     this.toolStats.set(name, s);
+
+    // Canonical performance store, read back by the `/metrics` command.
+    recordToolExecution(name, ms, !isError);
 
     recordToolOutcome(name, !isError, ms, isError ? `Error in ${name}` : undefined).catch((err) =>
       logger.warn('[RL] Failed to record tool outcome:', err instanceof Error ? err.message : err),
@@ -151,6 +175,19 @@ export class AgentToolExecutor {
   /** Get per-tool usage statistics. */
   getToolStats(): ReadonlyMap<string, { calls: number; totalMs: number; errors: number }> {
     return this.toolStats;
+  }
+
+  /**
+   * Drop per-session tool statistics.
+   *
+   * Called by `Agent.reset()` (`/clear`). Without this the previous session's
+   * counts leak into the next one, so `getToolStats()` kept reporting tools
+   * that had not been used since the reset.
+   */
+  resetStats(): void {
+    this.toolStats.clear();
+    this.toolCache.clear();
+    this.pendingReads.clear();
   }
 
   // ── Tool batch execution ─────────────────────────────────
@@ -207,8 +244,10 @@ export class AgentToolExecutor {
           toolResultIds[i] = tc.id;
           const tool = getTool(tc.name);
           if (!tool) {
-            toolResults[i] = { tool: tc.name, input: tc.input, output: `Unknown: ${tc.name}`, isError: true };
-            cbs.onToolResult?.(tc.name, `Unknown: ${tc.name}`, true);
+            const msg = `[${ErrorCode.TOOL_NOT_FOUND}] Unknown tool: ${tc.name}. Call the tools available in your context, or ask the user to enable an MCP server that provides it.`;
+            toolResults[i] = { tool: tc.name, input: tc.input, output: msg, isError: true };
+            cbs.onToolResult?.(tc.name, msg, true);
+            this.recordToolCall(tc.name, 0, true);
             return;
           }
 
@@ -232,6 +271,8 @@ export class AgentToolExecutor {
             const cached = this.toolCache.get(ck);
             if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
               toolResults[i] = { tool: tc.name, input: tc.input, output: cached.result, isError: false };
+              // Served from cache: a real call, but ~0ms of work.
+              this.recordToolCall(tc.name, 0, false);
               return;
             }
             // Deduplicate concurrent reads
@@ -241,6 +282,7 @@ export class AgentToolExecutor {
                 const output = await pending;
                 toolResults[i] = { tool: tc.name, input: tc.input, output, isError: false };
                 cbs.onToolResult?.(tc.name, output, false);
+                this.recordToolCall(tc.name, 0, false);
                 return;
               } catch (err) {
                 if (process.env.CODEYANG_DEBUG) {
@@ -273,13 +315,15 @@ export class AgentToolExecutor {
               }
               span.status = 'ok';
             } catch (err) {
-              const errorMsg = err instanceof Error ? err.message : String(err);
+              const { message: errorMsg, retryable, code } = describeToolError(tc.name, err);
               this.recordToolCall(tc.name, Date.now() - t0, true);
               toolResults[i] = { tool: tc.name, input: tc.input, output: errorMsg, isError: true };
               cbs.onToolResult?.(tc.name, errorMsg, true);
               if (ck) this.pendingReads.delete(ck);
               span.status = 'error';
               span.error = errorMsg.slice(0, 200);
+              span.tags.errorCode = code;
+              span.tags.retryable = retryable;
 
               // Reflexion: record tool execution failure
               this.reflexionEngine.recordExecution({
@@ -294,7 +338,8 @@ export class AgentToolExecutor {
             }
           });
         } catch (err) {
-          const errMsg = err instanceof Error ? err.message : String(err);
+          const { message: errMsg } = describeToolError(tc.name, err);
+          this.recordToolCall(tc.name, 0, true);
           toolResults[i] = {
             tool: tc.name,
             input: tc.input,

@@ -10,6 +10,8 @@ import {
 } from './os-isolation.js';
 
 describe('OS Isolation - Edge Cases and Coverage', () => {
+  // Snapshot the real platform so a test that mocks `node:os` cannot leak into
+  // the next one; `vi.restoreAllMocks()` alone does not undo a module mock.
   let originalPlatform: NodeJS.Platform;
 
   beforeEach(() => {
@@ -17,6 +19,7 @@ describe('OS Isolation - Edge Cases and Coverage', () => {
   });
 
   afterEach(() => {
+    expect(originalPlatform).toBeDefined();
     vi.restoreAllMocks();
   });
 

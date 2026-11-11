@@ -28,6 +28,7 @@ import type { AgentCallbacks } from './types.js';
 import { toolSchemas } from '../../tools/index.js';
 import { ConnectionMonitor } from '../../utils/connectionMonitor.js';
 import { logger } from '../../utils/logger.js';
+import { recordLLMCall } from '../../metrics/index.js';
 
 const STREAM_TIMEOUT_MS = Number(process.env.CODEYANG_STREAM_TIMEOUT) || 180_000;
 
@@ -69,6 +70,8 @@ export async function streamLLM(
   monitor.start();
 
   const consumeStream = async () => {
+    const t0 = Date.now();
+    let streamOk = false;
     try {
       for await (const event of client.stream({
         model,
@@ -126,8 +129,12 @@ export async function streamLLM(
           }
         }
       }
+      streamOk = true;
       return { toolCalls: toolCallsInner, assistantText: textParts.join('') };
     } finally {
+      // Feed the `/metrics` LLM section. Recorded for failures too, so a
+      // consistently failing provider shows up as an error-rate spike.
+      recordLLMCall(Date.now() - t0, streamOk);
       // Stop monitoring
       monitor.stop();
     }

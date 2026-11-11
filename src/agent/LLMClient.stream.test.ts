@@ -1,7 +1,7 @@
 /**
  * Additional tests for LLMClient stream and retry functionality
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { consumeStream, type LLMClient, type StreamEvent, type StreamParams } from './LLMClient.js';
 
 describe('LLMClient - Stream Consumption', () => {

@@ -9,7 +9,7 @@ An AI coding agent inspired by [Claude Code](https://github.com/anthropics/claud
 
 **Project Status**: Beta — approaching production-ready for v1.0 release  
 ✅ Core functionality works; `tsc --noEmit` and ESLint pass clean  
-✅ Full suite green: **2137 tests, 7 skipped** (see [Testing](#testing))  
+✅ Full suite green: **2471 tests, 7 skipped** (see [Testing](#testing))  
 📊 Test Coverage: statements **77%** / branches **80%** / functions **86%** / lines **77%**  
 🎯 **Project Quality Score**: 85/100 (see [IMPROVEMENTS.md](IMPROVEMENTS.md) for ongoing enhancements)  
 ⚠️ **Evolving modules** (`src/experimental/`, `src/qt/`) ship in every build but their internal APIs may change — see [src/experimental/README.md](src/experimental/README.md)
@@ -251,7 +251,7 @@ npm test              # Run all tests
 npm run test:coverage # With coverage report
 ```
 
-Current status: **2137 tests across 110 files, 0 failures** (`npm test`).
+Current status: **2471 tests across 126 files, 0 failures** (`npm test`).
 
 Test parallelism is capped at `maxWorkers: 4` in `vitest.config.ts`. Several
 suites shell out to real `git` / `npx tsc` / `npx eslint` or do heavy filesystem
@@ -309,7 +309,7 @@ This is a **functional but work-in-progress** AI agent project:
 
 **Production readiness**: Beta (B)
 - Core modules: agent, tools, mcp, security — well-tested, suitable for personal / small-team use
-- Full suite: **2137 tests, 0 failures**; `tsc --noEmit` and ESLint clean
+- Full suite: **2471 tests, 0 failures**; `tsc --noEmit` and ESLint clean
 - Coverage gates: statements 75% / branches 78% / functions 84% / lines 75%
 - **59 registered core tools** (60+ with dynamic MCP/Qt tools)
 - `src/experimental/` (qt, reflexion, continual-learning) ships and runs but is excluded from coverage and its APIs may change
