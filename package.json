@@ -8,7 +8,8 @@
     "bin": {
         "codeyang": "./dist/index.js",
         "codeyangx": "./dist/codeyangx.js",
-        "codeyang-web": "./dist/web-server.js"
+        "codeyang-web": "./dist/web-server.js",
+        "codeyang-setup": "./dist/setup-wizard.js"
     },
     "files": [
         "dist",
@@ -30,6 +31,7 @@
         "build": "tsup --config tsup.config.ts",
         "dev": "tsup src/index.ts --format esm --clean --sourcemap --watch --outDir dist",
         "start": "node dist/index.js",
+        "setup": "tsx src/setup-wizard.ts",
         "web:server": "tsx web/server/index.ts",
         "web:client": "vite",
         "web:build": "vite build",
