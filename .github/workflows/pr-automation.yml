@@ -1,0 +1,167 @@
+name: PR Automation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  pull_request_target:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-label:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Label based on files changed
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+          sync-labels: true
+
+      - name: Label by size
+        uses: codelytv/pr-size-labeler@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          xs_label: 'size/xs'
+          xs_max_size: '10'
+          s_label: 'size/s'
+          s_max_size: '100'
+          m_label: 'size/m'
+          m_max_size: '500'
+          l_label: 'size/l'
+          l_max_size: '1000'
+          xl_label: 'size/xl'
+          fail_if_xl: 'false'
+
+  pr-checks:
+    name: PR Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+          requireScope: false
+
+      - name: Check for TODO/FIXME
+        run: |
+          echo "## 📝 Code Quality Checks" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check for TODO/FIXME in changed files
+          TODOS=$(git diff origin/${{ github.base_ref }}...HEAD | grep -E "^\+.*TODO|FIXME" | wc -l || echo "0")
+
+          echo "- TODOs/FIXMEs added: $TODOS" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$TODOS" -gt 5 ]; then
+            echo "⚠️ Many TODOs added. Consider creating issues instead." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check for console.log
+        run: |
+          # Check for console.log in source files
+          LOGS=$(git diff origin/${{ github.base_ref }}...HEAD | grep -E "^\+.*console\.(log|debug)" | grep -v "test\.ts" | wc -l || echo "0")
+
+          echo "- console.log statements added: $LOGS" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$LOGS" -gt 0 ]; then
+            echo "⚠️ Please remove console.log statements or use logger" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  pr-size-check:
+    name: PR Size Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR size
+        run: |
+          FILES_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+          LINES_CHANGED=$(git diff --stat origin/${{ github.base_ref }}...HEAD | tail -1 | awk '{print $4+$6}')
+
+          echo "## 📊 PR Size" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Files changed: $FILES_CHANGED" >> $GITHUB_STEP_SUMMARY
+          echo "- Lines changed: $LINES_CHANGED" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$FILES_CHANGED" -gt 50 ]; then
+            echo "⚠️ **Large PR**: Consider splitting into smaller PRs" >> $GITHUB_STEP_SUMMARY
+            echo "::warning::This PR changes $FILES_CHANGED files. Consider splitting it."
+          elif [ "$LINES_CHANGED" -gt 1000 ]; then
+            echo "⚠️ **Large PR**: $LINES_CHANGED lines changed" >> $GITHUB_STEP_SUMMARY
+            echo "::warning::This PR changes $LINES_CHANGED lines. Consider splitting it."
+          else
+            echo "✅ PR size is reasonable" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  pr-comment:
+    name: PR Welcome Comment
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    timeout-minutes: 5
+    steps:
+      - name: Add welcome comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.issue.number;
+            const author = context.payload.pull_request.user.login;
+
+            const message = `👋 Thanks for opening this PR, @${author}!
+
+            ## 🤖 Automated Checks
+
+            Your PR will be automatically checked for:
+            - ✅ Code quality (ESLint, TypeScript)
+            - ✅ Tests passing on multiple platforms
+            - ✅ Test coverage thresholds
+            - ✅ Security vulnerabilities
+            - ✅ Dependency review
+
+            ## 📝 Checklist
+
+            Please ensure:
+            - [ ] Tests are included for new functionality
+            - [ ] Documentation is updated if needed
+            - [ ] Commit messages follow conventional commits
+            - [ ] No console.log or debug statements
+
+            A maintainer will review your PR soon. Thank you for contributing! 🎉`;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: message
+            });
