@@ -3,6 +3,7 @@
  */
 import type { LLMMessage } from './LLMClient.js';
 import { logger } from '../utils/logger.js';
+import { CodeYangError, ErrorCode } from '../errors/index.js';
 
 // ── Constants ──────────────────────────────────────────────
 
@@ -87,20 +88,34 @@ export async function withRetry<T>(
 
       if (isRetryable) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        throw new Error(
-          `🔴 ${label} failed after ${maxRetries} attempts\n` +
-            `  💡 Last error: ${sanitizeErrorMessage(errMsg)}\n` +
-            `  📝 Try:\n` +
-            `    1) Check your network connection\n` +
-            `    2) Verify API endpoint is accessible\n` +
-            `    3) Check API key and rate limits\n` +
-            `    4) Wait a moment and retry manually`,
+        throw new CodeYangError(
+          `${label} 在 ${maxRetries} 次重试后失败`,
+          ErrorCode.LLM_RATE_LIMIT,
+          {
+            context: {
+              label,
+              maxRetries,
+              lastError: sanitizeErrorMessage(errMsg),
+            },
+            recoverable: true,
+            userMessage:
+              `🔴 ${label} 失败\n` +
+              `  💡 最后错误: ${sanitizeErrorMessage(errMsg)}\n` +
+              `  📝 建议:\n` +
+              `    1) 检查网络连接\n` +
+              `    2) 验证 API 端点可访问\n` +
+              `    3) 检查 API Key 和速率限制\n` +
+              `    4) 等待片刻后手动重试`,
+          },
         );
       }
       throw err;
     }
   }
-  throw new Error(`${label} failed after ${maxRetries} attempts`);
+  throw new CodeYangError(`${label} 在 ${maxRetries} 次重试后失败`, ErrorCode.LLM_API_ERROR, {
+    context: { label, maxRetries },
+    recoverable: true,
+  });
 }
 
 // ── Deep clone ─────────────────────────────────────────────
@@ -131,7 +146,10 @@ export function jsonClone<T>(obj: T): T {
   try {
     return JSON.parse(JSON.stringify(obj));
   } catch (err) {
-    throw new Error(`[AgentUtils] jsonClone failed: ${err instanceof Error ? err.message : String(err)}`);
+    throw new CodeYangError('对象克隆失败', ErrorCode.INTERNAL_ERROR, {
+      context: { error: err instanceof Error ? err.message : String(err) },
+      recoverable: false,
+    });
   }
 }
 

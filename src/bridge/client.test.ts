@@ -176,7 +176,7 @@ describe('Bridge Client - Health Check', () => {
     });
     global.fetch = mockFetch;
 
-    await expect(checkBridgeHealth()).rejects.toThrow('Authentication failed');
+    await expect(checkBridgeHealth()).rejects.toThrow('认证失败：无效的 bridge token');
   });
 
   it('should return null on other HTTP errors', async () => {
@@ -310,7 +310,7 @@ describe('Bridge Client - Task Management', () => {
     });
     global.fetch = mockFetch;
 
-    await expect(waitForTask('task-timeout', 100)).rejects.toThrow('timed out');
+    await expect(waitForTask('task-timeout', 100)).rejects.toThrow('超时');
   });
 
   it('should get pending tasks', async () => {
@@ -551,7 +551,7 @@ describe('Bridge Client - Error Handling', () => {
     });
     global.fetch = mockFetch;
 
-    await expect(sendTaskToClaude('Test', 'Description')).rejects.toThrow('Bridge API error (500)');
+    await expect(sendTaskToClaude('Test', 'Description')).rejects.toThrow('Bridge API 错误 (500)');
   });
 
   it('should handle network errors', async () => {

@@ -10,6 +10,7 @@ import {
   type PromptCacheOptions,
 } from './prompt-cache.js';
 import { logger } from '../utils/logger.js';
+import { CodeYangError, ErrorCode } from '../errors/index.js';
 
 /** Shared retry wrapper for LLM API calls (handles rate limits and transient errors). */
 async function withLLMRetry<T>(fn: () => Promise<T>, label: string, maxRetries = 3): Promise<T> {
@@ -43,7 +44,14 @@ async function withLLMRetry<T>(fn: () => Promise<T>, label: string, maxRetries =
       throw err;
     }
   }
-  throw new Error(`${label} failed after ${maxRetries} attempts`);
+  throw new CodeYangError(
+    `${label} 在 ${maxRetries} 次重试后失败`,
+    ErrorCode.LLM_API_ERROR,
+    {
+      context: { label, maxRetries },
+      recoverable: false,
+    },
+  );
 }
 
 export interface StreamEvent {

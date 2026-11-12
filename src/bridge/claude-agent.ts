@@ -25,6 +25,7 @@ import { createInterface } from 'node:readline';
 import { WebSocket } from 'ws';
 import type { BridgeTask, BridgeMessage, WsEvent } from './types.js';
 import { codeyangPath } from '../utils/paths.js';
+import { CodeYangError, ErrorCode } from '../errors/index.js';
 
 // ── Config ────────────────────────────────────────────────────────
 
@@ -66,7 +67,10 @@ async function apiFetch<T>(method: string, path: string, body?: unknown, token?:
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(`API error (${res.status}): ${err.error || res.statusText}`);
+    throw new CodeYangError(`Bridge API 错误 (${res.status})`, ErrorCode.NETWORK_ERROR, {
+      context: { status: res.status, error: err.error || res.statusText },
+      recoverable: res.status >= 500,
+    });
   }
   return res.json() as Promise<T>;
 }

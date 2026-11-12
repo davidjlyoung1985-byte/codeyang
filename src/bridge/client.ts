@@ -13,6 +13,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { BridgeTask, BridgeMessage, AgentId } from './types.js';
 import { codeyangPath } from '../utils/paths.js';
+import { CodeYangError, ErrorCode } from '../errors/index.js';
 
 // ── Configuration ─────────────────────────────────────────────────
 
@@ -37,10 +38,20 @@ async function loadConfig(): Promise<BridgeConnectionConfig> {
     const url = process.env['BRIDGE_URL'] || 'http://127.0.0.1:9876';
     const token = process.env['BRIDGE_TOKEN'] || '';
     if (!token) {
-      throw new Error(
-        'Bridge not configured. Run the bridge server first, then set BRIDGE_TOKEN.\n' +
-          '  npx tsx src/bridge/server.ts\n' +
-          '  Then copy the token and set BRIDGE_TOKEN=<token>',
+      throw new CodeYangError(
+        'Bridge 未配置',
+        ErrorCode.CONFIGURATION_ERROR,
+        {
+          context: {},
+          recoverable: true,
+          userMessage:
+            '🔗 Bridge 未配置\n' +
+            '  1. 首先运行 bridge 服务器:\n' +
+            '     npx tsx src/bridge/server.ts\n' +
+            '  2. 复制显示的 token\n' +
+            '  3. 设置环境变量:\n' +
+            '     set BRIDGE_TOKEN=<token>',
+        },
       );
     }
     return { serverUrl: url, token };
@@ -70,7 +81,10 @@ async function apiFetch<T>(method: string, path: string, body?: unknown): Promis
   });
   if (!res.ok) {
     const errData = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(`Bridge API error (${res.status}): ${errData.error || res.statusText}`);
+    throw new CodeYangError(`Bridge API 错误 (${res.status})`, ErrorCode.NETWORK_ERROR, {
+      context: { status: res.status, error: errData.error || res.statusText },
+      recoverable: res.status >= 500,
+    });
   }
   return res.json() as Promise<T>;
 }
@@ -100,7 +114,10 @@ export async function checkBridgeHealth(): Promise<{
       signal: AbortSignal.timeout(10000),
     });
     if (res.status === 401) {
-      throw new Error('Authentication failed: invalid bridge token');
+      throw new CodeYangError('认证失败：无效的 bridge token', ErrorCode.AUTHENTICATION_ERROR, {
+        context: {},
+        recoverable: false,
+      });
     }
     if (!res.ok) return null;
     return await res.json();
@@ -173,7 +190,10 @@ export async function waitForTask(taskId: string, timeoutMs = 300_000): Promise<
     await new Promise((resolve) => setTimeout(resolve, pollInterval));
   }
 
-  throw new Error(`Task ${taskId} timed out after ${timeoutMs}ms`);
+  throw new CodeYangError(`任务 ${taskId} 超时`, ErrorCode.TIMEOUT_ERROR, {
+    context: { taskId, timeoutMs },
+    recoverable: false,
+  });
 }
 
 /**
