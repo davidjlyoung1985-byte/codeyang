@@ -5,6 +5,28 @@
 
 **中文** | [English](docs/README.en.md)
 
+---
+
+## 📚 Documentation
+
+### 🌍 Multi-Language Support
+
+- 🇨🇳 **Chinese** (中文)
+  - [README](README.md)
+  - [快速开始](QUICK_START.md)
+  - [用户指南](USER_GUIDE.md)
+  - [常见问题](FAQ.md)
+  - [贡献指南](CONTRIBUTING.md)
+
+- 🇬🇧 **English**
+  - [README](docs/README.en.md)
+  - [Quick Start](docs/QUICK_START.en.md)
+  - [User Guide](docs/USER_GUIDE.en.md)
+  - [FAQ](docs/FAQ.en.md)
+  - [Contributing](docs/CONTRIBUTING.en.md)
+
+---
+
 An AI coding agent inspired by [Claude Code](https://github.com/anthropics/claude-code) architecture. CodeYang lets you describe coding tasks in natural language — it reads files, writes code, runs commands, manages Git, and more.
 
 **Project Status**: Beta — approaching production-ready for v1.0 release  

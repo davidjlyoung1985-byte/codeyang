@@ -1,0 +1,41 @@
+# Automatically label PRs based on file paths
+
+'area/agent':
+  - 'src/agent/**/*'
+
+'area/tools':
+  - 'src/tools/**/*'
+
+'area/bridge':
+  - 'src/bridge/**/*'
+
+'area/ui':
+  - 'src/ui/**/*'
+  - 'web/**/*'
+  - 'web-ui/**/*'
+
+'area/vscode':
+  - 'vscode-extension/**/*'
+
+'area/tests':
+  - '**/*.test.ts'
+  - '**/*.spec.ts'
+
+'area/docs':
+  - '*.md'
+  - 'docs/**/*'
+
+'area/ci':
+  - '.github/**/*'
+
+'area/deps':
+  - 'package.json'
+  - 'package-lock.json'
+
+'type/security':
+  - 'src/security/**/*'
+  - 'src/sandbox/**/*'
+
+'type/performance':
+  - 'src/performance/**/*'
+  - '**/*.bench.ts'
