@@ -44,6 +44,7 @@ import type { AgentState } from './types.js';
 import { config } from '../config.js';
 import { logger } from '../../utils/logger.js';
 import { jsonClone } from '../AgentUtils.js';
+import { CodeYangError, ErrorCode } from '../../errors/index.js';
 
 export async function prepareContext(state: AgentState, userMsg: string, _qtContext?: string): Promise<LLMMessage[]> {
   const messages = jsonClone(state.conversationManager.getHistory());
@@ -82,7 +83,13 @@ export async function prepareContext(state: AgentState, userMsg: string, _qtCont
     logger.error(
       `[run] messages is empty! history.length=${state.conversationManager.getHistoryLength()}, prompt="${userMsg}"`,
     );
-    throw new Error('Internal error: messages array is empty after summarization');
+    throw new CodeYangError('上下文摘要后消息数组为空', ErrorCode.INTERNAL_ERROR, {
+      context: {
+        historyLength: state.conversationManager.getHistoryLength(),
+        userMsg: userMsg.slice(0, 100),
+      },
+      recoverable: false,
+    });
   }
 
   // Tree-of-Thoughts

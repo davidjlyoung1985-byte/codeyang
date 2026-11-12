@@ -122,13 +122,13 @@ export async function checkBridgeHealth(): Promise<{
     if (!res.ok) return null;
     return await res.json();
   } catch (err) {
+    // 认证错误 — 重新抛出让调用方知晓配置问题
+    if (err instanceof CodeYangError && err.code === ErrorCode.AUTHENTICATION_ERROR) {
+      throw err;
+    }
     if (err instanceof TypeError && err.message.includes('fetch')) {
       // 网络错误（服务未启动、连接拒绝等）— 返回 null 表示不可用
       return null;
-    }
-    if (err instanceof Error && err.message.includes('Authentication failed')) {
-      // 认证错误 — 重新抛出让调用方知晓配置问题
-      throw err;
     }
     // 其他网络错误
     return null;

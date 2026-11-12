@@ -176,7 +176,7 @@ describe('Bridge Client - Health Check', () => {
     });
     global.fetch = mockFetch;
 
-    await expect(checkBridgeHealth()).rejects.toThrow('认证失败：无效的 bridge token');
+    await expect(checkBridgeHealth()).rejects.toThrow('认证失败');
   });
 
   it('should return null on other HTTP errors', async () => {

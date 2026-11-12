@@ -196,7 +196,7 @@ describe('Agent core-path coverage', () => {
   describe('run() wiring', () => {
     it('throws when the gateway rejects the request', async () => {
       gateway.handle.mockResolvedValueOnce({ success: false, error: 'denied' });
-      await expect(agent.run('hello')).rejects.toThrow('[Gateway] denied');
+      await expect(agent.run('hello')).rejects.toThrow('Gateway 拒绝请求');
     });
 
     it('injects a planner prompt when the planner is enabled', async () => {

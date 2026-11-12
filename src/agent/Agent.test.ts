@@ -352,7 +352,7 @@ describe('Agent', () => {
       const onError = vi.fn();
       agent.setCallbacks({ onError });
 
-      await expect(agent.run('test prompt')).rejects.toThrow('LLM API circuit breaker');
+      await expect(agent.run('test prompt')).rejects.toThrow('LLM API 熔断器触发');
     });
 
     it('handles malformed tool call JSON', async () => {

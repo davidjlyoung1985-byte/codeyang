@@ -34,16 +34,19 @@ export enum ErrorCode {
   NETWORK_TIMEOUT = 'NETWORK_TIMEOUT',
   NETWORK_CONNECTION_REFUSED = 'NETWORK_CONNECTION_REFUSED',
   NETWORK_DNS_ERROR = 'NETWORK_DNS_ERROR',
+  TIMEOUT_ERROR = 'TIMEOUT_ERROR',
 
   // 权限错误 (5xxx)
   PERMISSION_DENIED = 'PERMISSION_DENIED',
   AUTH_REQUIRED = 'AUTH_REQUIRED',
+  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
   INSUFFICIENT_PRIVILEGES = 'INSUFFICIENT_PRIVILEGES',
 
   // 配置错误 (6xxx)
   CONFIG_INVALID = 'CONFIG_INVALID',
   CONFIG_MISSING = 'CONFIG_MISSING',
   CONFIG_PARSE_ERROR = 'CONFIG_PARSE_ERROR',
+  CONFIGURATION_ERROR = 'CONFIGURATION_ERROR',
 
   // 验证错误 (7xxx)
   VALIDATION_ERROR = 'VALIDATION_ERROR',
@@ -54,6 +57,7 @@ export enum ErrorCode {
   INVALID_STATE = 'INVALID_STATE',
   OPERATION_NOT_ALLOWED = 'OPERATION_NOT_ALLOWED',
   RESOURCE_LOCKED = 'RESOURCE_LOCKED',
+  CIRCUIT_BREAKER_OPEN = 'CIRCUIT_BREAKER_OPEN',
 
   // 资源错误 (9xxx)
   RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
@@ -100,6 +104,8 @@ export class CodeYangError extends Error {
   public readonly originalError?: Error;
   public readonly timestamp: number;
   public readonly recovery: RecoveryStrategy;
+  /** 面向用户的友好错误说明（含修复建议），未提供时回退到 getUserMessage() */
+  public readonly userMessage?: string;
 
   constructor(
     message: string,
@@ -109,6 +115,7 @@ export class CodeYangError extends Error {
       context?: ErrorContext;
       originalError?: Error;
       recovery?: Partial<RecoveryStrategy>;
+      userMessage?: string;
     } = {},
   ) {
     super(message);
@@ -118,6 +125,7 @@ export class CodeYangError extends Error {
     this.recoverable = options.recoverable ?? this.isRecoverableByDefault(code);
     this.context = options.context ?? {};
     this.originalError = options.originalError;
+    this.userMessage = options.userMessage;
     this.timestamp = Date.now();
 
     // 设置恢复策略
@@ -152,6 +160,7 @@ export class CodeYangError extends Error {
       context: this.context,
       timestamp: this.timestamp,
       recovery: this.recovery,
+      userMessage: this.userMessage,
       stack: this.stack,
     };
   }
@@ -160,6 +169,11 @@ export class CodeYangError extends Error {
    * 获取用户友好的错误描述
    */
   getUserMessage(): string {
+    // 显式提供的用户说明优先（通常包含修复建议/多行指引）
+    if (this.userMessage) {
+      return this.userMessage;
+    }
+
     const messages: Record<ErrorCode, string> = {
       [ErrorCode.TOOL_EXECUTION_FAILED]: '工具执行失败',
       [ErrorCode.TOOL_NOT_FOUND]: '未找到指定的工具',
@@ -179,18 +193,22 @@ export class CodeYangError extends Error {
       [ErrorCode.NETWORK_TIMEOUT]: '网络请求超时',
       [ErrorCode.NETWORK_CONNECTION_REFUSED]: '连接被拒绝',
       [ErrorCode.NETWORK_DNS_ERROR]: 'DNS 解析失败',
+      [ErrorCode.TIMEOUT_ERROR]: '操作超时',
       [ErrorCode.PERMISSION_DENIED]: '操作权限不足',
       [ErrorCode.AUTH_REQUIRED]: '需要身份验证',
+      [ErrorCode.AUTHENTICATION_ERROR]: '认证失败，请检查凭据',
       [ErrorCode.INSUFFICIENT_PRIVILEGES]: '权限不足',
       [ErrorCode.CONFIG_INVALID]: '配置文件无效',
       [ErrorCode.CONFIG_MISSING]: '缺少必要的配置',
       [ErrorCode.CONFIG_PARSE_ERROR]: '配置文件解析失败',
+      [ErrorCode.CONFIGURATION_ERROR]: '配置错误',
       [ErrorCode.VALIDATION_ERROR]: '输入验证失败',
       [ErrorCode.INVALID_ARGUMENT]: '参数无效',
       [ErrorCode.MISSING_REQUIRED_FIELD]: '缺少必填字段',
       [ErrorCode.INVALID_STATE]: '当前状态不允许此操作',
       [ErrorCode.OPERATION_NOT_ALLOWED]: '操作不被允许',
       [ErrorCode.RESOURCE_LOCKED]: '资源被锁定',
+      [ErrorCode.CIRCUIT_BREAKER_OPEN]: '服务暂时不可用（熔断器已开启），请稍后重试',
       [ErrorCode.RESOURCE_NOT_FOUND]: '资源不存在',
       [ErrorCode.RESOURCE_EXHAUSTED]: '资源已耗尽',
       [ErrorCode.QUOTA_EXCEEDED]: '配额已超限',
@@ -213,6 +231,8 @@ export class CodeYangError extends Error {
       ErrorCode.NETWORK_TIMEOUT,
       ErrorCode.NETWORK_CONNECTION_REFUSED,
       ErrorCode.TOOL_TIMEOUT,
+      ErrorCode.TIMEOUT_ERROR,
+      ErrorCode.CIRCUIT_BREAKER_OPEN,
     ];
 
     return recoverableCodes.includes(code);
@@ -228,6 +248,8 @@ export class CodeYangError extends Error {
       ErrorCode.NETWORK_TIMEOUT,
       ErrorCode.NETWORK_ERROR,
       ErrorCode.TOOL_TIMEOUT,
+      ErrorCode.TIMEOUT_ERROR,
+      ErrorCode.CIRCUIT_BREAKER_OPEN,
     ];
 
     return retryableCodes.includes(code);

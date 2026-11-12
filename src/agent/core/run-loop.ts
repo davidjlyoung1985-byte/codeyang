@@ -41,6 +41,7 @@ import { prepareContext } from './context.js';
 import { logger } from '../../utils/logger.js';
 import { withRetry } from '../../utils/retry.js';
 import { runConsolidation } from '../../experimental/continual-learning/MemoryManager.js';
+import { CodeYangError, ErrorCode } from '../../errors/index.js';
 
 /**
  * Main agent run loop handling LLM streaming, tool execution, and feedback cycles.
@@ -55,7 +56,15 @@ export async function runLoop(state: AgentState, userMsg: string, qtContext?: Qt
   });
   const gatewayResponse = await state.gateway.handle(gatewayRequest);
   if (!gatewayResponse.success) {
-    throw new Error(`[Gateway] ${gatewayResponse.error || 'Request rejected by gateway'}`);
+    throw new CodeYangError(
+      'Gateway 拒绝请求',
+      ErrorCode.PERMISSION_DENIED,
+      {
+        context: { error: gatewayResponse.error },
+        recoverable: false,
+        userMessage: `🚫 请求被拒绝\n  原因: ${gatewayResponse.error || '未知'}`,
+      },
+    );
   }
 
   const messages = await prepareContext(state, userMsg, typeof qtContext === 'string' ? qtContext : undefined);
@@ -77,7 +86,11 @@ export async function runLoop(state: AgentState, userMsg: string, qtContext?: Qt
 
   for (let turn = 0; turn < maxTurns; turn++) {
     logger.debug(`[turn ${turn}] messages count: ${messages.length}`);
-    if (messages.length === 0) throw new Error('[Agent] Internal error: messages empty at turn ' + turn);
+    if (messages.length === 0)
+      throw new CodeYangError('消息数组为空', ErrorCode.INTERNAL_ERROR, {
+        context: { turn },
+        recoverable: false,
+      });
 
     // Context window protection (budget derived from the model's real window)
     state.ctxManager.truncateIfNeeded(messages, config.model, config.maxTokens);
@@ -108,7 +121,12 @@ export async function runLoop(state: AgentState, userMsg: string, qtContext?: Qt
         );
       });
 
-      if (!cbResult.success) throw new Error(`LLM API circuit breaker: ${cbResult.error}`);
+      if (!cbResult.success)
+        throw new CodeYangError('LLM API 熔断器触发', ErrorCode.CIRCUIT_BREAKER_OPEN, {
+          context: { error: cbResult.error },
+          recoverable: true,
+          userMessage: `⚡ API 暂时不可用\n  原因: ${cbResult.error}\n  💡 请稍后重试`,
+        });
       return cbResult.data!;
     });
 
