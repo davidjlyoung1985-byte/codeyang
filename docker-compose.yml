@@ -1,42 +1,59 @@
-# CodeYang Service
 version: '3.8'
 
 services:
   codeyang:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    image: codeyang:latest
     container_name: codeyang
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - CODEYANG_LOG_LEVEL=${CODEYANG_LOG_LEVEL:-info}
-      - CODEYANG_TRACE_ENABLED=${CODEYANG_TRACE_ENABLED:-false}
+      # LLM Configuration
+      - CODEYANG_PROVIDER=${CODEYANG_PROVIDER:-deepseek}
+      - CODEYANG_API_KEY=${CODEYANG_API_KEY}
+      - CODEYANG_MODEL=${CODEYANG_MODEL:-deepseek-reasoner}
+      - CODEYANG_MAX_TOKENS=${CODEYANG_MAX_TOKENS:-8192}
+      - CODEYANG_TEMPERATURE=${CODEYANG_TEMPERATURE:-0.7}
+
+      # Optional: Base URL override
+      - CODEYANG_BASE_URL=${CODEYANG_BASE_URL:-}
+
+      # Optional: Debug mode
+      - CODEYANG_DEBUG=${CODEYANG_DEBUG:-false}
+
+      # Node environment
       - NODE_ENV=production
+
     volumes:
-      # Mount workspace (read-write)
+      # Mount your project workspace
       - ./workspace:/workspace
-      # Mount config (read-only)
-      - ./.env:/app/.env:ro
+
+      # Mount config directory
+      - codeyang-config:/root/.codeyang
+
+      # Optional: Mount git credentials
+      # - ~/.gitconfig:/root/.gitconfig:ro
+      # - ~/.ssh:/root/.ssh:ro
+
+    # Web UI port (if enabled)
     ports:
       - "3000:3000"
-    restart: unless-stopped
-    networks:
-      - codeyang-net
-    security_opt:
-      - no-new-privileges:true
-    read_only: false
-    tmpfs:
-      - /tmp:noexec,nosuid,nodev,size=100m
-    healthcheck:
-      test: ["CMD", "node", "-e", "console.log('healthy')"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
 
-networks:
-  codeyang-net:
-    driver: bridge
+    # Interactive mode
+    stdin_open: true
+    tty: true
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
 
 volumes:
-  workspace:
+  codeyang-config:
+    driver: local

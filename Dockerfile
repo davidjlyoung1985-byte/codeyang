@@ -1,59 +1,60 @@
-# Multi-stage build for production
-FROM node:20-alpine AS builder
+# Multi-stage build for CodeYang
+FROM node:18-alpine AS builder
 
 # Install build dependencies
-RUN apk add --no-cache git python3 make g++
+RUN apk add --no-cache python3 make g++ git
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 COPY tsconfig.json ./
+COPY tsup.config.ts ./
 
 # Install dependencies
-RUN npm ci --only=production && \
-    npm ci --only=development
+RUN npm ci
 
-# Copy source
-COPY src/ ./src/
+# Copy source code
+COPY src ./src
 
-# Build
+# Build the project
 RUN npm run build
 
-# Production image
-FROM node:20-alpine
+# Production stage
+FROM node:18-alpine
 
 # Install runtime dependencies
-RUN apk add --no-cache git bash
-
-# Create non-root user
-RUN addgroup -g 1001 -S codeyang && \
-    adduser -u 1001 -S codeyang -G codeyang
+RUN apk add --no-cache git
 
 WORKDIR /app
 
-# Copy from builder
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --production
+
+# Copy built files from builder
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
 
 # Create workspace directory
-RUN mkdir -p /workspace && \
-    chown -R codeyang:codeyang /workspace /app
+RUN mkdir -p /workspace
 
-# Switch to non-root user
-USER codeyang
-
-# Set environment
+# Set environment variables
 ENV NODE_ENV=production
 ENV CODEYANG_WORKSPACE=/workspace
 
-# Expose port (if running as server)
+# Expose web server port (if using web UI)
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "console.log('healthy')" || exit 1
+# Create volume for workspace
+VOLUME ["/workspace"]
 
-# Default command
-CMD ["node", "dist/index.js"]
+# Create volume for config
+VOLUME ["/root/.codeyang"]
+
+# Set entrypoint
+ENTRYPOINT ["node", "dist/index.js"]
+
+# Default command (can be overridden)
+CMD []

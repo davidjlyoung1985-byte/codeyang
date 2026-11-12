@@ -1,45 +1,61 @@
-# Docker
-*.log
-.env
-.env.*
-!.env.example
+# Dependencies
 node_modules
-dist
-coverage
-.test-*
-*.test.ts
+npm-debug.log
+yarn-error.log
+package-lock.json
 
-# Security - Credentials and secrets
-*.key
-*.pem
-*.pfx
-*.p12
-*.jks
-*.keystore
-config.json
-sessions/
-.codeyang/
-*.secret
-*secret*
-*credential*
+# Build output
+dist
+*.tsbuildinfo
+
+# Test files
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+coverage
+.nyc_output
+
+# Development files
+.env
+.env.local
+.env.*.local
 
 # IDE
 .vscode
 .idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Git
 .git
 .gitignore
+.gitattributes
+
+# Documentation (exclude from image)
+*.md
+!README.md
+docs
 
 # CI/CD
 .github
+.gitlab-ci.yml
+.travis.yml
 
-# Docs
-docs
-*.md
-!README.md
+# Logs
+logs
+*.log
 
-# Tests
-*.test.ts
-*.bench.ts
-vitest.config.ts
+# Temporary files
+tmp
+temp
+*.tmp
+
+# CodeYang specific
+.codeyang
+workspace
