@@ -78,8 +78,24 @@ describe('WebFetchTool', () => {
     });
 
     it('should reject non-HTTP protocols', async () => {
-      await expect(executeWebFetch('ftp://example.com')).rejects.toThrow('Invalid URL');
-      await expect(executeWebFetch('file:///etc/passwd')).rejects.toThrow('Invalid URL');
+      await expect(executeWebFetch('ftp://example.com')).rejects.toThrow('Unsupported protocol');
+      await expect(executeWebFetch('file:///etc/passwd')).rejects.toThrow('Unsupported protocol');
+    });
+
+    it('should reject URLs blocked by SSRF validation before fetching', async () => {
+      const { validateUrl } = await import('./NetworkTool.js');
+      vi.mocked(validateUrl).mockResolvedValueOnce('Accessing IP addresses directly is not allowed');
+
+      await expect(executeWebFetch('http://127.0.0.1/secret')).rejects.toThrow(/URL blocked/);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should block the first request to a private host, not only redirects', async () => {
+      const { validateUrl } = await import('./NetworkTool.js');
+      vi.mocked(validateUrl).mockResolvedValueOnce('DNS resolved "evil.test" to private IP 10.0.0.5');
+
+      await expect(executeWebFetch('http://evil.test/')).rejects.toThrow(/URL blocked/);
+      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it('should accept http and https', async () => {

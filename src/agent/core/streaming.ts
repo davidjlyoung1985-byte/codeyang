@@ -140,8 +140,9 @@ export async function streamLLM(
     }
   };
 
+  let timeoutId: NodeJS.Timeout | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
+    timeoutId = setTimeout(() => {
       monitor.stop();
       reject(
         new Error(`Stream timed out after ${STREAM_TIMEOUT_MS / 1000}s. Increase CODEYANG_STREAM_TIMEOUT if needed.`),
@@ -149,5 +150,11 @@ export async function streamLLM(
     }, STREAM_TIMEOUT_MS);
   });
 
-  return Promise.race([consumeStream(), timeoutPromise]);
+  try {
+    return await Promise.race([consumeStream(), timeoutPromise]);
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+  }
 }

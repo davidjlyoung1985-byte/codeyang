@@ -10,15 +10,25 @@ export async function executeWebFetch(url: string, format?: string): Promise<str
     throw new Error(invalidParam('url', 'a non-empty URL string'));
   }
 
-  // Validate URL
+  // Validate URL syntax. Kept separate from the protocol check so a protocol
+  // error is not swallowed by the parse catch and mislabelled "Invalid URL".
   let parsed: URL;
   try {
     parsed = new URL(url);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      throw new Error(netError(url, `Unsupported protocol: ${parsed.protocol}`));
-    }
   } catch {
     throw new Error(netError(url, 'Invalid URL'));
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error(netError(url, `Unsupported protocol: ${parsed.protocol}`));
+  }
+
+  // SECURITY: SSRF protection for the INITIAL request.
+  // This previously ran only in the redirect branch, so the very first URL
+  // could point straight at loopback / private ranges / cloud metadata.
+  const urlError = await validateUrl(url);
+  if (urlError) {
+    throw new Error(netError(url, `URL blocked: ${urlError}`));
   }
 
   const outputFormat = format === 'html' ? 'html' : 'text';

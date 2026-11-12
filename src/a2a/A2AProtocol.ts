@@ -334,13 +334,14 @@ export class A2AProtocol {
     await channel.send(request);
 
     // Wait for response with timeout
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(
+    let timeoutId: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(
         () =>
           reject(new Error(`A2A timeout: ${targetAgentId} did not respond in ${this.config.messageTimeoutMs / 1000}s`)),
         this.config.messageTimeoutMs,
-      ),
-    );
+      );
+    });
 
     const responsePromise = new Promise<A2AMessage>(async (resolve) => {
       for await (const msg of channel.receive()) {
@@ -356,7 +357,13 @@ export class A2AProtocol {
       }
     });
 
-    return Promise.race([responsePromise, timeoutPromise]);
+    try {
+      return await Promise.race([responsePromise, timeoutPromise]);
+    } finally {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+    }
   }
 
   /**

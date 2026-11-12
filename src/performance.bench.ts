@@ -8,7 +8,8 @@
 import { bench, describe } from 'vitest';
 import { isComplexPrompt, formatComplexPrompt, validateMessages } from './agent/AgentRunHelpers.js';
 import { jsonClone } from './agent/AgentUtils.js';
-import { validateUrl, isPrivateIP } from './security/ssrf.js';
+import { validateUrl } from './tools/NetworkTool.js';
+import { isPrivateIP } from './security/ssrf.js';
 import { loadConfig } from './config/index.js';
 import type { LLMMessage } from './agent/LLMClient.js';
 

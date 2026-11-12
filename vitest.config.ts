@@ -63,8 +63,7 @@ export default defineConfig({
     },
     // Ensure test files are found on Windows with absolute paths
     root: __dirname,
-    // For Windows: force POSIX-style path separators in test file matching
-    forceExit: true,
+    // Timer leaks have been fixed - no longer need forceExit
     // Cap parallelism: several suites shell out to real `git`/`npx tsc`/`npx
     // eslint` or do heavy fs I/O. Uncapped (one worker per core) starves them on
     // Windows, causing wall-clock timeouts and flaky failures.

@@ -34,6 +34,7 @@ export class ConnectionMonitor {
     process.stdout.write(`${message} `);
 
     // 健康检查定时器（每5秒检查一次）
+    // 使用 unref() 允许进程在没有其他活动时正常退出
     this.healthCheckTimer = setInterval(() => {
       const idleTime = Date.now() - this.lastActivity;
 
@@ -46,6 +47,9 @@ export class ConnectionMonitor {
         }
       }
     }, 5000);
+
+    // 关键修复: 允许进程在没有其他活动时退出
+    this.healthCheckTimer.unref();
 
     // 心跳定时器（定期显示进度点）
     let beatCount = 0;
@@ -64,6 +68,9 @@ export class ConnectionMonitor {
         }
       }
     }, this.heartbeatInterval);
+
+    // 关键修复: 允许进程在没有其他活动时退出
+    this.heartbeatTimer.unref();
   }
 
   /**
