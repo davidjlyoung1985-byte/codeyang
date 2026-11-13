@@ -151,7 +151,7 @@ describe('AgentContextManager - Boundary Tests', () => {
       });
 
       const origLength = messages.length;
-      const truncated = manager.truncateIfNeeded(messages, 'gpt-4', 100); // Very small budget
+      manager.truncateIfNeeded(messages, 'gpt-4', 100); // Very small budget
 
       // Should not truncate if no safe cut point
       expect(messages.length).toBe(origLength);

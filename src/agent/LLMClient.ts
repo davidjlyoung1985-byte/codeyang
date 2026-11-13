@@ -44,14 +44,10 @@ async function withLLMRetry<T>(fn: () => Promise<T>, label: string, maxRetries =
       throw err;
     }
   }
-  throw new CodeYangError(
-    `${label} 在 ${maxRetries} 次重试后失败`,
-    ErrorCode.LLM_API_ERROR,
-    {
-      context: { label, maxRetries },
-      recoverable: false,
-    },
-  );
+  throw new CodeYangError(`${label} 在 ${maxRetries} 次重试后失败`, ErrorCode.LLM_API_ERROR, {
+    context: { label, maxRetries },
+    recoverable: false,
+  });
 }
 
 export interface StreamEvent {

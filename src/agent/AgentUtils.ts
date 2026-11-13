@@ -88,26 +88,22 @@ export async function withRetry<T>(
 
       if (isRetryable) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        throw new CodeYangError(
-          `${label} 在 ${maxRetries} 次重试后失败`,
-          ErrorCode.LLM_RATE_LIMIT,
-          {
-            context: {
-              label,
-              maxRetries,
-              lastError: sanitizeErrorMessage(errMsg),
-            },
-            recoverable: true,
-            userMessage:
-              `🔴 ${label} 失败\n` +
-              `  💡 最后错误: ${sanitizeErrorMessage(errMsg)}\n` +
-              `  📝 建议:\n` +
-              `    1) 检查网络连接\n` +
-              `    2) 验证 API 端点可访问\n` +
-              `    3) 检查 API Key 和速率限制\n` +
-              `    4) 等待片刻后手动重试`,
+        throw new CodeYangError(`${label} 在 ${maxRetries} 次重试后失败`, ErrorCode.LLM_RATE_LIMIT, {
+          context: {
+            label,
+            maxRetries,
+            lastError: sanitizeErrorMessage(errMsg),
           },
-        );
+          recoverable: true,
+          userMessage:
+            `🔴 ${label} 失败\n` +
+            `  💡 最后错误: ${sanitizeErrorMessage(errMsg)}\n` +
+            `  📝 建议:\n` +
+            `    1) 检查网络连接\n` +
+            `    2) 验证 API 端点可访问\n` +
+            `    3) 检查 API Key 和速率限制\n` +
+            `    4) 等待片刻后手动重试`,
+        });
       }
       throw err;
     }

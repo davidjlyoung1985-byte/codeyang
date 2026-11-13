@@ -56,15 +56,11 @@ export async function runLoop(state: AgentState, userMsg: string, qtContext?: Qt
   });
   const gatewayResponse = await state.gateway.handle(gatewayRequest);
   if (!gatewayResponse.success) {
-    throw new CodeYangError(
-      'Gateway 拒绝请求',
-      ErrorCode.PERMISSION_DENIED,
-      {
-        context: { error: gatewayResponse.error },
-        recoverable: false,
-        userMessage: `🚫 请求被拒绝\n  原因: ${gatewayResponse.error || '未知'}`,
-      },
-    );
+    throw new CodeYangError('Gateway 拒绝请求', ErrorCode.PERMISSION_DENIED, {
+      context: { error: gatewayResponse.error },
+      recoverable: false,
+      userMessage: `🚫 请求被拒绝\n  原因: ${gatewayResponse.error || '未知'}`,
+    });
   }
 
   const messages = await prepareContext(state, userMsg, typeof qtContext === 'string' ? qtContext : undefined);

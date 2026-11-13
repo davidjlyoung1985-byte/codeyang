@@ -107,13 +107,14 @@ async function testConnection(provider: ProviderConfig, apiKey: string): Promise
       method: provider.name === 'Anthropic' ? 'POST' : 'GET',
       headers,
       signal: AbortSignal.timeout(10000),
-      body: provider.name === 'Anthropic'
-        ? JSON.stringify({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 10,
-            messages: [{ role: 'user', content: 'test' }],
-          })
-        : undefined,
+      body:
+        provider.name === 'Anthropic'
+          ? JSON.stringify({
+              model: 'claude-3-haiku-20240307',
+              max_tokens: 10,
+              messages: [{ role: 'user', content: 'test' }],
+            })
+          : undefined,
     });
 
     if (response.status === 401) {
@@ -257,7 +258,6 @@ async function main(): Promise<void> {
     console.log();
     print('祝你使用愉快！🚀', 'bright');
     console.log();
-
   } catch (err) {
     const error = err as Error;
     print(`\n错误: ${error.message}`, 'red');

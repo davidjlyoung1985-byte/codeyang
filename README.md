@@ -29,11 +29,12 @@
 
 An AI coding agent inspired by [Claude Code](https://github.com/anthropics/claude-code) architecture. CodeYang lets you describe coding tasks in natural language — it reads files, writes code, runs commands, manages Git, and more.
 
-**Project Status**: Beta — approaching production-ready for v1.0 release  
+**Project Status**: Beta — stable for personal/team use, approaching production-ready for v1.0  
 ✅ Core functionality works; `tsc --noEmit` and ESLint pass clean  
-✅ Full suite green: **2498 tests, 7 skipped** (see [Testing](#testing))  
-📊 Test Coverage: statements **75.9%** / branches **79.7%** / functions **85.9%** / lines **75.9%**  
-🎯 **Project Quality Score**: 85/100 (see [IMPROVEMENT_REPORT.md](IMPROVEMENT_REPORT.md) for the scored breakdown)  
+✅ Full suite green: **2544 tests, 7 skipped** (see [Testing](#testing))  
+📊 Test Coverage: statements **75.72%** / branches **79.64%** / functions **86.14%** / lines **75.72%**  
+🎯 **Project Quality Score**: 85/100 (B grade) — see [FIXES_SUMMARY.md](FIXES_SUMMARY.md) for recent improvements  
+✅ **Critical fixes completed** (2024-11-13): Timer leaks resolved, SSRF protection hardened, test suite stability improved  
 ⚠️ **Evolving modules** (`src/experimental/`, `src/qt/`) ship in every build but their internal APIs may change — see [src/experimental/README.md](src/experimental/README.md)
 
 ## Architecture
@@ -273,7 +274,7 @@ npm test              # Run all tests
 npm run test:coverage # With coverage report
 ```
 
-Current status: **2471 tests across 126 files, 0 failures** (`npm test`).
+Current status: **2544 tests across 129 files, 0 failures** (`npm test`).
 
 Test parallelism is capped at `maxWorkers: 4` in `vitest.config.ts`. Several
 suites shell out to real `git` / `npx tsc` / `npx eslint` or do heavy filesystem
@@ -281,10 +282,10 @@ I/O; leaving it unbounded starves those processes on Windows and produces
 wall-clock timeout flakes.
 
 Coverage thresholds enforced by CI (see `vitest.config.ts` and [.github/workflows/ci.yml](.github/workflows/ci.yml)):
-- Statements: 75%
-- Branches: 78%
-- Functions: 84%
-- Lines: 75%
+- Statements: 75% (actual: 75.72%)
+- Branches: 78% (actual: 79.64%)
+- Functions: 85% (actual: 86.14%)
+- Lines: 75% (actual: 75.72%)
 
 ## Contributing
 
@@ -329,20 +330,24 @@ This is a **functional but work-in-progress** AI agent project:
 - ✅ CI/CD with hard gates (tsc + lint + vitest)
 - ✅ Performance benchmarks and security hardening
 
-**Production readiness**: Beta (B)
+**Production readiness**: Beta (B) — Quality Score: 85/100
 - Core modules: agent, tools, mcp, security — well-tested, suitable for personal / small-team use
-- Full suite: **2471 tests, 0 failures**; `tsc --noEmit` and ESLint clean
-- Coverage gates: statements 75% / branches 78% / functions 84% / lines 75%
+- Full suite: **2544 tests, 0 failures**; `tsc --noEmit` and ESLint clean
+- Coverage verified: statements 75.72% / branches 79.64% / functions 86.14% / lines 75.72%
 - **59 registered core tools** (60+ with dynamic MCP/Qt tools)
-- `src/experimental/` (qt, reflexion, continual-learning) ships and runs but is excluded from coverage and its APIs may change
-- SSRF protection and security best practices
+- `src/experimental/` (qt, reflexion, continual-learning) ships and runs but its APIs may change
+- **Critical fixes completed (Nov 2024)**: Timer leak resolution, SSRF hardening, test stability improvements
+- SSRF protection and security best practices enforced
 - Active development with regular improvements
 
-**Not yet done** (why this is Beta, not stable):
+**What's left for v1.0 stable** (why this is Beta, not production-ready):
+- More real-world production testing and feedback
+- Performance benchmarking and optimization under load
+- Independent security audit
 - Network isolation on macOS/Windows needs elevated privileges (SIP / admin); without them it degrades to soft blocking
-- Experimental modules (`src/qt/`, `src/experimental/`) not yet included in coverage metrics (planned for v1.0)
-- Coverage targets for v1.0: core modules ≥85%, experimental modules ≥60% (see [V1_RELEASE_CHECKLIST.md](V1_RELEASE_CHECKLIST.md))
-- Releases are tagged (latest `v0.9.0`); see the tags page: https://github.com/davidjlyoung1985-byte/codeyang/tags
+- Experimental modules (`src/qt/`, `src/experimental/`) included in coverage but APIs not frozen yet
+- Coverage targets for v1.0: maintain ≥75% across all modules (currently: 75.72%)
+- Releases are tagged (latest `v1.1.0`); see the tags page: https://github.com/davidjlyoung1985-byte/codeyang/tags
 - Some suites still shell out to real `git`/`npx`, so a heavily loaded host can still slow the run
 
 We believe in honest documentation. If you find issues, please report them!

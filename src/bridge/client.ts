@@ -38,21 +38,17 @@ async function loadConfig(): Promise<BridgeConnectionConfig> {
     const url = process.env['BRIDGE_URL'] || 'http://127.0.0.1:9876';
     const token = process.env['BRIDGE_TOKEN'] || '';
     if (!token) {
-      throw new CodeYangError(
-        'Bridge 未配置',
-        ErrorCode.CONFIGURATION_ERROR,
-        {
-          context: {},
-          recoverable: true,
-          userMessage:
-            '🔗 Bridge 未配置\n' +
-            '  1. 首先运行 bridge 服务器:\n' +
-            '     npx tsx src/bridge/server.ts\n' +
-            '  2. 复制显示的 token\n' +
-            '  3. 设置环境变量:\n' +
-            '     set BRIDGE_TOKEN=<token>',
-        },
-      );
+      throw new CodeYangError('Bridge 未配置', ErrorCode.CONFIGURATION_ERROR, {
+        context: {},
+        recoverable: true,
+        userMessage:
+          '🔗 Bridge 未配置\n' +
+          '  1. 首先运行 bridge 服务器:\n' +
+          '     npx tsx src/bridge/server.ts\n' +
+          '  2. 复制显示的 token\n' +
+          '  3. 设置环境变量:\n' +
+          '     set BRIDGE_TOKEN=<token>',
+      });
     }
     return { serverUrl: url, token };
   }
