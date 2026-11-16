@@ -11,6 +11,7 @@ import { Tracer } from '../tracing/index.js';
 import { ReflexionEngine } from '../experimental/reflexion/ReflexionEngine.js';
 import { logger } from '../utils/logger.js';
 import { checkPermission } from '../permission/index.js';
+import { requestConfirmation } from '../permission/confirmation.js';
 import { categoryOf, gitSubject, permissionSubject } from '../permission/tool-categories.js';
 import { recordToolExecution } from '../metrics/index.js';
 import { ErrorCode, wrapError } from '../errors/index.js';
@@ -62,9 +63,17 @@ async function checkToolPermission(toolName: string, input: Record<string, unkno
     return `[PERMISSION DENIED] ${result.reason || `${toolName} is not permitted on ${subject}`}`;
   }
   if (result.level === 'ask') {
+    // Ask the user instead of failing closed outright — that is what the level
+    // means. requestConfirmation() denies when there is no TTY, so the
+    // non-interactive path still behaves like the old fail-closed default.
+    const decision = await requestConfirmation({
+      subject: `${toolName}: ${subject}`,
+      reason: result.reason,
+    });
+    if (decision !== 'deny') return null;
     return (
       `[PERMISSION REQUIRED] ${result.reason || `${toolName} on ${subject} needs confirmation`}. ` +
-      `Ask the user to approve this, or set an explicit allow rule in ~/.codeyang/permissions.json.`
+      `The user did not approve it. Ask them to approve, or set an explicit allow rule in ~/.codeyang/permissions.json.`
     );
   }
   return null;

@@ -1,6 +1,7 @@
 import * as path from 'node:path';
 import { existsSync } from 'node:fs';
 import { executeGrep } from './GrepTool.js';
+import { resolveSafePath } from './shared.js';
 import { getProjectIndex } from '../utils/projectIndex.js';
 
 /**
@@ -21,6 +22,12 @@ export async function executeSearch(
   const { maxResults = 20, includeGlob, searchContent = true, searchNames = true, caseSensitive = false } = options;
 
   if (!query.trim()) return 'Error: query cannot be empty';
+
+  // SECURITY: resolve the search root through the sandbox check. Content search
+  // delegates to executeGrep (which validates too), but the *name* search below
+  // reads the project index directly, so the check has to happen here as well.
+  // A blocked root throws - it must not degrade into an "empty results" string.
+  rootDir = resolveSafePath(path.isAbsolute(rootDir) ? rootDir : path.join(process.cwd(), rootDir));
   if (!existsSync(rootDir)) return `Error: directory not found: ${rootDir}`;
 
   const results: Array<{ type: 'name' | 'content'; path: string; line?: number; snippet?: string }> = [];

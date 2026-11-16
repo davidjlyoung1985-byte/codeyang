@@ -5,7 +5,7 @@
  * Provides tamper-proof logging with immutable append-only storage.
  */
 
-import { writeFile, appendFile, mkdir, readFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { logger } from '../utils/logger.js';
@@ -309,6 +309,54 @@ export class AuditLogger {
   }
 
   /**
+   * Delete audit logs older than `retentionDays`.
+   *
+   * `retentionDays` was previously stored on the instance and never used, so
+   * audit logs accumulated forever — which for a security log is both a disk
+   * problem and a compliance one (the configured retention period was a lie).
+   *
+   * Called from `cleanup()` so hosts that already tear down cleanly get it for
+   * free. Returns the filenames removed.
+   */
+  async pruneOldLogs(): Promise<string[]> {
+    const cutoff = Date.now() - this.retentionDays * 24 * 60 * 60 * 1000;
+    const { readdir, stat, unlink } = await import('node:fs/promises');
+    const removed: string[] = [];
+
+    let entries: string[];
+    try {
+      entries = await readdir(this.auditDir);
+    } catch {
+      return removed;
+    }
+
+    for (const name of entries) {
+      if (!/^audit-.*\.log$/.test(name)) continue;
+      const full = join(this.auditDir, name);
+      try {
+        const info = await stat(full);
+        if (info.mtimeMs < cutoff) {
+          await unlink(full);
+          removed.push(name);
+        }
+      } catch {
+        // A log that vanished mid-scan needs no action.
+      }
+    }
+
+    if (removed.length > 0) {
+      logger.info(`[AuditLogger] Pruned ${removed.length} log(s) older than ${this.retentionDays}d`);
+    }
+    return removed;
+  }
+
+  /** Whether encryption was requested but is not implemented for this sink. */
+  isEncryptionPending(): boolean {
+    return this.enableEncryption;
+  }
+
+
+  /**
    * Generate unique ID
    */
   private generateId(): string {
@@ -345,6 +393,8 @@ export class AuditLogger {
       clearInterval(this.flushTimer);
     }
     await this.flush();
+    // Honour the configured retention window on shutdown, when I/O is quiet.
+    await this.pruneOldLogs();
   }
 }
 

@@ -4,6 +4,7 @@
  */
 import { execa } from 'execa';
 import { checkPermission } from '../permission/index.js';
+import { requestConfirmation } from '../permission/confirmation.js';
 import { extractCommandSubjects } from './commandSubjects.js';
 
 // Dangerous PowerShell patterns
@@ -44,14 +45,27 @@ export async function executePowerShell(command: string, cwd?: string, timeoutSe
   // written against whole commands (`rm -rf*`, `git push --force*`), so passing
   // only `rm` or `git` would let every one of them through unconfirmed.
   const subjects = new Set<string>(extractCommandSubjects(command));
+  const pendingAsks: { subject: string; reason?: string }[] = [];
+
   for (const subject of subjects) {
     const perm = await checkPermission('bash', subject);
     if (perm.level === 'deny') {
       throw new Error(`[PERMISSION DENIED] ${perm.reason || 'Command not permitted.'}`);
     }
     if (perm.level === 'ask') {
+      pendingAsks.push({ subject, reason: perm.reason });
+    }
+  }
+
+  // Same semantics as BashTool: `ask` prompts, and fails closed with no TTY.
+  for (const pending of pendingAsks) {
+    const decision = await requestConfirmation({
+      subject: `powershell: ${pending.subject}`,
+      reason: pending.reason,
+    });
+    if (decision === 'deny') {
       throw new Error(
-        `[PERMISSION REQUIRED] ${perm.reason || 'This operation needs confirmation.'} User must approve this action first.`,
+        `[PERMISSION REQUIRED] ${pending.reason || 'This operation needs confirmation.'} The user did not approve it.`,
       );
     }
   }

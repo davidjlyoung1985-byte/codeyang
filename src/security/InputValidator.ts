@@ -9,7 +9,6 @@
  * - Schema validation
  */
 
-import { logger } from '../utils/logger.js';
 
 export interface ValidationSchema {
   type: 'string' | 'number' | 'boolean' | 'object' | 'array';

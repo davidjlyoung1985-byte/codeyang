@@ -1,5 +1,6 @@
 import { execa } from 'execa';
 import { checkPermission } from '../permission/index.js';
+import { requestConfirmation } from '../permission/confirmation.js';
 import { auditLog } from '../utils/sessionStore.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { Sandbox } from '../sandbox/index.js';
@@ -212,6 +213,9 @@ export async function executeBash(
   // `git push --force*`, `curl*|*sh`) never matched and those commands ran
   // without confirmation.
   let worstPermissionLevel = 'allow';
+  /** Subjects the rules flagged as `ask`; resolved with the user after the loop. */
+  const pendingAsks: { subject: string; reason?: string }[] = [];
+
   for (const subject of extractCommandSubjects(command)) {
     const cached = permissionCache.get(subject);
     if (cached && Date.now() - cached.timestamp < PERMISSION_CACHE_TTL) {
@@ -220,7 +224,7 @@ export async function executeBash(
         throw new Error(`[PERMISSION DENIED] This command is not permitted.`);
       }
       if (cached.level === 'ask') {
-        throw new Error(`[PERMISSION REQUIRED] This operation needs user confirmation.`);
+        pendingAsks.push({ subject });
       }
       continue;
     }
@@ -233,7 +237,29 @@ export async function executeBash(
       throw new Error(`[PERMISSION DENIED] ${perm.reason || 'This command is not permitted.'}`);
     }
     if (perm.level === 'ask') {
-      throw new Error(`[PERMISSION REQUIRED] ${perm.reason || 'This operation needs user confirmation.'}`);
+      pendingAsks.push({ subject, reason: perm.reason });
+    }
+  }
+
+  // `ask` really asks. Denying instead would make it indistinguishable from
+  // `deny`; allowing silently would be worse. Without a TTY the gate fails
+  // closed, so piped/CI invocations still cannot auto-approve.
+  for (const pending of pendingAsks) {
+    const decision = await requestConfirmation({
+      subject: `bash: ${pending.subject}`,
+      reason: pending.reason,
+    });
+    if (decision === 'deny') {
+      void auditLog({
+        action: 'bash_denied_by_user',
+        command: sanitizeForLogging(command),
+        cwd: cwd || process.cwd(),
+        result: 'rejected_at_confirmation',
+      });
+      throw new Error(
+        `[PERMISSION REQUIRED] ${pending.reason || 'This operation needs user confirmation.'} ` +
+          `The user did not approve it.`,
+      );
     }
   }
 

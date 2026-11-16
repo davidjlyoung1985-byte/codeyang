@@ -10,8 +10,8 @@
  */
 
 import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'node:fs';
-import { readdir, stat, readFile, writeFile, unlink } from 'node:fs/promises';
-import { join, basename } from 'node:path';
+import { readdir, stat, readFile, writeFile, unlink, rm } from 'node:fs/promises';
+import { join } from 'node:path';
 import { createGzip, createGunzip } from 'node:zlib';
 import { pipeline } from 'node:stream/promises';
 import { logger } from '../utils/logger.js';
@@ -340,10 +340,17 @@ export class BackupManager {
     const backupPath = join(this.config.backupDir, backupId);
     const metadataPath = join(this.config.backupDir, `${backupId}.json`);
 
-    // Delete directory recursively (simplified)
+    // Delete the backup payload and its metadata.
+    //
+    // The previous version computed `backupPath` and then never used it, despite
+    // the comment claiming otherwise — so deleting a backup removed the .json
+    // record and left the whole backup directory on disk as an orphan.
     if (existsSync(metadataPath)) {
       await unlink(metadataPath);
     }
+    await rm(backupPath, { recursive: true, force: true });
+    // The archive variant (.tar.gz), when the backup was compressed.
+    await rm(`${backupPath}.tar.gz`, { force: true });
 
     logger.debug(`[BackupManager] Deleted backup: ${backupId}`);
   }
@@ -372,11 +379,22 @@ export class BackupManager {
   }
 
   /**
-   * Schedule automatic backups
+   * Schedule automatic backups.
+   *
+   * `cronExpression` is currently only used to derive a fixed interval — there
+   * is no cron parser in the dependency tree. Rather than silently ignoring the
+   * argument (which is what happened before: it was accepted and discarded, so
+   * every caller got daily backups regardless), the supported subset is parsed
+   * and anything unrecognised is reported.
+   *
+   * Supported: `*\/N * * * *` (every N minutes) and the common
+   * `M H * * *` (daily at H:M). Everything else falls back to daily and warns.
    */
   scheduleBackups(cronExpression: string = '0 0 * * *'): NodeJS.Timeout {
-    // Daily at midnight by default
-    const interval = 24 * 60 * 60 * 1000; // 24 hours
+    const interval = intervalFromCron(cronExpression);
+    logger.info(
+      `[BackupManager] Scheduling automatic backups: "${cronExpression}" -> every ${Math.round(interval / 60000)} min`,
+    );
 
     const timer = setInterval(async () => {
       try {
@@ -388,10 +406,44 @@ export class BackupManager {
     }, interval);
 
     timer.unref();
-    logger.info('[BackupManager] Scheduled automatic backups');
-
     return timer;
   }
+}
+
+/**
+ * Translate a (small) subset of cron syntax into a polling interval.
+ *
+ * Only what the built-in scheduler actually supports. Anything else falls back
+ * to daily, because silently running at the wrong frequency is worse than a
+ * conservative default — but it is logged so the mismatch is visible.
+ */
+export function intervalFromCron(cronExpression: string): number {
+  const DAY = 24 * 60 * 60 * 1000;
+  const parts = cronExpression.trim().split(/\s+/);
+
+  if (parts.length !== 5) {
+    logger.warn(`[BackupManager] Unrecognised cron "${cronExpression}" (expected 5 fields); defaulting to daily.`);
+    return DAY;
+  }
+
+  const [minute, hour] = parts;
+
+  // `*/N * * * *` — every N minutes.
+  const stepMatch = minute.match(/^\*\/(\d+)$/);
+  if (stepMatch && hour === '*') {
+    const n = Number(stepMatch[1]);
+    if (n > 0) return n * 60 * 1000;
+  }
+
+  // `M H * * *` — once a day at H:M. Because the scheduler polls at a fixed
+  // interval rather than firing at a wall-clock time, the closest faithful
+  // approximation is a 24 h period.
+  if (/^\d+$/.test(minute) && /^\d+$/.test(hour)) {
+    return DAY;
+  }
+
+  logger.warn(`[BackupManager] Unsupported cron "${cronExpression}"; defaulting to daily.`);
+  return DAY;
 }
 
 // Singleton instance

@@ -206,7 +206,9 @@ export class AlertingManager {
    */
   private async sendToSlack(alert: Alert, config: Record<string, any>): Promise<void> {
     // Placeholder for actual Slack implementation
-    logger.info(`[Alerting] Would send Slack message to ${config.webhook}: ${alert.title}`);
+    logger.info(
+      `[Alerting] Would send Slack message to ${config.webhook}: ${alert.title} (color ${this._getSeverityColor(alert.severity)})`,
+    );
     // Example:
     // await fetch(config.webhook, {
     //   method: 'POST',
@@ -224,7 +226,7 @@ export class AlertingManager {
   /**
    * Send to PagerDuty (placeholder)
    */
-  private async sendToPagerDuty(alert: Alert, config: Record<string, any>): Promise<void> {
+  private async sendToPagerDuty(alert: Alert, _config: Record<string, any>): Promise<void> {
     // Placeholder for actual PagerDuty implementation
     logger.info(`[Alerting] Would send PagerDuty event: ${alert.title}`);
     // Example:
@@ -300,9 +302,8 @@ export class AlertingManager {
   }
 
   /**
-   * Get severity color for Slack (unused but kept for future use)
+   * Get severity color for Slack attachments.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private _getSeverityColor(severity: AlertSeverity): string {
     const colors = {
       [AlertSeverity.INFO]: '#36a64f',

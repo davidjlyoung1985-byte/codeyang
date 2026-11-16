@@ -64,10 +64,18 @@ export default defineConfig({
     // Ensure test files are found on Windows with absolute paths
     root: __dirname,
     // Timer leaks have been fixed - no longer need forceExit
-    // Cap parallelism: several suites shell out to real `git`/`npx tsc`/`npx
-    // eslint` or do heavy fs I/O. Uncapped (one worker per core) starves them on
-    // Windows, causing wall-clock timeouts and flaky failures.
-    maxWorkers: 4,
+    //
+    // Cap parallelism: several suites shell out to real `git`/`npx tsc`/
+    // `npx eslint` or do heavy fs I/O. Uncapped (one worker per core) starves
+    // them on Windows, causing wall-clock timeouts and flaky failures.
+    //
+    // 2, not 4: at maxWorkers=4 the full `src/tools` suite hangs indefinitely
+    // (no summary, no exit) on this project's Windows CI. At 2 the same 36
+    // files / 732 tests finish in ~34s. Every file passes in isolation either
+    // way, so this is a scheduler/starvation issue, not a failing test — but a
+    // suite that never terminates is indistinguishable from a broken one, so
+    // the safe value wins.
+    maxWorkers: 2,
     minWorkers: 1,
   },
 });

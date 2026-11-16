@@ -5,6 +5,7 @@ import type { LLMClient } from '../agent/LLMClient.js';
 import { builtinDefinitions } from './definitions/index.js';
 import { resolveAlias, fuzzyFindTools, rebuildSemanticIndex } from './aliases.js';
 import { validateParams } from './schema-validate.js';
+import { findPathViolations, formatPathViolations } from './pathGuard.js';
 import { claudeCodeTool } from './ClaudeCodeTool.js';
 
 export interface ToolContext {
@@ -67,12 +68,25 @@ function buildAllTools(): ToolDefinition[] {
 function validatedExecute(
   execute: (args: Record<string, unknown>) => Promise<string>,
   schema: Record<string, unknown>,
+  toolName = '(anonymous)',
 ): (args: Record<string, unknown>) => Promise<string> {
   return async (args) => {
     const schemaErrors = validateParams(args, schema);
     if (schemaErrors.length > 0) {
       return schemaErrors.join('\n');
     }
+
+    // SECURITY: enforce the sandbox for every path-like argument, in one place.
+    //
+    // Individual tools used to be responsible for calling resolveSafePath, and
+    // five of them (Grep, Glob, CodeAnalysis, Search, ...) simply did not — so
+    // a sandboxed session could read ~/.ssh. Doing it here means a tool cannot
+    // forget no matter how it is implemented.
+    const violations = findPathViolations(toolName, args);
+    if (violations.length > 0) {
+      return formatPathViolations(toolName, violations);
+    }
+
     return execute(args);
   };
 }
@@ -81,7 +95,7 @@ function validatedExecute(
 function wrapToolValidation(t: ToolDefinition): ToolDefinition {
   return {
     ...t,
-    execute: validatedExecute(t.execute, t.parameters),
+    execute: validatedExecute(t.execute, t.parameters, t.name),
   };
 }
 
@@ -172,7 +186,7 @@ export async function refreshMcpTools(): Promise<void> {
         name: t.qualifiedName,
         description: `[MCP:${t.serverName}] ${t.description}`,
         parameters: params,
-        execute: validatedExecute(rawExecute, params),
+        execute: validatedExecute(rawExecute, params, t.qualifiedName),
       });
     }
 

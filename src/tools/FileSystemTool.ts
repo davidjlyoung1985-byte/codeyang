@@ -4,32 +4,89 @@ import * as path from 'node:path';
 import { resolveSafePath } from './shared.js';
 import { captureFile, captureMove, captureTree } from '../utils/snapshot.js';
 
-// 防止误删项目根目录或关键系统路径
+/**
+ * Exact paths (and, for directories, their whole subtree) that must never be
+ * deleted. Matched case-insensitively on a normalized absolute path.
+ */
 const PROTECTED_PATHS = [
   '/', // 根目录
   '/etc',
   '/bin',
+  '/sbin',
   '/boot',
   '/dev',
   '/lib',
+  '/lib64',
   '/sys',
   '/usr',
   '/var',
   '/proc',
+  '/root',
   'C:\\', // Windows 根
   'C:\\Windows',
   'C:\\Program Files',
   'C:\\Program Files (x86)',
-  'C:\\System32',
+  'C:\\ProgramData',
+  // NOTE: `C:\Users` is deliberately NOT protected — that is where all user
+  // projects live, and a coding agent must be able to delete build output
+  // there. Only the home directory itself is blocked, via PROTECTED_HOMES.
 ];
 
+/**
+ * Directories that may be deleted *from* but never deleted themselves.
+ * `C:\Users\me\proj\node_modules` is fine; `C:\Users\me` is not.
+ */
+const PROTECTED_HOMES = ['/home', '/Users', '/root'];
+
+/** Normalize for comparison: forward slashes, no trailing separator, lowercase. */
+function normalizeForCompare(p: string): string {
+  let out = p.replace(/\\/g, '/').toLowerCase();
+  // Keep a bare drive root ("c:/") intact, strip other trailing slashes.
+  if (out.length > 1 && out.endsWith('/')) out = out.replace(/\/+$/, '');
+  if (/^[a-z]:$/.test(out)) out += '/';
+  return out;
+}
+
+/**
+ * True when `absPath` is a protected path **or anything inside one**.
+ *
+ * The original implementation compared only for equality, so `/etc` was
+ * blocked but `/etc/passwd` and `C:\Windows\System32\drivers\x.sys` were not —
+ * i.e. the guard protected the directory entry while leaving its contents
+ * deletable.
+ */
 function isProtectedPath(absPath: string): boolean {
-  const normalized = absPath.replace(/\\/g, '/').toLowerCase();
-  for (const p of PROTECTED_PATHS) {
-    if (normalized === p.replace(/\\/g, '/').toLowerCase()) {
-      return true;
-    }
+  const normalized = normalizeForCompare(absPath);
+  for (const protectedPath of PROTECTED_PATHS) {
+    const p = normalizeForCompare(protectedPath);
+    if (normalized === p) return true;
+
+    // A filesystem root is only ever protected as itself. Treating `/` or
+    // `c:/` as a subtree prefix would match *every* absolute path and make the
+    // whole guard worthless.
+    const isFilesystemRoot = p === '/' || /^[a-z]:\/$/.test(p);
+    if (isFilesystemRoot) continue;
+
+    // Subtree check: `/etc/passwd` starts with `/etc/`.
+    const prefix = p.endsWith('/') ? p : p + '/';
+    if (normalized.startsWith(prefix)) return true;
   }
+
+  // Home directories: the directory itself is protected, its contents are not.
+  // This catches `C:\Users\me` and `/home/me` while leaving
+  // `C:\Users\me\proj\dist` deletable.
+  for (const homeRoot of PROTECTED_HOMES) {
+    const root = normalizeForCompare(homeRoot);
+    const rootPrefix = root.endsWith('/') ? root : root + '/';
+    if (!normalized.startsWith(rootPrefix)) continue;
+
+    const rest = normalized.slice(rootPrefix.length);
+    const segments = rest.split('/').filter(Boolean);
+    // `users/me` = 2 segments → deleting a home directory. Anything deeper is a
+    // project path and must be allowed.
+    if (segments.length <= 1) return true;
+  }
+
   return false;
 }
 
@@ -164,16 +221,20 @@ export async function executeMove(sourcePath: string, destPath: string, overwrit
 export async function executeDelete(targetPath: string, recursive = false, force = false): Promise<string> {
   const absPath = resolveSafePath(targetPath);
 
+  // SECURITY: 保护系统关键路径，防止误删。
+  //
+  // This must run BEFORE the existence check below. Otherwise a protected path
+  // that happens not to exist on this platform (`/etc` on Windows) takes the
+  // `force` early-return and is never evaluated at all.
+  if (isProtectedPath(absPath)) {
+    throw new Error(`[SECURITY] Cannot delete protected system path: ${targetPath}`);
+  }
+
   if (!existsSync(absPath)) {
     if (force) {
       return `Path does not exist (ignored with force=true): ${targetPath}`;
     }
     throw new Error(`Path does not exist: ${targetPath}`);
-  }
-
-  // SECURITY: 保护系统关键路径，防止误删
-  if (isProtectedPath(absPath)) {
-    throw new Error(`[SECURITY] Cannot delete protected system path: ${targetPath}`);
   }
 
   const stats = await stat(absPath);

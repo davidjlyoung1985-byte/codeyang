@@ -10,6 +10,7 @@ vi.mock('../permission/index.js', () => ({
 }));
 
 import { checkPermission } from '../permission/index.js';
+import { setConfirmer, clearSessionGrants } from '../permission/confirmation.js';
 import { executeBash, clearPermissionCache, isDenied, shouldUseSandbox } from './BashTool.js';
 import { resetRateLimit } from '../utils/rateLimiter.js';
 
@@ -92,6 +93,72 @@ describe('BashTool', () => {
     it('should throw when permission level is ask', async () => {
       vi.mocked(checkPermission).mockResolvedValue({ level: 'ask', reason: 'Need confirmation' });
       await expect(executeBash('echo confirm')).rejects.toThrow(/PERMISSION REQUIRED/);
+    });
+
+    // ── `ask` must actually ask ──
+    //
+    // Before this, `ask` was implemented as a bare throw, so it behaved exactly
+    // like `deny`. These tests pin the real semantics: the command runs only
+    // when the user approves, and is refused when they do not.
+    describe('ask level prompts the user', () => {
+      afterEach(() => {
+        setConfirmer(null);
+        clearSessionGrants();
+      });
+
+      it('runs the command when the user approves', async () => {
+        vi.mocked(checkPermission).mockResolvedValue({ level: 'ask', reason: 'Confirmed by user' });
+        setConfirmer(async () => 'allow');
+
+        const output = await executeBash('echo approved-by-user');
+        expect(output).toContain('approved-by-user');
+      });
+
+      it('refuses the command when the user declines', async () => {
+        vi.mocked(checkPermission).mockResolvedValue({ level: 'ask', reason: 'User said no' });
+        setConfirmer(async () => 'deny');
+
+        await expect(executeBash('echo should-not-run')).rejects.toThrow(/PERMISSION REQUIRED/);
+      });
+
+      it('only prompts once when the user grants the whole session', async () => {
+        vi.mocked(checkPermission).mockResolvedValue({ level: 'ask', reason: 'Session grant' });
+        const confirmer = vi.fn(async () => 'allow-session' as const);
+        setConfirmer(confirmer);
+
+        // Grants are per-subject: repeating the *same* command must not re-prompt.
+        await executeBash('echo session-granted');
+        await executeBash('echo session-granted');
+        expect(confirmer).toHaveBeenCalledTimes(1);
+      });
+
+      it('re-prompts for a different command in the same session', async () => {
+        vi.mocked(checkPermission).mockResolvedValue({ level: 'ask', reason: 'Per-subject grant' });
+        const confirmer = vi.fn(async () => 'allow-session' as const);
+        setConfirmer(confirmer);
+
+        await executeBash('echo first-command');
+        await executeBash('echo second-command');
+        expect(confirmer).toHaveBeenCalledTimes(2);
+      });
+
+      it('still refuses when the prompter itself fails', async () => {
+        vi.mocked(checkPermission).mockResolvedValue({ level: 'ask', reason: 'Broken prompter' });
+        setConfirmer(async () => {
+          throw new Error('no UI available');
+        });
+
+        await expect(executeBash('echo boom')).rejects.toThrow(/PERMISSION REQUIRED/);
+      });
+
+      it('does not prompt at all for allow-level commands', async () => {
+        vi.mocked(checkPermission).mockResolvedValue({ level: 'allow' });
+        const confirmer = vi.fn(async () => 'deny' as const);
+        setConfirmer(confirmer);
+
+        await executeBash('echo no-prompt-expected');
+        expect(confirmer).not.toHaveBeenCalled();
+      });
     });
 
     it('should cache permission results within TTL', async () => {

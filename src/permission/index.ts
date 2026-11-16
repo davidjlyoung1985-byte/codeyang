@@ -4,7 +4,7 @@
  * Three levels per operation:
  *   - "allow" — execute without confirmation
  *   - "deny"  — block with error message
- *   - "ask"   — ask user via Question tool (default for dangerous ops)
+ *   - "ask"   — prompt the user for a decision (see permission/confirmation.ts)
  *
  * Rules are stored in ~/.codeyang/permissions.json and checked at runtime.
  *
@@ -41,12 +41,12 @@ const DEFAULT_CONFIG: PermissionConfig = {
     // `*` / `?` are wildcards. Each pattern is tested against the whole command
     // AND against every `;`/`&&`/`|` separated segment (tools/commandSubjects.ts).
     //
-    // IMPORTANT — `ask` is NOT a prompt. Nothing implements interactive
-    // confirmation, so `ask` behaves exactly like `deny` (BashTool throws).
-    // Rules are therefore limited to operations that are unrecoverable or have
-    // no legitimate use for a coding agent. Routine work — `git reset --hard`,
-    // `git clean -fd`, `rm -rf node_modules`, `chown -R`, `dd` to a file — must
-    // stay allowed, otherwise the agent cannot do its job at all.
+    // IMPORTANT — `ask` prompts the user (see permission/confirmation.ts) and
+    // fails closed when there is no TTY. Rules are limited to operations that
+    // are unrecoverable or have no legitimate use for a coding agent. Routine
+    // work — `git reset --hard`, `git clean -fd`, `rm -rf node_modules`,
+    // `chown -R`, `dd` to a file — must stay allowed, otherwise the agent
+    // cannot do its job at all.
     //
     // Recursive delete is decided by `isDangerousRmTarget()` (see below) rather
     // than by pattern: `rm -rf dist` is fine, `rm -rf /` is not.
@@ -89,12 +89,159 @@ const DEFAULT_CONFIG: PermissionConfig = {
 
 let cachedConfig: PermissionConfig | null = null;
 
+/** Schema version written by this build. Bump when DEFAULT_CONFIG changes. */
+const CURRENT_VERSION = 3;
+
+/**
+ * Patterns that older builds shipped as built-in defaults but the current
+ * table no longer contains.
+ *
+ * Two sources of noise have to be recognised by name, because there is no
+ * `builtin` marker in old configs:
+ *   - `rm -rf*` and friends: v3 decides recursive deletes by target path
+ *     (`dangerousRmReason`), so the pattern is gone from the table entirely.
+ *   - single-`*` file/network catch-alls: an even older default that never
+ *     matched any path containing a separator. v2 already replaced it with `**`,
+ *     but configs written before that still carry it.
+ *
+ * NOTE: shipped defaults have not been spelled consistently — some builds wrote
+ * `rm -rf*`, others `rm -rf *` (with a space, so the pattern only matched when
+ * an argument followed). Both spellings must be listed or the stale rule
+ * survives migration and keeps shadowing the path-based check.
+ */
+const STALE_BUILTIN_PATTERNS = new Set([
+  // Recursive delete — superseded by dangerousRmReason().
+  'rm -rf*',
+  'rm -rf *',
+  'rm -fr*',
+  'rm -fr *',
+  'rm -Rf*',
+  'rm -fR*',
+  'rm -r -f*',
+  'rm -f -r*',
+  'rm --recursive*',
+  'rm --force*',
+  // Other patterns that were added and then withdrawn as too broad.
+  'git reset --hard*',
+  'git reset --hard *',
+  'git clean -*',
+  'git clean - *',
+  'dd *',
+  'shred*',
+  'chmod -R 777*',
+  'chown -R*',
+  // Catch-alls from older schemas.
+  '*', // single-star file/network catch-all (pre-v2)
+  'sudo *', // spaced spelling, replaced by the anchored `sudo*`
+  'curl *| sh',
+  'curl *| bash',
+  'wget *| sh',
+  'wget *| bash',
+  '> /dev/sd*', // unanchored-at-start spelling, replaced by `*> /dev/sd*`
+]);
+
+/**
+ * Bring an older config up to CURRENT_VERSION.
+ *
+ * Returns the migrated config, or `null` when nothing needs to change.
+ * User-authored rules keep their original order; stale built-ins are dropped
+ * and the current built-ins appended.
+ */
+export function migrateConfig(parsed: PermissionConfig): PermissionConfig | null {
+  const from = parsed.version ?? 1;
+  if (from >= CURRENT_VERSION) return null;
+
+  const currentBuiltinKeys = new Set(DEFAULT_CONFIG.rules.map((r) => `${r.category}\u0000${r.pattern}`));
+  const currentBuiltinFullKeys = new Set(
+    DEFAULT_CONFIG.rules.map((r) => `${r.category}\u0000${r.pattern}\u0000${r.level}`),
+  );
+
+  const userRules = parsed.rules.filter((rule) => {
+    if (!rule || typeof rule.pattern !== 'string') return false;
+
+    // A `deny` always survives — including a *stale built-in* the user has
+    // tightened. There is no `builtin` marker, so a deny on a retired pattern
+    // is indistinguishable from a user who deliberately hardened it. Keeping it
+    // costs nothing (the pattern simply never matches anything new) while
+    // dropping it could silently unlock something the user locked down.
+    if (rule.level === 'deny') return true;
+
+    // Non-deny rules: drop stale built-ins, then drop anything the current
+    // table already provides (it is re-appended below).
+    if (STALE_BUILTIN_PATTERNS.has(rule.pattern)) return false;
+    return !currentBuiltinKeys.has(`${rule.category}\u0000${rule.pattern}`);
+  });
+
+  // Dedupe on (category, pattern, level). A config that accumulated thousands
+  // of identical entries costs real time on every permission check.
+  const seen = new Set<string>();
+  const dedupedUser: PermissionRule[] = [];
+  for (const rule of userRules) {
+    const fullKey = `${rule.category}\u0000${rule.pattern}\u0000${rule.level}`;
+    if (seen.has(fullKey)) continue;
+    seen.add(fullKey);
+    // An exact match for a rule we are about to append adds nothing.
+    if (currentBuiltinFullKeys.has(fullKey) && rule.level !== 'deny') continue;
+    dedupedUser.push(rule);
+  }
+
+  const seenFinal = new Set<string>();
+  const finalRules: PermissionRule[] = [];
+  for (const rule of [...dedupedUser, ...DEFAULT_CONFIG.rules]) {
+    const fullKey = `${rule.category}\u0000${rule.pattern}\u0000${rule.level}`;
+    if (seenFinal.has(fullKey)) continue;
+    seenFinal.add(fullKey);
+    finalRules.push(rule);
+  }
+
+  return { version: CURRENT_VERSION, rules: finalRules };
+}
+
+/** Write a timestamped copy of the pre-migration config next to the original. */
+async function backupConfig(raw: string): Promise<void> {
+  try {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    await writeFile(codeyangPath(`permissions.json.bak-${stamp}`), raw);
+  } catch {
+    // A failed backup must not block the migration; the caller already holds
+    // the parsed content in memory.
+  }
+}
+
 /**
  * Absolute paths whose recursive deletion would damage the machine (or the
  * user's other work) rather than just the project being worked on.
  */
 const SYSTEM_ROOT_PATTERN =
   /^\/(etc|usr|bin|sbin|lib|lib64|boot|sys|proc|dev|var|opt|root|home|srv|run|snap)(\/|$)/;
+
+/**
+ * Top-level directories that must never be deleted wholesale. A *subdirectory*
+ * of /tmp is fine (`rm -rf /tmp/build-cache`), but `rm -rf /tmp` is not.
+ */
+const TOP_LEVEL_SYSTEM_DIRS = new Set([
+  '/',
+  '/etc',
+  '/usr',
+  '/bin',
+  '/sbin',
+  '/lib',
+  '/lib64',
+  '/boot',
+  '/sys',
+  '/proc',
+  '/dev',
+  '/var',
+  '/opt',
+  '/root',
+  '/home',
+  '/srv',
+  '/run',
+  '/snap',
+  '/tmp',
+  '/mnt',
+  '/media',
+]);
 
 /**
  * Decide whether a `rm` command is dangerous, based on *what it targets* rather
@@ -141,16 +288,41 @@ export function dangerousRmReason(command: string): string | null {
     if (/^~\/?\*?$/.test(target) || /^\$HOME\/?\*?$/.test(target) || /^\/root\/?\*?$/.test(target)) {
       return 'Refusing to recursively delete the home directory';
     }
-    // System directories (/etc, /usr, ...)
+    // Deleting a whole top-level system directory (but not a subdirectory of
+    // /tmp, where scratch work legitimately happens).
+    if (TOP_LEVEL_SYSTEM_DIRS.has(target)) {
+      return `Refusing to recursively delete system path ${target}`;
+    }
+    // Anything inside a system directory (/etc/nginx, /usr/local, ...)
     if (SYSTEM_ROOT_PATTERN.test(target)) {
       return `Refusing to recursively delete system path ${target}`;
     }
-    // Unresolved glob at the root, e.g. `rm -rf /tmp/*` is fine but `/ *` is not.
+    // Unresolved glob at the root, e.g. `rm -rf / *`
     if (/^\/\*/.test(target)) {
       return 'Refusing to recursively delete everything under /';
     }
   }
 
+  return null;
+}
+
+/**
+ * `dd of=X` writes to X. When X is a block device this is unrecoverable, and
+ * unlike a shell redirect (`cat x > /dev/sda`) there is no `>` for the pattern
+ * table to match — so it needs its own check.
+ */
+export function dangerousDdReason(command: string): string | null {
+  const trimmed = command.trim();
+  const head = trimmed.split(/\s+/)[0] ?? '';
+  if (!/(^|\/)dd$/.test(head)) return null;
+
+  const ofMatch = trimmed.match(/\bof=("[^"]*"|'[^']*'|\S+)/);
+  if (!ofMatch) return null;
+
+  const target = ofMatch[1].replace(/^['"]|['"]$/g, '');
+  if (/^\/dev\/(sd|nvme|hd|mmcblk|disk|vd|xvd)/.test(target)) {
+    return `Refusing to write to block device ${target}`;
+  }
   return null;
 }
 
@@ -190,7 +362,17 @@ async function loadConfig(): Promise<PermissionConfig> {
     throw new Error(`[permission] ${CONFIG_PATH} is malformed: expected a "rules" array.`);
   }
 
-  cachedConfig = { version: parsed.version ?? 2, rules: parsed.rules };
+  const migrated = migrateConfig(parsed);
+  if (migrated) {
+    // Back up before rewriting: this file holds the user's own deny rules, and
+    // losing them is worse than any migration bug.
+    await backupConfig(raw);
+    await writeFile(CONFIG_PATH, JSON.stringify(migrated, null, 2));
+    cachedConfig = migrated;
+    return cachedConfig;
+  }
+
+  cachedConfig = { version: parsed.version ?? CURRENT_VERSION, rules: parsed.rules };
   return cachedConfig;
 }
 
@@ -202,17 +384,8 @@ export async function checkPermission(
   category: PermissionRule['category'],
   input: string,
 ): Promise<{ level: PermissionLevel; reason?: string }> {
-  // Recursive delete is judged by target path, not by pattern — see
-  // dangerousRmReason(). This must run before the rule table so that a user
-  // rule cannot accidentally allow `rm -rf /`.
-  if (category === 'bash') {
-    const rmReason = dangerousRmReason(input);
-    if (rmReason) {
-      return { level: 'ask', reason: rmReason };
-    }
-  }
-
-  // Check env overrides first
+  // Check env overrides first — they are the user's explicit opt-out, so they
+  // must run before the built-in path checks below.
   if (category === 'bash') {
     if (process.env['CODEYANG_PERMIT_RM'] === 'allow' && /rm\s+-rf/i.test(input)) {
       return { level: 'allow', reason: 'Env override: CODEYANG_PERMIT_RM' };
@@ -222,6 +395,19 @@ export async function checkPermission(
     }
     if (process.env['CODEYANG_PERMIT_FORCE'] === 'allow' && /git\s+push\s+(-f|--force)/i.test(input)) {
       return { level: 'allow', reason: 'Env override: CODEYANG_PERMIT_FORCE' };
+    }
+
+    // Built-in, path-aware safety checks. These run before the rule table so a
+    // broad user rule cannot accidentally allow `rm -rf /` or `dd of=/dev/sda`.
+    // They are judged by *target*, not by flag spelling: `rm -rf dist` is fine,
+    // `rm -rf /` is not.
+    const rmReason = dangerousRmReason(input);
+    if (rmReason) {
+      return { level: 'ask', reason: rmReason };
+    }
+    const ddReason = dangerousDdReason(input);
+    if (ddReason) {
+      return { level: 'ask', reason: ddReason };
     }
   }
 

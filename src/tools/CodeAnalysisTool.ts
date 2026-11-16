@@ -7,6 +7,19 @@ import type * as t from '@babel/types';
 import { parse as acornParse } from 'acorn';
 import * as acornWalk from 'acorn-walk';
 import { ESLint } from 'eslint';
+import { resolveSafePath } from './shared.js';
+
+/**
+ * Resolve an analysis target through the same sandbox check Read/Write use.
+ *
+ * These helpers used a bare `path.resolve(filePath)`, so under CODEX_SANDBOX a
+ * session could analyse — and thereby read — any file on the machine. The
+ * output is structural rather than verbatim, but `Lines:`/`Functions:`/
+ * `bodyLength` on an arbitrary path is still an information leak.
+ */
+function safeResolve(filePath: string): string {
+  return resolveSafePath(path.resolve(filePath));
+}
 
 // ── AST Results Cache (mtime-based invalidation) ────────────────────
 // Avoids re-parsing/re-analyzing the same file within a session when unchanged.
@@ -41,7 +54,7 @@ export function clearCache(): void {
  */
 function cacheKey(filePath: string): string | null {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = safeResolve(filePath);
     const mtimeMs = statSync(absPath).mtimeMs;
     return `${absPath}@${mtimeMs}`;
   } catch {
@@ -78,7 +91,7 @@ export async function executeParseAst(
   language: 'javascript' | 'typescript' = 'javascript',
 ): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = safeResolve(filePath);
     if (!existsSync(absPath)) {
       return `Error: File does not exist: ${filePath}`;
     }
@@ -119,6 +132,10 @@ export async function executeParseAst(
     return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    // SECURITY: a sandbox refusal must propagate. Folding it into a
+    // "Error ...:" string lets the model treat a blocked path as a retryable
+    // tool error and try a different path instead of stopping.
+    if (msg.includes("[Security]") || msg.includes("Path traversal blocked")) throw err;
     return `Error parsing AST: ${msg}`;
   }
 }
@@ -131,7 +148,7 @@ export async function executeAnalyzeCode(
   language: 'javascript' | 'typescript' = 'javascript',
 ): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = safeResolve(filePath);
     if (!existsSync(absPath)) {
       return `Error: File does not exist: ${filePath}`;
     }
@@ -243,6 +260,10 @@ export async function executeAnalyzeCode(
     return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    // SECURITY: a sandbox refusal must propagate. Folding it into a
+    // "Error ...:" string lets the model treat a blocked path as a retryable
+    // tool error and try a different path instead of stopping.
+    if (msg.includes("[Security]") || msg.includes("Path traversal blocked")) throw err;
     return `Error analyzing code: ${msg}`;
   }
 }
@@ -252,7 +273,7 @@ export async function executeAnalyzeCode(
  */
 export async function executeComplexity(filePath: string): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = safeResolve(filePath);
     if (!existsSync(absPath)) {
       return `Error: File does not exist: ${filePath}`;
     }
@@ -359,6 +380,10 @@ export async function executeComplexity(filePath: string): Promise<string> {
     return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    // SECURITY: a sandbox refusal must propagate. Folding it into a
+    // "Error ...:" string lets the model treat a blocked path as a retryable
+    // tool error and try a different path instead of stopping.
+    if (msg.includes("[Security]") || msg.includes("Path traversal blocked")) throw err;
     return `Error calculating complexity: ${msg}`;
   }
 }
@@ -377,7 +402,7 @@ function getComplexityRating(complexity: number, functions: number): string {
  */
 export async function executeLint(filePath: string, fix = false): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = safeResolve(filePath);
     if (!existsSync(absPath)) {
       return `Error: File does not exist: ${filePath}`;
     }
@@ -507,7 +532,7 @@ export async function executeFindDeps(projectDir: string): Promise<string> {
  */
 export async function executeCountLines(filePath: string): Promise<string> {
   try {
-    const absPath = path.resolve(filePath);
+    const absPath = safeResolve(filePath);
     if (!existsSync(absPath)) {
       return `Error: File does not exist: ${filePath}`;
     }

@@ -186,7 +186,7 @@ export class MetricsCollector {
     }
 
     // Reset histograms after export (keep counters and gauges)
-    for (const [key, metric] of this.metrics.entries()) {
+    for (const metric of this.metrics.values()) {
       if (metric.type === 'histogram') {
         metric.values = [];
       }
