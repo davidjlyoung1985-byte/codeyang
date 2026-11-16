@@ -4,6 +4,7 @@
  */
 import { execa } from 'execa';
 import { checkPermission } from '../permission/index.js';
+import { extractCommandSubjects } from './commandSubjects.js';
 
 // Dangerous PowerShell patterns
 const DANGEROUS_PATTERNS: RegExp[] = [
@@ -21,6 +22,12 @@ export async function executePowerShell(command: string, cwd?: string, timeoutSe
   // SECURITY: ALLOW prefix removed - same fix as BashTool
   // All commands must go through permission system
 
+  // An empty command has nothing to run; spawning powershell.exe for it just
+  // costs a process (and used to hang for the full timeout).
+  if (!command.trim()) {
+    throw new Error('[SAFETY] Empty PowerShell command.');
+  }
+
   // Security: always check dangerous patterns
   // (these are hard safety boundaries that cannot be bypassed)
   for (const pattern of DANGEROUS_PATTERNS) {
@@ -31,11 +38,14 @@ export async function executePowerShell(command: string, cwd?: string, timeoutSe
     }
   }
 
-  // Check permission system for all commands
-  const segments = command.split(/[\s;|&]+/).filter(Boolean);
-  for (const segment of segments) {
-    const firstWord = segment.split(' ')[0];
-    const perm = await checkPermission('bash', firstWord);
+  // Check permission system for all commands.
+  //
+  // SECURITY: check each subject in full, not just its first word. Rules are
+  // written against whole commands (`rm -rf*`, `git push --force*`), so passing
+  // only `rm` or `git` would let every one of them through unconfirmed.
+  const subjects = new Set<string>(extractCommandSubjects(command));
+  for (const subject of subjects) {
+    const perm = await checkPermission('bash', subject);
     if (perm.level === 'deny') {
       throw new Error(`[PERMISSION DENIED] ${perm.reason || 'Command not permitted.'}`);
     }

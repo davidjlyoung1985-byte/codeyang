@@ -258,6 +258,27 @@ describe('NetworkTool', () => {
       expect(result).toContain('Response Time:');
     });
 
+    // ── Regression: IPv6 literals reach executeCheckUrl ──
+    //
+    // NetworkTool used to keep its own `isDangerousIPv6` with literal prefixes
+    // ('fc00:', 'ff00:'), which missed fc01::1 and never unwrapped
+    // IPv4-mapped addresses. `verifyDnsBeforeRequest` also skipped IPv6
+    // entirely, so executeCheckUrl would happily HEAD an internal address.
+    describe('regression: IPv6 literals are rejected', () => {
+      it.each([
+        'http://[::1]/',
+        'http://[fd00::1]/',
+        'http://[fc01::1]/',
+        'http://[fe80::1]/',
+        'http://[ff02::1]/',
+        'http://[::ffff:127.0.0.1]/',
+      ])('refuses to check %s', async (url) => {
+        const result = await executeCheckUrl(url);
+        expect(result).not.toContain('Accessible: Yes');
+        expect(mockedAxios.head).not.toHaveBeenCalled();
+      });
+    });
+
     it('should check inaccessible URL (404)', async () => {
       // validateStatus: () => true means 404 resolves, not rejects
       mockedAxios.head.mockResolvedValue({

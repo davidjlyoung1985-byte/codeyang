@@ -3,6 +3,7 @@ import { checkPermission } from '../permission/index.js';
 import { auditLog } from '../utils/sessionStore.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { Sandbox } from '../sandbox/index.js';
+import { extractCommandSubjects } from './commandSubjects.js';
 
 // User-customizable deny list from env var (comma-separated words)
 const DENY_LIST = (process.env['CODEYANG_DENY_COMMANDS'] || '')
@@ -13,6 +14,24 @@ const DENY_LIST = (process.env['CODEYANG_DENY_COMMANDS'] || '')
 /** Permission cache: avoids redundant async checkPermission calls within TTL. */
 const permissionCache = new Map<string, { level: string; timestamp: number }>();
 const PERMISSION_CACHE_TTL = 5_000; // 5 seconds (short TTL to avoid stale cached permissions)
+/** Hard cap so a long session cannot grow the cache without bound. */
+const PERMISSION_CACHE_MAX = 512;
+
+function cachePermission(subject: string, level: string): void {
+  if (permissionCache.size >= PERMISSION_CACHE_MAX) {
+    // Cheap eviction: drop the oldest insertion. The TTL is 5s, so a FIFO
+    // eviction can only ever cost one extra async check.
+    const oldest = permissionCache.keys().next();
+    if (!oldest.done) permissionCache.delete(oldest.value);
+  }
+  permissionCache.set(subject, { level, timestamp: Date.now() });
+}
+
+/** Combine two permission levels, keeping the most restrictive one. */
+function worseLevel(a: string, b: string): string {
+  const rank: Record<string, number> = { deny: 3, ask: 2, allow: 1 };
+  return (rank[b] ?? 0) > (rank[a] ?? 0) ? b : a;
+}
 
 /**
  * Check if a command matches any deny-listed word.
@@ -185,33 +204,31 @@ export async function executeBash(
     throw new Error(`[SAFETY] Command blocked by deny list.`);
   }
 
-  // Check permission system for all commands
-  // SECURITY: Also extract commands from backtick `cmd` and $() subshells
-  // to prevent permission bypass via command substitution
-  const baseCommands = command
-    .replace(/`([^`]+)`/g, (_, inner) => inner) // backtick substitution
-    .replace(/\$\(([^)]+)\)/g, (_, inner) => inner) // $() substitution
-    .replace(/[;&|`$()<>{}[\]]+/g, ' ') // replace metacharacters with spaces
-    .split(/\s+/)
-    .filter(Boolean);
-  const seenCommands = new Set<string>();
-  for (const segment of baseCommands) {
-    const firstWord = segment.split(' ')[0].trim();
-    if (!firstWord || seenCommands.has(firstWord)) continue;
-    seenCommands.add(firstWord);
-    // Check permission cache first
-    const cached = permissionCache.get(firstWord);
+  // Check permission system for all commands.
+  //
+  // SECURITY: every subject is matched against the rules *in full*. An earlier
+  // version split the command on whitespace and passed only the first word to
+  // checkPermission(), so rules written against a whole command (`rm -rf*`,
+  // `git push --force*`, `curl*|*sh`) never matched and those commands ran
+  // without confirmation.
+  let worstPermissionLevel = 'allow';
+  for (const subject of extractCommandSubjects(command)) {
+    const cached = permissionCache.get(subject);
     if (cached && Date.now() - cached.timestamp < PERMISSION_CACHE_TTL) {
+      worstPermissionLevel = worseLevel(worstPermissionLevel, cached.level);
       if (cached.level === 'deny') {
         throw new Error(`[PERMISSION DENIED] This command is not permitted.`);
       }
       if (cached.level === 'ask') {
         throw new Error(`[PERMISSION REQUIRED] This operation needs user confirmation.`);
       }
-      continue; // 'allow' — cache hit, skip async check
+      continue;
     }
-    const perm = await checkPermission('bash', firstWord);
-    permissionCache.set(firstWord, { level: perm.level, timestamp: Date.now() });
+
+    const perm = await checkPermission('bash', subject);
+    cachePermission(subject, perm.level);
+    worstPermissionLevel = worseLevel(worstPermissionLevel, perm.level);
+
     if (perm.level === 'deny') {
       throw new Error(`[PERMISSION DENIED] ${perm.reason || 'This command is not permitted.'}`);
     }
@@ -222,7 +239,7 @@ export async function executeBash(
 
   // ── Sandbox (L3)分流: 高危命令走沙箱隔离 ──
   // 检查是否需要沙箱执行
-  const lastPermLevel = seenCommands.size > 0 ? permissionCache.get([...seenCommands][0])?.level || 'allow' : 'allow';
+  const lastPermLevel = worstPermissionLevel;
 
   if (shouldUseSandbox(command, lastPermLevel)) {
     void auditLog({

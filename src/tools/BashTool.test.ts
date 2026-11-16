@@ -102,6 +102,47 @@ describe('BashTool', () => {
       const callsAfterSecond = vi.mocked(checkPermission).mock.calls.length;
       expect(callsAfterSecond).toBe(1);
     }, 10000);
+
+    // ── Regression: the permission subject must be the whole command ──
+    //
+    // BashTool used to pass only the first word of each whitespace-separated
+    // token to checkPermission(), so a rule written against a whole command
+    // (`rm -rf*`, `git push --force*`, `curl*|*sh`) never matched and those
+    // commands ran unconfirmed. These tests assert on the subject that reaches
+    // the rules, which is the property that actually broke.
+    describe('regression: full command reaches the permission rules', () => {
+      it('checks `rm -rf /` as a whole, not just `rm`', async () => {
+        vi.mocked(checkPermission).mockResolvedValue({ level: 'allow' });
+        await executeBash('rm -rf /tmp/nonexistent-audit-target').catch(() => undefined);
+        const subjects = vi.mocked(checkPermission).mock.calls.map((c) => c[1]);
+        expect(subjects).toContain('rm -rf /tmp/nonexistent-audit-target');
+      });
+
+      it('blocks a destructive command when the rule matches the full command', async () => {
+        // Reject any subject that is the whole `rm -rf` command.
+        vi.mocked(checkPermission).mockImplementation(async (_cat, subject) =>
+          subject.startsWith('rm -rf') ? { level: 'ask', reason: 'Recursive force delete' } : { level: 'allow' },
+        );
+        await expect(executeBash('rm -rf /tmp/nonexistent-audit-target')).rejects.toThrow(/PERMISSION REQUIRED/);
+      });
+
+      it('checks every segment of a compound command', async () => {
+        vi.mocked(checkPermission).mockResolvedValue({ level: 'allow' });
+        await executeBash('echo a && echo b').catch(() => undefined);
+        const subjects = vi.mocked(checkPermission).mock.calls.map((c) => c[1]);
+        expect(subjects).toContain('echo a');
+        expect(subjects).toContain('echo b');
+      });
+
+      it('rejects a compound command when only a later segment is denied', async () => {
+        vi.mocked(checkPermission).mockImplementation(async (_cat, subject) =>
+          subject.includes('rm -rf') ? { level: 'deny', reason: 'blocked' } : { level: 'allow' },
+        );
+        await expect(executeBash('echo harmless && rm -rf /tmp/nonexistent-audit-target')).rejects.toThrow(
+          /PERMISSION DENIED/,
+        );
+      });
+    });
   });
 
   describe('edge cases', () => {

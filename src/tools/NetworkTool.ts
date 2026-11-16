@@ -16,59 +16,22 @@ if (axios.defaults) {
 
 // ── SSRF / URL validation ────────────────────────────────────────
 
-/** Private / loopback / dangerous IP ranges (for IPv4) */
-const DANGEROUS_IPV4_RANGES = [
-  { prefix: '10.', mask: 8 }, // 10.0.0.0/8
-  { prefix: '172.16.', mask: 12 }, // 172.16.0.0/12
-  { prefix: '192.168.', mask: 16 }, // 192.168.0.0/16
-  { prefix: '127.', mask: 8 }, // 127.0.0.0/8 loopback
-  { prefix: '169.254.', mask: 16 }, // 169.254.0.0/16 link-local
-  { prefix: '0.', mask: 8 }, // 0.0.0.0/8
-];
+/**
+ * Private / loopback / dangerous IP classification lives in `security/ssrf.ts`.
+ * This file used to carry its own duplicate copy (`isDangerousIPv4` /
+ * `isDangerousIPv6`) which drifted: its IPv6 list was a set of literal
+ * `startsWith` prefixes (`'fc00:'`, `'ff00:'`) that missed `fc01::1`, and it
+ * never unwrapped IPv4-mapped addresses like `::ffff:127.0.0.1`.
+ */
+import { isPrivateIP } from '../security/ssrf.js';
 
-/** Dangerous IPv6 ranges */
-const DANGEROUS_IPV6_PREFIXES = [
-  '::1', // loopback
-  'fc00:', // unique local
-  'fd00:', // unique local
-  'fe80:', // link-local
-  'ff00:', // multicast
-];
+/** Check if an IPv4/IPv6 address is private/loopback/link-local/metadata. */
+function isDangerousAddress(ip: string): boolean {
+  return isPrivateIP(ip);
+}
 
 /** Block dangerous URL schemes */
 const BLOCKED_SCHEMES = new Set(['file', 'ftp', 'telnet', 'gopher', 'dict', 'ssh', 'git']);
-
-/** Convert IPv4 dotted string to a 32-bit number for prefix matching. */
-function ipv4ToNumber(ip: string): number {
-  const parts = ip.split('.').map(Number);
-  return ((parts[0] ?? 0) << 24) | ((parts[1] ?? 0) << 16) | ((parts[2] ?? 0) << 8) | (parts[3] ?? 0);
-}
-
-/** Check if an IPv4 address falls within a CIDR range (prefix/length). */
-function isInRange(ip: string, prefix: string, maskLen: number): boolean {
-  const ipNum = ipv4ToNumber(ip);
-  const prefixNum = ipv4ToNumber(prefix);
-  const mask = ~0 << (32 - maskLen);
-  return (ipNum & mask) === (prefixNum & mask);
-}
-
-/** Check if an IPv4 address is private/loopback/link-local. */
-function isDangerousIPv4(ip: string): boolean {
-  if (!isIPv4(ip)) return false;
-  for (const range of DANGEROUS_IPV4_RANGES) {
-    if (isInRange(ip, range.prefix, range.mask)) return true;
-  }
-  return false;
-}
-
-/** Check if an IPv6 address is dangerous. */
-function isDangerousIPv6(ip: string): boolean {
-  const lower = ip.toLowerCase();
-  for (const prefix of DANGEROUS_IPV6_PREFIXES) {
-    if (lower.startsWith(prefix)) return true;
-  }
-  return false;
-}
 
 /**
  * 将 hostname DNS 解析为 IP，并检查是否指向内网。
@@ -117,10 +80,7 @@ async function resolveAndCheckHostname(host: string): Promise<string | null> {
 
   // 逐一检查每个解析到的 IP
   for (const addr of addresses) {
-    if (isIPv4(addr) && isDangerousIPv4(addr)) {
-      return `DNS resolved "${host}" to private IP ${addr} — access denied.`;
-    }
-    if (!isIPv4(addr) && isDangerousIPv6(addr)) {
+    if (isDangerousAddress(addr)) {
       return `DNS resolved "${host}" to private IP ${addr} — access denied.`;
     }
   }
@@ -176,7 +136,11 @@ export async function validateUrl(url: string): Promise<string | null> {
 
 /**
  * Verify DNS resolution before making the actual request (DNS rebinding protection).
- * This double-checks the hostname still resolves to safe IPs at request time.
+ *
+ * Re-runs the full literal + DNS check, not just the DNS half: this function is
+ * reachable on its own (see `executeCheckUrl`) and used to hand IPv6 literals
+ * straight back as "safe" because `resolveAndCheckHostname` returns early for
+ * bracketed hosts.
  */
 async function verifyDnsBeforeRequest(url: string): Promise<string | null> {
   let parsed: URL;
@@ -187,6 +151,12 @@ async function verifyDnsBeforeRequest(url: string): Promise<string | null> {
   }
 
   const host = parsed.hostname.toLowerCase();
+
+  // IPv6 literals never reach DNS (there is nothing to resolve), so they must be
+  // classified directly.
+  if (host.startsWith('[') || host === '::1' || host.includes(':')) {
+    return isDangerousAddress(host) ? `DNS rebinding detected: private address ${host}` : null;
+  }
 
   // Re-validate DNS to prevent rebinding attacks
   const dnsError = await resolveAndCheckHostname(host);

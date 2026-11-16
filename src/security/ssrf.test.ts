@@ -46,6 +46,55 @@ describe('SSRF Protection', () => {
       expect(() => validateUrl('not a url')).toThrow(/invalid url/i);
       expect(() => validateUrl('')).toThrow(/invalid url/i);
     });
+
+    // ── Regression: IPv6 literal handling ──
+    //
+    // Node's URL parser returns IPv6 hosts *with* brackets ("[::1]"), but the
+    // original patterns were written as /^::1$/, /^::ffff:/, /^fe80:/ etc. and
+    // therefore could never match. Every one of these URLs used to be allowed.
+    describe('regression: IPv6 literals are blocked', () => {
+      it.each([
+        'http://[::1]/',
+        'http://[::1]:8080/',
+        'http://[0:0:0:0:0:0:0:1]/',
+        'http://[::]/',
+        'http://[fe80::1]/',
+        'http://[fc00::1]/',
+        'http://[fd00::1]/',
+        'http://[ff02::1]/',
+      ])('blocks %s', (url) => {
+        expect(() => validateUrl(url)).toThrow(/private network/i);
+      });
+
+      it.each([
+        'http://[::ffff:127.0.0.1]/',
+        'http://[::ffff:7f00:1]/',
+        'http://[::ffff:192.168.1.1]/',
+        'http://[::ffff:a00:1]/',
+      ])('blocks IPv4-mapped IPv6 %s', (url) => {
+        expect(() => validateUrl(url)).toThrow(/private network/i);
+      });
+
+      it('blocks IPv4-mapped metadata address', () => {
+        expect(() => validateUrl('http://[::ffff:169.254.169.254]/latest/meta-data')).toThrow(/metadata|private/i);
+      });
+
+      it('still allows public IPv6 literals', () => {
+        expect(() => validateUrl('http://[2606:4700:4700::1111]/')).not.toThrow();
+      });
+    });
+
+    // ── Regression: integer / shorthand IPv4 notation ──
+    //
+    // WHATWG URL normalises these to dotted decimal, so they were already safe;
+    // this pins the behaviour so a future parser change cannot silently reopen
+    // the hole.
+    it.each(['http://2130706433/', 'http://0x7f000001/', 'http://127.1/', 'http://0/'])(
+      'blocks normalised shorthand notation %s',
+      (url) => {
+        expect(() => validateUrl(url)).toThrow(/private network/i);
+      },
+    );
   });
 
   describe('checkUrl', () => {
