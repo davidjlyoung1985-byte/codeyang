@@ -146,9 +146,17 @@ describe('MetricsCollector', () => {
     const snapshot = metrics.getMetrics();
     const key = Object.keys(snapshot).find((k) => k.includes('latency'));
 
-    expect(snapshot[key].p50).toBeCloseTo(50, -1);
-    expect(snapshot[key].p95).toBeCloseTo(95, -1);
-    expect(snapshot[key].p99).toBeCloseTo(99, -1);
+    // Linear interpolation (R-7 / Excel PERCENTILE.INC), which is what a
+    // latency percentile is normally taken to mean:
+    //   p50 of 10..100 -> 55   (midpoint between the 5th and 6th sample)
+    //   p95 of 10..100 -> 95.5
+    //   p99 of 10..100 -> 99.1
+    //
+    // The original assertions (50 / 95 / 99) matched a nearest-rank
+    // implementation that returned the *maximum* for p95 on ten samples.
+    expect(snapshot[key].p50).toBeCloseTo(55, 5);
+    expect(snapshot[key].p95).toBeCloseTo(95.5, 5);
+    expect(snapshot[key].p99).toBeCloseTo(99.1, 5);
   });
 });
 

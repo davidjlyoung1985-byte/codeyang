@@ -212,7 +212,10 @@ export class MetricsCollector {
     if (Object.keys(snapshot).length === 0) return;
 
     logger.info('[Metrics] Current metrics:');
-    for (const [, data] of Object.entries(snapshot)) {
+    // `name` was destructured away but still referenced in every log line, so
+    // exporting to console threw `ReferenceError: name is not defined` for any
+    // non-empty snapshot — the one path a user would hit first.
+    for (const [name, data] of Object.entries(snapshot)) {
       if (data.type === 'counter') {
         logger.info(`  ${name}: ${data.value} ${this.formatTags(data.tags)}`);
       } else if (data.type === 'histogram') {
@@ -253,11 +256,31 @@ export class MetricsCollector {
   /**
    * Calculate percentile
    */
+  /**
+   * Percentile via linear interpolation between ranks.
+   *
+   * The previous implementation used nearest-rank:
+   *   index = ceil(p/100 * n) - 1
+   * For n=10 and p=95 that is ceil(9.5)-1 = 9, the *maximum* value — so p95
+   * reported 100 for the sample 10..100 and the only safe reading was "p95 is
+   * either 95 or 100 depending on how many samples you took".
+   *
+   * The standard (R-7 / Excel PERCENTILE.INC) definition interpolates, which is
+   * what a latency percentile is expected to mean: p95 of 10..100 is 95.5.
+   */
   private percentile(values: number[], p: number): number {
     if (values.length === 0) return 0;
+    if (values.length === 1) return values[0];
+
     const sorted = [...values].sort((a, b) => a - b);
-    const index = Math.ceil((p / 100) * sorted.length) - 1;
-    return sorted[Math.max(0, index)];
+    const rank = (p / 100) * (sorted.length - 1);
+    const lower = Math.floor(rank);
+    const upper = Math.ceil(rank);
+
+    if (lower === upper) return sorted[lower];
+
+    const weight = rank - lower;
+    return sorted[lower] * (1 - weight) + sorted[upper] * weight;
   }
 
   /**

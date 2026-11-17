@@ -12,6 +12,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { resolveSafePath } from './shared.js';
 import { extractSymbols, searchContent } from '../utils/queryEngine.js';
 
 type LspAction = 'definition' | 'references' | 'hover' | 'symbols' | 'diagnostics';
@@ -135,9 +136,19 @@ export async function executeLsp(
   }
 }
 
+/**
+ * Resolve a path supplied by the model and read it, refusing to leave the
+ * working root.
+ *
+ * `readFileContent` used to take a bare `join(root, filePath)`, so
+ * `{ action: 'diagnostics', filePath: '../secrets.ts' }` read a file outside
+ * the project. The registry now guards path-like arguments, but this file is
+ * also reachable directly, so it validates here too.
+ */
 async function readFileContent(filePath: string): Promise<string | null> {
   try {
-    return await readFile(filePath, 'utf-8');
+    const safe = resolveSafePath(filePath);
+    return await readFile(safe, 'utf-8');
   } catch {
     return null;
   }
