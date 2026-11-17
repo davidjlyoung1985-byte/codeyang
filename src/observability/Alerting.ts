@@ -22,13 +22,13 @@ export interface Alert {
   title: string;
   message: string;
   source: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   fingerprint?: string; // For deduplication
 }
 
 export interface AlertRule {
   name: string;
-  condition: (data: any) => boolean;
+  condition: (data: unknown) => boolean;
   severity: AlertSeverity;
   message: string;
   cooldown?: number; // Milliseconds before re-alerting
@@ -36,7 +36,7 @@ export interface AlertRule {
 
 export interface AlertChannel {
   type: 'console' | 'email' | 'slack' | 'pagerduty' | 'webhook';
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 export interface AlertingOptions {
@@ -86,7 +86,7 @@ export class AlertingManager {
   /**
    * Evaluate all rules against data
    */
-  async evaluate(data: any): Promise<void> {
+  async evaluate(data: unknown): Promise<void> {
     for (const [name, rule] of this.rules.entries()) {
       try {
         if (rule.condition(data)) {
@@ -204,7 +204,7 @@ export class AlertingManager {
   /**
    * Send to Slack (placeholder)
    */
-  private async sendToSlack(alert: Alert, config: Record<string, any>): Promise<void> {
+  private async sendToSlack(alert: Alert, config: Record<string, unknown>): Promise<void> {
     // Placeholder for actual Slack implementation
     logger.info(
       `[Alerting] Would send Slack message to ${config.webhook}: ${alert.title} (color ${this._getSeverityColor(alert.severity)})`,
@@ -226,7 +226,7 @@ export class AlertingManager {
   /**
    * Send to PagerDuty (placeholder)
    */
-  private async sendToPagerDuty(alert: Alert, _config: Record<string, any>): Promise<void> {
+  private async sendToPagerDuty(alert: Alert, _config: Record<string, unknown>): Promise<void> {
     // Placeholder for actual PagerDuty implementation
     logger.info(`[Alerting] Would send PagerDuty event: ${alert.title}`);
     // Example:
@@ -249,7 +249,7 @@ export class AlertingManager {
   /**
    * Send to generic webhook
    */
-  private async sendToWebhook(alert: Alert, config: Record<string, any>): Promise<void> {
+  private async sendToWebhook(alert: Alert, config: Record<string, unknown>): Promise<void> {
     logger.info(`[Alerting] Would send webhook to ${config.url}: ${alert.title}`);
     // Example:
     // await fetch(config.url, {
@@ -321,8 +321,9 @@ export class AlertingManager {
     // High memory usage
     this.addRule({
       name: 'high_memory_usage',
-      condition: (data: HealthReport) => {
-        const memCheck = data.checks?.memory;
+      condition: (data: unknown) => {
+        const report = data as HealthReport;
+        const memCheck = report.checks?.memory;
         return memCheck?.status === 'unhealthy';
       },
       severity: AlertSeverity.WARNING,
@@ -332,8 +333,9 @@ export class AlertingManager {
     // Service unhealthy
     this.addRule({
       name: 'service_unhealthy',
-      condition: (data: HealthReport) => {
-        return data.status === 'unhealthy';
+      condition: (data: unknown) => {
+        const report = data as HealthReport;
+        return report.status === 'unhealthy';
       },
       severity: AlertSeverity.CRITICAL,
       message: 'Service health check failed',
@@ -342,11 +344,15 @@ export class AlertingManager {
     // High error rate
     this.addRule({
       name: 'high_error_rate',
-      condition: (data: any) => {
-        if (data.metrics?.error_rate !== undefined) {
-          return data.metrics.error_rate > 0.1; // 10%
-        }
-        return false;
+      condition: (data: unknown) => {
+        const report = data as HealthReport;
+        // HealthReport has no top-level `metrics`; the per-check record lives on
+        // `checks`. The previous version read `data.metrics.error_rate`, which
+        // was always undefined — so this rule could never fire. Read the rate
+        // out of the check metadata instead.
+        const errorCheck = report.checks?.error_rate;
+        const rate = errorCheck?.metadata?.['rate'];
+        return typeof rate === 'number' && rate > 0.1; // 10%
       },
       severity: AlertSeverity.ERROR,
       message: 'Error rate exceeds threshold (>10%)',

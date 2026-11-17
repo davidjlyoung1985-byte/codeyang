@@ -7,6 +7,30 @@
 
 import { logger } from '../utils/logger.js';
 
+/**
+ * One entry of a metrics snapshot. Each metric kind carries different fields,
+ * so this is a discriminated union rather than `any` — callers can narrow on
+ * `type` and get exhaustiveness checking.
+ */
+export type MetricSnapshotEntry =
+  | { type: 'counter'; value: number; tags?: MetricTags }
+  | {
+      type: 'histogram';
+      count: number;
+      sum: number;
+      min: number;
+      max: number;
+      avg: number;
+      p50: number;
+      p95: number;
+      p99: number;
+      tags?: MetricTags;
+    }
+  | { type: 'gauge'; value: number; tags?: MetricTags };
+
+/** Snapshot keyed by metric name. */
+export type MetricsSnapshot = Record<string, MetricSnapshotEntry>;
+
 export interface MetricsExporterConfig {
   type: 'prometheus' | 'datadog' | 'statsd' | 'console';
   endpoint?: string;
@@ -135,8 +159,8 @@ export class MetricsCollector {
   /**
    * Get current metrics snapshot
    */
-  getMetrics(): Record<string, any> {
-    const snapshot: Record<string, any> = {};
+  getMetrics(): MetricsSnapshot {
+    const snapshot: MetricsSnapshot = {};
 
     for (const [key, metric] of this.metrics.entries()) {
       if (metric.type === 'counter') {
@@ -196,7 +220,7 @@ export class MetricsCollector {
   /**
    * Export metrics to external service
    */
-  private async export(snapshot: Record<string, any>, config: MetricsExporterConfig): Promise<void> {
+  private async export(snapshot: MetricsSnapshot, config: MetricsExporterConfig): Promise<void> {
     if (config.type === 'console') {
       this.exportToConsole(snapshot);
     } else {
@@ -208,7 +232,7 @@ export class MetricsCollector {
   /**
    * Export to console
    */
-  private exportToConsole(snapshot: Record<string, any>): void {
+  private exportToConsole(snapshot: MetricsSnapshot): void {
     if (Object.keys(snapshot).length === 0) return;
 
     logger.info('[Metrics] Current metrics:');
@@ -298,7 +322,7 @@ export class MetricsCollector {
   /**
    * Format tags for display
    */
-  private formatTags(tags: MetricTags): string {
+  private formatTags(tags?: MetricTags): string {
     if (!tags || Object.keys(tags).length === 0) return '';
     return `{${Object.entries(tags)
       .map(([k, v]) => `${k}=${v}`)

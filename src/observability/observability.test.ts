@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { StructuredLogger, LogLevel } from './StructuredLogger.js';
 import { MetricsCollector } from './MetricsCollector.js';
 import { AlertingManager, AlertSeverity } from './Alerting.js';
@@ -200,11 +200,11 @@ describe('AlertingManager', () => {
   });
 
   it('should evaluate rules', async () => {
-    const ruleTriggered = false;
+    // (rule evaluation is asserted via alerting.evaluate below)
 
     alerting.addRule({
       name: 'test_rule',
-      condition: (data: any) => data.value > 100,
+      condition: (data: unknown) => (data as { value: number }).value > 100,
       severity: AlertSeverity.WARNING,
       message: 'Value exceeded threshold',
     });
