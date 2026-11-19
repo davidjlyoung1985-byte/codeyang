@@ -6,7 +6,21 @@
  * SSRF, and other security issues.
  */
 
-import { isAbsolute, normalize, resolve } from 'node:path';
+import { win32, posix } from 'node:path';
+
+/**
+ * Detect Windows-style absolute paths (drive letter or UNC) so the validator
+ * can pick the matching path flavor.
+ *
+ * A security validator must not change its verdict based on the host OS: the
+ * same input has to be judged the same way whether it runs on Linux, macOS or
+ * Windows. Using the bare `node:path` helpers (which alias win32 or posix
+ * depending on the host) made `validateFilePath('C:\\Users\\me\\f.ts')` return
+ * `false` on Linux and `true` on Windows.
+ */
+function isWindowsStylePath(p: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(p) || /^\\\\/.test(p);
+}
 
 /**
  * Validate file path for security issues
@@ -26,9 +40,6 @@ export function validateFilePath(path: string, allowedRoot?: string): boolean {
     return false;
   }
 
-  // Normalize the path first to resolve .. and .
-  const normalizedPath = normalize(path);
-
   // Check if normalization resulted in path traversal
   // After normalize, '..' should be resolved away
   // If the original path had '..', normalize would have changed it
@@ -36,8 +47,13 @@ export function validateFilePath(path: string, allowedRoot?: string): boolean {
     return false;
   }
 
+  // Pick the path flavor from the input, not from the host OS, so the verdict
+  // is identical on every platform.
+  const pathApi = isWindowsStylePath(path) ? win32 : posix;
+  const normalizedPath = pathApi.normalize(path);
+
   // Must be absolute path for security
-  if (!isAbsolute(normalizedPath)) {
+  if (!pathApi.isAbsolute(normalizedPath)) {
     return false;
   }
 
@@ -64,10 +80,13 @@ export function validateFilePath(path: string, allowedRoot?: string): boolean {
 
   // If allowedRoot specified, ensure path is within it
   if (allowedRoot) {
-    const resolvedRoot = resolve(allowedRoot);
-    const resolvedPath = resolve(normalizedPath);
+    const rootApi = isWindowsStylePath(allowedRoot) ? win32 : posix;
+    const resolvedRoot = rootApi.resolve(allowedRoot);
+    const resolvedPath = rootApi.resolve(normalizedPath);
 
-    if (!resolvedPath.startsWith(resolvedRoot)) {
+    // Compare with a separator so `/home/user2` does not pass a `/home/user` root.
+    const rootPrefix = resolvedRoot.endsWith(rootApi.sep) ? resolvedRoot : resolvedRoot + rootApi.sep;
+    if (resolvedPath !== resolvedRoot && !resolvedPath.startsWith(rootPrefix)) {
       return false;
     }
   }

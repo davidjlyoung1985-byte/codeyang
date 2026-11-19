@@ -11,6 +11,15 @@ vi.mock('./shared.js', () => ({
 
 import { executeLaunchApp } from './LaunchAppTool.js';
 
+/**
+ * An application present in BOTH the Windows and the Unix whitelist.
+ *
+ * `notepad` and `calc` only exist in ALLOWED_APPS_WINDOWS, so using them made
+ * this suite fail on Linux and macOS with "Application not in whitelist" —
+ * the tests were only ever run on Windows. `code` is in both sets.
+ */
+const CROSS_PLATFORM_APP = 'code';
+
 describe('LaunchAppTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -24,9 +33,9 @@ describe('LaunchAppTool', () => {
         exitCode: 0,
       } as unknown as ReturnType<typeof execa>);
 
-      const result = await executeLaunchApp('notepad');
+      const result = await executeLaunchApp(CROSS_PLATFORM_APP);
 
-      expect(result).toContain('Launched: notepad');
+      expect(result).toContain(`Launched: ${CROSS_PLATFORM_APP}`);
       expect(execa).toHaveBeenCalled();
     });
 
@@ -49,7 +58,7 @@ describe('LaunchAppTool', () => {
         exitCode: 0,
       } as unknown as ReturnType<typeof execa>);
 
-      const result = await executeLaunchApp('notepad', 'file.txt');
+      const result = await executeLaunchApp(CROSS_PLATFORM_APP, 'file.txt');
 
       expect(result).toContain('Launched');
     });
@@ -79,7 +88,7 @@ describe('LaunchAppTool', () => {
     });
 
     it('should reject arguments with shell metacharacters', async () => {
-      const result = await executeLaunchApp('notepad', 'file.txt;rm -rf /');
+      const result = await executeLaunchApp(CROSS_PLATFORM_APP, 'file.txt;rm -rf /');
 
       expect(result).toContain('Error: argument contains dangerous shell characters');
     });
@@ -170,7 +179,7 @@ describe('LaunchAppTool', () => {
         stdout: '',
       });
 
-      const result = await executeLaunchApp('notepad');
+      const result = await executeLaunchApp(CROSS_PLATFORM_APP);
 
       expect(result).toContain('Launch completed');
       expect(result).toContain('Application not found');
@@ -182,7 +191,7 @@ describe('LaunchAppTool', () => {
         code: 1,
       });
 
-      const result = await executeLaunchApp('calc');
+      const result = await executeLaunchApp(CROSS_PLATFORM_APP);
 
       expect(result).toContain('Timed out');
     });
@@ -194,7 +203,7 @@ describe('LaunchAppTool', () => {
         stdout: '',
       });
 
-      const result = await executeLaunchApp('notepad');
+      const result = await executeLaunchApp(CROSS_PLATFORM_APP);
 
       expect(result).toContain('Permission denied');
     });
@@ -206,7 +215,7 @@ describe('LaunchAppTool', () => {
         stdout: '',
       });
 
-      const result = await executeLaunchApp('notepad');
+      const result = await executeLaunchApp(CROSS_PLATFORM_APP);
 
       expect(result).toContain('Launch completed');
     });

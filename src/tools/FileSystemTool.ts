@@ -91,6 +91,20 @@ function isProtectedPath(absPath: string): boolean {
 }
 
 /**
+ * True when the *requested* path or its sandbox-resolved form is protected.
+ *
+ * Checking only the resolved form lets a foreign-style path slip through:
+ * `resolveSafePath('C:\\Windows')` on POSIX becomes `$PWD/C:\Windows`, which
+ * matches no entry in PROTECTED_PATHS, so an unambiguously protected system
+ * directory was silently treated as an ordinary project file. The mirror case
+ * (`/etc` on Windows) behaved the same way. Evaluating the raw input as well
+ * makes the guard OS-independent.
+ */
+function isProtectedTarget(rawPath: string, resolvedPath?: string): boolean {
+  return isProtectedPath(rawPath) || (resolvedPath !== undefined && isProtectedPath(resolvedPath));
+}
+
+/**
  * Copy a file or directory recursively
  */
 export async function executeCopy(sourcePath: string, destPath: string, overwrite = false): Promise<string> {
@@ -179,7 +193,7 @@ export async function executeMove(sourcePath: string, destPath: string, overwrit
   }
 
   // SECURITY: 防止移动到受保护的系统路径
-  if (isProtectedPath(absDest)) {
+  if (isProtectedTarget(destPath, absDest)) {
     throw new Error(`[SECURITY] Cannot move to protected system path: ${destPath}`);
   }
 
@@ -226,7 +240,7 @@ export async function executeDelete(targetPath: string, recursive = false, force
   // This must run BEFORE the existence check below. Otherwise a protected path
   // that happens not to exist on this platform (`/etc` on Windows) takes the
   // `force` early-return and is never evaluated at all.
-  if (isProtectedPath(absPath)) {
+  if (isProtectedTarget(targetPath, absPath)) {
     throw new Error(`[SECURITY] Cannot delete protected system path: ${targetPath}`);
   }
 
