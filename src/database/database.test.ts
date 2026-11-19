@@ -182,7 +182,7 @@ describe('DatabaseManager', () => {
 
   it('should support transactions', async () => {
     await db.transaction(() => {
-      db.saveSession({
+      void db.saveSession({
         id: 'session-1',
         userId: 'user-1',
         createdAt: Date.now(),

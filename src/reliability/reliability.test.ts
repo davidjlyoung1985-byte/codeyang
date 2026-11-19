@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SessionRecoveryManager } from './SessionRecovery.js';
 import { ErrorRecoveryManager, CircuitBreaker, CircuitState } from './ErrorRecovery.js';
 import { HealthChecker, HealthStatus } from './HealthChecker.js';

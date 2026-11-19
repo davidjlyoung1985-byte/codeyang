@@ -45,7 +45,9 @@ export class SessionRecoveryManager {
     this.autoSaveInterval = options.autoSaveInterval ?? 60_000; // 1 minute default
     this.maxCheckpoints = options.maxCheckpoints ?? 10;
     this.checkpointRetention = options.checkpointRetention ?? 7 * 24 * 60 * 60 * 1000; // 7 days
-    this.ensureCheckpointDir();
+    this.ensureCheckpointDir().catch((error: unknown) => {
+      logger.error('[SessionRecovery] Failed to create checkpoint directory:', error);
+    });
   }
 
   private async ensureCheckpointDir(): Promise<void> {

@@ -5,6 +5,7 @@
  * Compatible with log aggregation systems (ELK, Datadog, Splunk).
  */
 
+import { hostname } from 'node:os';
 import { logger as simpleLogger } from '../utils/logger.js';
 
 export enum LogLevel {
@@ -16,7 +17,7 @@ export enum LogLevel {
 }
 
 export interface LogContext {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface LogEntry {
@@ -110,8 +111,8 @@ export class StructuredLogger {
     };
 
     // Add trace context if available
-    if (context.traceId) entry.traceId = context.traceId;
-    if (context.spanId) entry.spanId = context.spanId;
+    if (typeof context.traceId === 'string') entry.traceId = context.traceId;
+    if (typeof context.spanId === 'string') entry.spanId = context.spanId;
 
     this.emit(entry);
   }
@@ -172,7 +173,7 @@ export class StructuredLogger {
             // Buffer for batch export
             this.logBuffer.push(entry);
             if (this.logBuffer.length >= (exporter.batchSize || 100)) {
-              this.flush();
+              void this.flush();
             }
             break;
         }
@@ -257,7 +258,7 @@ export class StructuredLogger {
   /**
    * Sanitize context to remove sensitive data
    */
-  private sanitizeContext(context: LogContext): LogContext {
+  private sanitizeContext(context: Record<string, unknown>): LogContext {
     const sanitized: LogContext = {};
     const sensitiveKeys = ['password', 'apiKey', 'token', 'secret', 'authorization'];
 
@@ -267,7 +268,7 @@ export class StructuredLogger {
         sanitized[key] = '***REDACTED***';
       } else if (typeof value === 'object' && value !== null) {
         // Recursively sanitize nested objects
-        sanitized[key] = this.sanitizeContext(value);
+        sanitized[key] = this.sanitizeContext(value as Record<string, unknown>);
       } else {
         sanitized[key] = value;
       }
@@ -301,7 +302,7 @@ export class StructuredLogger {
 
   private getHostname(): string {
     try {
-      return require('node:os').hostname();
+      return hostname();
     } catch {
       return 'unknown';
     }

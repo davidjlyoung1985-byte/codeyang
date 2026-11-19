@@ -274,7 +274,7 @@ export class HealthChecker {
             availableBlocks: stats.bavail,
           },
         };
-      } catch (error) {
+      } catch {
         // statfs not available on all platforms
         return {
           name: 'disk_space',

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { AuditLogger, AuditEventType, AuditSeverity } from './AuditLogger.js';
+import { AuditLogger, AuditSeverity } from './AuditLogger.js';
 import { DataProtection } from './DataProtection.js';
 import { InputValidator } from './InputValidator.js';
 import { existsSync } from 'node:fs';

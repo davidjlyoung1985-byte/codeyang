@@ -16,9 +16,9 @@ export interface ConcurrencyOptions {
   timeout?: number; // Per-operation timeout in ms
 }
 
-interface QueuedOperation<T> {
-  operation: () => Promise<T>;
-  resolve: (value: T) => void;
+interface QueuedOperation {
+  operation: () => Promise<unknown>;
+  resolve: (value: unknown) => void;
   reject: (error: Error) => void;
   priority: number;
   timeoutId?: NodeJS.Timeout;
@@ -33,7 +33,7 @@ export class ConcurrencyLimiter {
   private queueSize: number;
   private timeout: number;
   private running = 0;
-  private queue: QueuedOperation<unknown>[] = [];
+  private queue: QueuedOperation[] = [];
   private stats = {
     total: 0,
     completed: 0,
@@ -77,9 +77,9 @@ export class ConcurrencyLimiter {
     this.stats.queued++;
 
     return new Promise((resolve, reject) => {
-      const queued: QueuedOperation<T> = {
+      const queued: QueuedOperation = {
         operation,
-        resolve,
+        resolve: (value: unknown) => resolve(value as T),
         reject,
         priority,
         createdAt: Date.now(),

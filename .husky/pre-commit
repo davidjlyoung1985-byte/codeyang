@@ -1,3 +1,15 @@
-node .husky/secret-scan.mjs
-npx lint-staged
-npx tsc --noEmit
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running pre-commit checks..."
+
+# Block accidental secret commits
+node .husky/secret-scan.mjs || exit 1
+
+# Lint + format only the staged files (fast)
+npx lint-staged || exit 1
+
+# Type check the whole project (tsc has no staging-aware mode)
+npx tsc --noEmit || exit 1
+
+echo "Pre-commit checks passed"

@@ -1,7 +1,7 @@
 # Auto-detect text files and normalize line endings
 * text=auto
 
-# Source files — force LF
+# Source files - force LF
 *.ts text eol=lf
 *.tsx text eol=lf
 *.js text eol=lf
@@ -18,6 +18,8 @@
 
 # Shell scripts MUST be LF
 *.sh text eol=lf
+# Husky hooks are extensionless shell scripts - must stay LF or the hook breaks
+/.husky/** text eol=lf
 
 # Windows-specific
 *.bat text eol=crlf

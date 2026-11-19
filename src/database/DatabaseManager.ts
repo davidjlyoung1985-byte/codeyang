@@ -33,14 +33,14 @@ interface SessionRow {
   user_id: string;
   created_at: number;
   updated_at: number;
-  status: string;
+  status: 'active' | 'completed' | 'failed';
   metadata: string | null;
 }
 
 interface MessageRow {
   id: string;
   session_id: string;
-  role: string;
+  role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
   tokens: number | null;
@@ -261,7 +261,7 @@ export class DatabaseManager {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       status: row.status,
-      metadata: JSON.parse(row.metadata),
+      metadata: JSON.parse(row.metadata ?? '{}'),
     };
   }
 
@@ -283,7 +283,7 @@ export class DatabaseManager {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       status: row.status,
-      metadata: JSON.parse(row.metadata),
+      metadata: JSON.parse(row.metadata ?? '{}'),
     }));
   }
 
@@ -329,7 +329,7 @@ export class DatabaseManager {
       role: row.role,
       content: row.content,
       timestamp: row.timestamp,
-      tokens: row.tokens,
+      tokens: row.tokens ?? undefined,
       metadata: JSON.parse(row.metadata || '{}'),
     }));
   }
@@ -356,7 +356,7 @@ export class DatabaseManager {
       role: row.role,
       content: row.content,
       timestamp: row.timestamp,
-      tokens: row.tokens,
+      tokens: row.tokens ?? undefined,
       metadata: JSON.parse(row.metadata || '{}'),
     }));
   }
