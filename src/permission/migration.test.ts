@@ -123,7 +123,11 @@ describe('permission config migration', () => {
   it('drops malformed entries instead of crashing', () => {
     const result = migrateConfig({
       version: 2,
-      rules: [null, { pattern: 123 }, { pattern: 'ok', level: 'deny', category: 'bash' }] as unknown as PermissionRule[],
+      rules: [
+        null,
+        { pattern: 123 },
+        { pattern: 'ok', level: 'deny', category: 'bash' },
+      ] as unknown as PermissionRule[],
     });
     expect(result!.rules.some((r) => r.pattern === 'ok')).toBe(true);
   });

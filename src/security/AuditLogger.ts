@@ -150,12 +150,7 @@ export class AuditLogger {
   /**
    * Log a security event
    */
-  logSecurity(
-    user: string,
-    threat: string,
-    severity: AuditSeverity,
-    details?: Record<string, unknown>,
-  ): void {
+  logSecurity(user: string, threat: string, severity: AuditSeverity, details?: Record<string, unknown>): void {
     this.log({
       eventType: AuditEventType.SECURITY,
       severity,
@@ -354,7 +349,6 @@ export class AuditLogger {
   isEncryptionPending(): boolean {
     return this.enableEncryption;
   }
-
 
   /**
    * Generate unique ID

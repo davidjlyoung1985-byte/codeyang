@@ -135,7 +135,7 @@ export async function executeParseAst(
     // SECURITY: a sandbox refusal must propagate. Folding it into a
     // "Error ...:" string lets the model treat a blocked path as a retryable
     // tool error and try a different path instead of stopping.
-    if (msg.includes("[Security]") || msg.includes("Path traversal blocked")) throw err;
+    if (msg.includes('[Security]') || msg.includes('Path traversal blocked')) throw err;
     return `Error parsing AST: ${msg}`;
   }
 }
@@ -263,7 +263,7 @@ export async function executeAnalyzeCode(
     // SECURITY: a sandbox refusal must propagate. Folding it into a
     // "Error ...:" string lets the model treat a blocked path as a retryable
     // tool error and try a different path instead of stopping.
-    if (msg.includes("[Security]") || msg.includes("Path traversal blocked")) throw err;
+    if (msg.includes('[Security]') || msg.includes('Path traversal blocked')) throw err;
     return `Error analyzing code: ${msg}`;
   }
 }
@@ -383,7 +383,7 @@ export async function executeComplexity(filePath: string): Promise<string> {
     // SECURITY: a sandbox refusal must propagate. Folding it into a
     // "Error ...:" string lets the model treat a blocked path as a retryable
     // tool error and try a different path instead of stopping.
-    if (msg.includes("[Security]") || msg.includes("Path traversal blocked")) throw err;
+    if (msg.includes('[Security]') || msg.includes('Path traversal blocked')) throw err;
     return `Error calculating complexity: ${msg}`;
   }
 }

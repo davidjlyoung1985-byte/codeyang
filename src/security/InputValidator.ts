@@ -9,7 +9,6 @@
  * - Schema validation
  */
 
-
 export interface ValidationSchema {
   type: 'string' | 'number' | 'boolean' | 'object' | 'array';
   required?: boolean;
@@ -91,12 +90,7 @@ export class InputValidator {
   /**
    * Validate string
    */
-  private validateString(
-    input: string,
-    schema: ValidationSchema,
-    path: string,
-    result: ValidationResult,
-  ): void {
+  private validateString(input: string, schema: ValidationSchema, path: string, result: ValidationResult): void {
     if (schema.minLength !== undefined && input.length < schema.minLength) {
       result.valid = false;
       result.errors.push(`${path} must be at least ${schema.minLength} characters`);
@@ -116,12 +110,7 @@ export class InputValidator {
   /**
    * Validate number
    */
-  private validateNumber(
-    input: number,
-    schema: ValidationSchema,
-    path: string,
-    result: ValidationResult,
-  ): void {
+  private validateNumber(input: number, schema: ValidationSchema, path: string, result: ValidationResult): void {
     if (schema.min !== undefined && input < schema.min) {
       result.valid = false;
       result.errors.push(`${path} must be at least ${schema.min}`);
@@ -156,12 +145,7 @@ export class InputValidator {
   /**
    * Validate array
    */
-  private validateArray(
-    input: unknown[],
-    schema: ValidationSchema,
-    path: string,
-    result: ValidationResult,
-  ): void {
+  private validateArray(input: unknown[], schema: ValidationSchema, path: string, result: ValidationResult): void {
     if (schema.minLength !== undefined && input.length < schema.minLength) {
       result.valid = false;
       result.errors.push(`${path} must contain at least ${schema.minLength} items`);
@@ -226,7 +210,7 @@ export class InputValidator {
    */
   checkPathTraversal(path: string): boolean {
     const traversalPatterns = [
-      /\.\.[\/\\]/,  // ../
+      /\.\.[\/\\]/, // ../
       /\.\.[\/\\]{2,}/, // ..//
       /%2e%2e[\/\\]/i, // URL encoded ../
       /\.\.%2f/i,
@@ -241,9 +225,9 @@ export class InputValidator {
    */
   checkCommandInjection(input: string): boolean {
     const cmdPatterns = [
-      /[;&|`$()]/,  // Shell operators
-      /\n/,         // Newline
-      /\r/,         // Carriage return
+      /[;&|`$()]/, // Shell operators
+      /\n/, // Newline
+      /\r/, // Carriage return
     ];
 
     return cmdPatterns.some((pattern) => pattern.test(input));

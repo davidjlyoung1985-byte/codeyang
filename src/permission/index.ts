@@ -212,8 +212,7 @@ async function backupConfig(raw: string): Promise<void> {
  * Absolute paths whose recursive deletion would damage the machine (or the
  * user's other work) rather than just the project being worked on.
  */
-const SYSTEM_ROOT_PATTERN =
-  /^\/(etc|usr|bin|sbin|lib|lib64|boot|sys|proc|dev|var|opt|root|home|srv|run|snap)(\/|$)/;
+const SYSTEM_ROOT_PATTERN = /^\/(etc|usr|bin|sbin|lib|lib64|boot|sys|proc|dev|var|opt|root|home|srv|run|snap)(\/|$)/;
 
 /**
  * Top-level directories that must never be deleted wholesale. A *subdirectory*

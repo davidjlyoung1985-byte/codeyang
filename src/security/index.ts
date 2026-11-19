@@ -25,9 +25,4 @@ export {
   type EncryptedData,
 } from './DataProtection.js';
 
-export {
-  InputValidator,
-  inputValidator,
-  type ValidationSchema,
-  type ValidationResult,
-} from './InputValidator.js';
+export { InputValidator, inputValidator, type ValidationSchema, type ValidationResult } from './InputValidator.js';

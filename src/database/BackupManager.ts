@@ -311,7 +311,7 @@ export class BackupManager {
 
     for (const backup of backups) {
       const age = now - backup.timestamp;
-        const days = age / (1000 * 60 * 60 * 24);
+      const days = age / (1000 * 60 * 60 * 24);
 
       let shouldRemove = false;
 

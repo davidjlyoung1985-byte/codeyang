@@ -194,13 +194,10 @@ describe('permission', () => {
       },
     );
 
-    it.each(['> /dev/sda', 'cat image > /dev/sda', 'tee > /dev/hda'])(
-      'blocks raw disk writes: %s',
-      async (cmd) => {
-        const r = await checkPermission('bash', cmd);
-        expect(r.level).toBe('deny');
-      },
-    );
+    it.each(['> /dev/sda', 'cat image > /dev/sda', 'tee > /dev/hda'])('blocks raw disk writes: %s', async (cmd) => {
+      const r = await checkPermission('bash', cmd);
+      expect(r.level).toBe('deny');
+    });
 
     it('asks before dd targeting a block device', async () => {
       const r = await checkPermission('bash', 'dd if=/dev/zero of=/dev/nvme0n1');
