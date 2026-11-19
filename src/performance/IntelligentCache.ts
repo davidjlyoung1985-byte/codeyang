@@ -21,13 +21,13 @@ export interface CacheEntry<T> {
 export interface CacheOptions {
   maxSize?: number; // Max entries
   defaultTTL?: number; // Default TTL in milliseconds
-  onEvict?: (key: string, value: any) => void;
+  onEvict?: (key: string, value: unknown) => void;
 }
 
 /**
  * LRU Cache with TTL support
  */
-export class IntelligentCache<T = any> {
+export class IntelligentCache<T = unknown> {
   private cache = new Map<string, CacheEntry<T>>();
   private maxSize: number;
   private defaultTTL?: number;
@@ -294,7 +294,7 @@ export const caches = {
   }),
 
   // Tool result cache (10 minute TTL)
-  toolResults: new IntelligentCache<any>({
+  toolResults: new IntelligentCache<unknown>({
     maxSize: 500,
     defaultTTL: 10 * 60 * 1000,
   }),

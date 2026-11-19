@@ -19,7 +19,7 @@ export interface HealthCheck {
   message?: string;
   lastCheck: number;
   responseTime?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface HealthReport {

@@ -231,7 +231,7 @@ export class RateLimiter {
    * Get statistics
    */
   getStats() {
-    const buckets: Record<string, any> = {};
+    const buckets: Record<string, ReturnType<TokenBucketLimiter['getStatus']>> = {};
     for (const [name, limiter] of this.tokenBuckets.entries()) {
       buckets[name] = limiter.getStatus();
     }

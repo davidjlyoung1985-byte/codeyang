@@ -27,6 +27,33 @@ export interface DatabaseConfig {
   password?: string;
 }
 
+/** Raw SQLite row shapes (snake_case columns) */
+interface SessionRow {
+  id: string;
+  user_id: string;
+  created_at: number;
+  updated_at: number;
+  status: string;
+  metadata: string | null;
+}
+
+interface MessageRow {
+  id: string;
+  session_id: string;
+  role: string;
+  content: string;
+  timestamp: number;
+  tokens: number | null;
+  metadata: string | null;
+}
+
+interface StatisticsRow {
+  total_sessions: number;
+  total_messages: number;
+  total_tool_executions: number;
+  active_sessions: number;
+}
+
 export interface Session {
   id: string;
   userId: string;
@@ -224,7 +251,7 @@ export class DatabaseManager {
     if (!this.db) throw new Error('Database not connected');
 
     const stmt = this.db.prepare('SELECT * FROM sessions WHERE id = ?');
-    const row = stmt.get(sessionId) as any;
+    const row = stmt.get(sessionId) as SessionRow | undefined;
 
     if (!row) return null;
 
@@ -250,7 +277,7 @@ export class DatabaseManager {
 
     const rows = userId ? stmt.all(userId, limit, offset) : stmt.all(limit, offset);
 
-    return (rows as any[]).map((row) => ({
+    return (rows as SessionRow[]).map((row) => ({
       id: row.id,
       userId: row.user_id,
       createdAt: row.created_at,
@@ -296,7 +323,7 @@ export class DatabaseManager {
 
     const rows = limit ? stmt.all(sessionId, limit) : stmt.all(sessionId);
 
-    return (rows as any[]).map((row) => ({
+    return (rows as MessageRow[]).map((row) => ({
       id: row.id,
       sessionId: row.session_id,
       role: row.role,
@@ -323,7 +350,7 @@ export class DatabaseManager {
 
     const rows = stmt.all(query, limit);
 
-    return (rows as any[]).map((row) => ({
+    return (rows as MessageRow[]).map((row) => ({
       id: row.id,
       sessionId: row.session_id,
       role: row.role,
@@ -381,7 +408,7 @@ export class DatabaseManager {
         (SELECT COUNT(*) FROM sessions WHERE status = 'active') as active_sessions
     `,
       )
-      .get() as any;
+      .get() as StatisticsRow;
 
     return {
       totalSessions: result.total_sessions,

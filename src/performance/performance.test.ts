@@ -127,11 +127,11 @@ describe('ConcurrencyLimiter', () => {
     };
 
     // Start first operation (will run immediately)
-    void limiter.execute(operation(1), 0);
+    const p1 = limiter.execute(operation(1), 0);
 
     // Queue these (high priority should run before low)
-    void limiter.execute(operation(2), 1); // Low priority
-    void limiter.execute(operation(3), 10); // High priority
+    const p2 = limiter.execute(operation(2), 1); // Low priority
+    const p3 = limiter.execute(operation(3), 10); // High priority
 
     await Promise.all([p1, p2, p3]);
 
@@ -145,9 +145,9 @@ describe('ConcurrencyLimiter', () => {
 
     const slowOp = async () => await new Promise((resolve) => setTimeout(resolve, 100));
 
-    limiter.execute(slowOp); // Running
-    limiter.execute(slowOp); // Queued 1
-    limiter.execute(slowOp); // Queued 2
+    void limiter.execute(slowOp); // Running
+    void limiter.execute(slowOp); // Queued 1
+    void limiter.execute(slowOp); // Queued 2
 
     await expect(limiter.execute(slowOp)).rejects.toThrow('Queue full');
   });

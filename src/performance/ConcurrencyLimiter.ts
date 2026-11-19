@@ -33,7 +33,7 @@ export class ConcurrencyLimiter {
   private queueSize: number;
   private timeout: number;
   private running = 0;
-  private queue: QueuedOperation<any>[] = [];
+  private queue: QueuedOperation<unknown>[] = [];
   private stats = {
     total: 0,
     completed: 0,
