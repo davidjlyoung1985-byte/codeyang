@@ -152,6 +152,12 @@ coverage-report.txt
 tools-out.txt
 *-out.txt
 
+# Test/CI output files
+blk.txt
+ci*.txt
+fails.txt
+tw.txt
+twe.txt
 
 # Runtime memory graph (generated per-user, never committed)
 memory/
