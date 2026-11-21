@@ -190,6 +190,15 @@ export class Sandbox {
   private childProcess: ChildProcess | null = null;
   private startTime = 0;
   private _cleanedUp = false;
+  /**
+   * Tracks the fire-and-forget cleanup started after a run finishes.
+   *
+   * A pooled sandbox is reused immediately after `release()`, but the cleanup
+   * from the previous run was not awaited, so it raced the next run and could
+   * delete the freshly recreated workdir mid-execution. run() awaits this
+   * before touching the workdir.
+   */
+  private _pendingCleanup: Promise<void> | null = null;
 
   /** Pre-exec 钩子（如安装依赖、准备环境） */
   private preExecHooks: SandboxHook[] = [];
@@ -250,6 +259,13 @@ export class Sandbox {
   ): Promise<SandboxResult> {
     this.startTime = Date.now();
     const timeoutMs = opts?.timeoutMs ?? this.config.timeoutMs;
+
+    // ── 等待上次运行的清理完成 ──
+    // 防止在池化沙箱重用时，上次的清理删除了新创建的工作目录
+    if (this._pendingCleanup) {
+      await this._pendingCleanup;
+      this._pendingCleanup = null;
+    }
 
     // ── OS 级网络隔离（如果启用） ──
     let actualCommand = command;
@@ -493,9 +509,9 @@ export class Sandbox {
             logger.warn('⚠️ [Sandbox] Post-exec hook failed:', err instanceof Error ? err.message : err),
           );
         }
-        // 清理临时目录（fire-and-forget）
+        // 清理临时目录（fire-and-forget，但记录 promise 供下次 run 等待）
         if (this.config.cleanupTempDir && !opts?.cwd) {
-          this.cleanup().catch((err) =>
+          this._pendingCleanup = this.cleanup().catch((err) =>
             logger.warn('⚠️ [Sandbox] Cleanup failed:', err instanceof Error ? err.message : err),
           );
         }

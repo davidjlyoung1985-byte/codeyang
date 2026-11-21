@@ -1,4 +1,4 @@
-import { resolve, sep } from 'node:path';
+import { resolve, sep, dirname, basename } from 'node:path';
 import { realpathSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { toolError } from './errors.js';
@@ -12,13 +12,40 @@ import { toolError } from './errors.js';
  * Bypass options:
  *   CODEYANG_ALLOW_DRIVES=E,F — whitelist Windows drive letters (colon optional)
  */
+/**
+ * realpath() that also works for paths which do not exist yet.
+ *
+ * Resolves the deepest existing ancestor and re-appends the missing segments.
+ * Without this, a sandbox whose real path differs from its logical path
+ * rejected every *new* file inside it: on macOS `tmpdir()` is `/var/folders/...`
+ * while its realpath is `/private/var/folders/...`, so `absSandbox` was
+ * normalised but the not-yet-created target was not, and the prefix comparison
+ * failed. File creation was impossible whenever the sandbox root sat behind a
+ * symlink.
+ */
+function realpathAllowingMissing(p: string): string {
+  const missing: string[] = [];
+  let current = p;
+
+  for (;;) {
+    try {
+      const realCurrent = realpathSync(current);
+      return missing.length === 0 ? realCurrent : resolve(realCurrent, ...missing.reverse());
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return p; // reached the root, nothing exists
+      missing.push(basename(current));
+      current = parent;
+    }
+  }
+}
+
 export function resolveSafePath(inputPath: string, cwd?: string): string {
   const base = cwd || process.cwd();
   const resolved = resolve(base, inputPath);
   const sandbox = process.env['CODEX_SANDBOX'];
 
   if (!sandbox) return resolved;
-
   // SECURITY: Resolve symlinks in sandbox base directory
   let absSandbox = resolve(sandbox);
   try {
@@ -29,13 +56,9 @@ export function resolveSafePath(inputPath: string, cwd?: string): string {
 
   if (resolved === absSandbox) return resolved;
 
-  // SECURITY: realpath resolves symlinks in target — use when the path exists
-  let real = resolved;
-  try {
-    real = realpathSync(resolved);
-  } catch {
-    // path doesn't exist yet (write) — use the resolved form
-  }
+  // SECURITY: realpath resolves symlinks in target - use when the path exists.
+  // Must also work for not-yet-created paths: see realpathAllowingMissing().
+  const real = realpathAllowingMissing(resolved);
 
   // Sandbox check: path must be inside sandbox directory
   const sandboxSep = absSandbox.endsWith(sep) ? absSandbox : absSandbox + sep;

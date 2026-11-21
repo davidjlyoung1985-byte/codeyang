@@ -189,7 +189,7 @@ export async function saveMemory(
       id = existing.id;
       createdAt = existing.createdAt;
     } else {
-      id = `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
+      id = `${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
     }
   }
 

@@ -97,11 +97,20 @@ function isProtectedPath(absPath: string): boolean {
  * `resolveSafePath('C:\\Windows')` on POSIX becomes `$PWD/C:\Windows`, which
  * matches no entry in PROTECTED_PATHS, so an unambiguously protected system
  * directory was silently treated as an ordinary project file. The mirror case
- * (`/etc` on Windows) behaved the same way. Evaluating the raw input as well
- * makes the guard OS-independent.
+ * (`/etc` on Windows) behaved the same way.
+ *
+ * The raw path is only consulted when its style does NOT match the host OS.
+ * Comparing it unconditionally produced false positives for legitimate host
+ * paths: on macOS the temp directory is `/var/folders/...`, which is both a
+ * real path and a subtree of the protected `/var`.
  */
 function isProtectedTarget(rawPath: string, resolvedPath?: string): boolean {
-  return isProtectedPath(rawPath) || (resolvedPath !== undefined && isProtectedPath(resolvedPath));
+  const isWindowsHost = process.platform === 'win32';
+  const rawIsWindowsStyle = /^[a-zA-Z]:[\\/]/.test(rawPath) || /^\\\\/.test(rawPath);
+  const rawIsForeignStyle = isWindowsHost ? !rawIsWindowsStyle : rawIsWindowsStyle;
+
+  if (rawIsForeignStyle && isProtectedPath(rawPath)) return true;
+  return resolvedPath !== undefined && isProtectedPath(resolvedPath);
 }
 
 /**
