@@ -356,16 +356,26 @@ export class BackupManager {
   }
 
   /**
-   * Upload to cloud storage (placeholder)
+   * Upload backup to cloud storage
+   *
+   * @note Cloud storage integration is planned but not yet implemented.
+   *       See GitHub issues for implementation tracking.
+   *       Currently, backups are only stored locally.
+   *
+   * Planned implementations:
+   * - S3: @aws-sdk/client-s3
+   * - Azure Blob: @azure/storage-blob
+   * - GCS: @google-cloud/storage
    */
   private async uploadToCloud(backup: Backup): Promise<void> {
     if (!this.config.cloudStorage) return;
 
-    logger.info(`[BackupManager] Uploading backup to ${this.config.cloudStorage.type}: ${backup.id}`);
+    logger.warn(
+      `[BackupManager] Cloud storage (${this.config.cloudStorage.type}) is configured but not yet implemented. ` +
+        `Backup ${backup.id} will only be stored locally.`,
+    );
 
-    // TODO: Implement S3/Azure Blob upload
-    // For S3: use @aws-sdk/client-s3
-    // For Azure: use @azure/storage-blob
+    // Implementation planned - see class documentation above
   }
 
   /**
