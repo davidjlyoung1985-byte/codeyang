@@ -150,7 +150,7 @@ npm run format
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.en.md) for guidelines.
 
 Current priorities:
 1. **Improve test coverage** — Reach 60% branches for core modules (currently 52.7%)
@@ -191,13 +191,11 @@ This is a **functional but work-in-progress** AI agent project:
 - ✅ CI/CD with hard gates (tsc + lint + vitest)
 - ✅ Performance benchmarks and security hardening
 
-**Production readiness**: B+ (85/100)
-- Core modules: agent, tools, mcp, security (well-tested, production-ready)
-- Test coverage: 1701/1706 passing (99.7%), branches 52.7%, statements 64.9%
-- Known issues: 4 environment-dependent test timeouts on Windows (full parallel runs)
-- Experimental modules: qt, reflexion, continual-learning (excluded from coverage, research-only)
-- SSRF protection and security best practices
-- Clean git history and organized documentation
-- Active development with regular improvements
+**Current state** (see [STATUS.md](./STATUS.md) for full details)
+- Core modules: agent, tools, mcp, security — well tested
+- Tests: 2,834 passing / 7 skipped / 0 failing; statements 76.4%, branches 79.5%, functions 85.6%
+- Distribution: CLI only — no library exports yet; not published to npm
+- Experimental modules: qt, reflexion, continual-learning
+- SSRF protection, path guard, permission layers, audit logging
 
 We believe in honest documentation. If you find issues, please report them!

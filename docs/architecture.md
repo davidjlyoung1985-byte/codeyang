@@ -545,8 +545,8 @@ A: Yes — permission system, sandbox, and deny lists provide multiple safety la
 ## Resources
 
 - [Contributing Guide](../CONTRIBUTING.md)
-- [CI/CD Documentation](../.github/CI-CD.md)
-- [Tool Development Guide](./tool-development.md) (TODO)
+- CI/CD config: .github/workflows/
+- Tool Development Guide — 尚未编写，可参考 src/tools/definitions/ 与 src/tools/registry.ts
 - [API Reference](./api-reference.md) (TODO)
 
 ---

@@ -187,7 +187,7 @@ CODEYANG_DEBUG=false
 - **GitHub Issues**: https://github.com/davidjlyoung1985-byte/codeyang/issues
 - **Documentation**: [README.md](README.md)
 - **FAQ**: [FAQ.md](FAQ.md)
-- **User Guide**: [USER_GUIDE.md](USER_GUIDE.md)
+- **User Guide**: [USER_GUIDE.en.md](USER_GUIDE.en.md)
 
 ---
 

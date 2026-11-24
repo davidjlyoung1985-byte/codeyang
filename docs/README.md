@@ -10,7 +10,7 @@
 
 1. **[快速开始](./QUICKSTART.md)** - 5 分钟快速上手
 2. **[常见问题 FAQ](./FAQ.md)** - 常见问题解答
-3. **[用户指南](./USER_GUIDE.en.md)** - 完整使用指南
+3. **[工程现状](./STATUS.md)** - 实测指标与已知短板
 
 ---
 
@@ -29,9 +29,8 @@
 
 ### 测试与质量
 - **[测试指南](./TESTING.md)** - 测试运行和编写
-- **[最终审核报告](./FINAL_AUDIT_REPORT.md)** - 项目质量评估 (80/100)
-- **[最新审计](./LATEST_AUDIT.md)** - 最新审计结果 (83/100)
-- **[安全审计](./SECURITY_AUDIT.md)** - 安全评估报告
+- **[工程现状](./STATUS.md)** - 实测指标与已知短板
+- 历史审计与改进报告见 **[archive/](./archive/)**（分数声明已过时，不作为当前依据）
 
 ---
 
@@ -77,12 +76,13 @@ docs/
 | 需求 | 文档 |
 |------|------|
 | 快速上手 | [QUICKSTART.md](./QUICKSTART.md) |
+| 了解当前状态 | [STATUS.md](./STATUS.md) |
 | 了解 API | [api-reference.md](./api-reference.md) |
 | 部署到生产 | [DEPLOYMENT.md](./DEPLOYMENT.md) |
 | 使用 Docker | [DOCKER_GUIDE.md](./DOCKER_GUIDE.md) |
 | 解决问题 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) |
 | 了解架构 | [architecture.md](./architecture.md) |
-| 查看安全性 | [SECURITY_AUDIT.md](./SECURITY_AUDIT.md) |
+| 查看安全性 | [SECURITY.md](./SECURITY.md) |
 | 贡献代码 | [CONTRIBUTING.md](./CONTRIBUTING.md) |
 | 查看更新 | [CHANGELOG.md](./CHANGELOG.md) |
 | 了解差异 | [DIFFERENTIATION.md](./DIFFERENTIATION.md) |
@@ -92,10 +92,12 @@ docs/
 ## 📊 项目状态
 
 - **最新版本**: 1.1.0
-- **质量评分**: 83/100 (B)
-- **测试覆盖**: 76.36%
-- **测试用例**: 2,815 个 (99.96% 通过率)
-- **安全评分**: 95%
+- **测试用例**: 2,834 通过 / 7 跳过 / 0 失败
+- **语句覆盖率**: 76.4%
+- **源码规模**: 221 个文件 / 43,147 行
+- **npm 发布**: 未发布（需从源码构建）
+
+完整数据见 [STATUS.md](./STATUS.md)。
 
 ---
 

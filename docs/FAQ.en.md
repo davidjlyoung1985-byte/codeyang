@@ -59,11 +59,13 @@ It uses Large Language Models (LLM) to understand natural language instructions 
 ### Q5: What's the current project status?
 
 **A**: 
-- **Version**: v1.0.0 (Stable)
-- **Quality Score**: 91.5/100
-- **Test Coverage**: 75.9% (2535+ tests)
-- **Status**: Production-ready for personal and small team use
-- **CI/CD**: Fully automated with security scanning
+- **Version**: v1.1.0
+- **Tests**: 2,834 passing / 7 skipped
+- **Statement coverage**: 76.4%
+- **Distribution**: CLI tool, not yet published to npm — build from source
+- **Status**: Suitable for command-line use by individuals and small teams
+
+See [STATUS.md](./STATUS.md) for verified metrics.
 
 ---
 

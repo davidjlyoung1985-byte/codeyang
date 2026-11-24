@@ -252,7 +252,7 @@ SSRF: Private IP address detected
 
 ## 📖 下一步
 
-- [API 文档](./API.md) - 完整 API 参考
+- [API 参考](./api-reference.md) - 完整 API 参考
 - [安全指南](./SECURITY.md) - 深入了解安全特性
 - [架构设计](./ARCHITECTURE.md) - 理解系统架构
 - [贡献指南](./CONTRIBUTING.md) - 参与开发
