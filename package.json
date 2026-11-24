@@ -13,7 +13,14 @@
     },
     "files": [
         "dist",
-        "codeyangx"
+        "README.md",
+        "LICENSE",
+        "docs/STATUS.md",
+        "docs/QUICKSTART.md",
+        "docs/architecture.md",
+        "docs/api-reference.md",
+        "docs/SECURITY.md",
+        "docs/CHANGELOG.md"
     ],
     "engines": {
         "node": ">=18"

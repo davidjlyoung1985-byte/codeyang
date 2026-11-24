@@ -6,6 +6,7 @@ export default defineConfig([
       index: 'src/index.ts',
       lib: 'src/lib.ts',
       codeyangx: 'src/codeyangx.ts',
+      'setup-wizard': 'src/setup-wizard.ts',
       'web-server': 'src/web-server.ts',
     },
     format: ['esm'],

@@ -84,6 +84,7 @@ docs/
 | 了解架构 | [architecture.md](./architecture.md) |
 | 查看安全性 | [SECURITY.md](./SECURITY.md) |
 | 贡献代码 | [CONTRIBUTING.md](./CONTRIBUTING.md) |
+| 发布到 npm | [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md) |
 | 查看更新 | [CHANGELOG.md](./CHANGELOG.md) |
 | 了解差异 | [DIFFERENTIATION.md](./DIFFERENTIATION.md) |
 
