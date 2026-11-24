@@ -1,0 +1,31 @@
+feat: add library entry point and make the extension bundle a build artifact
+
+Two separate "the package is not usable" problems, both fixed.
+
+1. No library API
+   package.json pointed main/types at dist/index.js, which is the CLI script:
+   a shebang and zero exports. dist/index.d.ts contained one line. So
+   `import ... from 'codeyang'` resolved to an empty module, and the README
+   worked around it with a fictional `createAgent()` example.
+
+   Added src/lib.ts (28 exports): Agent, the tool registry, the security
+   primitives, permission checking, the config/env layer, errors and VERSION.
+   main/types/exports now point there. Verified with a real import: tools=82,
+   envNames=68, isPrivateIP('[::1]')=true. Import has no side effects - it does
+   not touch stdin, start a server or spawn anything.
+
+2. 573 KB build artifact committed with no build script
+   vscode-extension/tools.cjs is an esbuild bundle of 11 tool executors from
+   src/tools/. It was tracked in git and nothing could regenerate it, so it
+   could silently drift from the TypeScript sources with no reviewable diff.
+
+   Added src/tools/extension-exports.ts (the barrel) and
+   scripts/build-extension-tools.mjs (the build). `npm run build` now produces
+   it alongside the CLI bundle. Removed it from git and ignored it, but kept it
+   in the .vsix via .vscodeignore so the published extension still ships it.
+   Verified: rebuilt from source, all 11 exports present and functionally
+   correct (executeRead/executeGlob/executeGrep return real results against
+   this repo).
+
+Locked the API surface with src/lib.test.ts (15 tests).
+Suite: 2864 passing. tsc and eslint clean.

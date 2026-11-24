@@ -42,11 +42,28 @@ CI 在 3 OS × 3 Node 版本的矩阵上运行，测试失败即阻断合并（�
 
 ## 分发形态
 
-**当前是 CLI 产品，不是库。**
+**CLI 产品 + 库入口。**
 
-- `package.json` 的 `main` 指向 `./dist/index.js`，该文件是 CLI 入口脚本（`#!/usr/bin/env node`），不含任何 `export`。
-- `dist/index.d.ts` 仅包含一行 shebang。
-- 因此 `import ... from 'codeyang'` **无可用导出**。若需要编程式接口，目前唯一方式是直接引用 `src/` 下的模块（不推荐，不稳定）。
+### 库形式（编程使用）
+
+```ts
+import { Agent, tools, isPrivateIP, envNames } from 'codeyang';
+```
+
+`package.json` 的 `main`/`types` 指向 `dist/lib.js` / `dist/lib.d.ts`，共 28 个导出，覆盖：
+
+| 分类 | 导出 |
+|---|---|
+| Agent | `Agent`、`AgentCallbacks`、`createLLMClient` |
+| 工具 | `tools`、`getTool`、`toolSchemas`、`ToolContext` |
+| 安全 | `isPrivateIP`、`validateUrl`、`findPathViolations` |
+| 权限 | `checkPermission` |
+| 配置 | `getConfig`、`ENV_SPECS`、`envString`/`envInt`/`envBool`、`renderEnvHelp` |
+| 错误 | `CodeYangError`、`ErrorCode` |
+
+导入 `src/lib.ts` **无副作用**：不读 stdin、不起服务、不 spawn 进程。CLI 入口 `src/index.ts` 仍然零导出。
+
+### 命令行形式
 
 四个 bin 入口：
 
@@ -65,13 +82,10 @@ CI 在 3 OS × 3 Node 版本的矩阵上运行，测试失败即阻断合并（�
 
 | # | 问题 | 现状 |
 |---|---|---|
-| 1 | 无库 API，无法被集成 | `src/index.ts` 无导出；需新增 `src/lib.ts` 并调整 `exports` 字段 |
-| 2 | 未发布到 npm | 用户需自行 clone + build |
-| 3 | 部分入口仍缺测试 | `bridge/server.ts` 约 4%；`sandbox/sandbox-runner.ts` 由 fork 子进程执行，v8 覆盖率不采集（已有 10 个真实 fork 测试） |
-| 4 | 重复的安全实现 | `isPrivateIP` 等函数存在 2–3 份副本（见 `docs/archive/` 修复记录） |
-| 5 | 配置项分散 | 环境变量散落在 27 个文件中，`--help` 只列 8 个 |
-| 6 | 前端未完成 | `web/client` 仅 `App.tsx` 骨架；WPS 加载项与 VS Code 扩展为实验性 |
-| 7 | 文档历史包袱 | `docs/archive/` 保留过程记录，不作为当前依据 |
+| 1 | 未发布到 npm | 用户需自行 clone + build |
+| 2 | 部分入口仍缺测试 | `bridge/server.ts` 约 4%；`sandbox/sandbox-runner.ts` 由 fork 子进程执行，v8 覆盖率不采集（已有 10 个真实 fork 测试） |
+| 3 | 前端未完成 | `web/client` 仅 `App.tsx` 骨架；WPS 加载项与 VS Code 扩展为实验性 |
+| 4 | 文档历史包袱 | `docs/archive/` 保留过程记录，不作为当前依据 |
 
 ---
 

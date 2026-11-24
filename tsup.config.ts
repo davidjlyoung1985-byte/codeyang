@@ -4,6 +4,7 @@ export default defineConfig([
   {
     entry: {
       index: 'src/index.ts',
+      lib: 'src/lib.ts',
       codeyangx: 'src/codeyangx.ts',
       'web-server': 'src/web-server.ts',
     },

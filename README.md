@@ -41,16 +41,17 @@ npm test
 
 ### 快速开始
 
-CodeYang 是 **CLI 工具**，当前不提供库形式的编程接口（详见 [STATUS.md](./docs/STATUS.md#分发形态)）。
+CodeYang 同时提供 **CLI** 和 **库** 两种用法。
 
 ```bash
-# 方式一：从源码运行
+# 克隆并构建
+git clone https://github.com/davidjlyoung1985-byte/codeyang.git
+cd codeyang
+npm install
 npm run build
-node dist/index.js
 
-# 方式二：Windows / Unix 启动脚本
-./start.bat      # Windows
-./start.sh       # macOS / Linux
+# 运行
+node dist/index.js
 
 # 配置向导（首次使用）
 npm run setup
@@ -65,11 +66,25 @@ node dist/index.js --api-key sk-xxxx
 常用命令：
 
 ```bash
-node dist/index.js --help              # 查看全部参数
+node dist/index.js --help              # 查看全部参数与环境变量
 node dist/index.js --list              # 列出已保存会话
 node dist/index.js --resume <id>       # 恢复会话
 node dist/index.js --export-md <id>    # 导出为 Markdown
 ```
+
+### 作为库使用
+
+```ts
+import { Agent, tools, isPrivateIP, envNames } from 'codeyang';
+
+const agent = new Agent();
+await agent.run('列出当前目录的 TypeScript 文件');
+
+console.log(tools.length);          // 82
+console.log(isPrivateIP('10.0.0.1')); // true
+```
+
+共 28 个导出，完整清单见 [docs/STATUS.md](./docs/STATUS.md#库形式编程使用)。导入无副作用：不读 stdin、不起服务、不 spawn 进程。
 
 ### 配置
 
