@@ -111,7 +111,7 @@ export function loadConfig(): Config {
     // Features
     autoVerify: process.env.CODEYANG_AUTO_VERIFY === 'true',
     autoFixOnError: process.env.CODEYANG_AUTO_FIX === 'true',
-    watchMode: process.env.CODEYANG_WATCH_MODE === 'true',
+    watchMode: process.env.CODEYANG_WATCH === 'true',
 
     // Agent
     maxTurns: parseIntEnv(process.env.CODEYANG_MAX_TURNS, 50),
@@ -134,12 +134,12 @@ export function loadConfig(): Config {
 
     // Planner
     planner: {
-      enabled: process.env.CODEYANG_PLANNER_ENABLED === 'true',
+      enabled: process.env.CODEYANG_PLANNER === 'true',
     },
 
     // Reflexion
     reflexion: {
-      enabled: process.env.CODEYANG_REFLEXION_ENABLED === 'true',
+      enabled: process.env.CODEYANG_REFLEXION === 'true',
     },
   };
 
