@@ -161,3 +161,6 @@ twe.txt
 
 # Runtime memory graph (generated per-user, never committed)
 memory/
+
+# Commit message scratch file
+commitmsg.txt
