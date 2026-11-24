@@ -60,8 +60,8 @@ It uses Large Language Models (LLM) to understand natural language instructions 
 
 **A**: 
 - **Version**: v1.1.0
-- **Tests**: 2,770 passing / 7 skipped
-- **Statement coverage**: 76.4%
+- **Tests**: 2,796 passing / 7 skipped
+- **Statement coverage**: 78.1%
 - **Distribution**: CLI tool, not yet published to npm — build from source
 - **Status**: Suitable for command-line use by individuals and small teams
 

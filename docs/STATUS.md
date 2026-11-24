@@ -25,12 +25,12 @@ npx vitest run --coverage   # 覆盖率
 | 版本 | 1.1.0 | `package.json` |
 | 源文件（非测试） | 221 个 `.ts` | `src/` 递归统计 |
 | 源码行数（非测试） | 43,147 行 | `src/` 递归统计 |
-| 测试文件 | 144 个 | vitest 汇总 |
-| 测试用例 | 2,770 通过 / 7 跳过 / 0 失败 | `npm test` |
+| 测试文件 | 145 个 | vitest 汇总 |
+| 测试用例 | 2,796 通过 / 7 跳过 / 0 失败 | `npm test` |
 | 测试耗时 | ~94 秒（`maxWorkers: 2`） | `npm test` |
-| 语句覆盖率 | 76.4% | `vitest --coverage` |
-| 分支覆盖率 | 79.5% | `vitest --coverage` |
-| 函数覆盖率 | 85.6% | `vitest --coverage` |
+| 语句覆盖率 | 78.1% | `vitest --coverage` |
+| 分支覆盖率 | 79.1% | `vitest --coverage` |
+| 函数覆盖率 | 85.4% | `vitest --coverage` |
 | `tsc --noEmit` | 0 错误（strict 全开） | CI `lint` job |
 | `eslint src/` | 0 错误 0 警告 | CI `lint` job |
 | 模块目录 | 30 个 | `src/` 一级目录 |
@@ -67,7 +67,7 @@ CI 在 3 OS × 3 Node 版本的矩阵上运行，测试失败即阻断合并（�
 |---|---|---|
 | 1 | 无库 API，无法被集成 | `src/index.ts` 无导出；需新增 `src/lib.ts` 并调整 `exports` 字段 |
 | 2 | 未发布到 npm | 用户需自行 clone + build |
-| 3 | 入口路径缺测试 | `setup-wizard.ts`、`bridge/server.ts`、`sandbox/sandbox-runner.ts` 覆盖率接近 0 |
+| 3 | 部分入口仍缺测试 | `bridge/server.ts` 约 4%；`sandbox/sandbox-runner.ts` 由 fork 子进程执行，v8 覆盖率不采集（已有 10 个真实 fork 测试） |
 | 4 | 重复的安全实现 | `isPrivateIP` 等函数存在 2–3 份副本（见 `docs/archive/` 修复记录） |
 | 5 | 配置项分散 | 环境变量散落在 27 个文件中，`--help` 只列 8 个 |
 | 6 | 前端未完成 | `web/client` 仅 `App.tsx` 骨架；WPS 加载项与 VS Code 扩展为实验性 |

@@ -2,8 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-2770%20passing-brightgreen.svg)](https://github.com/davidjlyoung1985-byte/codeyang)
-[![Coverage](https://img.shields.io/badge/coverage-76.4%25-yellowgreen.svg)](./docs/STATUS.md)
+[![Tests](https://img.shields.io/badge/tests-2796%20passing-brightgreen.svg)](https://github.com/davidjlyoung1985-byte/codeyang)
+[![Coverage](https://img.shields.io/badge/coverage-78.1%25-yellowgreen.svg)](./docs/STATUS.md)
 
 一个面向命令行的 AI 编码 Agent，内置 82 个工具、多层权限控制与沙箱隔离。
 
@@ -14,7 +14,7 @@
 ## ⭐ 项目特点
 
 - 🔒 **多层安全防护**：SSRF 检测（含 IPv6）、危险命令拦截、路径保护、删除保护、审计日志
-- ✅ **测试基线**：2,770 个用例通过，`tsc --noEmit` 与 `eslint` 均为 0 错误
+- ✅ **测试基线**：2,796 个用例通过，`tsc --noEmit` 与 `eslint` 均为 0 错误
 - 🏗️ **模块化架构**：30 个模块，TypeScript strict 全开
 - 🖥️ **CLI 优先**：单进程交互式使用，无需部署服务
 
@@ -141,8 +141,8 @@ CODEYANG_PERMIT_FORCE=ask   # git push --force 需要确认
 源文件（非测试）:  221 个 .ts
 源码行数:          43,147 行
 测试文件:          146 个
-测试用例:          2,770 通过 / 7 跳过 / 0 失败
-语句覆盖率:        76.4%
+测试用例:          2,796 通过 / 7 跳过 / 0 失败
+语句覆盖率:        78.1%
 模块目录:          30 个
 内置工具:          82 个
 ```

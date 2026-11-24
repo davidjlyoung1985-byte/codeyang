@@ -29,31 +29,35 @@ import { CodeYangError, ErrorCode } from '../errors/index.js';
 
 // ── Config ────────────────────────────────────────────────────────
 
-const BRIDGE_DIR = codeyangPath('bridge');
-const TASKS_DIR = join(BRIDGE_DIR, 'claude-tasks');
+export const BRIDGE_DIR = codeyangPath('bridge');
+export const TASKS_DIR = join(BRIDGE_DIR, 'claude-tasks');
 
-function getConfig() {
-  const url = process.env['BRIDGE_URL'] || 'http://127.0.0.1:9876';
-  const token = process.env['BRIDGE_TOKEN'] || '';
-
-  // Parse CLI args
+export function getConfig() {
+  // Parse CLI args first so they win over the environment.
+  //
+  // BUG (fixed): this used to capture `url`/`token` before the loop and then
+  // return that stale copy, so `--url` was silently discarded — the loop wrote
+  // the new value into process.env but never read it back. Only `--token`
+  // happened to work, because that branch returned early.
   const args = process.argv.slice(2);
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--token' && args[i + 1]) {
       process.env['BRIDGE_TOKEN'] = args[i + 1];
-      return { url: process.env['BRIDGE_URL'] || url, token: args[i + 1] };
     }
     if (args[i] === '--url' && args[i + 1]) {
       process.env['BRIDGE_URL'] = args[i + 1];
     }
   }
 
-  return { url, token: process.env['BRIDGE_TOKEN'] || token };
+  return {
+    url: process.env['BRIDGE_URL'] || 'http://127.0.0.1:9876',
+    token: process.env['BRIDGE_TOKEN'] || '',
+  };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
 
-async function apiFetch<T>(method: string, path: string, body?: unknown, token?: string): Promise<T> {
+export async function apiFetch<T>(method: string, path: string, body?: unknown, token?: string): Promise<T> {
   const config = getConfig();
   const url = `${config.url}${path}`;
   const res = await fetch(url, {
@@ -87,11 +91,11 @@ function printDivider(): void {
 
 // ── Task execution ────────────────────────────────────────────────
 
-async function ensureDirs(): Promise<void> {
+export async function ensureDirs(): Promise<void> {
   await mkdir(TASKS_DIR, { recursive: true });
 }
 
-async function saveTaskLocally(task: BridgeTask): Promise<void> {
+export async function saveTaskLocally(task: BridgeTask): Promise<void> {
   await mkdir(TASKS_DIR, { recursive: true });
   const filePath = join(TASKS_DIR, `${task.id}.json`);
   await writeFile(filePath, JSON.stringify(task, null, 2));
@@ -101,7 +105,7 @@ async function saveTaskLocally(task: BridgeTask): Promise<void> {
  * Handle a single task from CodeYang.
  * Prints the task details and waits for user to complete it in Claude Code.
  */
-async function handleTask(task: BridgeTask): Promise<void> {
+export async function handleTask(task: BridgeTask): Promise<void> {
   printDivider();
   print(`📋 NEW TASK FROM CODEYANG`);
   printDivider();
@@ -154,7 +158,7 @@ async function handleTask(task: BridgeTask): Promise<void> {
  * Main loop: keep reading input from the user and
  * polling the bridge server for new tasks.
  */
-async function mainLoop(token: string): Promise<void> {
+export async function mainLoop(token: string): Promise<void> {
   const config = getConfig();
   print(`Connected to bridge at ${config.url}`);
   print(`Token: ${token.slice(0, 16)}...`);
@@ -282,59 +286,12 @@ async function mainLoop(token: string): Promise<void> {
   });
 
   rl.on('line', async (line) => {
-    const trimmed = line.trim();
-
-    if (trimmed === 'exit' || trimmed === 'quit' || trimmed === 'q') {
+    const action = await handleLine(line, token);
+    if (action === 'exit') {
       clearInterval(pollTimer);
       if (ws) ws.close();
       print('Goodbye!');
       process.exit(0);
-    }
-
-    if (trimmed === 'status') {
-      try {
-        const health = await apiFetch<{ status: string; agents: Record<string, boolean>; taskCount: number }>(
-          'GET',
-          '/api/health',
-          undefined,
-          token,
-        );
-        print(`Server: ${health.status}, Tasks: ${health.taskCount}`);
-        for (const [agent, connected] of Object.entries(health.agents)) {
-          print(`  ${agent}: ${connected ? 'online' : 'offline'}`);
-        }
-      } catch (err) {
-        print(`Status check failed: ${err instanceof Error ? err.message : String(err)}`);
-      }
-      return;
-    }
-
-    if (trimmed === 'tasks') {
-      try {
-        const tasks = await apiFetch<BridgeTask[]>('GET', '/api/tasks?agent=claude-code', undefined, token);
-        if (tasks.length === 0) {
-          print('No tasks');
-        } else {
-          for (const t of tasks) {
-            print(`[${t.status}] ${t.id.slice(-8)}: ${t.title}`);
-          }
-        }
-      } catch (err) {
-        print(`Failed to list tasks: ${err instanceof Error ? err.message : String(err)}`);
-      }
-      return;
-    }
-
-    if (trimmed === 'help') {
-      print('Commands:');
-      print('  status          — Check bridge server status');
-      print('  tasks           — List all tasks from CodeYang');
-      print('  exit/quit/q     — Disconnect and exit');
-      print('  help            — Show this help');
-      print('');
-      print('When a task is received, complete it in Claude Code,');
-      print('then type your result and press Ctrl+Z to submit.');
-      return;
     }
   });
 
@@ -348,7 +305,73 @@ async function mainLoop(token: string): Promise<void> {
 
 // ── Main ──────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
+/**
+ * Result of handling one line of REPL input.
+ * `exit` tells the caller to tear down timers and quit.
+ */
+export type LineAction = 'exit' | 'handled' | 'noop';
+
+/**
+ * Handle a single REPL command. Extracted from `mainLoop` so the command
+ * surface can be tested without attaching to stdin/stdout.
+ */
+export async function handleLine(line: string, token: string): Promise<LineAction> {
+  const trimmed = line.trim();
+
+  if (trimmed === 'exit' || trimmed === 'quit' || trimmed === 'q') {
+    return 'exit';
+  }
+
+  if (trimmed === 'status') {
+    try {
+      const health = await apiFetch<{ status: string; agents: Record<string, boolean>; taskCount: number }>(
+        'GET',
+        '/api/health',
+        undefined,
+        token,
+      );
+      print(`Server: ${health.status}, Tasks: ${health.taskCount}`);
+      for (const [agent, connected] of Object.entries(health.agents)) {
+        print(`  ${agent}: ${connected ? 'online' : 'offline'}`);
+      }
+    } catch (err) {
+      print(`Status check failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    return 'handled';
+  }
+
+  if (trimmed === 'tasks') {
+    try {
+      const tasks = await apiFetch<BridgeTask[]>('GET', '/api/tasks?agent=claude-code', undefined, token);
+      if (tasks.length === 0) {
+        print('No tasks');
+      } else {
+        for (const t of tasks) {
+          print(`[${t.status}] ${t.id.slice(-8)}: ${t.title}`);
+        }
+      }
+    } catch (err) {
+      print(`Failed to list tasks: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    return 'handled';
+  }
+
+  if (trimmed === 'help') {
+    print('Commands:');
+    print('  status          — Check bridge server status');
+    print('  tasks           — List all tasks from CodeYang');
+    print('  exit/quit/q     — Disconnect and exit');
+    print('  help            — Show this help');
+    print('');
+    print('When a task is received, complete it in Claude Code,');
+    print('then type your result and press Ctrl+Z to submit.');
+    return 'handled';
+  }
+
+  return 'noop';
+}
+
+export async function main(): Promise<void> {
   console.log('');
   console.log('  ╔══════════════════════════════════════════╗');
   console.log('  ║   Claude Code Bridge Agent               ║');
@@ -374,7 +397,12 @@ async function main(): Promise<void> {
   await mainLoop(config.token);
 }
 
-main().catch((err) => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+// Only run when executed directly (`tsx src/bridge/claude-agent.ts`).
+// Guarding this makes the module importable from tests; previously the
+// unconditional call meant any import immediately started a WebSocket loop.
+if (process.argv[1] && /claude-agent\.(ts|js)$/.test(process.argv[1])) {
+  main().catch((err) => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}

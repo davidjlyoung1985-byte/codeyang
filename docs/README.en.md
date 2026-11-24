@@ -193,7 +193,7 @@ This is a **functional but work-in-progress** AI agent project:
 
 **Current state** (see [STATUS.md](./STATUS.md) for full details)
 - Core modules: agent, tools, mcp, security — well tested
-- Tests: 2,770 passing / 7 skipped / 0 failing; statements 76.4%, branches 79.5%, functions 85.6%
+- Tests: 2,796 passing / 7 skipped / 0 failing; statements 78.1%, branches 79.5%, functions 85.6%
 - Distribution: CLI only — no library exports yet; not published to npm
 - Experimental modules: qt, reflexion, continual-learning
 - SSRF protection, path guard, permission layers, audit logging
