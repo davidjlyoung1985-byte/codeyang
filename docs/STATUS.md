@@ -25,8 +25,8 @@ npx vitest run --coverage   # 覆盖率
 | 版本 | 1.1.0 | `package.json` |
 | 源文件（非测试） | 221 个 `.ts` | `src/` 递归统计 |
 | 源码行数（非测试） | 43,147 行 | `src/` 递归统计 |
-| 测试文件 | 146 个 | vitest 汇总 |
-| 测试用例 | 2,834 通过 / 7 跳过 / 0 失败 | `npm test` |
+| 测试文件 | 144 个 | vitest 汇总 |
+| 测试用例 | 2,770 通过 / 7 跳过 / 0 失败 | `npm test` |
 | 测试耗时 | ~94 秒（`maxWorkers: 2`） | `npm test` |
 | 语句覆盖率 | 76.4% | `vitest --coverage` |
 | 分支覆盖率 | 79.5% | `vitest --coverage` |

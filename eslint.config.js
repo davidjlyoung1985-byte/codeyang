@@ -67,4 +67,31 @@ export default tseslint.config(
       'no-console': 'off',
     },
   },
+  // ── Security single-source-of-truth guard ──────────────────────────
+  //
+  // `src/security/ssrf.ts` owns IP classification. It previously existed in
+  // three near-identical copies (src/utils/securityValidation.ts,
+  // src/utils/inputValidation.ts, src/tools/NetworkTool.ts). The two utils
+  // copies silently drifted — one had no IPv6 handling at all, the exact bug
+  // ssrf.ts documents fixing. The duplicates are deleted; this rule stops them
+  // coming back.
+  //
+  // `src/tools/NetworkTool.ts` is exempt for the *name* only: its
+  // `validateUrl` is async, performs DNS resolution, and returns an error
+  // string — it composes `isPrivateIP` rather than re-implementing it. It is
+  // still forbidden from defining its own `isPrivateIP`.
+  {
+    files: ['src/**/*.ts'],
+    ignores: ['src/security/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'FunctionDeclaration[id.name=/^(isPrivateIP|isPrivateIPv6)$/]',
+          message:
+            'IP classification has exactly one implementation. Import `isPrivateIP` from src/security/ssrf.ts instead of defining another copy — the previous copies drifted and lost IPv6 handling.',
+        },
+      ],
+    },
+  },
 );
