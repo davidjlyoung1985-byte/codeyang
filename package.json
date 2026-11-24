@@ -1,10 +1,10 @@
 {
     "name": "codeyang",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Terminal-based AI coding agent with 80+ core tools, MCP integration, multi-provider LLM support, and session persistence",
     "type": "module",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./dist/lib.js",
+    "types": "./dist/lib.d.ts",
     "bin": {
         "codeyang": "./dist/index.js",
         "codeyangx": "./dist/codeyangx.js",
@@ -13,7 +13,14 @@
     },
     "files": [
         "dist",
-        "codeyangx"
+        "README.md",
+        "LICENSE",
+        "docs/STATUS.md",
+        "docs/QUICKSTART.md",
+        "docs/architecture.md",
+        "docs/api-reference.md",
+        "docs/SECURITY.md",
+        "docs/CHANGELOG.md"
     ],
     "engines": {
         "node": ">=18"
@@ -28,7 +35,7 @@
         "url": "https://github.com/davidjlyoung1985-byte/codeyang/issues"
     },
     "scripts": {
-        "build": "tsup --config tsup.config.ts",
+        "build": "tsup --config tsup.config.ts && node scripts/build-extension-tools.mjs",
         "dev": "tsup src/index.ts --format esm --clean --sourcemap --watch --outDir dist",
         "start": "node dist/index.js",
         "setup": "tsx src/setup-wizard.ts",
@@ -48,7 +55,12 @@
         "generate-docs": "npx tsx src/tools/auto-docs.ts",
         "check": "npx tsc --noEmit",
         "audit": "npm audit --audit-level=high",
-        "prepare": "husky"
+        "prepare": "husky",
+        "build:extension-tools": "node scripts/build-extension-tools.mjs",
+        "test:unit": "vitest run --config vitest.unit.config.ts",
+        "test:slow": "vitest run src/tools/GitTool.test.ts src/tools/BashTool.test.ts src/tools/PowerShellTool.test.ts src/agent/Agent.test.ts src/sandbox/sandbox-integration.test.ts src/sandbox/sandbox-runner.test.ts src/sandbox/os-isolation.test.ts src/sandbox/os-isolation.coverage.test.ts src/sandbox/os-isolation-windows.test.ts src/mcp/McpClient.test.ts src/mcp/McpManager.test.ts src/tools/mcp.test.ts src/e2e/e2e.test.ts",
+        "mutation": "stryker run",
+        "mutation:fast": "stryker run --mutate src/security/ssrf.ts --thresholds.break 0"
     },
     "dependencies": {
         "@anthropic-ai/sdk": "^0.32.0",
@@ -108,5 +120,16 @@
         "typescript-eslint": "^8.60.0",
         "vite": "^8.1.5",
         "vitest": "^3.2.6"
+    },
+    "exports": {
+        ".": {
+            "types": "./dist/lib.d.ts",
+            "import": "./dist/lib.js"
+        },
+        "./security": {
+            "types": "./dist/lib.d.ts",
+            "import": "./dist/lib.js"
+        },
+        "./package.json": "./package.json"
     }
 }

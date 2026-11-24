@@ -1,39 +1,17 @@
-# 📚 Documentation Archive
+# 历史文档归档
 
-This directory contains historical documentation, reports, and guides that are no longer actively maintained but kept for reference.
+本目录保存项目开发过程中的审计报告、改进计划、阶段性总结等过程记录，**仅作历史参考**。
 
-## Structure
+## 重要说明
 
-### `/reports`
-Historical improvement reports, performance analyses, and status updates:
-- Project improvement reports (various phases)
-- Performance analysis documents
-- Security alerts and fixes
-- Release notes
+- 本目录中的文档**包含过时的评分声明**（如 80/100、85/100、93.5/100、94/100 等），这些数字来自不同时间点、不同评估方法，彼此矛盾，**不代表项目当前状态**。
+- 项目当前的真实状态请见 **[../STATUS.md](../STATUS.md)**，该文件包含可复现的实测指标。
+- 本目录文档不再维护，不再更新。
 
-### `/guides`
-Legacy guides and usage documentation:
-- Deployment guides
-- Usage instructions
-- Feature-specific guides
+## 为什么保留
 
-### Root
-Feature-specific documentation:
-- Sandbox implementation docs
-- Reflexion/planner designs
-- Bridge implementations
-- Motion control designs
+保留是为了记录决策过程与技术演进，便于回溯"当时为什么这么做"。其中的技术分析（如 SSRF 防护设计、沙箱隔离方案）仍有参考价值，但**其中的结论和评分请勿引用**。
 
-## Active Documentation
+## 当前有效文档
 
-For current documentation, see the main `docs/` directory:
-- `TESTING.md` - Testing best practices
-- `AGENT_REFACTORING.md` - Agent refactoring plan
-- `PERFORMANCE_BENCHMARK.md` - Performance benchmarks
-- `FINAL_STATUS_REPORT.md` - Current project status
-- `architecture.md` - System architecture
-- `api-reference.md` - API reference
-
-## Note
-
-These archived documents represent the evolution of the CodeYang project and may contain outdated information. Always refer to the main documentation for current practices and status.
+参见 [../README.md](../README.md) 的文档导航。

@@ -30,6 +30,7 @@ import { McpManager } from './mcp/McpManager.js';
 import { detectQtProject, createQtTools } from './qt/index.js';
 import { dispatch as dispatchCommand, type CommandContext } from './commands.js';
 import { VERSION } from './version.js';
+import { renderEnvHelp } from './config/envHelp.js';
 import { checkNodeVersion } from './utils/nodeVersionCheck.js';
 import { WatcherSystem, VerificationPipeline } from './closed-loop/index.js';
 import { Gateway } from './gateway/index.js';
@@ -140,14 +141,7 @@ Options:
   --import <file>     Import a session from a JSON file
 
 Environment Variables:
-  CODEYANG_API_KEY          API key for the LLM provider
-  CODEYANG_MODEL            Model name (default: deepseek-chat)
-  CODEYANG_BASE_URL         Custom API base URL
-  CODEYANG_MAX_TOKENS       Max tokens per response (default: 1000000)
-  CODEYANG_AUTO_VERIFY      Auto-run lint/tsc after Write/Edit (true/false, default: true)
-  CODEYANG_AUTO_FIX         Auto-fix lint errors when verified (true/false, default: true)
-  CODEYANG_WATCH            Watch files and auto-trigger verification (true/false, default: true)
-  DEEPSEEK_API_KEY          Alternative env var for API key
+${renderEnvHelp('  ')}
 
 Interactive Commands:
   /clear           Reset the conversation

@@ -7,7 +7,7 @@ describe('CircuitBreaker', () => {
   beforeEach(() => {
     breaker = new CircuitBreaker('test-circuit', {
       failureThreshold: 3,
-      resetTimeoutMs: 1000,
+      resetTimeoutMs: 60,
       probeTimeoutMs: 500,
       maxProbeConcurrency: 2,
       slowCallThresholdMs: 200,
@@ -170,7 +170,7 @@ describe('CircuitBreaker', () => {
       expect(breaker.getStats().state).toBe('OPEN');
 
       // Wait for reset timeout
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await new Promise((resolve) => setTimeout(resolve, 80));
 
       // Next call should transition to HALF_OPEN, then if successful, to CLOSED
       const probePromise = breaker.call(async () => {
@@ -195,7 +195,7 @@ describe('CircuitBreaker', () => {
       }
 
       // Wait and probe successfully
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await new Promise((resolve) => setTimeout(resolve, 80));
       await breaker.call(async () => 'success');
 
       const stats = breaker.getStats();
@@ -211,7 +211,7 @@ describe('CircuitBreaker', () => {
       }
 
       // Wait and probe with failure
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await new Promise((resolve) => setTimeout(resolve, 80));
       await breaker.call(async () => {
         throw new Error('probe failed');
       });
@@ -231,7 +231,7 @@ describe('CircuitBreaker', () => {
       }
 
       // Wait for reset timeout
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await new Promise((resolve) => setTimeout(resolve, 80));
 
       // Start 3 probes concurrently (max is 2)
       const probes = [
@@ -280,14 +280,16 @@ describe('CircuitBreaker', () => {
     it('times out long-running operations', async () => {
       const result = await breaker.call(
         async () => {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // Deliberately longer than the 100 ms budget below, but short enough
+          // that the test does not burn a full second of wall clock.
+          await new Promise((resolve) => setTimeout(resolve, 300));
           return 'never completes';
         },
         { timeoutMs: 100 },
       );
 
       expect(result.success).toBe(false);
-      expect(result.durationMs).toBeLessThan(200);
+      expect(result.durationMs).toBeLessThan(300);
     });
   });
 

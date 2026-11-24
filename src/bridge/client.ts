@@ -183,7 +183,15 @@ export async function waitForTask(taskId: string, timeoutMs = 300_000): Promise<
     if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
       return task;
     }
-    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    // Sleep only for the time actually left in the budget.
+    //
+    // This used to always sleep the full `pollInterval`, so a caller passing a
+    // short timeout still waited up to 2s past it — `waitForTask(id, 100)`
+    // returned after ~2s instead of ~100ms. That is a real latency bug for
+    // callers, not just a slow test.
+    const remaining = timeoutMs - (Date.now() - startTime);
+    if (remaining <= 0) break;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(pollInterval, remaining)));
   }
 
   throw new CodeYangError(`任务 ${taskId} 超时`, ErrorCode.TIMEOUT_ERROR, {

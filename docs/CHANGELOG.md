@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] - 2026-11-12
 
-### 🎉 Major Quality Improvements - A Grade Achievement (93.5/100)
+### 质量改进
 
-This release represents a major quality milestone, completing all 6 quick-win improvement projects and achieving A grade (93.5/100) project quality.
+This release completes all 6 quick-win improvement projects. See [STATUS.md](./STATUS.md) for current verified metrics.
 
 ### Added
 
@@ -97,7 +97,7 @@ This release represents a major quality milestone, completing all 6 quick-win im
 
 ### Changed
 
-- **Project Quality Score**: 82/100 (B+) → **93.5/100 (A grade)** 🎯
+- **Test suite**: expanded with boundary and stress coverage (see [STATUS.md](./STATUS.md) for current counts)
 - **Test Coverage**: 17.5/20 → 19/20 (+1.5 points)
 - **Engineering Maturity**: 8/10 → 10/10 (+2.0 points)
 - **Documentation Completeness**: 18/20 → 20/20 (+2.0 points)

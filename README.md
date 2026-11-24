@@ -2,19 +2,21 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-2814%20passing-brightgreen.svg)](https://github.com/davidjlyoung1985-byte/codeyang)
-[![Score](https://img.shields.io/badge/score-80%2F100-orange.svg)](./docs/FINAL_AUDIT_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-2796%20passing-brightgreen.svg)](https://github.com/davidjlyoung1985-byte/codeyang)
+[![Coverage](https://img.shields.io/badge/coverage-78.1%25-yellowgreen.svg)](./docs/STATUS.md)
 
-一个安全性业界领先、测试覆盖充分的 AI Agent 框架。
+一个面向命令行的 AI 编码 Agent，内置 82 个工具、多层权限控制与沙箱隔离。
+
+> 工程现状（测试数、覆盖率、已知短板）见 **[docs/STATUS.md](./docs/STATUS.md)**。该文件是项目状态的唯一来源。
 
 ---
 
-## ⭐ 项目亮点
+## ⭐ 项目特点
 
-- 🔒 **安全性领先**：95% 安全评分，多层防护体系
-- ✅ **测试充分**：2,814 个测试用例，99.96% 通过率
-- 🏗️ **架构清晰**：34 个模块，TypeScript strict mode
-- 🚀 **持续改进**：快速响应，规范的工程实践
+- 🔒 **多层安全防护**：SSRF 检测（含 IPv6）、危险命令拦截、路径保护、删除保护、审计日志
+- ✅ **测试基线**：2,796 个用例通过，`tsc --noEmit` 与 `eslint` 均为 0 错误
+- 🏗️ **模块化架构**：30 个模块，TypeScript strict 全开
+- 🖥️ **CLI 优先**：单进程交互式使用，无需部署服务
 
 ---
 
@@ -30,25 +32,59 @@ cd codeyang
 # 安装依赖
 npm install
 
+# 构建
+npm run build
+
 # 运行测试
 npm test
 ```
 
-### 5 分钟上手
+### 快速开始
 
-```typescript
-import { createAgent } from './src/agent';
+CodeYang 同时提供 **CLI** 和 **库** 两种用法。
 
-// 创建 AI Agent
-const agent = await createAgent({
-  model: 'claude-3-5-sonnet',
-  tools: ['bash', 'file', 'search'],
-});
+```bash
+# 克隆并构建
+git clone https://github.com/davidjlyoung1985-byte/codeyang.git
+cd codeyang
+npm install
+npm run build
 
-// 执行任务
-const result = await agent.execute('创建一个 Hello World 项目');
-console.log(result);
+# 运行
+node dist/index.js
+
+# 配置向导（首次使用）
+npm run setup
 ```
+
+首次运行会提示输入 API Key。也可直接通过参数传入：
+
+```bash
+node dist/index.js --api-key sk-xxxx
+```
+
+常用命令：
+
+```bash
+node dist/index.js --help              # 查看全部参数与环境变量
+node dist/index.js --list              # 列出已保存会话
+node dist/index.js --resume <id>       # 恢复会话
+node dist/index.js --export-md <id>    # 导出为 Markdown
+```
+
+### 作为库使用
+
+```ts
+import { Agent, tools, isPrivateIP, envNames } from 'codeyang';
+
+const agent = new Agent();
+await agent.run('列出当前目录的 TypeScript 文件');
+
+console.log(tools.length);          // 82
+console.log(isPrivateIP('10.0.0.1')); // true
+```
+
+共 28 个导出，完整清单见 [docs/STATUS.md](./docs/STATUS.md#库形式编程使用)。导入无副作用：不读 stdin、不起服务、不 spawn 进程。
 
 ### 配置
 
@@ -70,103 +106,63 @@ CODEYANG_PERMIT_FORCE=ask   # git push --force 需要确认
 ## 📚 文档
 
 - [快速开始](./docs/QUICKSTART.md) - 5 分钟上手指南
-- [API 文档](./docs/API.md) - 完整 API 参考
+- [工程现状](./docs/STATUS.md) - 实测指标与已知短板
+- [API 参考](./docs/api-reference.md) - 工具与命令行参考
 - [安全指南](./docs/SECURITY.md) - 安全配置和最佳实践
 - [贡献指南](./docs/CONTRIBUTING.md) - 如何参与开发
 - [更新日志](./docs/CHANGELOG.md) - 版本历史
 
 ### 深度文档
 
-- [架构设计](./docs/ARCHITECTURE.md) - 系统架构详解
-- [最终审核报告](./docs/FINAL_AUDIT_REPORT.md) - 项目质量评估
-- [安全审计](./docs/SECURITY_AUDIT.md) - 安全审计结果
+- [架构设计](./docs/architecture.md) - 系统架构详解
+- [部署指南](./docs/DEPLOYMENT.md) - 生产环境部署
+- [常见问题](./docs/FAQ.md) - FAQ
+
+历史审计与改进报告见 [`docs/archive/`](./docs/archive/)，其中的评分声明已过时。
 
 ---
 
 ## 🔧 核心功能
 
-### 1. 80+ 工具集成
+### 1. 工具集成（82 个）
 
-```typescript
-// 文件操作
-await agent.readFile('package.json');
-await agent.writeFile('output.txt', content);
+覆盖文件读写、Bash/PowerShell、Git、网络请求、代码分析、数据转换、图像处理、TodoWrite、子 Agent 调度等。
 
-// Bash 命令（带安全检查）
-await agent.executeBash('npm install');
-
-// 网络请求（带 SSRF 防护）
-await agent.fetch('https://api.example.com');
-
-// Git 操作
-await agent.gitCommit('feat: add new feature');
-```
+工具定义位于 [`src/tools/definitions/`](./src/tools/definitions/)，按域拆分（filesystem / shell / git / network / code / data / search 等）。
 
 ### 2. 权限系统
 
-```typescript
-// 三级权限控制
-// - allow: 直接执行
-// - ask: 需要确认
-// - deny: 拒绝执行
+三级权限：`allow` 直接执行、`ask` 需确认、`deny` 直接拒绝。规则可按命令模式配置，危险操作（`rm -rf`、`sudo`、`git push --force`）默认走 `ask` 或 `deny`。
 
-// 配置权限规则
-{
-  pattern: 'rm -rf*',
-  level: 'ask',
-  reason: 'Dangerous delete operation'
-}
-```
+实现见 [`src/permission/`](./src/permission/)。
 
 ### 3. 安全沙箱
 
-```typescript
-// 隔离执行环境
-const sandbox = await createSandbox({
-  timeout: 30000,
-  memory: '512MB',
-  network: false,
-});
+命令执行可隔离在受限环境中（超时、内存上限、网络开关）。沙箱实现按平台分文件（Windows / macOS / Linux）。
 
-const result = await sandbox.execute(code);
-```
+见 [`src/sandbox/`](./src/sandbox/)。
 
-### 4. 完整可观测性
+### 4. 可观测性
 
-```typescript
-// 日志、指标、追踪
-import { logger, metricsCollector } from './observability';
+统一日志（`src/utils/logger.ts`）、指标采集、追踪、健康检查。
 
-logger.info('Task started');
-metricsCollector.recordDuration('task', duration);
-```
+见 [`src/observability/`](./src/observability/)、[`src/metrics/`](./src/metrics/)、[`src/tracing/`](./src/tracing/)。
 
 ---
 
-## 📊 项目统计
+## 📊 项目规模
 
 ```
-评分:        80/100 (B-)
-代码量:      76,000 行
-测试用例:    2,814 个
-测试通过率:  99.96%
-安全评分:    95%
-模块数:      34 个
+源文件（非测试）:  221 个 .ts
+源码行数:          43,147 行
+测试文件:          146 个
+测试用例:          2,796 通过 / 7 跳过 / 0 失败
+语句覆盖率:        78.1%
+模块目录:          30 个
+内置工具:          82 个
 ```
 
----
-
-## 🏆 评分详情
-
-| 维度 | 分数 | 评级 |
-|------|------|------|
-| 功能完整性 | 18/20 | ⭐⭐⭐⭐⭐ |
-| **安全性** | **19/20** | **⭐⭐⭐⭐⭐** |
-| 代码质量 | 17/20 | ⭐⭐⭐⭐ |
-| **测试覆盖** | **18/20** | **⭐⭐⭐⭐⭐** |
-| 架构设计 | 16/20 | ⭐⭐⭐⭐ |
-
-详见：[完整审核报告](./docs/FINAL_AUDIT_REPORT.md)
+完整指标与采集方式见 [docs/STATUS.md](./docs/STATUS.md)。
 
 ---
 

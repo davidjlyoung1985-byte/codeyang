@@ -479,4 +479,4 @@ Thank you for making CodeYang better!
 ---
 
 **Last Updated**: 2026-11-12  
-**Maintainers**: See [MAINTAINERS.md](MAINTAINERS.md)
+**Maintainers**: see the repository owner list on GitHub

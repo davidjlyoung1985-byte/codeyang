@@ -40,7 +40,7 @@ function printHeader(title: string): void {
 }
 
 // LLM 提供商配置
-interface ProviderConfig {
+export interface ProviderConfig {
   name: string;
   apiKeyPattern: RegExp;
   apiKeyExample: string;
@@ -49,7 +49,7 @@ interface ProviderConfig {
   instructions: string;
 }
 
-const providers: Record<string, ProviderConfig> = {
+export const providers: Record<string, ProviderConfig> = {
   deepseek: {
     name: 'DeepSeek',
     apiKeyPattern: /^deepseek-r-[a-zA-Z0-9_-]+$/,
@@ -86,10 +86,47 @@ const providers: Record<string, ProviderConfig> = {
 };
 
 // 配置文件路径
-const configDir = join(homedir(), '.codeyang');
-const configFile = join(configDir, 'config.json');
+export const configDir = join(homedir(), '.codeyang');
+export const configFile = join(configDir, 'config.json');
 
-async function testConnection(provider: ProviderConfig, apiKey: string): Promise<boolean> {
+/**
+ * Validate an API key against the provider's expected format.
+ * Extracted from the interactive loop so it can be tested directly.
+ */
+export function validateApiKey(provider: ProviderConfig, apiKey: string): boolean {
+  return provider.apiKeyPattern.test(apiKey.trim());
+}
+
+/**
+ * Build the config object written to ~/.codeyang/config.json.
+ * Extracted so the provider→model mapping is testable without touching disk.
+ */
+export function buildConfig(provider: string, apiKey: string, baseURL: string): Record<string, unknown> {
+  return {
+    provider,
+    apiKey,
+    baseURL,
+    model: provider === 'deepseek' ? 'deepseek-reasoner' : provider === 'openai' ? 'gpt-4' : 'claude-sonnet-4-20250514',
+    maxTokens: 8192,
+    temperature: 0.7,
+    configuredAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Probe an API endpoint with the given key.
+ *
+ * Returns true when the credentials are accepted. 401 means the key is bad;
+ * 429 means rate-limited but valid; 2xx/400 mean auth passed (400 is the usual
+ * response to a deliberately malformed probe request).
+ *
+ * `fetchImpl` is injectable so this can be tested without network access.
+ */
+export async function testConnection(
+  provider: ProviderConfig,
+  apiKey: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
   try {
     print('  正在测试连接...', 'yellow');
 
@@ -103,7 +140,7 @@ async function testConnection(provider: ProviderConfig, apiKey: string): Promise
       headers['Content-Type'] = 'application/json';
     }
 
-    const response = await fetch(testUrl, {
+    const response = await fetchImpl(testUrl, {
       method: provider.name === 'Anthropic' ? 'POST' : 'GET',
       headers,
       signal: AbortSignal.timeout(10000),
@@ -146,24 +183,39 @@ async function testConnection(provider: ProviderConfig, apiKey: string): Promise
   }
 }
 
-async function saveConfig(provider: string, apiKey: string, baseURL: string): Promise<void> {
-  const config = {
-    provider,
-    apiKey,
-    baseURL,
-    model: provider === 'deepseek' ? 'deepseek-reasoner' : provider === 'openai' ? 'gpt-4' : 'claude-sonnet-4-20250514',
-    maxTokens: 8192,
-    temperature: 0.7,
-    configuredAt: new Date().toISOString(),
-  };
+export async function saveConfig(provider: string, apiKey: string, baseURL: string): Promise<void> {
+  const config = buildConfig(provider, apiKey, baseURL);
 
   await mkdir(configDir, { recursive: true });
   await writeFile(configFile, JSON.stringify(config, null, 2));
   print(`  ✓ 配置已保存到: ${configFile}`, 'green');
 }
 
-async function main(): Promise<void> {
-  const rl = createInterface({ input, output });
+/** Minimal readline surface used by main(), injectable for tests. */
+export interface Prompter {
+  question(query: string): Promise<string>;
+  close(): void;
+}
+
+export interface WizardDeps {
+  /** Injected prompt (defaults to a real stdin/stdout readline interface). */
+  prompt?: Prompter;
+  /** Injected connection tester (defaults to testConnection). */
+  testConnection?: (provider: ProviderConfig, apiKey: string) => Promise<boolean>;
+  /** Injected config writer (defaults to saveConfig). */
+  saveConfig?: (provider: string, apiKey: string, baseURL: string) => Promise<void>;
+  /** Whether a config file already exists (defaults to an fs check). */
+  configExists?: () => boolean;
+  /** Called instead of process.exit on fatal error. */
+  onExit?: (code: number) => void;
+}
+
+export async function main(deps: WizardDeps = {}): Promise<void> {
+  const rl = deps.prompt ?? createInterface({ input, output });
+  const connTest = deps.testConnection ?? testConnection;
+  const persist = deps.saveConfig ?? saveConfig;
+  const configExists = deps.configExists ?? (() => existsSync(configFile));
+  const exit = deps.onExit ?? ((code: number) => process.exit(code));
 
   try {
     printHeader('🎉 欢迎使用 CodeYang！');
@@ -172,7 +224,7 @@ async function main(): Promise<void> {
     print('让我们开始配置...', 'cyan');
 
     // 检查是否已配置
-    if (existsSync(configFile)) {
+    if (configExists()) {
       console.log();
       print('⚠️  检测到已有配置文件', 'yellow');
       const overwrite = await rl.question('是否覆盖现有配置？(y/N): ');
@@ -221,7 +273,7 @@ async function main(): Promise<void> {
         continue;
       }
 
-      if (!provider.apiKeyPattern.test(apiKey)) {
+      if (!validateApiKey(provider, apiKey)) {
         print(`  ✗ API Key 格式不正确，应该以 ${provider.apiKeyExample.split('-')[0]} 开头`, 'red');
         const retry = await rl.question('重新输入？(Y/n): ');
         if (retry.toLowerCase() === 'n') break;
@@ -230,7 +282,7 @@ async function main(): Promise<void> {
 
       // 测试连接
       printHeader('步骤 3: 测试连接');
-      isValid = await testConnection(provider, apiKey);
+      isValid = await connTest(provider, apiKey);
 
       if (!isValid) {
         const retry = await rl.question('重新输入 API Key？(Y/n): ');
@@ -246,7 +298,7 @@ async function main(): Promise<void> {
 
     // 保存配置
     printHeader('步骤 4: 保存配置');
-    await saveConfig(selectedProvider, apiKey, provider.defaultBaseURL);
+    await persist(selectedProvider, apiKey, provider.defaultBaseURL);
 
     // 完成
     printHeader('✨ 配置完成！');
@@ -261,10 +313,15 @@ async function main(): Promise<void> {
   } catch (err) {
     const error = err as Error;
     print(`\n错误: ${error.message}`, 'red');
-    process.exit(1);
+    exit(1);
   } finally {
     rl.close();
   }
 }
 
-main().catch(console.error);
+// Only run when executed directly (`codeyang-setup`), not when imported by tests.
+// The previous unconditional `main()` made the module impossible to import
+// without blocking on stdin.
+if (process.argv[1] && /setup-wizard\.(ts|js)$/.test(process.argv[1])) {
+  main().catch(console.error);
+}
