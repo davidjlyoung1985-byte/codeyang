@@ -1,6 +1,6 @@
 {
     "name": "codeyang",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Terminal-based AI coding agent with 80+ core tools, MCP integration, multi-provider LLM support, and session persistence",
     "type": "module",
     "main": "./dist/lib.js",
@@ -58,7 +58,9 @@
         "prepare": "husky",
         "build:extension-tools": "node scripts/build-extension-tools.mjs",
         "test:unit": "vitest run --config vitest.unit.config.ts",
-        "test:slow": "vitest run src/tools/GitTool.test.ts src/tools/BashTool.test.ts src/tools/PowerShellTool.test.ts src/agent/Agent.test.ts src/sandbox/sandbox-integration.test.ts src/sandbox/sandbox-runner.test.ts src/sandbox/os-isolation.test.ts src/sandbox/os-isolation.coverage.test.ts src/sandbox/os-isolation-windows.test.ts src/mcp/McpClient.test.ts src/mcp/McpManager.test.ts src/tools/mcp.test.ts src/e2e/e2e.test.ts"
+        "test:slow": "vitest run src/tools/GitTool.test.ts src/tools/BashTool.test.ts src/tools/PowerShellTool.test.ts src/agent/Agent.test.ts src/sandbox/sandbox-integration.test.ts src/sandbox/sandbox-runner.test.ts src/sandbox/os-isolation.test.ts src/sandbox/os-isolation.coverage.test.ts src/sandbox/os-isolation-windows.test.ts src/mcp/McpClient.test.ts src/mcp/McpManager.test.ts src/tools/mcp.test.ts src/e2e/e2e.test.ts",
+        "mutation": "stryker run",
+        "mutation:fast": "stryker run --mutate src/security/ssrf.ts --thresholds.break 0"
     },
     "dependencies": {
         "@anthropic-ai/sdk": "^0.32.0",
