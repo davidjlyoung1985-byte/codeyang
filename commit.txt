@@ -1,0 +1,35 @@
+perf(test): cut the fast test loop in half and fix two timer bugs found doing it
+
+The full suite takes ~100s and five files were 63% of it. Waiting 100s per edit
+is the main reason tests do not get run while developing, so added a fast
+configuration alongside the full one:
+
+  npm test            full suite, unchanged (CI + pre-push)
+  npm run test:unit   135 files, ~41s, no process spawns
+  npm run test:slow   just the 13 spawning files, when touching them
+
+The slow files are listed explicitly in vitest.unit.config.ts rather than
+matched by convention, so a new slow test can never silently drop out of the
+full run. maxWorkers is 4 there because the hang that forced maxWorkers=2 lived
+in src/tools, which that config excludes.
+
+While measuring, two tests turned out to be out-waiting real bugs:
+
+1. circuit-breaker (5.2s -> 1.6s)
+   Four await sleep(1100) calls existed only to cross a 1000 ms
+   resetTimeoutMs. Shrunk the configured timeout to 60 ms and the waits to
+   80 ms; the assertions are about state transitions, not about duration.
+   One test did need real time: "times out long-running operations" waits on a
+   promise that must exceed its 100 ms budget, so that one now sleeps 300 ms
+   and asserts durationMs < 300 instead of the previous 1s / <200ms pairing.
+
+2. bridge/client waitForTask (4.1s -> 2.6s, and a real latency bug)
+   waitForTask always slept the full 2000 ms poll interval regardless of the
+   remaining budget, so waitForTask(id, 100) returned after ~2s instead of
+   ~100ms - a 20x overshoot for any caller passing a short timeout, not just
+   an artifact of the test. Now it sleeps min(pollInterval, remaining).
+
+Also added vitest.unit.config.ts to tsconfig.eslint.json so the new config is
+type-aware linted like the others.
+
+Suite: 2856 passing / 7 skipped / 0 failing. tsc and eslint clean.

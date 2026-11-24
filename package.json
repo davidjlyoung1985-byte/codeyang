@@ -56,7 +56,9 @@
         "check": "npx tsc --noEmit",
         "audit": "npm audit --audit-level=high",
         "prepare": "husky",
-        "build:extension-tools": "node scripts/build-extension-tools.mjs"
+        "build:extension-tools": "node scripts/build-extension-tools.mjs",
+        "test:unit": "vitest run --config vitest.unit.config.ts",
+        "test:slow": "vitest run src/tools/GitTool.test.ts src/tools/BashTool.test.ts src/tools/PowerShellTool.test.ts src/agent/Agent.test.ts src/sandbox/sandbox-integration.test.ts src/sandbox/sandbox-runner.test.ts src/sandbox/os-isolation.test.ts src/sandbox/os-isolation.coverage.test.ts src/sandbox/os-isolation-windows.test.ts src/mcp/McpClient.test.ts src/mcp/McpManager.test.ts src/tools/mcp.test.ts src/e2e/e2e.test.ts"
     },
     "dependencies": {
         "@anthropic-ai/sdk": "^0.32.0",
