@@ -1,6 +1,6 @@
 {
     "name": "codeyang",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "Terminal-based AI coding agent with 80+ core tools, MCP integration, multi-provider LLM support, and session persistence",
     "type": "module",
     "main": "./dist/lib.js",
