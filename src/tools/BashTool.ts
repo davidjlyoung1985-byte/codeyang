@@ -1,5 +1,5 @@
 import { execa } from 'execa';
-import { checkPermission } from '../permission/index.js';
+import { checkPermission, getConfigGeneration } from '../permission/index.js';
 import { requestConfirmation } from '../permission/confirmation.js';
 import { auditLog } from '../utils/sessionStore.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
@@ -12,8 +12,15 @@ const DENY_LIST = (process.env['CODEYANG_DENY_COMMANDS'] || '')
   .map((s) => s.trim())
   .filter(Boolean);
 
-/** Permission cache: avoids redundant async checkPermission calls within TTL. */
-const permissionCache = new Map<string, { level: string; timestamp: number }>();
+/**
+ * Permission cache: avoids redundant async checkPermission calls within TTL.
+ *
+ * `generation` records which permission config produced the decision. A
+ * `reloadPermissions()` bumps the generation and every entry from an older one
+ * is ignored, so revoking a rule takes effect on the next command instead of
+ * up to 5 seconds later.
+ */
+const permissionCache = new Map<string, { level: string; timestamp: number; generation: number }>();
 const PERMISSION_CACHE_TTL = 5_000; // 5 seconds (short TTL to avoid stale cached permissions)
 /** Hard cap so a long session cannot grow the cache without bound. */
 const PERMISSION_CACHE_MAX = 512;
@@ -25,7 +32,22 @@ function cachePermission(subject: string, level: string): void {
     const oldest = permissionCache.keys().next();
     if (!oldest.done) permissionCache.delete(oldest.value);
   }
-  permissionCache.set(subject, { level, timestamp: Date.now() });
+  permissionCache.set(subject, { level, timestamp: Date.now(), generation: getConfigGeneration() });
+}
+
+/**
+ * Return the cached decision for `subject`, or `undefined` when it is missing,
+ * expired, or was produced by a permission config that has since been reloaded.
+ */
+function readPermissionCache(subject: string): string | undefined {
+  const cached = permissionCache.get(subject);
+  if (!cached) return undefined;
+
+  if (Date.now() - cached.timestamp >= PERMISSION_CACHE_TTL || cached.generation !== getConfigGeneration()) {
+    permissionCache.delete(subject);
+    return undefined;
+  }
+  return cached.level;
 }
 
 /** Combine two permission levels, keeping the most restrictive one. */
@@ -217,13 +239,13 @@ export async function executeBash(
   const pendingAsks: { subject: string; reason?: string }[] = [];
 
   for (const subject of extractCommandSubjects(command)) {
-    const cached = permissionCache.get(subject);
-    if (cached && Date.now() - cached.timestamp < PERMISSION_CACHE_TTL) {
-      worstPermissionLevel = worseLevel(worstPermissionLevel, cached.level);
-      if (cached.level === 'deny') {
+    const cachedLevel = readPermissionCache(subject);
+    if (cachedLevel !== undefined) {
+      worstPermissionLevel = worseLevel(worstPermissionLevel, cachedLevel);
+      if (cachedLevel === 'deny') {
         throw new Error(`[PERMISSION DENIED] This command is not permitted.`);
       }
-      if (cached.level === 'ask') {
+      if (cachedLevel === 'ask') {
         pendingAsks.push({ subject });
       }
       continue;

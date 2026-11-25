@@ -166,6 +166,25 @@ function isCloudMetadataEndpoint(url: string): boolean {
 /**
  * Validate URL to prevent SSRF attacks
  *
+ * ── SCOPE: NO DNS RESOLUTION ──
+ * This function classifies the **hostname literal only**. It does not resolve
+ * the name, so a public hostname that points at an internal address
+ * (`127.0.0.1.nip.io`, `localtest.me`, an attacker-controlled A record) passes.
+ * That is a deliberate split — `tools/NetworkTool.ts#validateUrl` adds a DNS
+ * lookup and is the entry point every network tool actually uses — but this
+ * module is exported as a public API (`codeyang/security`), and a function
+ * named `validateUrl` reads like a complete check.
+ *
+ * If you are guarding a request with this function alone, you must resolve the
+ * hostname yourself and re-check the answer, and again after any redirect:
+ *
+ *     validateUrl(url);
+ *     const addrs = await dns.lookup(new URL(url).hostname, { all: true });
+ *     for (const a of addrs) if (isPrivateIP(a.address)) throw …;
+ *
+ * Prefer `tools/NetworkTool.ts#validateUrl` unless you specifically need the
+ * synchronous, dependency-free subset.
+ *
  * @param url - The URL to validate
  * @param allowPrivate - Whether to allow private IP ranges (default: false)
  * @throws Error if URL is dangerous

@@ -5,8 +5,14 @@ import * as path from 'node:path';
 import { existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 
+// `getConfigGeneration` is part of the seam the cache uses to notice a
+// `reloadPermissions()`; the mock must provide it or every call into BashTool
+// throws. Mutable so the cache-invalidation test can simulate a reload.
+const permissionState = vi.hoisted(() => ({ generation: 0 }));
+
 vi.mock('../permission/index.js', () => ({
   checkPermission: vi.fn(),
+  getConfigGeneration: vi.fn(() => permissionState.generation),
 }));
 
 import { checkPermission } from '../permission/index.js';
@@ -22,6 +28,7 @@ describe('BashTool', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     clearPermissionCache(); // Clear cache before each test
+    permissionState.generation = 0;
     resetRateLimit('bash'); // Reset rate limit for fast test execution
     vi.mocked(checkPermission).mockResolvedValue({ level: 'allow' });
     if (existsSync(TEST_DIR)) await fs.rm(TEST_DIR, { recursive: true, force: true });
@@ -169,6 +176,47 @@ describe('BashTool', () => {
       const callsAfterSecond = vi.mocked(checkPermission).mock.calls.length;
       expect(callsAfterSecond).toBe(1);
     }, 10000);
+
+    // ── Regression: a reloaded permission config must apply immediately ──
+    //
+    // The cache kept `deny`/`ask` decisions for up to PERMISSION_CACHE_TTL, so a
+    // rule the user had just revoked kept being enforced (and worse, a rule the
+    // user had just added kept being ignored) for another 5 seconds. Entries now
+    // carry the config generation and are ignored once that generation moves.
+    it('re-checks permission after the config generation changes', async () => {
+      vi.mocked(checkPermission).mockResolvedValue({ level: 'allow' });
+      await executeBash('gencheck-cmd');
+
+      // Same subject twice: the second call must be served from the cache.
+      vi.mocked(checkPermission).mockClear();
+      await executeBash('gencheck-cmd');
+      expect(vi.mocked(checkPermission).mock.calls.length).toBe(0);
+
+      // A reload bumps the generation. The cached `allow` must be discarded and
+      // the new rule applied on the very next call, not TTL seconds later.
+      permissionState.generation += 1;
+      vi.mocked(checkPermission).mockResolvedValue({ level: 'deny', reason: 'revoked' });
+
+      await expect(executeBash('gencheck-cmd')).rejects.toThrow(/PERMISSION DENIED/);
+      expect(vi.mocked(checkPermission).mock.calls.length).toBe(1);
+    });
+
+    it('applies a newly added rule immediately instead of reusing a cached allow', async () => {
+      vi.mocked(checkPermission).mockResolvedValue({ level: 'allow' });
+      await executeBash('newrule-cmd');
+
+      // User adds a rule that flags this command.
+      permissionState.generation += 1;
+      vi.mocked(checkPermission).mockResolvedValue({ level: 'ask', reason: 'newly added' });
+      setConfirmer(async () => 'deny');
+
+      try {
+        await expect(executeBash('newrule-cmd')).rejects.toThrow(/PERMISSION REQUIRED/);
+      } finally {
+        setConfirmer(null);
+        clearSessionGrants();
+      }
+    });
 
     // ── Regression: the permission subject must be the whole command ──
     //

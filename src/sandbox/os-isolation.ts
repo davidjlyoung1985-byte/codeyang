@@ -5,7 +5,7 @@
  * 仅在支持的平台上可用。
  */
 
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 import { platform } from 'node:os';
 
 export interface NetworkIsolationCapabilities {
@@ -194,18 +194,29 @@ export async function wrapCommandWithNetworkIsolation(command: string, args: str
 /**
  * Resolve an executable name to an absolute path (best effort).
  * Used so a firewall rule can target the exact program image.
+ *
+ * `execSync(\`where ${command}\`)` used to be used here. `execSync` runs the
+ * string through a shell, and `command` arrives from the agent via
+ * `Sandbox.run()`, so `command = 'x & calc'` executed `calc`. `execFileSync`
+ * passes the name as a single argv entry — no shell, nothing to escape.
  */
 function resolveExecutablePath(command: string): string | null {
   try {
     if (platform() === 'win32') {
-      const out = execSync(`where ${command}`, { encoding: 'utf-8', timeout: 3000 });
+      const out = execFileSync('where', [command], { encoding: 'utf-8', timeout: 3000 });
       const first = out
         .split(/\r?\n/)
         .map((l) => l.trim())
         .filter(Boolean)[0];
       return first || null;
     }
-    const out = execSync(`command -v ${command}`, { encoding: 'utf-8', timeout: 3000 });
+    // `command -v` is a POSIX shell builtin, so it still needs a shell — but the
+    // command name is passed as a positional parameter (`$1`), never spliced
+    // into the script text.
+    const out = execFileSync('sh', ['-c', 'command -v -- "$1"', 'sh', command], {
+      encoding: 'utf-8',
+      timeout: 3000,
+    });
     return out.trim() || null;
   } catch {
     return null;
@@ -221,7 +232,9 @@ export async function testNetworkIsolation(): Promise<boolean> {
   try {
     const { command, args } = await wrapCommandWithNetworkIsolation('ping', ['-c', '1', '8.8.8.8']);
 
-    execSync(`${command} ${args.join(' ')}`, {
+    // argv form: `${command} ${args.join(' ')}` was a shell string built from
+    // values that reach here from `Sandbox.run()`'s caller.
+    execFileSync(command, args, {
       stdio: 'ignore',
       timeout: 2000,
     });

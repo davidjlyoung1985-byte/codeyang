@@ -12,7 +12,10 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 30_000,
     hookTimeout: 30_000,
-    include: ['src/**/*.test.ts'],
+    // `web/**` is included because the web bridge is an entry point with its own
+    // security boundary (token-authenticated WebSocket). It shipped untested and
+    // therefore unauthenticated; a test that never runs is not a test.
+    include: ['src/**/*.test.ts', 'web/**/*.test.ts'],
     exclude: [
       '**/node_modules/**',
       '**/.git/**',

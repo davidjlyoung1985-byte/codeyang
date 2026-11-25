@@ -100,6 +100,36 @@ export function resolveSafePath(inputPath: string, cwd?: string): string {
   return resolved;
 }
 
+/**
+ * Async counterpart of {@link realpathAllowingMissing}.
+ *
+ * The sync version exists because a sandbox whose real path differs from its
+ * logical path rejected every *new* file inside it. The async version of
+ * `resolveSafePath` was written before that fix and never picked it up: it did
+ * `try { realpath } catch { use resolved }`, so a not-yet-created path kept its
+ * logical form while `absSandbox` was normalised, and the prefix comparison
+ * failed — exactly the bug the sync path had already solved.
+ *
+ * Only tests called the async version, which is why the divergence never showed
+ * up. Now the two agree.
+ */
+async function realpathAllowingMissingAsync(p: string): Promise<string> {
+  const missing: string[] = [];
+  let current = p;
+
+  for (;;) {
+    try {
+      const realCurrent = await realpath(current);
+      return missing.length === 0 ? realCurrent : resolve(realCurrent, ...missing.reverse());
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return p; // reached the root, nothing exists
+      missing.push(basename(current));
+      current = parent;
+    }
+  }
+}
+
 export async function resolveSafePathAsync(inputPath: string, cwd?: string): Promise<string> {
   const base = cwd || process.cwd();
   const resolved = resolve(base, inputPath);
@@ -117,13 +147,8 @@ export async function resolveSafePathAsync(inputPath: string, cwd?: string): Pro
 
   if (resolved === absSandbox) return resolved;
 
-  // SECURITY: realpath resolves symlinks in target — use when the path exists
-  let real = resolved;
-  try {
-    real = await realpath(resolved);
-  } catch {
-    // path doesn't exist yet (write) — use the resolved form
-  }
+  // SECURITY: resolve symlinks in the target, including when it does not exist
+  const real = await realpathAllowingMissingAsync(resolved);
 
   // Sandbox check: path must be inside sandbox directory
   const sandboxSep = absSandbox.endsWith(sep) ? absSandbox : absSandbox + sep;

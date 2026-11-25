@@ -248,6 +248,65 @@ describe('shared - resolveSafePathAsync', () => {
 
       expect(result).toBe(path.join(nonExistentSandbox, 'test.txt'));
     });
+
+    // Regression: the async variant did `try { realpath } catch { use resolved }`
+    // while the sync one used realpathAllowingMissing(). For a path that does not
+    // exist yet behind a symlink, only the sync form could see where it really
+    // pointed; the async form fell back to the logical path and let it through.
+    it('should agree with the synchronous variant for a not-yet-created nested path', async () => {
+      const nested = path.join('a', 'b', 'c', 'new-file.txt');
+
+      const syncResult = resolveSafePath(nested, testDir);
+      const asyncResult = await resolveSafePathAsync(nested, testDir);
+
+      expect(asyncResult).toBe(syncResult);
+    });
+
+    it('should block a not-yet-created path that escapes through a symlink', async () => {
+      const outsideDir = path.join(tmpdir(), `codeyang-outside-${randomUUID()}`);
+      const escapeLink = path.join(testDir, 'escape');
+      await fs.mkdir(outsideDir, { recursive: true });
+
+      try {
+        await fs.symlink(outsideDir, escapeLink, 'junction');
+      } catch {
+        await fs.rm(outsideDir, { recursive: true, force: true });
+        return; // symlink creation needs privileges on Windows — not our concern
+      }
+
+      try {
+        // `secret.txt` exists nowhere: the check has to resolve the symlinked
+        // ancestor to notice the target lives outside the sandbox.
+        const target = path.join('escape', 'secret.txt');
+
+        expect(() => resolveSafePath(target, testDir)).toThrow(/Path traversal blocked/);
+        await expect(resolveSafePathAsync(target, testDir)).rejects.toThrow(/Path traversal blocked/);
+      } finally {
+        await fs.rm(outsideDir, { recursive: true, force: true });
+      }
+    });
+
+    it('should block traversal out of a symlinked sandbox root', async () => {
+      const realDir = path.join(testDir, 'real');
+      const linkDir = path.join(testDir, 'link');
+      await fs.mkdir(realDir, { recursive: true });
+
+      try {
+        await fs.symlink(realDir, linkDir, 'junction');
+      } catch {
+        return;
+      }
+
+      process.env['CODEX_SANDBOX'] = linkDir;
+
+      // Both forms resolve the symlinked sandbox root before comparing prefixes,
+      // so the not-yet-created file is accepted rather than rejected.
+      const syncResult = resolveSafePath('new-file.txt', linkDir);
+      const asyncResult = await resolveSafePathAsync('new-file.txt', linkDir);
+
+      expect(asyncResult).toBe(syncResult);
+      await expect(resolveSafePathAsync('../escape.txt', linkDir)).rejects.toThrow(/Path traversal blocked/);
+    });
   });
 
   describe('with drive whitelist', () => {

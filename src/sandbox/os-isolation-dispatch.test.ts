@@ -8,8 +8,14 @@ vi.mock('node:os', async (importOriginal) => {
   return { ...actual, platform: () => state.platform };
 });
 
-vi.mock('node:child_process', () => ({
+const childProcessMock = vi.hoisted(() => ({
   execSync: vi.fn(() => 'C:\\Windows\\System32\\PING.EXE\n'),
+  execFileSync: vi.fn(() => 'C:\\Windows\\System32\\PING.EXE\n'),
+}));
+
+vi.mock('node:child_process', () => ({
+  execSync: childProcessMock.execSync,
+  execFileSync: childProcessMock.execFileSync,
 }));
 
 const winMock = vi.hoisted(() => ({
@@ -57,6 +63,17 @@ describe('OS isolation dispatch', () => {
     expect(typeof wrapped.cleanup).toBe('function');
     wrapped.cleanup!();
     expect(winMock.removeNetworkBlockRule).toHaveBeenCalledWith(ruleId);
+  });
+
+  test('Windows: resolves the executable path through argv, not a shell string', async () => {
+    state.platform = 'win32';
+    await wrapCommandWithNetworkIsolation('x & calc', []);
+
+    // SECURITY: the command used to be spliced into `where ${command}` and run
+    // through a shell, so `x & calc` executed `calc`. Now it is one argv entry.
+    expect(childProcessMock.execFileSync).toHaveBeenCalledWith('where', ['x & calc'], expect.any(Object));
+    const shellStrings = childProcessMock.execSync.mock.calls.map((c) => String(c[0]));
+    expect(shellStrings.some((s) => s.includes('calc'))).toBe(false);
   });
 
   test('macOS: wraps with sandbox-exec and cleans up the profile', async () => {

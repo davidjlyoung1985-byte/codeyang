@@ -21,11 +21,26 @@ export { tools, getTool, toolSchemas } from './tools/registry.js';
 export type { ToolContext } from './tools/registry.js';
 
 // ── Security ───────────────────────────────────────────────────────────
-export { isPrivateIP, validateUrl } from './security/ssrf.js';
+//
+// Two different `validateUrl`s existed on this surface and only one of them was
+// safe to use as an SSRF gate, so they are now exported under names that say
+// which is which:
+//
+//   validateUrlWithDns  — literal check + DNS lookup. This is what the network
+//                         tools use, and what you want. Rejects a public name
+//                         that resolves to a private address.
+//   validateUrlLiteral  — no DNS. Synchronous, dependency-free, and *not* a
+//                         complete SSRF check on its own.
+//
+// `validateUrl` stays exported as the literal-check alias for backwards
+// compatibility with existing imports.
+export { isPrivateIP } from './security/ssrf.js';
+export { validateUrl as validateUrlLiteral, validateUrl as validateUrl } from './security/ssrf.js';
+export { validateUrl as validateUrlWithDns } from './tools/NetworkTool.js';
 export { findPathViolations, formatPathViolations } from './tools/pathGuard.js';
 
 // ── Permissions ────────────────────────────────────────────────────────
-export { checkPermission } from './permission/index.js';
+export { checkPermission, getConfigGeneration } from './permission/index.js';
 
 // ── Configuration ──────────────────────────────────────────────────────
 export { loadConfig, getConfig, reloadConfig, clearConfigCache, type Config } from './config/index.js';

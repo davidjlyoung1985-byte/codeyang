@@ -4,8 +4,22 @@
  */
 import { promises as fs } from 'fs';
 import { platform } from 'os';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { logger } from './logger.js';
+
+/**
+ * Run `icacls <path>` and return its output.
+ *
+ * Configured as `execSync(\`icacls "${configPath}"\`)`, which breaks on any path
+ * containing a double quote: the quote closes the argument early and the rest of
+ * the path is parsed by `cmd.exe` as a further command. The advisory text
+ * printed below tells the user to run `icacls "<configPath>"` themselves, so a
+ * crafted config path was a self-inflicted injection. `execFileSync` passes the
+ * path as one argv entry.
+ */
+function readIcacls(configPath: string): string {
+  return execFileSync('icacls', [configPath], { encoding: 'utf8' });
+}
 
 /**
  * Check and fix configuration file permissions.
@@ -24,7 +38,7 @@ export async function checkConfigPermissions(configPath: string): Promise<void> 
   if (platform() === 'win32') {
     // Windows: Use icacls to check permissions
     try {
-      const output = execSync(`icacls "${configPath}"`, { encoding: 'utf8' });
+      const output = readIcacls(configPath);
 
       // Check for overly permissive access
       if (output.includes('Everyone') || output.includes('BUILTIN\\Users')) {

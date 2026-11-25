@@ -71,26 +71,26 @@ describe('LaunchAppTool', () => {
       expect(result).toContain('Error: target cannot be empty');
     });
 
-    it('should reject targets with dangerous shell metacharacters (not path separators)', async () => {
-      const dangerousTargets = [
-        'app;rm -rf /',
-        'app|cat /etc/passwd',
-        'app`whoami`',
-        'app$VAR',
-        'app>output.txt',
-        'app<input.txt',
-      ];
+    // Shell metacharacters are no longer rejected at input: they are *inert*
+    // because the value travels through the environment block (Windows) or an
+    // argv array (open / xdg-open). What matters is that they never reach a
+    // command string — see the regression tests below.
+    it('should reject targets containing control characters', async () => {
+      const targets = ['app\nrm -rf /', 'app\rcalc', 'app\0calc'];
 
-      for (const target of dangerousTargets) {
+      for (const target of targets) {
         const result = await executeLaunchApp(target);
-        expect(result).toContain('Error: target contains dangerous shell characters');
+        expect(result).toContain('Error: target contains a control character');
       }
     });
 
-    it('should reject arguments with shell metacharacters', async () => {
-      const result = await executeLaunchApp(CROSS_PLATFORM_APP, 'file.txt;rm -rf /');
+    it('should reject arguments containing control characters', async () => {
+      // NUL survives whitespace splitting and cannot be carried in the
+      // environment block, so it must be refused. (A newline is just another
+      // whitespace separator here and every resulting token is still checked.)
+      const result = await executeLaunchApp(CROSS_PLATFORM_APP, 'file.txt\0rm -rf /');
 
-      expect(result).toContain('Error: argument contains dangerous shell characters');
+      expect(result).toContain('Error: argument contains a control character');
     });
 
     it('should reject non-whitelisted applications', async () => {
@@ -99,11 +99,69 @@ describe('LaunchAppTool', () => {
       expect(result).toContain('Error: Application not in whitelist');
     });
 
-    it('should reject paths with backslash (Windows paths blocked by dangerous chars)', async () => {
-      // Note: Implementation blocks backslashes as dangerous characters
+    it('should reject paths outside the sandbox', async () => {
+      // resolveSafePath (mocked) refuses anything containing "forbidden"
       const result = await executeLaunchApp('C:\\forbidden\\file.txt');
 
-      expect(result).toContain('Error: target contains dangerous shell characters');
+      expect(result).toContain('Error: Path outside sandbox or not accessible');
+    });
+  });
+
+  describe('Windows command-injection regression', () => {
+    const originalPlatform = process.platform;
+
+    beforeEach(() => {
+      Object.defineProperty(process, 'platform', { value: 'win32', writable: true, configurable: true });
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+      } as unknown as ReturnType<typeof execa>);
+    });
+
+    afterEach(() => {
+      Object.defineProperty(process, 'platform', { value: originalPlatform, writable: true, configurable: true });
+    });
+
+    it('must not interpolate the target into the PowerShell command text', async () => {
+      // `"` and `(` were both missing from the old blocklist, and the value was
+      // spliced into `Start-Process "…"` — a closing quote ended the string.
+      const payload = 'http://example.com"(Start-Process calc)"';
+
+      const result = await executeLaunchApp(payload);
+
+      expect(result).toContain('Launched');
+
+      const call = vi.mocked(execa).mock.calls[0];
+      expect(call).toBeDefined();
+      const [cmd, cmdArgs, opts] = call as [string, string[], { env: Record<string, string> }];
+
+      expect(cmd).toBe('powershell');
+      const commandText = cmdArgs.join(' ');
+      expect(commandText).not.toContain(payload);
+      expect(commandText).not.toContain('Start-Process calc');
+      expect(commandText).toContain('$env:CODEYANG_LAUNCH_TARGET');
+
+      // The untrusted value is transported as data, not code.
+      expect(opts.env['CODEYANG_LAUNCH_TARGET']).toBe(payload);
+    });
+
+    it('must transport extra arguments via the environment, not the command text', async () => {
+      await executeLaunchApp('code', 'file1.txt file2.txt');
+
+      const call = vi.mocked(execa).mock.calls[0];
+      const [, cmdArgs, opts] = call as [string, string[], { env: Record<string, string> }];
+
+      expect(cmdArgs.join(' ')).not.toContain('file1.txt');
+      expect(JSON.parse(opts.env['CODEYANG_LAUNCH_ARGS']!)).toEqual(['file1.txt', 'file2.txt']);
+    });
+
+    it('should still open URLs that contain a query string', async () => {
+      // `&` used to trip the metacharacter blocklist, so no URL with a query
+      // string could ever be opened.
+      const result = await executeLaunchApp('https://example.com?param=value&other=123');
+
+      expect(result).toContain('Launched');
     });
   });
 
@@ -247,10 +305,10 @@ describe('LaunchAppTool', () => {
     });
 
     it('should handle URLs with query parameters', async () => {
-      // Note: Query parameters with & are blocked by dangerous char validation
+      // `&` used to be blocklisted, so query strings were unopenable.
       const result = await executeLaunchApp('https://example.com?param=value&other=123');
 
-      expect(result).toContain('dangerous shell characters');
+      expect(result).toContain('Launched');
     });
 
     it('should handle URLs with fragments', async () => {
@@ -267,24 +325,36 @@ describe('LaunchAppTool', () => {
   });
 
   describe('file path handling', () => {
-    it('should reject Windows paths with backslashes (blocked by dangerous chars)', async () => {
-      // Note: Backslashes are blocked before path validation happens
+    it('should accept Windows paths that are inside the sandbox', async () => {
+      // Backslashes used to be blocklisted, so no file could be opened on
+      // Windows at all — the resolveSafePath branch below was unreachable.
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+      } as unknown as ReturnType<typeof execa>);
+
       const result = await executeLaunchApp('C:\\Users\\test\\file.txt');
 
-      expect(result).toContain('Error: target contains dangerous shell characters');
+      expect(result).toContain('Launched');
     });
 
-    it('should reject .lnk files with backslashes', async () => {
-      // Note: Backslashes are blocked before path validation happens
+    it('should accept .lnk shortcuts inside the sandbox', async () => {
+      vi.mocked(execa).mockResolvedValue({
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+      } as unknown as ReturnType<typeof execa>);
+
       const result = await executeLaunchApp('C:\\Users\\test\\shortcut.lnk');
 
-      expect(result).toContain('Error: target contains dangerous shell characters');
+      expect(result).toContain('Launched');
     });
 
-    it('should reject paths with backslashes (dangerous char check first)', async () => {
+    it('should reject sandboxed-out paths even when they are valid Windows paths', async () => {
       const result = await executeLaunchApp('C:\\forbidden\\malicious.exe');
 
-      expect(result).toContain('Error: target contains dangerous shell characters');
+      expect(result).toContain('Error: Path outside sandbox or not accessible');
     });
   });
 

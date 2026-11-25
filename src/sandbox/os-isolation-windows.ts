@@ -3,9 +3,29 @@
  * 使用Windows Filtering Platform (WFP) 通过netsh防火墙规则
  */
 
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 import { platform } from 'node:os';
 import { logger } from '../utils/logger.js';
+
+/**
+ * Build a `netsh advfirewall firewall <verb> rule ...` argument vector.
+ *
+ * ── Why argv and not a command string ──
+ * These calls used to be template-built:
+ *
+ *     execSync(`netsh ... add rule name="${ruleName}" ... program="${processPath}"`, …)
+ *
+ * `execSync` runs the string through `cmd.exe`, so a `"` inside `processPath`
+ * ended the quoted value and the rest was parsed as further commands. That path
+ * is reachable: `sandbox/os-isolation.ts#resolveExecutablePath` returns whatever
+ * `where <command>` printed, and `<command>` comes from the agent.
+ *
+ * `execFileSync` passes each element as a separate argv entry, so no shell is
+ * involved and quoting cannot be escaped.
+ */
+function netshFirewall(verb: string, fields: string[]): string[] {
+  return ['advfirewall', 'firewall', verb, 'rule', ...fields];
+}
 
 export interface WindowsIsolationResult {
   supported: boolean;
@@ -64,7 +84,7 @@ export function createNetworkBlockRule(processPath: string, ruleId: string): voi
   try {
     // 删除可能存在的旧规则
     try {
-      execSync(`netsh advfirewall firewall delete rule name="${ruleName}"`, {
+      execFileSync('netsh', netshFirewall('delete', [`name=${ruleName}`]), {
         stdio: 'pipe',
         timeout: 5000,
       });
@@ -73,10 +93,13 @@ export function createNetworkBlockRule(processPath: string, ruleId: string): voi
     }
 
     // 创建出站阻塞规则
-    execSync(
-      `netsh advfirewall firewall add rule name="${ruleName}" ` +
-        `dir=out action=block program="${processPath}" enable=yes`,
-      { stdio: 'pipe', timeout: 5000 },
+    execFileSync(
+      'netsh',
+      netshFirewall('add', [`name=${ruleName}`, 'dir=out', 'action=block', `program=${processPath}`, 'enable=yes']),
+      {
+        stdio: 'pipe',
+        timeout: 5000,
+      },
     );
   } catch (err) {
     throw new Error(`Failed to create firewall rule: ${err instanceof Error ? err.message : String(err)}`);
@@ -90,7 +113,7 @@ export function removeNetworkBlockRule(ruleId: string): void {
   const ruleName = `CodeYang_Sandbox_${ruleId}`;
 
   try {
-    execSync(`netsh advfirewall firewall delete rule name="${ruleName}"`, {
+    execFileSync('netsh', netshFirewall('delete', [`name=${ruleName}`]), {
       stdio: 'pipe',
       timeout: 5000,
     });
@@ -135,7 +158,7 @@ export function cleanupAllRules(): number {
 
   for (const ruleName of rules) {
     try {
-      execSync(`netsh advfirewall firewall delete rule name="${ruleName}"`, {
+      execFileSync('netsh', netshFirewall('delete', [`name=${ruleName}`]), {
         stdio: 'pipe',
         timeout: 5000,
       });
@@ -156,9 +179,15 @@ export async function testFirewallBlock(ruleId: string): Promise<boolean> {
   const ruleName = `CodeYang_Test_${ruleId}`;
 
   try {
-    execSync(
-      `netsh advfirewall firewall add rule name="${ruleName}" ` +
-        `dir=out action=block program="C:\\Windows\\System32\\PING.EXE" enable=yes`,
+    execFileSync(
+      'netsh',
+      netshFirewall('add', [
+        `name=${ruleName}`,
+        'dir=out',
+        'action=block',
+        'program=C:\\Windows\\System32\\PING.EXE',
+        'enable=yes',
+      ]),
       { stdio: 'pipe', timeout: 5000 },
     );
 
@@ -174,7 +203,7 @@ export async function testFirewallBlock(ruleId: string): Promise<boolean> {
   } finally {
     // 清理测试规则
     try {
-      execSync(`netsh advfirewall firewall delete rule name="${ruleName}"`, {
+      execFileSync('netsh', netshFirewall('delete', [`name=${ruleName}`]), {
         stdio: 'pipe',
       });
     } catch {

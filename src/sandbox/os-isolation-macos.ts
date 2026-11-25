@@ -3,7 +3,7 @@
  * 使用 sandbox-exec (macOS原生沙箱)
  */
 
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 import { platform } from 'node:os';
 import { writeFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -141,7 +141,11 @@ export async function testSandboxNetworkBlock(): Promise<boolean> {
 
     // 尝试在沙箱中ping（应该失败）
     try {
-      execSync(`sandbox-exec -f ${profilePath} ping -c 1 -W 1 8.8.8.8`, {
+      // argv form rather than a template string: `profilePath` derives from
+      // tmpdir() today, but the path is interpolated into a shell command in
+      // the string form, which would become exploitable the moment anyone makes
+      // the profile location configurable.
+      execFileSync('sandbox-exec', ['-f', profilePath, 'ping', '-c', '1', '-W', '1', '8.8.8.8'], {
         stdio: 'pipe',
         timeout: 3000,
       });

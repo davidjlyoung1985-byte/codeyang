@@ -464,12 +464,33 @@ export async function addRule(rule: PermissionRule): Promise<void> {
 }
 
 /**
+ * Bumped on every {@link reloadPermissions}. Consumers that cache decisions
+ * (e.g. `tools/BashTool.ts#permissionCache`) compare this against the generation
+ * they stored and drop anything older.
+ *
+ * A counter rather than a callback list because the dependency direction is
+ * `tools → permission`; letting `permission` import the cache to clear it would
+ * create a cycle.
+ */
+let configGeneration = 0;
+
+/** Monotonic id of the currently loaded permission config. */
+export function getConfigGeneration(): number {
+  return configGeneration;
+}
+
+/**
  * Drop the cached config so the next check re-reads permissions.json.
  *
  * This is deliberately a pure cache invalidation: it does NOT eagerly parse the
  * file. A malformed permissions.json is reported by the next `checkPermission`
  * call (which fails closed), so a reload never throws on its own.
+ *
+ * It also bumps {@link getConfigGeneration}, so callers holding a cached
+ * `ask`/`deny` decision stop honouring it immediately. Without that, a revoked
+ * permission kept working for the remainder of the cache TTL.
  */
 export async function reloadPermissions(): Promise<void> {
   cachedConfig = null;
+  configGeneration += 1;
 }
