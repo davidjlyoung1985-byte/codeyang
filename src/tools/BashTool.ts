@@ -5,6 +5,8 @@ import { auditLog } from '../utils/sessionStore.js';
 import { checkRateLimit } from '../utils/rateLimiter.js';
 import { Sandbox } from '../sandbox/index.js';
 import { extractCommandSubjects } from './commandSubjects.js';
+import type { ToolExecutionResult } from '../types.js';
+import { config } from '../agent/config.js';
 
 // User-customizable deny list from env var (comma-separated words)
 const DENY_LIST = (process.env['CODEYANG_DENY_COMMANDS'] || '')
@@ -212,7 +214,9 @@ export async function executeBash(
   command: string,
   cwd?: string,
   timeoutSecs = parseInt(process.env.CODEYANG_BASH_TIMEOUT || '60', 10),
-): Promise<string> {
+): Promise<ToolExecutionResult> {
+  // Use config.cwd as default if no cwd is provided
+  const workingDir = cwd || config.cwd;
   // Rate limit check first
   checkRateLimit('bash');
 
@@ -221,7 +225,7 @@ export async function executeBash(
     void auditLog({
       action: 'bash_denied',
       command: sanitizeForLogging(command), // SECURITY: Redact sensitive info
-      cwd: cwd || process.cwd(),
+      cwd: workingDir,
       result: 'blocked_by_deny_list',
     });
     throw new Error(`[SAFETY] Command blocked by deny list.`);
@@ -275,7 +279,7 @@ export async function executeBash(
       void auditLog({
         action: 'bash_denied_by_user',
         command: sanitizeForLogging(command),
-        cwd: cwd || process.cwd(),
+        cwd: workingDir,
         result: 'rejected_at_confirmation',
       });
       throw new Error(
@@ -293,13 +297,13 @@ export async function executeBash(
     void auditLog({
       action: 'bash_sandboxed',
       command: sanitizeForLogging(command),
-      cwd: cwd || process.cwd(),
+      cwd: workingDir,
       result: 'routed_to_sandbox',
     });
-    return executeInSandbox(command, cwd, timeoutSecs);
+    return executeInSandbox(command, workingDir, timeoutSecs);
   }
 
-  return executeDirect(command, cwd, timeoutSecs);
+  return executeDirect(command, workingDir, timeoutSecs);
 }
 
 /**
@@ -353,7 +357,8 @@ export function shouldUseSandbox(command: string, permissionLevel: string): bool
  * Execute a command in a sandboxed process for isolation.
  * Falls back to direct execa if sandbox fails to initialize.
  */
-async function executeInSandbox(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
+async function executeInSandbox(command: string, cwd?: string, timeoutSecs = 30): Promise<ToolExecutionResult> {
+  const workingDir = cwd || config.cwd;
   try {
     const sandbox = new Sandbox({
       timeoutMs: timeoutSecs * 1000,
@@ -362,14 +367,14 @@ async function executeInSandbox(command: string, cwd?: string, timeoutSecs = 30)
     });
 
     const result = await sandbox.run('bash', ['-c', command], {
-      cwd: cwd || process.cwd(),
+      cwd: workingDir,
       timeoutMs: timeoutSecs * 1000,
       env: process.env as Record<string, string>,
     });
 
     // Sandbox ran successfully
     if (result.success) {
-      return result.stdout || '(sandbox: no output)';
+      return { output: result.stdout || '(sandbox: no output)', isError: false };
     }
 
     // Sandbox timed out or had an error
@@ -378,34 +383,35 @@ async function executeInSandbox(command: string, cwd?: string, timeoutSecs = 30)
     if (result.stderr) output += result.stderr + '\n';
     if (result.timedOut) output += '\n[Command timed out in sandbox]\n';
     output += `exit code: ${result.exitCode}`;
-    return output;
+    return { output, isError: true };
   } catch (err) {
     // Sandbox unavailable — fall back to direct execa
     const errorMsg = err instanceof Error ? err.message : String(err);
     void auditLog({
       action: 'sandbox_fallback',
       command: sanitizeForLogging(command),
-      cwd: cwd || process.cwd(),
+      cwd: workingDir,
       result: `Sandbox failed: ${errorMsg}`,
     });
-    return executeDirect(command, cwd, timeoutSecs);
+    return executeDirect(command, workingDir, timeoutSecs);
   }
 }
 
 /**
  * Execute a command directly via execa (non-sandboxed).
  */
-async function executeDirect(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
+async function executeDirect(command: string, cwd?: string, timeoutSecs = 30): Promise<ToolExecutionResult> {
+  const workingDir = cwd || config.cwd;
   const isWin = process.platform === 'win32';
   const result = isWin
     ? await execa('cmd.exe', ['/c', command], {
-        cwd: cwd || process.cwd(),
+        cwd: workingDir,
         timeout: timeoutSecs * 1000,
         reject: false,
         env: { ...process.env, CI: undefined },
       })
     : await execa('bash', ['-c', command], {
-        cwd: cwd || process.cwd(),
+        cwd: workingDir,
         timeout: timeoutSecs * 1000,
         reject: false,
         env: { ...process.env, CI: undefined },
@@ -422,7 +428,7 @@ async function executeDirect(command: string, cwd?: string, timeoutSecs = 30): P
 
   if (result.exitCode === 0) {
     const output = stdout || '(no output)';
-    return stderr ? `${output}\n\n(stderr):\n${stderr}` : output;
+    return { output: stderr ? `${output}\n\n(stderr):\n${stderr}` : output, isError: false };
   }
 
   const parts: string[] = [];
@@ -430,7 +436,9 @@ async function executeDirect(command: string, cwd?: string, timeoutSecs = 30): P
   if (stderr) parts.push(`stderr:\n${stderr}`);
   parts.push(`exit code: ${result.exitCode}`);
 
-  return parts.join('\n\n');
+  // Non-zero exit means the command failed (failed tests, missing file, ...).
+  // Report it so the model sees is_error and acts on the output.
+  return { output: parts.join('\n\n'), isError: true };
 }
 
 /** Clear permission cache (for testing) */

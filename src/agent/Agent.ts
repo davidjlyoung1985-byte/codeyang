@@ -47,6 +47,12 @@ export class Agent {
   private state: AgentState;
 
   constructor(private qtContext?: QtContext) {
+    // LIBRARY MODE FIX: Ensure config is loaded
+    // The config object uses getters that call getConfig() on first access,
+    // which will load from ~/.codeyang/config.json if available.
+    // This happens automatically when we access config.provider, config.apiKey, etc.
+    // No explicit initialization needed.
+
     const client = createLLMClient(config.provider, config.apiKey, config.baseURL);
     const reflexionEngine = new ReflexionEngine(config.reflexion);
     const critiqueEngine = new CritiqueEngine();
@@ -81,6 +87,8 @@ export class Agent {
       slowCallThresholdMs: 60_000,
     });
     const gateway = Gateway.getInstance();
+    // 让 Gateway 在构造后即可用（runLoop 每轮还会按需刷新，见 run-loop.ts）
+    gateway.registerApiKey(config.apiKey);
 
     globalAgentRegistry.register(a2aProtocol.getMyCard());
     a2aProtocol.setLLMClient(client, config.model, config.maxTokens);

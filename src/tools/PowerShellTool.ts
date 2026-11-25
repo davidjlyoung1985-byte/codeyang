@@ -4,8 +4,10 @@
  */
 import { execa } from 'execa';
 import { checkPermission } from '../permission/index.js';
+import type { ToolExecutionResult } from '../types.js';
 import { requestConfirmation } from '../permission/confirmation.js';
 import { extractCommandSubjects } from './commandSubjects.js';
+import { config } from '../agent/config.js';
 
 // Dangerous PowerShell patterns
 const DANGEROUS_PATTERNS: RegExp[] = [
@@ -19,7 +21,10 @@ const DANGEROUS_PATTERNS: RegExp[] = [
   /\bgit\s+push\s+-f\b/i,
 ];
 
-export async function executePowerShell(command: string, cwd?: string, timeoutSecs = 30): Promise<string> {
+export async function executePowerShell(command: string, cwd?: string, timeoutSecs = 30): Promise<ToolExecutionResult> {
+  // Use config.cwd as default working directory
+  const workingDir = cwd || config.cwd;
+
   // SECURITY: ALLOW prefix removed - same fix as BashTool
   // All commands must go through permission system
 
@@ -72,7 +77,7 @@ export async function executePowerShell(command: string, cwd?: string, timeoutSe
 
   const result = await execa(command, {
     shell: 'powershell.exe',
-    cwd: cwd || process.cwd(),
+    cwd: workingDir,
     timeout: timeoutSecs * 1000,
     reject: false,
   });
@@ -82,12 +87,14 @@ export async function executePowerShell(command: string, cwd?: string, timeoutSe
 
   if (result.exitCode === 0) {
     const output = stdout || '(no output)';
-    return stderr ? `${output}\n\n(stderr):\n${stderr}` : output;
+    return { output: stderr ? `${output}\n\n(stderr):\n${stderr}` : output, isError: false };
   }
 
   const parts: string[] = [];
   if (stdout) parts.push(`stdout:\n${stdout}`);
   if (stderr) parts.push(`stderr:\n${stderr}`);
   parts.push(`exit code: ${result.exitCode}`);
-  return parts.join('\n\n');
+
+  // Non-zero exit means the command failed — report it so the model sees is_error.
+  return { output: parts.join('\n\n'), isError: true };
 }

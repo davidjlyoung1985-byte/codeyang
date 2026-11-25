@@ -8,7 +8,17 @@ export const definitions: ToolDefinition[] = [
     description:
       'Execute a PowerShell command on Windows. Use for Windows-specific operations ' +
       'like registry edits, service management, or when Bash is unavailable. ' +
-      'Includes security checks for dangerous operations.',
+      'Includes security checks for dangerous operations.\n\n' +
+      '⚠️ IMPORTANT - Pipeline Exit Code Caveat:\n' +
+      'Pipelines in PowerShell reset the exit code to the last command in the pipeline.\n' +
+      'Example: `node --test | Select-Object -Last 25`\n' +
+      '  - $LASTEXITCODE = 1 (node --test failed)\n' +
+      '  - But process exit code = 0 (Select-Object succeeded)\n' +
+      '  - Tool reports success even though tests failed!\n\n' +
+      'Solution: Avoid wrapping commands in pipelines if you need to check exit codes.\n' +
+      '  ❌ BAD:  node --test | Select-Object -Last 10\n' +
+      '  ✅ GOOD: node --test\n' +
+      '  ✅ GOOD: node --test; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }',
     parameters: {
       type: 'object',
       properties: {
