@@ -45,6 +45,7 @@ vi.mock('../gateway/index.js', () => {
     handle: vi.fn().mockResolvedValue({ success: true, data: null }),
     getAuditLogger: vi.fn(() => ({ log: vi.fn(), getEntries: vi.fn(() => []), clear: vi.fn() })),
     getCircuitBreaker: vi.fn(() => ({ isOpen: vi.fn(() => false), recordSuccess: vi.fn(), recordFailure: vi.fn() })),
+    registerApiKey: vi.fn(), // Add missing registerApiKey method
   };
   return { Gateway: { getInstance: vi.fn(() => mockGateway) } };
 });
