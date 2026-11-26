@@ -34,7 +34,7 @@ describe('Bridge Server - Extended Tests', () => {
       expect(task.status).toBe('pending');
     });
 
-    it('should update task status correctly', () => {
+    it('should update task status correctly', async () => {
       const task: BridgeTask = {
         id: randomUUID(),
         title: 'Test',
@@ -45,6 +45,9 @@ describe('Bridge Server - Extended Tests', () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+
+      // Small delay to ensure different timestamp
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Simulate status update
       const updatedTask = {

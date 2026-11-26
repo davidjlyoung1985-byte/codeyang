@@ -47,17 +47,18 @@ jobs:
       - run: npm ci
       - run: npm run build
       # Hard gate: any test failure fails the job. No retry bypass.
+      # --bail stops immediately on first failure.
       # Windows runs the thread pool with capped workers to limit parallel
       # resource pressure. (Earlier flakiness was a test-isolation bug --
       # process.chdir racing between parallel workers -- fixed in the tests.)
       - name: Run tests (Windows)
         if: runner.os == 'Windows'
-        run: npm test -- --pool=threads --maxWorkers=2
+        run: npm test -- --bail --pool=threads --maxWorkers=2
         env:
           CI: true
       - name: Run tests (Unix)
         if: runner.os != 'Windows'
-        run: npm test
+        run: npm test -- --bail
         env:
           CI: true
 

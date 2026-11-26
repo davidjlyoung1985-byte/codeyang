@@ -1,0 +1,65 @@
+# Source files (only publish dist/)
+src/
+*.test.ts
+*.bench.ts
+vitest.*.ts
+vitest.setup.ts
+vitest.isolate.ts
+tsconfig.json
+tsup.config.ts
+
+# Development files
+.github/
+.vscode/
+node_modules/
+coverage/
+.nyc_output/
+*.log
+*.tsbuildinfo
+
+# Test and coverage
+test/
+tests/
+__tests__/
+*.spec.ts
+.coverage/
+
+# CI/CD and Git
+.git/
+.gitignore
+.gitattributes
+.circleci/
+.travis.yml
+.gitlab-ci.yml
+
+# Documentation (keep only essential ones via files field in package.json)
+docs/archive/
+DEPLOYMENT_GUIDE.md
+PUSH_GUIDE.md
+FIX_PLAN.md
+CURRENT_ISSUES_ANALYSIS.md
+DAILY_SUMMARY_*.md
+*_SUMMARY.md
+BUG_FIX_*.md
+IMPROVEMENTS_*.md
+NEXT_STEPS_*.md
+P1_IMPROVEMENTS_*.md
+PHASE_*.md
+
+# IDE and editor files
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Misc
+*.tgz
+.env
+.env.*
+!.env.example
+
+# Web and extensions (experimental/incomplete)
+web/
+vscode-extension/
+wps-addin/

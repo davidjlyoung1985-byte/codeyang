@@ -2,10 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-2796%20passing-brightgreen.svg)](https://github.com/davidjlyoung1985-byte/codeyang)
-[![Coverage](https://img.shields.io/badge/coverage-78.1%25-yellowgreen.svg)](./docs/STATUS.md)
+[![Tests](https://img.shields.io/badge/tests-3005%20passing-brightgreen.svg)](https://github.com/davidjlyoung1985-byte/codeyang)
+[![Coverage](https://img.shields.io/badge/coverage-see%20STATUS-blue.svg)](./docs/STATUS.md)
 
-一个面向命令行的 AI 编码 Agent，内置 82 个工具、多层权限控制与沙箱隔离。
+一个面向命令行的 AI 编码 Agent，内置 80+ 个工具、多层权限控制与沙箱隔离。
 
 > 工程现状（测试数、覆盖率、已知短板）见 **[docs/STATUS.md](./docs/STATUS.md)**。该文件是项目状态的唯一来源。
 
@@ -14,8 +14,8 @@
 ## ⭐ 项目特点
 
 - 🔒 **多层安全防护**：SSRF 检测（含 IPv6）、危险命令拦截、路径保护、删除保护、审计日志
-- ✅ **测试基线**：2,796 个用例通过，`tsc --noEmit` 与 `eslint` 均为 0 错误
-- 🏗️ **模块化架构**：30 个模块，TypeScript strict 全开
+- ✅ **测试基线**：3,005 个用例通过，`tsc --noEmit` 0 错误，`eslint` 0 错误（11 警告在测试文件）
+- 🏗️ **模块化架构**���30 个模块，TypeScript strict 全开
 - 🖥️ **CLI 优先**：单进程交互式使用，无需部署服务
 
 ---

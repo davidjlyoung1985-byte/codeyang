@@ -22,19 +22,21 @@ npx vitest run --coverage   # 覆盖率
 
 | 指标 | 值 | 采集方式 |
 |---|---|---|
-| 版本 | 1.1.0 | `package.json` |
-| 源文件（非测试） | 221 个 `.ts` | `src/` 递归统计 |
-| 源码行数（非测试） | 43,147 行 | `src/` 递归统计 |
-| 测试文件 | 145 个 | vitest 汇总 |
-| 测试用例 | 2,796 通过 / 7 跳过 / 0 失败 | `npm test` |
-| 测试耗时 | ~94 秒（`maxWorkers: 2`） | `npm test` |
-| 语句覆盖率 | 78.1% | `vitest --coverage` |
-| 分支覆盖率 | 79.1% | `vitest --coverage` |
-| 函数覆盖率 | 85.4% | `vitest --coverage` |
+| 版本 | 2.0.1 | `package.json` |
+| 源文件（非测试） | 231 个 `.ts` | `src/` 递归统计 |
+| 源码行数（非测试） | 38,459 行 | `src/` 递归统计 |
+| 测试文件 | 146+ 个 | vitest 汇总 |
+| 测试用例 | 3,005 通过 / 7 跳过 / 0 失败 | `npm test` |
+| 测试耗时 | ~100 秒（`maxWorkers: 2`） | `npm test` |
+| 语句覆盖率 | 见注释 | `vitest --coverage` |
+| 分支覆盖率 | 见注释 | `vitest --coverage` |
+| 函数覆盖率 | 见注释 | `vitest --coverage` |
 | `tsc --noEmit` | 0 错误（strict 全开） | CI `lint` job |
-| `eslint src/` | 0 错误 0 警告 | CI `lint` job |
+| `eslint src/` | 0 错误 11 警告（全在测试文件） | CI `lint` job |
 | 模块目录 | 30 个 | `src/` 一级目录 |
-| 内置工具 | 82 个 definition | `src/tools/definitions/` |
+| 内置工具 | 80+ 个 definition | `src/tools/definitions/` |
+
+> **覆盖率说明：** 覆盖率数据需通过 `npx vitest run --coverage` 获取（约 5 分钟）。上次测量约为 statements 76%, branches 79%, functions 86%。运行命令以获取实时数据。
 
 CI 在 3 OS × 3 Node 版本的矩阵上运行，测试失败即阻断合并（无重试绕过）。
 

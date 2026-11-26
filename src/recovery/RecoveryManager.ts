@@ -111,6 +111,10 @@ export class RecoveryManager {
     await writeFile(filePath, JSON.stringify(checkpoint, null, 2), 'utf-8');
 
     logger.info(`[Recovery] Checkpoint saved: ${checkpoint.id}`);
+
+    // Auto-cleanup old checkpoints after creating new one
+    await this.cleanupOldCheckpoints();
+
     return checkpoint.id;
   }
 
@@ -291,5 +295,39 @@ export class RecoveryManager {
     // 查找最近 1 小时内的可恢复检查点
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
     return checkpoints.filter((cp) => cp.timestamp > oneHourAgo && cp.recoveryMetadata.canResume);
+  }
+
+  /**
+   * 加载检查点（不恢复当前状态）
+   */
+  async loadCheckpoint(checkpointId: string): Promise<Checkpoint | null> {
+    const filePath = join(this.checkpointDir, `${checkpointId}.json`);
+
+    if (!existsSync(filePath)) {
+      return null;
+    }
+
+    try {
+      const content = await readFile(filePath, 'utf-8');
+      const checkpoint: Checkpoint = JSON.parse(content);
+      return checkpoint;
+    } catch (error) {
+      logger.warn(`[Recovery] Failed to load checkpoint ${checkpointId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * 清理指定会话的所有检查点
+   */
+  async cleanupSession(sessionId: string): Promise<void> {
+    const checkpoints = await this.listCheckpoints();
+    const sessionCheckpoints = checkpoints.filter((cp) => cp.sessionId === sessionId);
+
+    for (const checkpoint of sessionCheckpoints) {
+      await this.deleteCheckpoint(checkpoint.id);
+    }
+
+    logger.info(`[Recovery] Cleaned up ${sessionCheckpoints.length} checkpoints for session ${sessionId}`);
   }
 }

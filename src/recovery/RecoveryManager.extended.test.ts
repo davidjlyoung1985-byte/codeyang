@@ -12,7 +12,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { RecoveryManager, type Checkpoint } from './RecoveryManager.js';
-import { rm, mkdir, readFile } from 'node:fs/promises';
+import { rm, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -277,7 +277,7 @@ describe('RecoveryManager - Extended Tests', () => {
 
       await recoveryManager.deleteCheckpoint(id);
 
-      const loaded = await recoveryManager.restoreFromCheckpoint(id);
+      const loaded = await recoveryManager.loadCheckpoint(id);
       expect(loaded).toBeNull();
     });
 
@@ -310,8 +310,8 @@ describe('RecoveryManager - Extended Tests', () => {
       const corruptId = 'ckpt-corrupt-123';
       const corruptPath = join(testDir, `${corruptId}.json`);
 
-      // Write invalid JSON
-      await recoveryManager['writeFile'](corruptPath, 'invalid json {{{');
+      // Write invalid JSON directly using node fs
+      await writeFile(corruptPath, 'invalid json {{{', 'utf-8');
 
       const loaded = await recoveryManager.loadCheckpoint(corruptId);
       expect(loaded).toBeNull();
