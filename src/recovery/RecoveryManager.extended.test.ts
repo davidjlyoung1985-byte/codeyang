@@ -170,7 +170,7 @@ describe('RecoveryManager - Extended Tests', () => {
         recoveryMetadata: { canResume: true },
       });
 
-      const loaded = await recoveryManager.loadCheckpoint(checkpoint);
+      const loaded = await recoveryManager.restoreFromCheckpoint(checkpoint);
       expect(loaded?.fileSystemSnapshot.modifiedFiles).toHaveLength(2);
       expect(loaded?.fileSystemSnapshot.modifiedFiles).toContain('src/file1.ts');
     });
@@ -190,7 +190,7 @@ describe('RecoveryManager - Extended Tests', () => {
         recoveryMetadata: { canResume: true },
       });
 
-      const loaded = await recoveryManager.loadCheckpoint(checkpoint);
+      const loaded = await recoveryManager.restoreFromCheckpoint(checkpoint);
       expect(loaded?.fileSystemSnapshot.createdFiles).toHaveLength(2);
     });
 
@@ -209,7 +209,7 @@ describe('RecoveryManager - Extended Tests', () => {
         recoveryMetadata: { canResume: true },
       });
 
-      const loaded = await recoveryManager.loadCheckpoint(checkpoint);
+      const loaded = await recoveryManager.restoreFromCheckpoint(checkpoint);
       expect(loaded?.fileSystemSnapshot.deletedFiles).toHaveLength(1);
       expect(loaded?.fileSystemSnapshot.deletedFiles[0]).toBe('old-file.ts');
     });
@@ -234,7 +234,7 @@ describe('RecoveryManager - Extended Tests', () => {
         recoveryMetadata: { canResume: true },
       });
 
-      const loaded = await recoveryManager.loadCheckpoint(checkpoint);
+      const loaded = await recoveryManager.restoreFromCheckpoint(checkpoint);
       expect(loaded?.toolExecutionState.pendingTools).toHaveLength(2);
       expect(loaded?.toolExecutionState.completedTools).toHaveLength(2);
     });
@@ -257,7 +257,7 @@ describe('RecoveryManager - Extended Tests', () => {
         recoveryMetadata: { canResume: false, resumeReason: 'Too many failures' },
       });
 
-      const loaded = await recoveryManager.loadCheckpoint(checkpoint);
+      const loaded = await recoveryManager.restoreFromCheckpoint(checkpoint);
       expect(loaded?.toolExecutionState.failedTools).toHaveLength(2);
       expect(loaded?.recoveryMetadata.canResume).toBe(false);
     });
@@ -277,7 +277,7 @@ describe('RecoveryManager - Extended Tests', () => {
 
       await recoveryManager.deleteCheckpoint(id);
 
-      const loaded = await recoveryManager.loadCheckpoint(id);
+      const loaded = await recoveryManager.restoreFromCheckpoint(id);
       expect(loaded).toBeNull();
     });
 
@@ -363,7 +363,7 @@ describe('RecoveryManager - Extended Tests', () => {
         recoveryMetadata: { canResume: true },
       });
 
-      const loaded = await recoveryManager.loadCheckpoint(id);
+      const loaded = await recoveryManager.restoreFromCheckpoint(id);
       expect(loaded?.context.cwd).toBe(cwd);
     });
 
@@ -379,7 +379,7 @@ describe('RecoveryManager - Extended Tests', () => {
         recoveryMetadata: { canResume: true },
       });
 
-      const loaded = await recoveryManager.loadCheckpoint(id);
+      const loaded = await recoveryManager.restoreFromCheckpoint(id);
       expect(loaded?.context.model).toBe(model);
       expect(loaded?.context.config.maxTokens).toBe(8192);
     });
