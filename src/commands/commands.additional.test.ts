@@ -13,7 +13,7 @@
  * - Advanced features (reflect, harness, ponytail)
  * - Error handling and edge cases
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 describe('Commands Module - Additional Coverage', () => {
   describe('Command Parsing', () => {

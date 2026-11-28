@@ -13,7 +13,7 @@
  * - Concurrent sandbox operations
  * - Sandbox pool management
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 describe('Sandbox Module - Additional Coverage', () => {
   describe('Sandbox Lifecycle', () => {
@@ -125,7 +125,6 @@ describe('Sandbox Module - Additional Coverage', () => {
 
   describe('Timeout Handling', () => {
     it('should detect timeout condition', () => {
-      const startTime = Date.now();
       const timeout = 1000;
       const elapsed = 1500;
 

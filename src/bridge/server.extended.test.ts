@@ -10,7 +10,7 @@
  * - Authentication
  * - Error handling
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { BridgeTask, BridgeMessage } from './types.js';
 

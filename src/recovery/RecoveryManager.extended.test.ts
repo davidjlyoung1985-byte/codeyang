@@ -10,9 +10,9 @@
  * - Error handling scenarios
  * - Concurrency and race conditions
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { RecoveryManager, type Checkpoint } from './RecoveryManager.js';
-import { rm, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { RecoveryManager } from './RecoveryManager.js';
+import { rm, mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
